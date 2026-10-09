@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+.venv/
+*.pyc
+
+# Node
+node_modules/
+.next/
+*.tsbuildinfo
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project
+.omo/
+.pi/
+/*-fullpage.png
+/mobile-disclosure-overflow.png
+/today-*.png
+/today-snapshot.yml
+/snap-*.yml
+/plan-console-errors.log
+
+# Playwright E2E
+test-results/
+playwright-report/
+.auth/
+apps/web/e2e/.auth/
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Local host backups / scratch notes (contain account data, never commit)
+.accounts-backup.csv
+.dead-files-backup.txt
+.debug-journal.md

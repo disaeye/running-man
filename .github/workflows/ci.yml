@@ -1,0 +1,175 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+# Cancel in-flight runs for the same ref when a new commit lands.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (migrate / ruff / mypy / pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres@127.0.0.1:5432/test_running_man
+      JWT_SECRET: ci-jwt-secret-not-used-in-unit-tests
+      PYTHON_VERSION: "3.12"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: uv sync --extra dev --locked
+
+      - name: Create disposable PostgreSQL database
+        run: createdb -h 127.0.0.1 -U postgres test_running_man
+
+      - name: Bridge pytest PostgreSQL socket
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y socat
+          sudo mkdir -p /var/run/postgresql
+          sudo chown "$USER" /var/run/postgresql
+          socat UNIX-LISTEN:/var/run/postgresql/.s.PGSQL.15434,fork,reuseaddr TCP:127.0.0.1:5432 &
+          echo "$!" > "$RUNNER_TEMP/postgres-socket-bridge.pid"
+
+      - name: Write CI API env
+        working-directory: apps/api
+        run: |
+          printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env
+          printf 'JWT_SECRET=%s\n' "$JWT_SECRET" >> .env
+
+      - name: Migrate disposable database
+        working-directory: apps/api
+        run: uv run alembic upgrade head
+
+      - name: Ruff
+        working-directory: apps/api
+        run: uv run ruff check .
+
+      - name: Mypy
+        working-directory: apps/api
+        run: uv run mypy src tests
+
+      - name: OpenAPI contracts
+        working-directory: apps/api
+        run: |
+          uv run python ../../scripts/check_response_models.py --app main:app --json
+          uv run python ../../scripts/export_openapi.py --app main:app --check ../../contracts/v1/openapi.json
+          uv run python ../../scripts/check_openapi_compatibility.py ../../contracts/v1/openapi.json ../../contracts/v1/openapi.json --json
+
+      - name: Pytest
+        working-directory: apps/api
+        run: uv run pytest -q
+
+  contract:
+    name: Contract (validate / generate / drift)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install contract dependencies
+        run: python -m pip install PyYAML
+
+      - name: Validate v1 contract
+        run: python scripts/validate_data_contract.py contracts/v1 --json
+
+      - name: Generate semantic registries
+        run: python scripts/generate_data_contract.py contracts/v1 --json
+
+      - name: Check generated registry drift
+        run: python scripts/check_generated_data_contract.py --json
+
+      - name: Assert generated files are checked in
+        run: git diff --exit-code -- apps/api/src/domain/generated apps/web/shared/config/generated
+
+  web:
+    name: Web (lint / typecheck / test / build / size / hex-ban)
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:18000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Lint
+        working-directory: apps/web
+        run: npm run lint -- --max-warnings=0
+
+      - name: Typecheck
+        working-directory: apps/web
+        run: npx tsc --noEmit
+
+      - name: Test
+        working-directory: apps/web
+        run: npm run test
+
+      - name: Build
+        working-directory: apps/web
+        run: npm run build
+
+      - name: File-size gate
+        run: python3 scripts/lint_file_size.py apps/web
+
+      - name: Hex-ban gate
+        working-directory: apps/web
+        run: npx vitest run scripts/hex-ban.test.ts
+
+  browser:
+    name: Browser scaffold (Todo 33 disabled)
+    runs-on: ubuntu-latest
+    # Todo 33 enables real Playwright coverage after deterministic fixtures and runtime assertions exist.
+    if: ${{ false }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Browser coverage intentionally disabled
+        run: echo "Browser coverage is scaffolded only; Todo 33 owns enablement."
