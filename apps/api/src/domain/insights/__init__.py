@@ -1,0 +1,1 @@
+"""Coach-style insight computations."""

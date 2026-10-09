@@ -1,0 +1,48 @@
+interactions:
+- request:
+    body: '{"key":"val"}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '13'
+      content-type:
+      - application/json
+      host:
+      - httpbin.org
+      user-agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://httpbin.org/post
+  response:
+    body:
+      string: "{\n  \"args\": {}, \n  \"data\": \"{\\\"key\\\":\\\"val\\\"}\", \n
+        \ \"files\": {}, \n  \"form\": {}, \n  \"headers\": {\n    \"Accept\": \"*/*\",
+        \n    \"Accept-Encoding\": \"gzip, deflate\", \n    \"Content-Length\": \"13\",
+        \n    \"Content-Type\": \"application/json\", \n    \"Host\": \"httpbin.org\",
+        \n    \"User-Agent\": \"python-httpx/0.28.1\", \n    \"X-Amzn-Trace-Id\":
+        \"Root=1-6a3107d4-2210fabb6d1d9a116b94a2e5\"\n  }, \n  \"json\": {\n    \"key\":
+        \"val\"\n  }, \n  \"origin\": \"114.221.77.84\", \n  \"url\": \"https://httpbin.org/post\"\n}\n"
+    headers:
+      access-control-allow-credentials:
+      - 'true'
+      access-control-allow-origin:
+      - '*'
+      connection:
+      - keep-alive
+      content-length:
+      - '473'
+      content-type:
+      - application/json
+      date:
+      - Tue, 16 Jun 2026 08:22:44 GMT
+      server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

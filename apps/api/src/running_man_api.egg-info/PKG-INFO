@@ -1,0 +1,27 @@
+Metadata-Version: 2.4
+Name: running-man-api
+Version: 0.2.0
+Summary: Personal running & fitness platform — FastAPI backend
+Requires-Python: >=3.11
+Requires-Dist: bcrypt>=5.0
+Requires-Dist: fastapi>=0.111
+Requires-Dist: fitdecode>=0.11
+Requires-Dist: uvicorn[standard]>=0.30
+Requires-Dist: pydantic-settings>=2.3
+Requires-Dist: httpx[socks]>=0.27
+Requires-Dist: PyJWT>=2.13
+Requires-Dist: psycopg[binary]>=3.2
+Requires-Dist: psycopg_pool>=3.3
+Requires-Dist: asyncpg>=0.29
+Requires-Dist: slowapi>=0.1.10
+Requires-Dist: python-multipart>=0.0.9
+Requires-Dist: sqlalchemy>=2.0.51
+Requires-Dist: lxml>=6.1.1
+Provides-Extra: dev
+Requires-Dist: ruff>=0.5; extra == "dev"
+Requires-Dist: mypy>=1.11; extra == "dev"
+Requires-Dist: pytest>=8.3; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24; extra == "dev"
+Requires-Dist: pytest-cov>=5.0; extra == "dev"
+Requires-Dist: vcrpy>=8.2; extra == "dev"
+Requires-Dist: fit-tool>=0.9.15; extra == "dev"
