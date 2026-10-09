@@ -165,7 +165,7 @@ maintenance timers.
 
 | Check | Command | Expected |
 |---|---|---|
-| API health | `curl http://localhost:18000/health` | `{"status":"ok"}` |
+| API health | `curl http://localhost:31001/health` | `{"status":"ok"}` |
 | DB connectivity | `psql "$DATABASE_URL" -c 'select 1'` | one row |
 | PMC data | `python scripts/bench_pmc.py` | P99 `< 2000ms` |
 | Restore validity | `python scripts/verify_restore.py ...` plus schema lifecycle verifier | all `OK` and `ok: true` |
@@ -180,8 +180,8 @@ The settings data page is only as trustworthy as its two source endpoints. After
 an import or Intervals.icu sync, verify both responses for the authenticated user:
 
 ```bash
-curl -i http://localhost:18000/api/v1/data/health -b "access_token=<token>"
-curl -i http://localhost:18000/api/v1/data/quality -b "access_token=<token>"
+curl -i http://localhost:31001/api/v1/data/health -b "access_token=<token>"
+curl -i http://localhost:31001/api/v1/data/quality -b "access_token=<token>"
 ```
 
 Both responses must be `200`, include `X-API-Version: 1`, and expose numeric
@@ -216,19 +216,21 @@ Restore moves selected activities back from `activity_summary_archive`.
 
 **The bug**: `next dev` behind a CDN (EdgeOne, Cloudflare, etc.) causes React hydration to silently fail. The page renders server-side HTML (form is visible), but client-side JavaScript never attaches. The login form's `onSubmit` handler is never bound, so clicking "Sign in" triggers the browser's default GET form submission instead of the JavaScript POST to `/api/v1/auth/login`. The credentials leak into the URL query string (`/login?email=...&password=...`), no auth cookie is set, and the middleware redirects back to `/login` — infinite loop.
 
-### How to deploy (Vercel-managed)
+### How to deploy (systemd, both services on this host)
 
-The production frontend lives on **Vercel** at `https://running-man-ten.vercel.app` (project `disaeyes/running-man`). It is NOT hosted on this machine. Deploy from `apps/web/` with the vercel CLI (authed as `disaeye`; reachable via the local HTTP proxy `127.0.0.1:7890`):
+The production frontend lives on this host as `running-man-web.service` (port 31000), alongside `running-man-api.service` (port 31001). Both are user units, enabled at `default.target`:
 
 ```bash
-cd apps/web
-vercel --prod        # deploy to production
-vercel ls running-man   # list deployments and aliases
+systemctl --user status  running-man-web.service running-man-api.service
+systemctl --user restart running-man-web.service   # after `npm run build`
+journalctl --user -u running-man-web.service -f
 ```
 
-The Vercel build reads `vercel.json` (framework `nextjs`, `API_URL=https://running-man.mysour.world`) — the backend is reached via server-side rewrites in `next.config.js`, so the browser only ever sees the Vercel domain.
+The browser only ever sees the CDN domain. `/api/*`, `/auth/*` and `/webhooks/*` are rewritten server-side to `API_URL` in `apps/web/.env`, so the HttpOnly auth cookie stays same-origin and no CORS configuration is required (the API registers no CORS middleware).
 
-> Historical note: the frontend previously ran under systemd as `running-man-web.service` on port 28801 (`scripts/deploy-web.sh`). That unit is retired — do not start it, do not deploy via `deploy-web.sh`. Keeping `next start` on 28801 is irrelevant to the live site.
+> Historical note: the frontend used to be deployed to Vercel (`running-man-ten.vercel.app`) while only the API ran here. That split is retired — running both sides under one origin removes the cross-site cookie problem entirely.
+
+> Historical note: the frontend previously ran under systemd as `running-man-web.service` on port 28801 (`scripts/deploy-web.sh`). That port is now 31000; `scripts/deploy-web.sh` still works and drives the same unit.
 
 ### Never kill Next.js by process name
 
@@ -248,8 +250,8 @@ A port is the only unique handle for a listening server, which is why `kill-port
 
 | Variable | Scope | Purpose | Example |
 |---|---|---|---|
-| `API_URL` | Server only (Vercel) | Backend base URL used by `next.config.js` rewrites. Reached via server-side rewrite, so the browser stays same-origin and the backend address is **not** leaked to the client bundle. | `https://running-man.mysour.world` |
-| `NEXT_PUBLIC_API_URL` | Server only (legacy) | Fallback for the retired systemd deployment's `.env`. Prefer `API_URL`. | `http://localhost:18000` |
+| `API_URL` | Server only | Backend base URL used by `next.config.js` rewrites. Reached via server-side rewrite, so the browser stays same-origin and the backend address is **not** leaked to the client bundle. | `http://127.0.0.1:31001` |
+| `NEXT_PUBLIC_API_URL` | Server only (legacy) | Fallback for the retired systemd deployment's `.env`. Prefer `API_URL`. | `http://localhost:31001` |
 
 `API_URL` is set in `apps/web/vercel.json` and must be reachable from Vercel's build/edge network, **not** from the end-user's browser.
 

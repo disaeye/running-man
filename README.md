@@ -25,7 +25,7 @@ npm run dev
 
 Verify health:
 ```bash
-curl http://localhost:18000/health
+curl http://localhost:31001/health
 ```
 
 Expected response:
@@ -77,11 +77,11 @@ npm install
 npm run dev
 npm run lint && npm run test
 
-# Frontend production (Vercel — live site: running-man-ten.vercel.app)
-cd apps/web && vercel --prod
+# Frontend production (systemd, port 31000)
+cd apps/web && npm run build && systemctl --user restart running-man-web.service
 # See CLAUDE.md "Public access topology" and docs/operations.md
 
-# Backend on this host (systemd)
+# Backend on this host (systemd, port 31001)
 systemctl --user status running-man-api.service
 
 # Data operations
@@ -92,10 +92,11 @@ python scripts/bench_pmc.py
 python scripts/reconcile_intervals_icu.py --athlete-id <uuid> --days 90
 ```
 
-> **⚠️ Production deployment**: The frontend is deployed to **Vercel** (`running-man-ten.vercel.app`)
-> via `cd apps/web && vercel --prod`; the backend runs on this host under systemd
-> (`running-man-api.service`, port 18000), fronted by EdgeOne CDN at `running-man.mysour.world`
-> (API-only origin). The legacy systemd frontend (`running-man-web.service`, port 28801) is retired.
+> **⚠️ Production deployment**: Both services run on this host under systemd —
+> the API as `running-man-api.service` on port 31001, the frontend as
+> `running-man-web.service` on port 31000. The browser reaches everything through
+> a single origin (default `running.532333.xyz`), so the frontend's server-side
+> rewrites keep `/api/*` same-origin and the HttpOnly auth cookie works without CORS.
 > See [docs/operations.md](docs/operations.md#frontend-deployment) and CLAUDE.md.
 
 ## Key paths

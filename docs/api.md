@@ -9,9 +9,8 @@
 
 | 项 | 值 |
 |---|---|
-| 本机基址 | `http://localhost:18000` |
-| 公网域名 | `https://running-man.mysour.world`（API-only，`/` 返回 404 属正常） |
-| 前端同源入口 | `https://running-man-ten.vercel.app`（Next.js rewrite `/api/*`、`/auth/*`、`/webhooks/*`） |
+| 本机基址 | `http://localhost:31001` |
+| 公网域名 | `https://running.532333.xyz`（前端与 API 同源，单一入口） |
 | 版本边界 | 业务接口仅在 `/api/v1/*`，webhook 在 `/webhooks/v1/*`，`/health` 不带版本 |
 | 文档 | `GET /docs`（Swagger UI）、`GET /openapi.json` |
 | 版本响应头 | 所有响应带 `X-API-Version: 1` |
@@ -244,7 +243,7 @@ source_readiness, source_training_load, source_weighted_power_w, threshold_pace,
 `apps/web` 通过 Next.js rewrite 同源访问，无需感知后端地址：
 
 ```
-/api/:path*      → ${API_URL}/api/:path*        （API_URL=https://running-man.mysour.world）
+/api/:path*      → ${API_URL}/api/:path*        （API_URL=http://127.0.0.1:31001）
 /auth/:path*     → ${API_URL}/auth/:path*
 /webhooks/:path* → ${API_URL}/webhooks/:path*
 ```
@@ -256,5 +255,5 @@ source_readiness, source_training_load, source_weighted_power_w, threshold_pace,
 ```bash
 cd apps/api && .venv/bin/python ../../scripts/export_openapi.py --app main:app --output ../../contracts/v1/openapi.json
 python3 scripts/check_openapi_compatibility.py contracts/v1/openapi.json contracts/v1/openapi.json --json
-curl -s http://localhost:18000/openapi.json | python3 -m json.tool | less
+curl -s http://localhost:31001/openapi.json | python3 -m json.tool | less
 ```

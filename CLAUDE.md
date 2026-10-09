@@ -3,56 +3,70 @@
 > This file gives any AI agent the context needed to work effectively in this project.
 > For human-facing docs, see [README.md](README.md) and [docs/](docs/).
 
-## Public access topology (verified 2026-08-20)
-
-**Do NOT trust older notes below; this section is the current truth.**
+## Public access topology
 
 ```
 Browser
    │
    ▼
-https://running-man-ten.vercel.app     ← FRONTEND: Vercel (Next.js), production, online
-   │   rewrite /api/*, /auth/*, /webhooks/* → API_URL (server-side, same-origin)
+https://running.532333.xyz     ← single origin (CDN/gateway in front of this host)
+   │
    ▼
-https://running-man.mysour.world       ← vercel.json sets API_URL to this domain
-   │   Tencent EdgeOne CDN (CNAME 3q3yezggb34a.mysour.world.eo.dnse0.com)
-   ▼
-openresty :80/:443 on this NAS        ← edge returns 404 for non-API paths (API-only origin)
-   │   proxy_pass (config inside container, NOT visible on host)
-   ▼
-uvicorn :18000 (running-man-api.service)  ← FastAPI backend, /health /docs live
-   ▼
-PostgreSQL
+openresty on this host (:80/:443)
+   ├── /api/*  /auth/*  /webhooks/*  →  127.0.0.1:31001  (FastAPI)
+   └── /*                           →  127.0.0.1:31000  (Next.js `next start`)
 ```
 
-Key facts (topology verified via `vercel` CLI / curl on 2026-08-20; git state verified 2026-09-01):
+Both services run on this machine as systemd **user** units:
 
-- **There is NO git remote**: the repository exists only on this NAS. `.github/workflows/ci.yml` is the gate manifest, not running automation — GitHub Actions never executes without pushing to GitHub. Run the same gates locally: `python3 scripts/run_gates.py` (`--fast` skips next build; pytest self-skips unless the 15434 test DB is up).
-- **Frontend deploys to Vercel**: project `disaeyes/running-man` (team `disaeyes`, projectId `prj_wADGHlc5XOAn7jIBi52Uz7GkcD25`). Production aliases: `running-man-ten.vercel.app`, `running-man-disaeyes.vercel.app`, `running-man-disaeye-disaeyes.vercel.app`. Deploy via `vercel` CLI (installed at `~/.nvm/.../vercel`, authed as `disaeye`).
-- **`running-man.mysour.world` is the API-only domain** (EdgeOne → this host). `/` returns 404 by design — no frontend there. API endpoints `/health`, `/docs` return 200.
-- **Reaching vercel.app from this host requires the proxy** (`HTTP_PROXY=http://127.0.0.1:7890`); `curl --noproxy '*'` to vercel.app times out — do not mistake that for the site being down.
-- The `running-man-web.service` systemd unit (port 28801) is **retired/not part of the live path** — do not restart it expecting to fix the public site.
+| Unit | Port | Command |
+|---|---|---|
+| `running-man-api.service` | 31001 | `.venv/bin/python -m uvicorn main:app --host 127.0.0.1` |
+| `running-man-web.service` | 31000 | `node node_modules/next/dist/bin/next start -p 31000` |
+
+```bash
+systemctl --user status  running-man-api.service running-man-web.service
+systemctl --user restart running-man-web.service    # after `npm run build` in apps/web
+journalctl --user -u running-man-api.service -f
+```
+
+**Same-origin is the point.** The frontend's server-side rewrites (`apps/web/next.config.js`, target from `API_URL` in `apps/web/.env`) keep `/api/*` on this one domain, so the HttpOnly auth cookie works with no CORS configuration — the API registers no CORS middleware on purpose.
+
+Key facts:
+
+- **Production must use `next start`, never `next dev`.** `next dev` behind a CDN silently breaks React hydration (WebSocket HMR cannot be proxied) — see docs/operations.md.
+- **Kill Next.js by port, never by process name** (see below).
+- **Python version is managed by pyenv.** `.python-version` pins 3.12.15; build/sync from `apps/api` with `uv sync --frozen --extra dev --all-groups` against that interpreter.
+- **Test database is plain TCP** at `postgresql://wind_runner_test@127.0.0.1:5432/wind_runner_test`; export `TEST_DATABASE_URL` to override. There is no unix-socket indirection anywhere.
+- **PostgreSQL runs in Docker** (`1Panel-postgresql-*`), published on host port 5432.
+- **Never install system packages, create databases/roles, change permissions or start long-running services without asking first.**
 
 ## Project: Running Man
 
 Personal running/fitness platform: activity import (Intervals.icu/Strava), training load (PMC), recovery insights, calendar planning, goals, strength training, and physiology estimation (HRmax/LTHR/threshold pace).
 
-- **Backend**: FastAPI (Python 3.12+) at `apps/api/`, runs on port 18000
-- **Frontend**: Next.js 16 (React, TypeScript) at `apps/web/`, production on port 28801
-- **Database**: PostgreSQL with partitioned tables
-- **CDN**: Tencent EdgeOne → origin (NAS), domain `running-man.mysour.world`
+- **Backend**: FastAPI (Python 3.12+) at `apps/api/`, port 31001
+- **Frontend**: Next.js 16 (React, TypeScript) at `apps/web/`, port 31000
+- **Database**: PostgreSQL 18 in Docker, host port 5432
+- **Edge**: gateway/CDN → this host, domain `running.532333.xyz`
 
 ## Critical deployment rule
 
-**Production frontend lives on Vercel (`running-man-ten.vercel.app`), NOT on this host.** Deploy it with the `vercel` CLI from `apps/web/`. See "Public access topology" at the top of this file — the systemd `running-man-web.service` unit (port 28801) below is **retired** and not part of the live path; do not restart it expecting to fix the public site.
+**Both services run on this host under systemd.** Rebuild and restart the frontend after any change under `apps/web`:
 
-> Historical note (pre-Vercel cutover): the frontend ran under systemd as `running-man-web.service` on port 28801. `next dev` behind a CDN caused silent React hydration failure (WebSocket HMR cannot be proxied), so production had to use `next start`. `scripts/deploy-web.sh` performed build + atomic systemd restart. This is kept for context only — the live frontend is Vercel, and `running-man-web.service` is currently `failed`/disabled without affecting the site.
+```bash
+cd apps/web && npm run build && systemctl --user restart running-man-web.service
+```
+
+Backend changes only need `systemctl --user restart running-man-api.service`. Use `scripts/run_gates.py` before restarting — see "Common tasks" below.
+
+> Historical note: the frontend was briefly deployed to Vercel while only the API ran here. That split is retired because it forced cross-site cookies; running both sides on one origin removes the problem. `next dev` behind a CDN still causes silent React hydration failure (WebSocket HMR cannot be proxied), so production must stay on `next start`.
 
 ### Killing local Next.js servers: by port, never by name
 
 **Never run `pkill -f "next-server"` or `pkill -f "next start"`.** `pkill -f` matches every process on the host whose full command line contains the pattern, and all Next.js servers share the identical `next-server (v16.3.1)` cmdline regardless of project or port. This has already taken down the local **pi-web** UI (port 30141), which exits with `Next.js exited unexpectedly (signal SIGKILL)`.
 
-To restart a local `next start` for e2e/manual QA, kill the port instead:
+To restart a local `next start` (e2e, manual QA), kill the port instead:
 
 ```bash
 cd apps/web
@@ -65,10 +79,14 @@ node scripts/kill-port.mjs 28801 --timeout 2000    # custom escalation window
 ## Architecture
 
 ```
-Browser → running-man-ten.vercel.app (Next.js on Vercel)
-               │ rewrite /api/*, /auth/*, /webhooks/* (server-side, API_URL)
-               ▼
-running-man.mysour.world (Tencent EdgeOne) → openresty → uvicorn :18000 (FastAPI) → PostgreSQL
+Browser → running.532333.xyz (gateway/CDN)
+            │
+            ▼
+openresty on this host
+   ├── /api/*  /auth/*  /webhooks/*  →  uvicorn :31001 (FastAPI) ─┐
+   └── /*                            →  next start :31000        │
+                                          │                      │
+                                          └──── PostgreSQL 18 :5432
 ```
 
 Next.js rewrites `/api/*`, `/auth/*` and `/webhooks/*` to the FastAPI backend (see `apps/web/next.config.js`).
@@ -161,23 +179,22 @@ Never create duplicate `SPORT_LABEL` maps elsewhere. Always `import { getSportCo
 | `JWT_SECRET` | `apps/api/.env` | Token signing |
 | `INTERVALS_ICU_API_KEY` | `apps/api/.env` | Intervals.icu sync |
 | `INTERVALS_ICU_ATHLETE_ID` | `apps/api/.env` | Intervals.icu athlete |
-| `NEXT_PUBLIC_API_URL` | `apps/web/.env` | Backend URL (default `http://localhost:18000`) |
+| `API_URL` | `apps/web/.env` | Server-side rewrite target for `/api/*` (default `http://127.0.0.1:31001`) |
+| `NEXT_PUBLIC_API_URL` | `apps/web/.env` | Legacy fallback, used only when `API_URL` is unset |
+| `TEST_DATABASE_URL` | shell env | Test DB for pytest / `run_gates.py` (plain TCP 5432) |
 
 ## Common tasks
 
 ```bash
-# Deploy frontend (Vercel — live site: running-man-ten.vercel.app)
-cd apps/web && vercel --prod
-# Preview: vercel        (and check aliases with: vercel ls running-man)
-# NOTE: vercel CLI from this host needs the HTTP proxy (127.0.0.1:7890).
+# Deploy: rebuild then restart (frontend must be `next start`, never `next dev`)
+cd apps/web && npm run build && systemctl --user restart running-man-web.service
 
-# Backend stays on this host under systemd:
-systemctl --user status running-man-api.service   # check health
+systemctl --user status  running-man-api.service running-man-web.service
 systemctl --user restart running-man-api.service  # restart without rebuild
 journalctl --user -u running-man-api.service -f   # tail logs
 
 # Sync Intervals.icu data
-curl -X POST http://localhost:18000/api/integrations/intervals_icu/sync -b "access_token=<token>"
+curl -X POST http://localhost:31001/api/integrations/intervals_icu/sync -b "access_token=<token>"
 
 # Full quality gates (the one command — web lint/typecheck/test/build,
 # api ruff/mypy/openapi, contract registries):

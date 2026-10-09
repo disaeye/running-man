@@ -1,7 +1,7 @@
 #!/bin/bash
 # Deploy the Running Man frontend: build, restart the systemd service, verify.
 #
-# Replaces the old manual `npm run build && pkill next && nohup next start` flow.
+# Equivalent to the two commands in CLAUDE.md; kept as one step for convenience.
 # The build-then-restart is atomic from the service's POV: systemd swaps in a
 # fresh process only after build succeeds, so a stale server can never serve
 # chunks that no longer exist on disk.
@@ -14,7 +14,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WEB_DIR="$REPO_ROOT/apps/web"
 SERVICE="running-man-web.service"
-PORT=28801
+PORT=31000
 
 # --- --check: just verify the live service ---------------------------------
 if [[ "${1:-}" == "--check" ]]; then

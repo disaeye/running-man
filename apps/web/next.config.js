@@ -30,7 +30,7 @@ const nextConfig = {
     // browser's perspective), so prefer the private server-only API_URL and
     // avoid baking the backend address into the client bundle. NEXT_PUBLIC_API_URL
     // is kept as a fallback for the existing systemd deployment's .env.
-    const backend = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:18000";
+    const backend = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:31001";
     return [
       { source: "/api/:path*", destination: `${backend}/api/:path*` },
       { source: "/auth/:path*", destination: `${backend}/auth/:path*` },

@@ -120,13 +120,13 @@ states explicitly, and invalidates both keys after a sync mutation.
 
 | Area | Technology | Notes |
 |---|---|---|
-| API | FastAPI, Pydantic | Authenticated JSON API on port 18000 |
+| API | FastAPI, Pydantic | Authenticated JSON API on port 31001 |
 | Domain | Python 3.12 | Pure functions for load math, physiology estimation |
 | Physiology | Pure Python (stdlib only) | Tangent method KDE (HRmax), Dmax (LTHR), critical speed (threshold pace) |
 | Database | PostgreSQL/Supabase | `TIMESTAMPTZ` for all timestamps |
 | DB access | psycopg 3 | Raw SQL, dict rows in repos |
 | Migrations | Alembic (Python) | Single authority in `apps/api/alembic/versions`; fresh-schema + lifecycle gates in `scripts/` |
-| Web | Next.js 16, React 19 | App Router, production on port 28801 |
+| Web | Next.js 16, React 19 | App Router, production on port 31000 |
 | Charts | ECharts, uPlot | ECharts for PMC/radar/donut; uPlot for activity multi-stream chart |
 | Tests | pytest, Vitest, Playwright | Backend unit, frontend unit/component, E2E + visual baseline |
 | Ops | shell + Python scripts | Backup, restore, archive, benchmark |
