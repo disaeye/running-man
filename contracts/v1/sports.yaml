@@ -1,0 +1,14 @@
+version: 1
+sports:
+  - { key: run, display_name: 跑步, aliases: [Run], family: running }
+  - { key: virtual_run, display_name: 室内跑步, aliases: [VirtualRun], family: running }
+  - { key: trail_run, display_name: 越野跑, aliases: [TrailRun], family: running }
+  - { key: ride, display_name: 骑行, aliases: [Ride, Bike], family: cycling }
+  - { key: virtual_ride, display_name: 室内骑行, aliases: [VirtualRide], family: cycling }
+  - { key: swim, display_name: 游泳, aliases: [Swim], family: swimming }
+  - { key: walk, display_name: 步行, aliases: [Walk], family: walking }
+  - { key: hike, display_name: 徒步, aliases: [Hike], family: hiking }
+  - { key: alpine_ski, display_name: 滑雪, aliases: [AlpineSki], family: skiing }
+  - { key: workout, display_name: 健身, aliases: [Workout], family: strength }
+  - { key: weight_training, display_name: 力量训练, aliases: [WeightTraining], family: strength }
+  - { key: unknown, display_name: 其他运动, aliases: [Unknown], family: unknown }

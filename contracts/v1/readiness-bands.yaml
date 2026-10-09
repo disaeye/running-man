@@ -1,0 +1,6 @@
+version: 1
+readiness_bands:
+  - { min_score: 80, level: high,     label: 状态良好, max_intensity: high,     color: good,     recommendation: "状态良好，可安排高强度训练" }
+  - { min_score: 60, level: moderate, label: 状态稳定, max_intensity: moderate, color: moderate, recommendation: "状态稳定，建议中等强度训练" }
+  - { min_score: 40, level: recovery, label: 恢复优先, max_intensity: low,      color: moderate, recommendation: "恢复优先，建议轻松训练" }
+  - { min_score: 0,  level: rest,     label: 建议休息, max_intensity: none,     color: poor,     recommendation: "疲劳风险较高，建议休息" }

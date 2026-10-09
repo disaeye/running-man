@@ -1,0 +1,6 @@
+version: 1
+sports:
+  - key: run
+    display_name: 跑步
+    aliases: [Run]
+    family: running

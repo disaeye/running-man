@@ -1,0 +1,27 @@
+version: 1
+algorithms:
+  - key: activity_load
+    version: 1.0.0
+    input_window_days: 1
+    materialization: stored_fact
+    outputs: [normalized_power, intensity_factor, tss, normalized_graded_pace, gap_avg, efficiency_factor, aerobic_decoupling_pct, rtss]
+  - key: pmc
+    version: 1.0.0
+    input_window_days: 1
+    materialization: stored_fact
+    history_policy: full_available_history
+    outputs: [daily_tss, ctl, atl, tsb, acwr]
+  - key: physiology
+    version: 1.0.0
+    input_window_days: 365
+    materialization: stored_fact
+    calculations:
+      - { key: hr_max, input_window_days: 730 }
+      - { key: lthr, input_window_days: 365 }
+      - { key: threshold_pace, input_window_days: 365 }
+    outputs: [hr_max, lthr, threshold_pace]
+  - key: vdot
+    version: 1.0.0
+    input_window_days: 365
+    materialization: stored_fact
+    outputs: [vdot]

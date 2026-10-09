@@ -1,0 +1,10 @@
+[Unit]
+Description=Monthly Running Man database partition maintenance
+
+[Timer]
+OnCalendar=monthly
+Persistent=true
+Unit=running-man-db-partitions.service
+
+[Install]
+WantedBy=timers.target

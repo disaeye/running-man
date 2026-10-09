@@ -1,0 +1,7 @@
+version: 1
+stream_metrics:
+  - key: heart_rate
+    storage_unit: bpm
+    display_unit: bpm
+    null_semantics: absent_sample
+    legal_range: { minimum: 1, maximum: 260 }

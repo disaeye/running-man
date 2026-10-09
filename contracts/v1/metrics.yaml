@@ -1,0 +1,698 @@
+version: 1
+metrics:
+  # ── Activity source-input metrics (volume) ──
+  - key: distance_m
+    display_name: 距离 (Distance)
+    classification: source_input
+    category: volume
+    storage_unit: m
+    display_unit: km
+    null_semantics: not_applicable
+    legal_range: { minimum: 0, maximum: 2000000 }
+    materialization: source_input
+    ui_precision: 2
+    source: { table: activity_summary, column: distance_m, aggregation: sum }
+
+  - key: duration_s
+    display_name: 时长 (Duration)
+    classification: source_input
+    category: volume
+    storage_unit: s
+    display_unit: h:m:s
+    null_semantics: not_applicable
+    legal_range: { minimum: 0, maximum: 172800 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: activity_summary, column: duration_s, aggregation: sum }
+
+  # ── Activity source-input metrics (intensity) ──
+  - key: avg_hr
+    display_name: 平均心率 (Avg HR)
+    classification: source_input
+    category: intensity
+    storage_unit: bpm
+    display_unit: bpm
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 260 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: activity_summary, column: avg_hr, aggregation: avg }
+
+  - key: source_weighted_power_w
+    display_name: 来源加权功率 (Source Weighted Power)
+    classification: source_input
+    category: intensity
+    storage_unit: w
+    display_unit: W
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 3000 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: activity_summary, column: source_weighted_power_w, aggregation: avg }
+
+  # ── Activity source-input metrics (load) ──
+  - key: source_training_load
+    display_name: 来源训练负荷 (Source Training Load)
+    classification: source_input
+    category: load
+    storage_unit: points
+    display_unit: ''
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 10000 }
+    materialization: source_input
+    ui_precision: 1
+    source: { table: activity_summary, column: source_training_load, aggregation: sum }
+
+  # ── Wellness source-input metrics ──
+  - key: source_readiness
+    display_name: 来源恢复评分 (Source Readiness)
+    classification: source_input
+    category: recovery
+    storage_unit: score
+    display_unit: ''
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 100 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: readiness, aggregation: latest }
+
+  - key: resting_hr
+    display_name: 静息心率 (RHR)
+    classification: source_input
+    category: wellness_input
+    storage_unit: bpm
+    display_unit: bpm
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 260 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: resting_hr, aggregation: latest }
+
+  - key: hrv
+    display_name: 心率变异性 (HRV)
+    classification: source_input
+    category: wellness_input
+    storage_unit: ms
+    display_unit: ms
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 500 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: hrv, aggregation: latest }
+
+  - key: sleep_secs
+    display_name: 睡眠时长 (Sleep Duration)
+    classification: source_input
+    category: wellness_input
+    storage_unit: s
+    display_unit: h
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 172800 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: sleep_secs, aggregation: latest }
+
+  - key: sleep_score
+    display_name: 睡眠评分 (Sleep Score)
+    classification: source_input
+    category: wellness_input
+    storage_unit: score
+    display_unit: ''
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 100 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: sleep_score, aggregation: latest }
+    zones:
+      - { max: 60, label: 偏低, tone: caution, description: "睡眠评分低于 60，恢复质量不足。" }
+      - { max: 80, label: 良好, tone: safe, description: "睡眠评分 60–80，恢复质量良好。" }
+      - { min: 80, label: 优秀, tone: safe, description: "睡眠评分高于 80，恢复质量优秀。" }
+
+  - key: sleep_quality
+    display_name: 睡眠质量 (Sleep Quality)
+    classification: source_input
+    category: wellness_input
+    storage_unit: rating
+    display_unit: /4
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 4 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: sleep_quality, aggregation: latest }
+    zones:
+      - { max: 2, label: 偏低, tone: caution, description: "主观睡眠质量 1–2（Intervals.icu 1–4 等级）。" }
+      - { min: 2, label: 良好, tone: safe, description: "主观睡眠质量 2–4（Intervals.icu 1–4 等级）。" }
+
+  - key: avg_sleeping_hr
+    display_name: 睡眠平均心率 (Avg Sleeping HR)
+    classification: source_input
+    category: wellness_input
+    storage_unit: bpm
+    display_unit: bpm
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 20, maximum: 160 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: avg_sleeping_hr, aggregation: latest }
+
+  - key: hrv_sdnn
+    display_name: HRV SDNN
+    classification: source_input
+    category: wellness_input
+    storage_unit: ms
+    display_unit: ms
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 500 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: hrv_sdnn, aggregation: latest }
+
+  - key: spo2
+    display_name: 血氧饱和度 (SpO2)
+    classification: source_input
+    category: wellness_input
+    storage_unit: percent
+    display_unit: '%'
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 50, maximum: 100 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: spo2, aggregation: latest }
+    zones:
+      - { max: 90, label: 偏低, tone: danger, description: "血氧低于 90%，需要关注。" }
+      - { max: 95, label: 正常, tone: safe, description: "血氧 90–95%。" }
+      - { min: 95, label: 良好, tone: safe, description: "血氧高于 95%。" }
+
+  - key: respiration_rate
+    display_name: 呼吸频率 (Respiration Rate)
+    classification: source_input
+    category: wellness_input
+    storage_unit: brpm
+    display_unit: 次/分
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 4, maximum: 60 }
+    materialization: source_input
+    ui_precision: 1
+    source: { table: health_wellness, column: respiration_rate, aggregation: latest }
+
+  - key: systolic_bp
+    display_name: 收缩压 (Systolic BP)
+    classification: source_input
+    category: wellness_input
+    storage_unit: mmhg
+    display_unit: mmHg
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 60, maximum: 260 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: systolic_bp, aggregation: latest }
+    zones:
+      - { max: 90, label: 偏低, tone: caution, description: "收缩压低于 90 mmHg。" }
+      - { max: 130, label: 正常, tone: safe, description: "收缩压 90–130 mmHg。" }
+      - { max: 140, label: 偏高, tone: caution, description: "收缩压 130–140 mmHg。" }
+      - { min: 140, label: 高, tone: danger, description: "收缩压高于 140 mmHg。" }
+
+  - key: diastolic_bp
+    display_name: 舒张压 (Diastolic BP)
+    classification: source_input
+    category: wellness_input
+    storage_unit: mmhg
+    display_unit: mmHg
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 30, maximum: 180 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: diastolic_bp, aggregation: latest }
+    zones:
+      - { max: 60, label: 偏低, tone: caution, description: "舒张压低于 60 mmHg。" }
+      - { max: 85, label: 正常, tone: safe, description: "舒张压 60–85 mmHg。" }
+      - { min: 85, label: 偏高, tone: caution, description: "舒张压高于 85 mmHg。" }
+
+  - key: vo2max
+    display_name: 最大摄氧量 (VO2max)
+    classification: source_input
+    category: ability
+    storage_unit: ml_kg_min
+    display_unit: ml/kg/min
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 10, maximum: 95 }
+    materialization: source_input
+    ui_precision: 1
+    source: { table: health_wellness, column: vo2max, aggregation: latest }
+
+  - key: steps
+    display_name: 步数 (Steps)
+    classification: source_input
+    category: wellness_input
+    storage_unit: count
+    display_unit: 步
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 200000 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: steps, aggregation: latest }
+
+  - key: kcal_consumed
+    display_name: 热量摄入 (kcal Consumed)
+    classification: source_input
+    category: wellness_input
+    storage_unit: kcal
+    display_unit: kcal
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 15000 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: kcal_consumed, aggregation: latest }
+
+  - key: carbs_g
+    display_name: 碳水摄入 (Carbs)
+    classification: source_input
+    category: wellness_input
+    storage_unit: g
+    display_unit: g
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 3000 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: carbs_g, aggregation: latest }
+
+  - key: protein_g
+    display_name: 蛋白质摄入 (Protein)
+    classification: source_input
+    category: wellness_input
+    storage_unit: g
+    display_unit: g
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 1000 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: protein_g, aggregation: latest }
+
+  - key: fat_g
+    display_name: 脂肪摄入 (Fat)
+    classification: source_input
+    category: wellness_input
+    storage_unit: g
+    display_unit: g
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 1000 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: fat_g, aggregation: latest }
+
+  - key: hydration
+    display_name: 水分状态 (Hydration)
+    classification: source_input
+    category: wellness_input
+    storage_unit: rating
+    display_unit: /4
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 4 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: hydration, aggregation: latest }
+    zones:
+      - { max: 2, label: 水分充足, tone: safe, description: "Intervals.icu 1–4 等级，1 = 水分充足。" }
+      - { max: 3, label: 轻度不足, tone: caution, description: "Intervals.icu 1–4 等级，3 = 轻度水分不足。" }
+      - { min: 3, label: 脱水, tone: danger, description: "Intervals.icu 1–4 等级，4 = 明显脱水。" }
+
+  - key: body_fat_pct
+    display_name: 体脂率 (Body Fat)
+    classification: source_input
+    category: body
+    storage_unit: percent
+    display_unit: '%'
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 2, maximum: 70 }
+    materialization: source_input
+    ui_precision: 1
+    source: { table: health_wellness, column: body_fat_pct, aggregation: latest }
+
+  - key: menstrual_phase
+    display_name: 生理周期阶段 (Menstrual Phase)
+    classification: source_input
+    category: wellness_input
+    storage_unit: phase_code
+    display_unit: ''
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 9 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: menstrual_phase, aggregation: latest }
+    note: "Intervals.icu 原始阶段编号，未在本系统内映射为阶段名称。"
+
+  - key: menstrual_phase_predicted
+    display_name: 预测生理周期阶段 (Predicted Menstrual Phase)
+    classification: source_input
+    category: wellness_input
+    storage_unit: phase_code
+    display_unit: ''
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 0, maximum: 9 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: menstrual_phase_predicted, aggregation: latest }
+    note: "Intervals.icu 原始阶段编号，未在本系统内映射为阶段名称。"
+
+  - key: fatigue
+    display_name: 主观疲劳 (Fatigue)
+    classification: source_input
+    category: wellness_input
+    storage_unit: rating
+    display_unit: /4
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 4 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: fatigue, aggregation: latest }
+    zones:
+      - { max: 2, label: 正常, tone: safe, description: "Intervals.icu 1–4 等级，数值低表示疲劳轻。" }
+      - { max: 3, label: 偏高, tone: caution, description: "Intervals.icu 1–4 等级，疲劳感偏重。" }
+      - { min: 3, label: 过高, tone: danger, description: "Intervals.icu 1–4 等级，疲劳感很重。" }
+
+  - key: soreness
+    display_name: 主观酸痛 (Soreness)
+    classification: source_input
+    category: wellness_input
+    storage_unit: rating
+    display_unit: /4
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 4 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: soreness, aggregation: latest }
+    zones:
+      - { max: 2, label: 正常, tone: safe, description: "Intervals.icu 1–4 等级，数值低表示酸痛轻。" }
+      - { max: 3, label: 偏高, tone: caution, description: "Intervals.icu 1–4 等级，酸痛感偏重。" }
+      - { min: 3, label: 过高, tone: danger, description: "Intervals.icu 1–4 等级，酸痛感很重。" }
+
+  - key: stress
+    display_name: 主观压力 (Stress)
+    classification: source_input
+    category: wellness_input
+    storage_unit: rating
+    display_unit: /4
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 4 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: stress, aggregation: latest }
+    zones:
+      - { max: 2, label: 正常, tone: safe, description: "Intervals.icu 1–4 等级，数值低表示压力小。" }
+      - { max: 3, label: 偏高, tone: caution, description: "Intervals.icu 1–4 等级，压力偏大。" }
+      - { min: 3, label: 过高, tone: danger, description: "Intervals.icu 1–4 等级，压力很大。" }
+
+  - key: mood
+    display_name: 心情 (Mood)
+    classification: source_input
+    category: wellness_input
+    storage_unit: rating
+    display_unit: /4
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 4 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: mood, aggregation: latest }
+    zones:
+      - { max: 2, label: 偏低, tone: caution, description: "Intervals.icu 1–4 等级，数值低表示心情差。" }
+      - { min: 2, label: 良好, tone: safe, description: "Intervals.icu 1–4 等级，数值高表示心情好。" }
+
+  - key: motivation
+    display_name: 动机 (Motivation)
+    classification: source_input
+    category: wellness_input
+    storage_unit: rating
+    display_unit: /4
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 4 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: motivation, aggregation: latest }
+    zones:
+      - { max: 2, label: 偏低, tone: caution, description: "Intervals.icu 1–4 等级，数值低表示训练动机弱。" }
+      - { min: 2, label: 良好, tone: safe, description: "Intervals.icu 1–4 等级，数值高表示训练动机强。" }
+
+  - key: injury_status
+    display_name: 伤病感受 (Injury Status)
+    classification: source_input
+    category: wellness_input
+    storage_unit: rating
+    display_unit: /4
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 1, maximum: 4 }
+    materialization: source_input
+    ui_precision: 0
+    source: { table: health_wellness, column: injury_status, aggregation: latest }
+    zones:
+      - { max: 2, label: 正常, tone: safe, description: "Intervals.icu 1–4 等级，数值低表示无伤病困扰。" }
+      - { max: 3, label: 偏高, tone: caution, description: "Intervals.icu 1–4 等级，存在伤病不适。" }
+      - { min: 3, label: 过高, tone: danger, description: "Intervals.icu 1–4 等级，伤病困扰明显，考虑就医。" }
+
+  - key: weight
+    display_name: 体重 (Body Weight)
+    classification: source_input
+    category: body
+    storage_unit: kg
+    display_unit: kg
+    null_semantics: unavailable_from_source
+    legal_range: { minimum: 20, maximum: 300 }
+    materialization: source_input
+    ui_precision: 1
+    source: { table: health_wellness, column: weight, aggregation: latest }
+
+  # ── Activity computed metrics (intensity) ──
+  - key: normalized_power
+    display_name: 标准化功率 (Normalized Power)
+    classification: local_computation
+    category: intensity
+    storage_unit: w
+    display_unit: W
+    null_semantics: insufficient_power_samples
+    legal_range: { minimum: 0, maximum: 3000 }
+    materialization: stored_fact
+    ui_precision: 0
+
+  - key: intensity_factor
+    display_name: 强度系数 (Intensity Factor)
+    classification: local_computation
+    category: intensity
+    storage_unit: ratio
+    display_unit: ''
+    null_semantics: ftp_unavailable
+    legal_range: { minimum: 0, maximum: 5 }
+    materialization: stored_fact
+    ui_precision: 2
+
+  - key: efficiency_factor
+    display_name: 效率系数 (Efficiency Factor)
+    classification: local_computation
+    category: intensity
+    storage_unit: ratio
+    display_unit: ''
+    null_semantics: insufficient_effort_or_cardio_samples
+    legal_range: { minimum: 0, maximum: 5 }
+    materialization: stored_fact
+    ui_precision: 2
+
+  - key: aerobic_decoupling_pct
+    display_name: 有氧漂移 (Aerobic Decoupling)
+    classification: local_computation
+    category: intensity
+    storage_unit: percent
+    display_unit: '%'
+    null_semantics: insufficient_steady_state_window
+    legal_range: { minimum: -100, maximum: 100 }
+    materialization: stored_fact
+    ui_precision: 1
+
+  - key: normalized_graded_pace
+    display_name: 标准化坡度配速 (NGP)
+    classification: local_computation
+    category: intensity
+    storage_unit: s_km
+    display_unit: min/km
+    null_semantics: insufficient_speed_or_grade_samples
+    legal_range: { minimum: 120, maximum: 1800 }
+    materialization: stored_fact
+    ui_precision: 0
+
+  - key: gap_avg
+    display_name: 平均坡度修正配速 (Gap Avg)
+    classification: local_computation
+    category: intensity
+    storage_unit: s_km
+    display_unit: min/km
+    null_semantics: insufficient_speed_or_grade_samples
+    legal_range: { minimum: 120, maximum: 1800 }
+    materialization: stored_fact
+    ui_precision: 0
+
+  # ── Activity computed metrics (load) ──
+  - key: tss
+    display_name: 训练压力分数 (TSS)
+    classification: local_computation
+    category: load
+    storage_unit: points
+    display_unit: ''
+    null_semantics: insufficient_load_inputs
+    legal_range: { minimum: 0, maximum: 10000 }
+    materialization: stored_fact
+    ui_precision: 1
+
+  - key: rtss
+    display_name: 跑步训练压力分数 (rTSS)
+    classification: local_computation
+    category: load
+    storage_unit: points
+    display_unit: ''
+    null_semantics: threshold_pace_unavailable
+    legal_range: { minimum: 0, maximum: 10000 }
+    materialization: stored_fact
+    ui_precision: 1
+
+  # ── PMC daily metrics (load) ──
+  - key: daily_tss
+    display_name: 每日训练压力分数 (Daily TSS)
+    classification: local_computation
+    category: load
+    storage_unit: points
+    display_unit: ''
+    null_semantics: no_completed_activities
+    legal_range: { minimum: 0, maximum: 10000 }
+    materialization: stored_fact
+    ui_precision: 1
+
+  - key: ctl
+    display_name: 长期训练负荷 (CTL)
+    classification: local_computation
+    category: load
+    storage_unit: points
+    display_unit: ''
+    null_semantics: no_load_history
+    legal_range: { minimum: 0, maximum: 10000 }
+    materialization: stored_fact
+    ui_precision: 1
+    zones:
+      - { max: 20, label: 新手, tone: neutral, description: "CTL < 20，基础体能较低，适合循序渐进。" }
+      - { max: 40, label: 中等, tone: safe, description: "CTL 20–40，有氧能力中等，多数业余训练者区间。" }
+      - { min: 40, label: 精英, tone: safe, description: "CTL > 40，高水平有氧能力，接近竞技选手。" }
+
+  - key: atl
+    display_name: 短期训练负荷 (ATL)
+    classification: local_computation
+    category: load
+    storage_unit: points
+    display_unit: ''
+    null_semantics: no_load_history
+    legal_range: { minimum: 0, maximum: 10000 }
+    materialization: stored_fact
+    ui_precision: 1
+    zones:
+      - { max: 15, label: 低负荷, tone: safe, description: "ATL < 15，当前疲劳较低，恢复充分。" }
+      - { max: 40, label: 中等负荷, tone: caution, description: "ATL 15–40，训练负荷适中。" }
+      - { min: 40, label: 高负荷, tone: danger, description: "ATL > 40，短期疲劳较重，注意恢复。" }
+
+  # ── PMC balance metrics (load_balance) ──
+  - key: tsb
+    display_name: 训练压力平衡 (TSB)
+    classification: local_computation
+    category: load_balance
+    storage_unit: points
+    display_unit: ''
+    null_semantics: no_load_history
+    legal_range: { minimum: -10000, maximum: 10000 }
+    materialization: stored_fact
+    ui_precision: 1
+    zones:
+      - { max: -30, label: 过载风险, tone: danger, description: "低于 -30，急性疲劳明显高于体能，优先恢复。" }
+      - { max: -20, label: 疲劳偏高, tone: caution, description: "-30 到 -20，训练刺激较重，适合降量或轻松日。" }
+      - { max: 10, label: 平衡, tone: safe, description: "-20 到 +10，多数日常训练处于可持续区间。" }
+      - { max: 25, label: 新鲜窗口, tone: safe, description: "+10 到 +25，恢复充分，适合比赛或关键课。" }
+      - { min: 25, label: 负荷过轻, tone: neutral, description: "高于 +25，短期很新鲜，但持续过高可能训练刺激不足。" }
+    note: "CTL(42d) − ATL(7d)。与 ACWR（28d 慢性窗口）可能给出相反信号——TSB 偏重体能-疲劳差，ACWR 偏重负荷变化速率。两者矛盾时，短期决策看 TSB，损伤风险评估看 ACWR。"
+
+  - key: acwr
+    display_name: 急慢性负荷比 (ACWR)
+    classification: local_computation
+    category: load_balance
+    storage_unit: ratio
+    display_unit: ''
+    null_semantics: insufficient_load_history
+    legal_range: { minimum: 0, maximum: 20 }
+    materialization: stored_fact
+    ui_precision: 2
+    zones:
+      - { max: 0.8, label: 减量风险, tone: caution, description: "ACWR < 0.8，负荷下降过快，可能训练刺激不足。" }
+      - { max: 1.3, label: 安全区, tone: safe, description: "ACWR 0.8–1.3，负荷增长在安全范围内。" }
+      - { max: 1.5, label: 偏高, tone: caution, description: "ACWR 1.3–1.5，负荷增长较快，需关注恢复。" }
+      - { min: 1.5, label: 损伤风险, tone: danger, description: "ACWR > 1.5，急性负荷急剧上升，损伤风险高。" }
+    note: "ACWR 的损伤预测效力在近年运动科学文献中存在争议。作为辅助参考，不作为唯一决策依据。"
+
+  # ── Physiology ability metrics ──
+  - key: hr_max
+    display_name: 最大心率 (HRmax)
+    classification: local_computation
+    category: ability
+    storage_unit: bpm
+    display_unit: bpm
+    null_semantics: insufficient_sessions
+    legal_range: { minimum: 60, maximum: 260 }
+    materialization: stored_fact
+    ui_precision: 0
+
+  - key: lthr
+    display_name: 乳酸阈值心率 (LTHR)
+    classification: local_computation
+    category: ability
+    storage_unit: bpm
+    display_unit: bpm
+    null_semantics: insufficient_efforts
+    legal_range: { minimum: 40, maximum: 250 }
+    materialization: stored_fact
+    ui_precision: 0
+
+  - key: threshold_pace
+    display_name: 阈值配速 (Threshold Pace)
+    classification: local_computation
+    category: ability
+    storage_unit: s_km
+    display_unit: min/km
+    null_semantics: insufficient_efforts
+    legal_range: { minimum: 120, maximum: 1800 }
+    materialization: stored_fact
+    ui_precision: 0
+
+  - key: vdot
+    display_name: VDOT跑力 (VDOT)
+    classification: local_computation
+    category: ability
+    storage_unit: score
+    display_unit: ''
+    null_semantics: insufficient_race_efforts
+    legal_range: { minimum: 20, maximum: 100 }
+    materialization: stored_fact
+    ui_precision: 1
+
+  # ── Recovery score (on-the-fly) ──
+  - key: local_readiness
+    display_name: 本地恢复评分 (Local Readiness)
+    classification: local_computation
+    category: recovery
+    storage_unit: score
+    display_unit: ''
+    null_semantics: insufficient_recovery_inputs
+    legal_range: { minimum: 0, maximum: 100 }
+    materialization: on_the_fly
+    ui_precision: 0
+
+  # ── Cadence (activity stream aggregate) ──
+  - key: cadence
+    display_name: 步频 (Cadence)
+    classification: source_input
+    category: intensity
+    storage_unit: rpm
+    display_unit: rpm
+    null_semantics: absent_sample
+    legal_range: { minimum: 0, maximum: 300 }
+    materialization: source_input
+    ui_precision: 0

@@ -1,0 +1,21 @@
+[Unit]
+Description=Running Man frontend for e2e (port 28801)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/workspace/code/running-man/apps/web
+Environment=PATH=%h/.nvm/versions/node/v22.22.0/bin:/usr/bin:/bin
+# UTC, because that is what production runs. Vercel executes server functions in
+# UTC while athletes read the page in Asia/Shanghai, and that split is the whole
+# reason a date rendered during render produced a hydration mismatch that this
+# gate could not see: with the server on the same clock as the browser, the bug
+# is unreproducible and every test passes. Matching production here is what makes
+# the client-rendering specs meaningful.
+Environment=TZ=UTC
+ExecStart=%h/.nvm/versions/node/v22.22.0/bin/npx next start -p 28801
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

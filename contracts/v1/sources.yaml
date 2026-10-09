@@ -1,0 +1,27 @@
+version: 1
+sources:
+  - key: intervals_icu
+    display_name: Intervals.icu
+    aliases: []
+    adapter_only_aliases: [intervals.icu]
+    input_metrics: [source_readiness, source_training_load, source_weighted_power_w, resting_hr, hrv, hrv_sdnn, sleep_secs, sleep_score, sleep_quality, avg_sleeping_hr, spo2, respiration_rate, systolic_bp, diastolic_bp, vo2max, steps, kcal_consumed, carbs_g, protein_g, fat_g, hydration, body_fat_pct, menstrual_phase, menstrual_phase_predicted, weight, fatigue, soreness, stress, mood, motivation, injury_status]
+  - key: fit
+    display_name: FIT file
+    aliases: []
+    adapter_only_aliases: []
+    input_metrics: []
+  - key: gpx
+    display_name: GPX file
+    aliases: []
+    adapter_only_aliases: []
+    input_metrics: []
+  - key: tcx
+    display_name: TCX file
+    aliases: []
+    adapter_only_aliases: []
+    input_metrics: []
+  - key: manual
+    display_name: Manual entry
+    aliases: []
+    adapter_only_aliases: []
+    input_metrics: []

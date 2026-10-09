@@ -1,0 +1,3 @@
+metrics:
+  - key: distance_m
+    storage_unit: km

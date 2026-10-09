@@ -1,0 +1,44 @@
+version: 1
+metrics:
+  - key: distance_m
+    display_name: 距离
+    classification: source_input
+    storage_unit: km
+    display_unit: km
+    null_semantics: not_applicable
+    legal_range: { minimum: 0, maximum: 2000000 }
+    materialization: source_input
+    ui_precision: 2
+  - key: duplicate_distance
+    display_name: 距离
+    classification: source_input
+    storage_unit: m
+    display_unit: km
+    null_semantics: not_applicable
+    legal_range: { minimum: 0, maximum: 2000000 }
+    materialization: source_input
+    ui_precision: 2
+  - key: missing_display_unit
+    display_name: 无显示单位
+    classification: source_input
+    storage_unit: m
+    null_semantics: not_applicable
+    legal_range: { minimum: 0, maximum: 2000000 }
+    materialization: source_input
+    ui_precision: 2
+  - key: missing_storage_unit
+    display_name: 无存储单位
+    classification: source_input
+    display_unit: km
+    null_semantics: not_applicable
+    legal_range: { minimum: 0, maximum: 2000000 }
+    materialization: source_input
+    ui_precision: 2
+  - key: missing_range
+    display_name: 无范围
+    classification: source_input
+    storage_unit: score
+    display_unit: ''
+    null_semantics: unavailable_from_source
+    materialization: source_input
+    ui_precision: 0

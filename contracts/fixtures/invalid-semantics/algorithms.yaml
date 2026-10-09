@@ -1,0 +1,14 @@
+version: 1
+algorithms:
+  - key: activity_load
+    version: 1.0.0
+    materialization: stored_fact
+  - key: pmc
+    version: 1.0.0
+    materialization: stored_fact
+  - key: physiology
+    version: 1.0.0
+    materialization: stored_fact
+  - key: detected_ftp
+    version: 1.0.0
+    materialization: stored_fact

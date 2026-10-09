@@ -1,0 +1,13 @@
+[Unit]
+Description=Running Man database partition maintenance
+After=running-man-api.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/workspace/code/running-man
+EnvironmentFile=%h/workspace/code/running-man/apps/api/.env
+# Absolute venv path, not a bare `uv`: systemd's user PATH excludes
+# ~/.local/bin, so the previous invocation failed with status 127 and these
+# units never ran at all. The audit reported nothing for months and the
+# partition set only reached beyond today because it had been created by hand.
+ExecStart=%h/workspace/code/running-man/apps/api/.venv/bin/python %h/workspace/code/running-man/scripts/maintain_database.py partitions --months-ahead 24 --json

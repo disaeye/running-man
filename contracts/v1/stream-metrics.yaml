@@ -1,0 +1,14 @@
+version: 1
+stream_metrics:
+  - { key: heart_rate, storage_unit: bpm, display_unit: bpm, null_semantics: absent_sample, legal_range: { minimum: 1, maximum: 260 }, adapter_only_aliases: [heartrate] }
+  - { key: power, storage_unit: w, display_unit: W, null_semantics: absent_sample, legal_range: { minimum: 0, maximum: 3000 }, adapter_only_aliases: [watts] }
+  - { key: speed, storage_unit: m_s, display_unit: m/s, null_semantics: absent_sample, legal_range: { minimum: 0, maximum: 40 }, adapter_only_aliases: [velocity_smooth] }
+  - { key: cadence, storage_unit: rpm, display_unit: rpm, null_semantics: absent_sample, legal_range: { minimum: 0, maximum: 300 }, adapter_only_aliases: [] }
+  - { key: distance, storage_unit: m, display_unit: km, null_semantics: absent_sample, legal_range: { minimum: 0, maximum: 2000000 }, adapter_only_aliases: [] }
+  - { key: altitude, storage_unit: m, display_unit: m, null_semantics: absent_sample, legal_range: { minimum: -1000, maximum: 10000 }, adapter_only_aliases: [] }
+  - { key: grade, storage_unit: percent, display_unit: '%', null_semantics: absent_sample, legal_range: { minimum: -100, maximum: 100 }, adapter_only_aliases: [grade_smooth] }
+  - { key: temperature, storage_unit: celsius, display_unit: °C, null_semantics: absent_sample, legal_range: { minimum: -80, maximum: 80 }, adapter_only_aliases: [] }
+  - { key: left_right_balance, storage_unit: percent_left, display_unit: '% left', null_semantics: absent_sample, legal_range: { minimum: 0, maximum: 100 }, adapter_only_aliases: [] }
+  - { key: vertical_oscillation, storage_unit: cm, display_unit: cm, null_semantics: absent_sample, legal_range: { minimum: 0, maximum: 50 }, adapter_only_aliases: [] }
+  - { key: ground_contact_time, storage_unit: ms, display_unit: ms, null_semantics: absent_sample, legal_range: { minimum: 0, maximum: 2000 }, adapter_only_aliases: [stance_time] }
+  - { key: stride_length, storage_unit: m, display_unit: m, null_semantics: absent_sample, legal_range: { minimum: 0, maximum: 10 }, adapter_only_aliases: [step_length] }

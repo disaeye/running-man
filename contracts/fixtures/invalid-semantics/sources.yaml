@@ -1,0 +1,7 @@
+version: 1
+sources:
+  - key: intervals.icu
+    display_name: Intervals.icu
+    aliases: []
+    adapter_only_aliases: []
+    input_metrics: []

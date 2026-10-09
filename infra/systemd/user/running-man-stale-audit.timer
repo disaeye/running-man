@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Running Man stale computation audit
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=running-man-stale-audit.service
+
+[Install]
+WantedBy=timers.target

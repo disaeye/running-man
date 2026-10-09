@@ -1,0 +1,13 @@
+[Unit]
+Description=Run the Running Man activity sync every 30 minutes
+
+[Timer]
+# Fires often; each athlete is only synced when their own frequency says they
+# are due. A coarser schedule would either sync hourly users late or daily
+# users hourly.
+OnCalendar=*:0/30
+Persistent=true
+Unit=running-man-sync.service
+
+[Install]
+WantedBy=timers.target
