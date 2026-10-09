@@ -7,6 +7,7 @@ import pytest
 from application.computation.orchestration import recompute_after_activity_change
 from application.load import recompute as activity_recompute
 from application.load.recompute import recompute_activity_load_facts
+from conftest import TEST_DSN
 from tests.integration.recompute_verifier_helpers import (
     ACTIVITY_ID,
     ATHLETE_ID,
@@ -18,7 +19,7 @@ from tests.integration.recompute_verifier_helpers import (
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.no_db]
 
-TEST_DSN = "postgresql://postgres@/test_running_man?host=/var/run/postgresql&port=15434"
+
 
 
 async def test_ordered_chain_skips_unchanged_inputs_without_fact_diff() -> None:

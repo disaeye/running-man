@@ -10,6 +10,7 @@ import pytest
 
 from application.load import pmc_facts
 from application.load.pmc_facts import ALGORITHM_VERSION, recompute_pmc_facts
+from conftest import TEST_DSN
 from domain.load.pmc import build_pmc_series
 from infrastructure.auth.settings import settings
 from infrastructure.db import domain_constraints
@@ -22,7 +23,7 @@ ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000014")
 
 
 def _configure_database_url() -> None:
-    settings.database_url = "postgresql://postgres@/test_running_man?host=/var/run/postgresql&port=15434"
+    settings.database_url = TEST_DSN
 
 
 @pytest.fixture(scope="session")

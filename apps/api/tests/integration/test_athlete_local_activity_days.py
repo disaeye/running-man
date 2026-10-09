@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 import psycopg
 import pytest
 
+from conftest import TEST_DSN
 from infrastructure.auth.models import Athlete
 from infrastructure.auth.settings import settings
 from infrastructure.db.pool import close_pool, open_pool
@@ -14,7 +15,7 @@ from infrastructure.repositories.activity_reads import ActivityReadRepo
 from tests.integration.helpers import ensure_tables
 
 pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.no_db]
-TEST_DSN = "postgresql://postgres@/test_running_man?host=/var/run/postgresql&port=15434"
+
 ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000071")
 
 

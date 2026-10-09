@@ -12,8 +12,9 @@ Usage:
   scripts/run_gates.py web api    # selected groups
   scripts/run_gates.py --fast     # skip next build (slowest gate)
 
-pytest is SKIPPED unless the dedicated test PostgreSQL instance is present
-(unix socket /var/run/postgresql/.s.PGSQL.15434, see docs/operations.md).
+pytest is SKIPPED unless the dedicated test database is reachable. The test
+DSN comes from TEST_DATABASE_URL (default in apps/api/conftest.py), e.g.
+  export TEST_DATABASE_URL='postgresql://user:pw@127.0.0.1:5432/test_running_man'
 Exit code is non-zero when any gate fails.
 """
 from __future__ import annotations
@@ -34,9 +35,51 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gate_e2e as _e2e  # noqa: E402
 API_DIR: Final = REPO_ROOT / "apps" / "api"
 WEB_DIR: Final = REPO_ROOT / "apps" / "web"
-PYTEST_SOCKET: Final = Path("/var/run/postgresql/.s.PGSQL.15434")
+
+# Test database DSN. Kept in sync with the default in apps/api/conftest.py;
+# TEST_DATABASE_URL overrides it for other machines.
+TEST_DATABASE_URL: Final = os.environ.get(
+    "TEST_DATABASE_URL",
+    "postgresql://wind_runner:runner1234@127.0.0.1:5432/test_running_man",
+)
 
 FAIL_OUTPUT_TAIL: Final = 40
+
+
+def redact(dsn: str) -> str:
+    """Strip the password from a DSN so it is safe to print in gate output."""
+    scheme, _, rest = dsn.partition("://")
+    if "@" not in rest:
+        return dsn
+    credentials, _, host = rest.rpartition("@")
+    user, _, _ = credentials.partition(":")
+    return f"{scheme}://{user}:***@{host}"
+
+
+def test_db_reachable() -> bool:
+    """True when the test database accepts a connection.
+
+    Probes with the same DSN the pytest suite will use, so the gate and the
+    tests can never disagree about whether the database is available.
+    """
+    python = str(API_DIR / ".venv/bin/python")
+    probe = (
+        "import sys, psycopg\n"
+        "try:\n"
+        f"    psycopg.connect({TEST_DATABASE_URL!r}, connect_timeout=3).close()\n"
+        "except Exception:\n"
+        "    sys.exit(1)\n"
+    )
+    try:
+        return subprocess.run(
+            [python, "-c", probe],
+            cwd=API_DIR,
+            capture_output=True,
+            timeout=15,
+            check=False,
+        ).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 @dataclass(slots=True)
@@ -114,8 +157,11 @@ def api_gates() -> list[Gate]:
             API_DIR,
         ),
     ]
-    if not PYTEST_SOCKET.exists():
-        reason = f"test DB socket {PYTEST_SOCKET} absent — start the 15434 instance (docs/operations.md)"
+    if not test_db_reachable():
+        reason = (
+            f"test database unreachable ({redact(TEST_DATABASE_URL)}) — set "
+            "TEST_DATABASE_URL to a provisioned test DB (docs/operations.md)"
+        )
         gates.append(Gate("api", "pytest", ["true"], API_DIR, skip_reason=reason))
     else:
         gates.append(

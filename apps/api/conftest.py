@@ -1,6 +1,7 @@
 """pytest configuration: PostgreSQL fixture + VCR.py setup."""
 
 import asyncio
+import os
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from typing import cast
@@ -12,7 +13,16 @@ from _pytest.fixtures import SubRequest
 from infrastructure.auth.settings import settings as app_settings
 from infrastructure.db.pool import close_pool, open_pool
 
-TEST_DSN = "postgresql://postgres@/test_running_man?host=/var/run/postgresql&port=15434"
+# Test database DSN. Plain TCP, no unix-socket indirection: the DSN is the
+# single source of truth for every DB-backed test (several import it from here
+# instead of hardcoding their own copy).
+#
+# Override per-machine with TEST_DATABASE_URL, e.g.
+#   export TEST_DATABASE_URL='postgresql://user:pw@127.0.0.1:5432/test_running_man'
+TEST_DSN = os.environ.get(
+    "TEST_DATABASE_URL",
+    "postgresql://wind_runner:runner1234@127.0.0.1:5432/test_running_man",
+)
 
 
 @pytest.fixture(scope="session")

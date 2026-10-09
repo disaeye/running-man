@@ -18,6 +18,7 @@ from uuid import UUID
 import psycopg
 import pytest
 
+from conftest import TEST_DSN
 from infrastructure.auth.settings import settings
 from tests.application.load.activity_fact_schema import ensure_activity_fact_schema
 
@@ -27,7 +28,7 @@ from tests.application.load.activity_fact_schema import ensure_activity_fact_sch
 pytestmark = [pytest.mark.no_db]
 
 ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000021")
-TEST_DSN = "postgresql://postgres@/test_running_man?host=/var/run/postgresql&port=15434"
+
 
 
 def _configure() -> None:

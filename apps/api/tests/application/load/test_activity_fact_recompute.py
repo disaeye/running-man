@@ -14,6 +14,7 @@ import psycopg
 import pytest
 
 from application.load.recompute import recompute_activity_load_facts
+from conftest import TEST_DSN
 from infrastructure.auth.settings import settings
 from infrastructure.db import domain_constraints
 from infrastructure.db.pool import close_pool, open_pool
@@ -25,7 +26,7 @@ ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000013")
 
 
 def _configure_database_url() -> None:
-    settings.database_url = "postgresql://postgres@/test_running_man?host=/var/run/postgresql&port=15434"
+    settings.database_url = TEST_DSN
 
 
 @pytest.fixture(scope="session")

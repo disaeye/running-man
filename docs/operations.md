@@ -54,7 +54,7 @@ paths.
 ## Restore drill
 
 ```bash
-export TEST_DATABASE_URL='postgresql://postgres@/test_running_man?host=/var/run/postgresql&port=15434'
+export TEST_DATABASE_URL='postgresql://user:pw@127.0.0.1:5432/test_running_man'
 ./scripts/restore.sh backups/<file>.sql
 python scripts/verify_restore.py "$DATABASE_URL" "$TEST_DATABASE_URL"
 ```
@@ -65,7 +65,7 @@ identity file, restore into the disposable `TEST_DATABASE_URL`, then run schema
 lifecycle verification against the manifest revision:
 
 ```bash
-export TEST_DATABASE_URL='postgresql://postgres@/todo12_restore_schema?host=/var/run/postgresql&port=15434'
+export TEST_DATABASE_URL='postgresql://user:pw@127.0.0.1:5432/todo12_restore_schema'
 export BACKUP_AGE_IDENTITY_FILE='/run/secrets/running-man/backup-age-identity.txt'
 export RCLONE_CONFIG='/run/secrets/running-man/rclone.conf'
 ./scripts/restore.sh --encrypted-offsite 'remote:running-man/backups/<file>.manifest.json'
@@ -84,7 +84,7 @@ Fresh-schema lifecycle drill:
 ```bash
 uv run --project apps/api python scripts/verify_schema_lifecycle.py \
   --create-fresh \
-  --admin-database-url 'postgresql://postgres@/postgres?host=/var/run/postgresql&port=15434' \
+  --admin-database-url 'postgresql://user:pw@127.0.0.1:5432/postgres' \
   --database-name todo12_schema_lifecycle \
   --exercise-reversibility \
   --json

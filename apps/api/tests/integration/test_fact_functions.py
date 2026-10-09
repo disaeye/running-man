@@ -6,10 +6,9 @@ from uuid import UUID, uuid4
 import psycopg
 import pytest
 
+from conftest import TEST_DSN
 from infrastructure.auth.settings import settings
 from tests.application.load.activity_fact_schema import ensure_activity_fact_schema
-
-TEST_DSN = "postgresql://postgres@/test_running_man?host=/var/run/postgresql&port=15434"
 
 ATHLETE_ID = uuid4()
 RUN_ID = "fact-run"

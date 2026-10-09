@@ -6,10 +6,11 @@ import psycopg
 import pytest
 
 from application.computation.queue_worker import RecomputeQueueWorker
+from conftest import TEST_DSN
 from infrastructure.repositories.recompute_jobs import RecomputeJobRepo
 
 pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.no_db]
-TEST_DSN = "postgresql://postgres@/test_running_man?host=/var/run/postgresql&port=15434"
+
 
 
 async def test_queue_coalesces_requests_and_persists_generation(db_conn: psycopg.Connection) -> None:
