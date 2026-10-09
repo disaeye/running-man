@@ -1,0 +1,18 @@
+{
+  "diagnostics": [
+    {
+      "actual": "d8e9f0a1b2c3",
+      "code": "omitted_migration",
+      "expected": "f0a1b2c3d4e5",
+      "message": "database is not upgraded to the expected Alembic head",
+      "path": "alembic.head"
+    },
+    {
+      "actual": "present",
+      "code": "manual_column_drift",
+      "expected": null,
+      "message": "manual column is not modeled by metadata",
+      "path": "tables.activity_summary.columns.manual_debug"
+    }
+  ]
+}

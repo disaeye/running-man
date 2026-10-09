@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "actual": "18",
+      "code": "seed_count_mismatch",
+      "expected": "19",
+      "message": "seed count mismatch",
+      "path": "tables.metric_definitions"
+    }
+  ]
+}

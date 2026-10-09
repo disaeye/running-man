@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "actual": "d8e9f0a1b2c3",
+      "code": "omitted_migration",
+      "expected": "e9f0a1b2c3d4",
+      "message": "unexpected Alembic head",
+      "path": "alembic.head"
+    }
+  ]
+}
