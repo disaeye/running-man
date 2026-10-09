@@ -283,7 +283,8 @@ def run_gate(gate: Gate) -> Result:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    summary = (__doc__ or __file__).splitlines()[0]
+    parser = argparse.ArgumentParser(description=summary)
     parser.add_argument("groups", nargs="*", metavar="group", default=[],
                         help="web | api | contract | all (default: all)")
     parser.add_argument("--fast", action="store_true", help="skip next build")

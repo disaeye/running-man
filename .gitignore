@@ -47,3 +47,6 @@ apps/web/e2e/.auth/
 .accounts-backup.csv
 .dead-files-backup.txt
 .debug-journal.md
+
+# Research scratch output (one-off probes, vendored tarballs, draft specs)
+research_output/

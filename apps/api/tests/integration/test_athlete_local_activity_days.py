@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from datetime import UTC, date, datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -20,7 +21,7 @@ ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000071")
 
 
 @pytest.fixture(scope="session")
-async def activity_pool() -> None:
+async def activity_pool() -> AsyncGenerator[None, None]:
     settings.database_url = TEST_DSN
     await close_pool()
     await open_pool()
