@@ -1,0 +1,18 @@
+# Local-only files — never deploy these to Vercel
+.env
+.env.local
+.env.*.local
+
+# Local test/QA artifacts
+.vercel
+.test-results
+.playwright-mcp
+.omo
+.tsbuildinfo
+*.tsbuildinfo
+coverage
+playwright-report
+test-results
+
+# QA auth fixtures (local-only, references absolute paths)
+.auth
