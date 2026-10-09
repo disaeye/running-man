@@ -1,0 +1,16 @@
+[Unit]
+Description=Running Man frontend (Next.js, port 31000)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/workspace/code/running-man/apps/web
+EnvironmentFile=%h/workspace/code/running-man/apps/web/.env
+# Absolute nvm path rather than `npx`: systemd's user PATH does not include
+# nvm's shims, and the version is pinned to the one installed on this host.
+ExecStart=%h/.nvm/versions/node/v24.21.0/bin/node node_modules/next/dist/bin/next start -p 31000
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
