@@ -37,10 +37,11 @@ API_DIR: Final = REPO_ROOT / "apps" / "api"
 WEB_DIR: Final = REPO_ROOT / "apps" / "web"
 
 # Test database DSN. Kept in sync with the default in apps/api/conftest.py;
-# TEST_DATABASE_URL overrides it for other machines.
+# TEST_DATABASE_URL overrides it. The default carries no credentials, so it is
+# safe to keep in version control.
 TEST_DATABASE_URL: Final = os.environ.get(
     "TEST_DATABASE_URL",
-    "postgresql://wind_runner:runner1234@127.0.0.1:5432/test_running_man",
+    "postgresql://postgres@127.0.0.1:5432/test_running_man",
 )
 
 FAIL_OUTPUT_TAIL: Final = 40

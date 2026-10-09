@@ -17,11 +17,12 @@ from infrastructure.db.pool import close_pool, open_pool
 # single source of truth for every DB-backed test (several import it from here
 # instead of hardcoding their own copy).
 #
-# Override per-machine with TEST_DATABASE_URL, e.g.
-#   export TEST_DATABASE_URL='postgresql://user:pw@127.0.0.1:5432/test_running_man'
+# The default carries no credentials, so it is safe to keep in version
+# control. Any real environment must supply its own:
+#   export TEST_DATABASE_URL='postgresql://user:pw@host:5432/test_running_man'
 TEST_DSN = os.environ.get(
     "TEST_DATABASE_URL",
-    "postgresql://wind_runner:runner1234@127.0.0.1:5432/test_running_man",
+    "postgresql://postgres@127.0.0.1:5432/test_running_man",
 )
 
 
