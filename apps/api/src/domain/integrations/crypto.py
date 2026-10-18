@@ -21,5 +21,5 @@ def decrypt(data: str) -> dict[str, object]:
 
 
 def _xor(data: bytes) -> bytes:
-    key = settings.jwt_secret.encode() or b"change-me-to-a-random-secret"
+    key = settings.jwt_secret.encode()
     return bytes(byte ^ key_byte for byte, key_byte in zip(data, cycle(key), strict=False))
