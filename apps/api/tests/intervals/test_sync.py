@@ -114,7 +114,9 @@ async def test_incremental_inserts_activities(
     ensure_activity_summary(db_conn)
     insert_athlete(db_conn)
 
-    async with IntervalsClient(api_key="API_KEY_PLACEHOLDER", rate_limiter=NoopLimiter()) as client:
+    async with IntervalsClient(
+        api_key="API_KEY_PLACEHOLDER", athlete_id=0, rate_limiter=NoopLimiter()
+    ) as client:
         with validation_vcr().use_cassette(str(CASSETTE)):
             count = await sync.sync_activities_incremental(
                 TEST_ATHLETE_ID, CassetteActivitiesClient(client), db_conn
@@ -143,7 +145,9 @@ async def test_dedup_keeps_row_count_stable(
     ensure_activity_summary(db_conn)
     insert_athlete(db_conn)
 
-    async with IntervalsClient(api_key="API_KEY_PLACEHOLDER", rate_limiter=NoopLimiter()) as client:
+    async with IntervalsClient(
+        api_key="API_KEY_PLACEHOLDER", athlete_id=0, rate_limiter=NoopLimiter()
+    ) as client:
         cassette_client = CassetteActivitiesClient(client)
         with validation_vcr().use_cassette(str(CASSETTE), allow_playback_repeats=True):
             await sync.backfill_activities(

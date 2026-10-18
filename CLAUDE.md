@@ -179,9 +179,8 @@ Never create duplicate `SPORT_LABEL` maps elsewhere. Always `import { getSportCo
 | Variable | Where | Purpose |
 |---|---|---|
 | `DATABASE_URL` | `apps/api/.env` | PostgreSQL connection |
-| `JWT_SECRET` | `apps/api/.env` | Token signing |
-| `INTERVALS_ICU_API_KEY` | `apps/api/.env` | Intervals.icu sync |
-| `INTERVALS_ICU_ATHLETE_ID` | `apps/api/.env` | Intervals.icu athlete |
+| `JWT_SECRET` | `apps/api/.env` | Token signing and stored integration credential encryption (min 32 bytes, required) |
+| `WEBHOOK_SECRET` | `apps/api/.env` | Shared secret the Intervals.icu webhook must echo (min 16 bytes, required) |
 | `API_URL` | `apps/web/.env` | Server-side rewrite target for `/api/*` (default `http://127.0.0.1:31001`) |
 | `NEXT_PUBLIC_API_URL` | `apps/web/.env` | Legacy fallback, used only when `API_URL` is unset |
 | `TEST_DATABASE_URL` | shell env (optional) | Overrides the derived `wind_runner_test` DSN for pytest / `run_gates.py` |

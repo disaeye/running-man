@@ -45,7 +45,9 @@ def _insert_athlete(db: psycopg.Connection) -> None:
 async def test_sync_wellness_inserts_records(db_conn: psycopg.Connection) -> None:
     _insert_athlete(db_conn)
 
-    async with IntervalsClient(api_key="API_KEY_PLACEHOLDER", rate_limiter=NoopLimiter()) as client:
+    async with IntervalsClient(
+        api_key="API_KEY_PLACEHOLDER", athlete_id=0, rate_limiter=NoopLimiter()
+    ) as client:
         with wellness_vcr().use_cassette(str(CASSETTE)):
             count = await sync_wellness(
                 athlete_id=TEST_ATHLETE_ID,
@@ -92,7 +94,9 @@ async def test_sync_wellness_dedup(db_conn: psycopg.Connection) -> None:
     NOT create duplicate rows (ON CONFLICT DO UPDATE)."""
     _insert_athlete(db_conn)
 
-    async with IntervalsClient(api_key="API_KEY_PLACEHOLDER", rate_limiter=NoopLimiter()) as client:
+    async with IntervalsClient(
+        api_key="API_KEY_PLACEHOLDER", athlete_id=0, rate_limiter=NoopLimiter()
+    ) as client:
         with wellness_vcr().use_cassette(str(CASSETTE)):
             count1 = await sync_wellness(
                 athlete_id=TEST_ATHLETE_ID,

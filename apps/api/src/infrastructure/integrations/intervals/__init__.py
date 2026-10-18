@@ -1,3 +1,3 @@
-from .client import IntervalsClient, IntervalsClientError, IntervalsSettings
+from .client import IntervalsClient, IntervalsClientError
 
-__all__ = ["IntervalsClient", "IntervalsClientError", "IntervalsSettings"]
+__all__ = ["IntervalsClient", "IntervalsClientError"]

@@ -5,10 +5,9 @@ import base64
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import ClassVar, Protocol, Self, cast, final
+from typing import Protocol, Self, cast, final
 
 import httpx
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .rate_limiter import rate_limiter_from_env, retry_delay
 
@@ -29,13 +28,6 @@ class IntervalsClientError(RuntimeError):
     pass
 
 
-class IntervalsSettings(BaseSettings):
-    intervals_icu_api_key: str = ""
-    intervals_icu_athlete_id: str = ""
-
-    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(env_file=".env", extra="ignore")
-
-
 @dataclass(slots=True)
 class _Token:
     value: str
@@ -50,20 +42,25 @@ class _Token:
 class IntervalsClient:
     def __init__(
         self,
-        api_key: str | None = None,
-        athlete_id: int | str | None = None,
         *,
+        api_key: str,
+        athlete_id: int | str,
         base_url: str = "https://intervals.icu/api/v1",
         client: httpx.AsyncClient | None = None,
         rate_limiter: RateLimiter | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
-        intervals_settings = IntervalsSettings()
-        self._api_key: str = api_key or intervals_settings.intervals_icu_api_key
-        if not self._api_key:
-            msg = "INTERVALS_ICU_API_KEY is required"
+        # Both are required. Reading them from the environment as a fallback made
+        # a caller that forgot to pass them ask for a URL nobody recorded, which
+        # looked like a stale cassette for months.
+        if not api_key:
+            msg = "an Intervals.icu API key is required"
             raise IntervalsClientError(msg)
-        self.athlete_id: int | str = athlete_id or intervals_settings.intervals_icu_athlete_id
+        if athlete_id == "":
+            msg = "an Intervals.icu athlete id is required"
+            raise IntervalsClientError(msg)
+        self._api_key: str = api_key
+        self.athlete_id: int | str = athlete_id
         self._base_url: str = base_url.rstrip("/")
         self._client: httpx.AsyncClient = client or httpx.AsyncClient(timeout=30, trust_env=True)
         self._owns_client: bool = client is None

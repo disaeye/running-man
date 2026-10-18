@@ -17,6 +17,7 @@ Requires-Dist: slowapi>=0.1.10
 Requires-Dist: python-multipart>=0.0.9
 Requires-Dist: sqlalchemy>=2.0.51
 Requires-Dist: lxml>=6.1.1
+Requires-Dist: cryptography>=50.0.2
 Provides-Extra: dev
 Requires-Dist: ruff>=0.5; extra == "dev"
 Requires-Dist: mypy>=1.11; extra == "dev"

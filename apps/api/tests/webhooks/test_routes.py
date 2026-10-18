@@ -1,6 +1,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient, Response
 
+from infrastructure.webhooks.settings import settings as webhook_settings
 from main import app
 from presentation.webhooks.routes import get_event_store, get_webhook_handler
 
@@ -99,7 +100,7 @@ async def _post_to(path: str, payload: dict[str, object]) -> Response:
 
 def _payload(event_type: str, timestamp: str = "2026-06-16T00:00:00Z") -> dict[str, object]:
     return {
-        "secret": "test-secret",
+        "secret": webhook_settings.webhook_secret,
         "type": event_type,
         "athlete_id": "athlete-1",
         "activity_id": "activity-1",

@@ -10,9 +10,11 @@
 | `BACKUP_AGE_IDENTITY_FILE` | 0600 runtime-only private age identity file used for restore decrypts |
 | `RCLONE_CONFIG` | 0600 rclone config file for the backup remote |
 | `RCLONE_REMOTE` | Remote path prefix for encrypted backup ciphertext and manifests |
-| `INTERVALS_ICU_API_KEY` | Basic auth password for Intervals.icu API |
-| `INTERVALS_ICU_ATHLETE_ID` | Intervals.icu athlete id for reconciliation |
-| `JWT_SECRET` | API token signing secret |
+| `WEBHOOK_SECRET` | Shared secret the Intervals.icu webhook must echo |
+| `JWT_SECRET` | API token signing secret and stored integration credential key |
+
+Intervals.icu API credentials are not environment variables. They live in
+`user_integrations.credentials`, encrypted with a key derived from `JWT_SECRET`.
 
 Load application values from `apps/api/.env`. Keep backup encryption and rclone
 secrets in runtime-only files, not in the repo, not in `.env`, and not in normal

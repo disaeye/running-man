@@ -26,7 +26,9 @@ class FixedDate(date):
 async def test_backfill_activities_replays_vcr(db_conn: psycopg.Connection) -> None:
     ensure_tables(db_conn)
     seed_athlete(db_conn, ATHLETE_ID, "backfill@example.com")
-    async with IntervalsClient(api_key="API_KEY_PLACEHOLDER", rate_limiter=NoopLimiter()) as client:
+    async with IntervalsClient(
+        api_key="API_KEY_PLACEHOLDER", athlete_id=0, rate_limiter=NoopLimiter()
+    ) as client:
         with _vcr().use_cassette(str(CASSETTE), allow_playback_repeats=True):
             count = await sync.backfill_activities(
                 ATHLETE_ID, CassetteClient(client), db_conn, date(2026, 6, 1), date(2026, 6, 16)

@@ -20,6 +20,8 @@ src/application/goals/__init__.py
 src/application/goals/progress.py
 src/application/insights/service.py
 src/application/integrations/scheduler.py
+src/application/integrations/sync_job_phases.py
+src/application/integrations/sync_jobs.py
 src/application/load/__init__.py
 src/application/load/activity_facts.py
 src/application/load/constants.py
@@ -31,11 +33,11 @@ src/application/notifications/__init__.py
 src/application/notifications/rules.py
 src/application/notifications/scanner.py
 src/application/physiology/__init__.py
-src/application/physiology/algorithm_contract.py
 src/application/physiology/facts.py
+src/application/physiology/physiology_windows.py
 src/application/physiology/service.py
+src/application/physiology/threshold_projection.py
 src/application/plan/__init__.py
-src/application/plan/adaptation_service.py
 src/application/plan/generator_service.py
 src/application/plan/plan_inputs.py
 src/application/plan/plan_records.py
@@ -48,6 +50,7 @@ src/application/thresholds/effective.py
 src/application/webhooks/__init__.py
 src/application/webhooks/handler.py
 src/domain/__init__.py
+src/domain/algorithms.py
 src/domain/ingestion.py
 src/domain/metric_series.py
 src/domain/py.typed
@@ -74,6 +77,7 @@ src/domain/insights/adherence.py
 src/domain/insights/hard_days.py
 src/domain/insights/hrv_factor.py
 src/domain/insights/pace_zones.py
+src/domain/insights/plan_intensity.py
 src/domain/insights/plan_quality.py
 src/domain/insights/prs.py
 src/domain/insights/readiness.py
@@ -145,6 +149,7 @@ src/infrastructure/integrations/intervals/rate_limiter.py
 src/infrastructure/integrations/intervals/reconcile.py
 src/infrastructure/integrations/intervals/sync.py
 src/infrastructure/integrations/intervals/sync_helpers.py
+src/infrastructure/integrations/intervals/sync_laps.py
 src/infrastructure/integrations/intervals/sync_rejections.py
 src/infrastructure/integrations/intervals/wellness_sync.py
 src/infrastructure/parsing/__init__.py
@@ -180,6 +185,9 @@ src/infrastructure/repositories/pmc.py
 src/infrastructure/repositories/recompute_jobs.py
 src/infrastructure/repositories/share.py
 src/infrastructure/repositories/strength.py
+src/infrastructure/repositories/sync_job_records.py
+src/infrastructure/repositories/sync_jobs.py
+src/infrastructure/repositories/sync_jobs_types.py
 src/infrastructure/repositories/sync_provenance.py
 src/infrastructure/repositories/sync_runs.py
 src/infrastructure/repositories/thresholds.py
@@ -197,6 +205,7 @@ src/presentation/errors.py
 src/presentation/middleware.py
 src/presentation/py.typed
 src/presentation/api/__init__.py
+src/presentation/api/_upload_batch_helpers.py
 src/presentation/api/_upload_helpers.py
 src/presentation/api/account_contracts.py
 src/presentation/api/activities.py
@@ -228,7 +237,6 @@ src/presentation/api/insights_streams.py
 src/presentation/api/integration_contracts.py
 src/presentation/api/integration_helpers.py
 src/presentation/api/integration_sync_detail.py
-src/presentation/api/integration_sync_job.py
 src/presentation/api/integrations.py
 src/presentation/api/json_contracts.py
 src/presentation/api/manual_activity.py

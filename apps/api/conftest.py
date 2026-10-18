@@ -74,18 +74,6 @@ async def app_pool_on_test_database() -> AsyncGenerator[None, None]:
 
 
 @pytest.fixture(autouse=True)
-def isolate_intervals_athlete_id(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Keep the developer's real Intervals.icu athlete id out of the suite.
-
-    `IntervalsClient` falls back to `INTERVALS_ICU_ATHLETE_ID` whenever the
-    caller passes no athlete, and the recorded cassettes replay athlete `0`.
-    Leaving the process value in place made every cassette test ask for a URL
-    that was never recorded, which looked like a stale cassette.
-    """
-    monkeypatch.setenv("INTERVALS_ICU_ATHLETE_ID", "")
-
-
-@pytest.fixture(autouse=True)
 def pg_transaction_rollback(
     request: SubRequest,
 ) -> Generator[None, None, None]:

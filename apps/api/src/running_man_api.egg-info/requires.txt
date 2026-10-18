@@ -12,6 +12,7 @@ slowapi>=0.1.10
 python-multipart>=0.0.9
 sqlalchemy>=2.0.51
 lxml>=6.1.1
+cryptography>=50.0.2
 
 [dev]
 ruff>=0.5

@@ -28,7 +28,7 @@ def validation_vcr() -> vcr.VCR:
 
 
 def test_basic_auth_header_uses_api_key_prefix() -> None:
-    client = IntervalsClient(api_key="secret", rate_limiter=NoopLimiter())
+    client = IntervalsClient(api_key="secret", athlete_id=0, rate_limiter=NoopLimiter())
     expected = base64.b64encode(b"API_KEY:secret").decode("ascii")
 
     assert client.auth_header == f"Basic {expected}"
@@ -38,7 +38,7 @@ def test_default_rate_limiter_uses_env_defaults(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("INTERVALS_RATE_LIMIT_REFILL_RATE", "3.5")
     monkeypatch.setenv("INTERVALS_RATE_LIMIT_CAPACITY", "7")
 
-    client = IntervalsClient(api_key="secret")
+    client = IntervalsClient(api_key="secret", athlete_id=0)
     limiter = cast(AsyncTokenBucket, client._rate_limiter)
 
     assert limiter._refill_rate == 3.5
@@ -47,14 +47,14 @@ def test_default_rate_limiter_uses_env_defaults(monkeypatch: pytest.MonkeyPatch)
 
 @pytest.mark.asyncio
 async def test_default_http_client_trusts_proxy_env() -> None:
-    async with IntervalsClient(api_key="secret", rate_limiter=NoopLimiter()) as client:
+    async with IntervalsClient(api_key="secret", athlete_id=0, rate_limiter=NoopLimiter()) as client:
         assert client._client._trust_env is True
 
 
 def test_basic_auth_header_refreshes_after_eight_hours(monkeypatch: pytest.MonkeyPatch) -> None:
     clock = 1000.0
     monkeypatch.setattr(time, "monotonic", lambda: clock)
-    client = IntervalsClient(api_key="secret", rate_limiter=NoopLimiter())
+    client = IntervalsClient(api_key="secret", athlete_id=0, rate_limiter=NoopLimiter())
     first = client.auth_header
     clock += 8 * 60 * 60 + 1
 
@@ -63,7 +63,9 @@ def test_basic_auth_header_refreshes_after_eight_hours(monkeypatch: pytest.Monke
 
 @pytest.mark.asyncio
 async def test_replays_intervals_endpoints_from_t3_cassette() -> None:
-    async with IntervalsClient(api_key="API_KEY_PLACEHOLDER", rate_limiter=NoopLimiter()) as client:
+    async with IntervalsClient(
+        api_key="API_KEY_PLACEHOLDER", athlete_id=0, rate_limiter=NoopLimiter()
+    ) as client:
         with validation_vcr().use_cassette(str(CASSETTE)):
             activities = await client.get_activities(0, "2026-05-17", "2026-06-16")
             activity_id = cast(str, activities[0]["id"])
@@ -92,7 +94,9 @@ async def test_get_activity_endpoint_path() -> None:
 
     transport = httpx.MockTransport(handler)
     http_client = httpx.AsyncClient(transport=transport)
-    client = IntervalsClient(api_key="secret", client=http_client, rate_limiter=NoopLimiter())
+    client = IntervalsClient(
+        api_key="secret", athlete_id=0, client=http_client, rate_limiter=NoopLimiter()
+    )
 
     assert await client.get_activity("i1") == {"id": "i1"}
     assert seen == ["https://intervals.icu/api/v1/activity/i1"]
@@ -115,7 +119,7 @@ async def test_429_retries_retry_after_then_exponential_backoff() -> None:
     transport = httpx.MockTransport(handler)
     http_client = httpx.AsyncClient(transport=transport)
     client = IntervalsClient(
-        api_key="secret", client=http_client, rate_limiter=NoopLimiter(), sleep=sleep
+        api_key="secret", athlete_id=0, client=http_client, rate_limiter=NoopLimiter(), sleep=sleep
     )
 
     assert await client.get_activities(0, "2026-05-17", "2026-06-16") == []
