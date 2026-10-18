@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from uuid import UUID
 
-from domain.insights.readiness import compute_readiness, compute_recommendation
+from domain.insights.readiness import compute_readiness
+from domain.insights.recommendation import compute_recommendation
 from infrastructure.repositories.insight_reads import InsightReadRepo
 from infrastructure.repositories.pmc import PmcRepo
 from infrastructure.repositories.wellness import WellnessRepo

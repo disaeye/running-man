@@ -52,7 +52,7 @@ test.describe("Settings Flow", () => {
     await page.getByRole("button", { name: "退出登录" }).click();
     await page.waitForURL(/\/login$/);
     // Assert on the login form itself. Matching the text "Running Man" was
-    // ambiguous — it appears in the shell header and the landing page — and
+    // ambiguous — it appears in the shell header and the auth wordmark — and
     // that ambiguity, not a missing logout, is what the test was reporting.
     await expect(page.locator('input[name="email"]')).toBeVisible();
   });

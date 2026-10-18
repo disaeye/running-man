@@ -2,25 +2,30 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
-from application.physiology.algorithm_contract import algorithm_contract, physiology_window_days
+from application.load.pmc_facts import recompute_pmc_facts
+from application.load.recompute import recompute_activity_load_facts
 from application.physiology.facts import (
     ComputationWindow,
     PhysiologyResults,
     persist_physiology_facts,
 )
+from application.physiology.physiology_windows import physiology_window_days
+from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
 from domain.generated.metrics import Metric
 from domain.physiology.hrmax import estimate_hrmax
 from domain.physiology.lthr import estimate_lthr
 from domain.physiology.threshold_pace import (
-    estimate_threshold_pace,
+    estimate_critical_speed,
     extract_efforts_from_activities,
 )
-from domain.physiology.vdot import vdot_from_efforts
+from domain.physiology.vdot import vdot_from_efforts, vdot_to_threshold_pace
+from domain.time import DEFAULT_TIMEZONE, today_in_zone
 from infrastructure.repositories.physiology import PhysiologyRepo
+from infrastructure.repositories.thresholds import ThresholdRepo
 
 _CACHE_FRESHNESS = timedelta(days=7)
 
@@ -74,10 +79,18 @@ async def calculate_physiology(
     athlete_id: UUID, now: datetime | None = None
 ) -> PhysiologyCalculation:
     calculated_at = now or datetime.now(UTC)
+    repository = PhysiologyRepo()
+    # The threshold step is stamped on the athlete's calendar day, matching the
+    # manual path. Stamping on the host's date makes an evening reading apply
+    # only to the previous day's sessions for an athlete east of Greenwich.
+    timezone_name = await repository.timezone(athlete_id)
+    today = today_in_zone(timezone_name, calculated_at)
+    effective_from = await _threshold_step_date(
+        athlete_id, repository, timezone_name, today
+    )
     hr_window = _window(calculated_at, physiology_window_days(Metric.HR_MAX))
     pace_window = _window(calculated_at, physiology_window_days(Metric.THRESHOLD_PACE))
     lthr_window = _window(calculated_at, physiology_window_days(Metric.LTHR))
-    repository = PhysiologyRepo()
     hr_activities = await repository.activities(athlete_id, hr_window.start, hr_window.end)
     pace_activities = await repository.activities(athlete_id, pace_window.start, pace_window.end)
     hr_streams = await repository.heart_rate_window(athlete_id, lthr_window.start, lthr_window.end)
@@ -102,9 +115,10 @@ async def calculate_physiology(
         hr_max=_integer(hr_result.get("hr_max")),
         lthr=_integer(lthr_result.get("lthr")),
     )
-    threshold_pace_result = estimate_threshold_pace(efforts)
+    critical_speed_result = estimate_critical_speed(efforts)
     effort_tuples = [(effort.distance_m, effort.duration_s) for effort in efforts]
     vdot_value = vdot_from_efforts(effort_tuples)
+    threshold_pace_result = _threshold_pace_from(vdot_value, critical_speed_result)
     vdot_result = (
         {
             "vdot": vdot_value,
@@ -114,7 +128,7 @@ async def calculate_physiology(
         if vdot_value is not None
         else None
     )
-    await persist_physiology_facts(
+    written = await persist_physiology_facts(
         athlete_id,
         PhysiologyResults(
             hr_max=hr_result,
@@ -130,7 +144,10 @@ async def calculate_physiology(
             "vdot": vdot_value,
         },
         ComputationWindow(start=hr_window.start, end=calculated_at),
+        effective_from=effective_from,
     )
+    _ = await ThresholdRepo().backfill_earlier_gaps(athlete_id, today, written)
+    _ = await recompute_load_after_threshold_change(athlete_id)
     return PhysiologyCalculation(
         hr_max=hr_result,
         lthr=lthr_result,
@@ -139,8 +156,94 @@ async def calculate_physiology(
     )
 
 
+async def _threshold_step_date(
+    athlete_id: UUID,
+    repository: PhysiologyRepo,
+    timezone_name: str | None,
+    today: date,
+) -> date:
+    """Where the first estimated step belongs.
+
+    An estimate recorded today only governs sessions from today onward, and
+    ``backfill_earlier_gaps`` can only fill rows that already exist. On an empty
+    ``athlete_thresholds`` table there is no row to widen, so a first sync
+    followed by a first estimate left every earlier activity without a
+    threshold — and an activity with no threshold pace and no LTHR produces no
+    load at all.
+
+    The first step is therefore anchored on the earliest activity, which covers
+    the whole history with one row. Once any step exists, later estimates stay on
+    today and the table keeps its time-versioned shape.
+    """
+    if await ThresholdRepo().earliest(athlete_id) is not None:
+        return today
+    first_day = await repository.earliest_activity_day(
+        athlete_id, timezone_name or DEFAULT_TIMEZONE
+    )
+    return min(first_day, today) if first_day is not None else today
+
+
+async def recompute_load_after_threshold_change(athlete_id: UUID) -> int:
+    """Rescore activities against the thresholds now in force, then re-derive PMC.
+
+    A threshold is time-versioned, so a new step applies from today and past
+    sessions keep the boundaries they were run under. Today's already-computed
+    facts, however, were built from the previous step, and leaving them alone
+    means the same session carries one load before the re-estimate and another
+    after it.
+
+    The PMC series is derived from daily TSS, so it has to be rebuilt in the same
+    call. Stopping at the activity facts left CTL/ATL/TSB on the previous load
+    until the next day's fingerprint change or an unrelated recompute — and the
+    Today page reads the PMC facts, so the athlete saw the old curve next to the
+    new numbers.
+
+    Both steps are fingerprint-guarded, so this only writes what changed.
+    """
+    result = await recompute_activity_load_facts(athlete_id, trigger="threshold_change")
+    _ = await recompute_pmc_facts(athlete_id, trigger="threshold_change")
+    return result.rows_affected
+
+
 def _window(now: datetime, days: int) -> ComputationWindow:
     return ComputationWindow(start=now - timedelta(days=days), end=now)
+
+
+def _threshold_pace_from(
+    vdot: float | None, critical_speed: Mapping[str, object]
+) -> dict[str, object]:
+    """Threshold pace (LT2) from the athlete's best maximal effort.
+
+    Threshold pace is an LT2 quantity. The critical-speed fit answers a
+    different question — it is the asymptote of the distance–time boundary, and
+    by construction slower than anything the athlete has held. Writing CS into
+    `threshold_pace` made the "threshold" slower than the athlete's half-marathon
+    pace, and every pace prescription is derived from it.
+
+    Threshold therefore comes from Daniels' VDOT model, which is defined on race
+    performances, and CS is carried alongside as a cross-check.
+    """
+    cross_check = {
+        "critical_speed_s_per_km": critical_speed.get("critical_speed_s_per_km"),
+        "critical_speed_ms": critical_speed.get("critical_speed_ms"),
+        "effort_count": critical_speed.get("effort_count", 0),
+    }
+    pace = vdot_to_threshold_pace(vdot) if vdot is not None else 0.0
+    if pace > 0:
+        return {
+            "threshold_pace_s_per_km": round(pace),
+            "confidence": critical_speed.get("confidence"),
+            "data_sufficient": True,
+            "method": "daniels_vdot_threshold",
+            **cross_check,
+        }
+    return {
+        "threshold_pace_s_per_km": None,
+        "confidence": "low",
+        "data_sufficient": False,
+        "method": "insufficient_maximal_efforts",
+        **cross_check,
+    }
 
 
 def _integer(value: object) -> int | None:

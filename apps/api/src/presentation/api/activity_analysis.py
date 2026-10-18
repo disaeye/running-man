@@ -21,6 +21,7 @@ from domain.insights.activity_analysis import (
     compute_laps,
     compute_power_curve,
     compute_summary,
+    stream_times_by_metric,
     streams_by_metric,
 )
 from domain.insights.zone_schemes import (
@@ -66,6 +67,7 @@ async def get_activity_analysis(
 
     stream_rows = await _activity_streams(athlete.id, activity_id)
     streams = streams_by_metric(stream_rows)
+    stream_times = stream_times_by_metric(stream_rows)
     duration_s = _duration(activity, streams)
     hr_zone_rows = await _hr_zones_for_activity(athlete, activity)
     return ActivityAnalysisResponse(
@@ -78,7 +80,7 @@ async def get_activity_analysis(
             for point in compute_power_curve(streams.get("power", []))
         ],
         summary=ActivityAnalysisSummaryResponse.model_validate(
-            compute_summary(streams, duration_s, None), by_name=True
+            compute_summary(streams, duration_s, None, stream_times=stream_times), by_name=True
         ),
     )
 

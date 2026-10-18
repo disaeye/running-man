@@ -16,6 +16,32 @@ def _to_int(value: object) -> object:
     return value
 
 
+# Intervals.icu sends `menstrualPhase` as a name; the column stores a code. The
+# `_to_int` cast used here crashed the whole wellness sync on the first live
+# record, because `int(float('PERIOD'))` raises.
+_MENSTRUAL_PHASE_CODES: dict[str, int] = {
+    "PERIOD": 1,
+    "FOLLICULAR": 2,
+    "OVULATION": 3,
+    "LUTEAL": 4,
+}
+
+
+def _to_phase(value: object) -> object:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        name = value.strip().upper()
+        if not name:
+            return None
+        code = _MENSTRUAL_PHASE_CODES.get(name)
+        if code is None:
+            msg = f"unknown Intervals.icu menstrual phase {name!r}"
+            raise ValueError(msg)
+        return code
+    return _to_int(value)
+
+
 # 每个健康列的取值方式：API 字段名（含回退顺序）与写入前的类型转换。
 # carbs / fat 在不同版本的 Intervals.icu API 中存在 carbohydrates / fatTotal
 # 与 carbs / fat 两种字段名，按顺序取第一个非空值。
@@ -40,8 +66,8 @@ _WELLNESS_FIELDS: tuple[tuple[str, tuple[str, ...], Callable[[object], object] |
     ("fat_g", ("fat", "fatTotal"), None),
     ("hydration", ("hydration",), _to_int),
     ("body_fat_pct", ("bodyFat",), None),
-    ("menstrual_phase", ("menstrualPhase",), _to_int),
-    ("menstrual_phase_predicted", ("menstrualPhasePredicted",), _to_int),
+    ("menstrual_phase", ("menstrualPhase",), _to_phase),
+    ("menstrual_phase_predicted", ("menstrualPhasePredicted",), _to_phase),
     ("fatigue", ("fatigue",), _to_int),
     ("soreness", ("soreness",), _to_int),
     ("stress", ("stress",), _to_int),

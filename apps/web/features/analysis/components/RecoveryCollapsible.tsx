@@ -17,7 +17,7 @@ export function RecoveryCollapsible({ children }: RecoveryCollapsibleProps) {
     <div data-testid="recovery-collapsible">
       <button
         type="button"
-        className="focus-ring flex w-full min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-[var(--glass-bg)] px-4 py-3 text-left transition-colors hover:bg-surface-overlay/60"
+        className="focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-card px-4 py-3 text-left transition-colors hover:bg-surface-overlay"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         data-testid="recovery-collapsible-toggle"
@@ -27,7 +27,7 @@ export function RecoveryCollapsible({ children }: RecoveryCollapsibleProps) {
             恢复趋势
           </span>
           <span className="mt-0.5 block text-caption1 text-text-muted">
-            睡眠 · 静息心率 · VO₂max · 负荷相关
+            睡眠 · 静息心率 · 最大摄氧量 · 负荷相关
           </span>
         </div>
         <span className="flex items-center gap-1 text-caption1 text-text-muted">

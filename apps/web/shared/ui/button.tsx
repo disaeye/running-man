@@ -5,20 +5,21 @@ import { Slot } from "radix-ui"
 import { cn } from "@shared/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-subheadline font-medium whitespace-nowrap transition-colors duration-200 ease-default outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-95 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-error aria-invalid:ring-error/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-subheadline font-medium whitespace-nowrap transition-colors duration-200 ease-default outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-95 disabled:pointer-events-none aria-invalid:border-error aria-invalid:ring-error/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-accent text-on-accent hover:bg-accent/90 active:bg-primary-active",
+        default:
+          "bg-accent text-on-accent hover:bg-accent/90 active:bg-primary-active disabled:bg-surface-active disabled:text-text-muted",
         destructive:
-          "border border-error/40 bg-error/10 text-error hover:bg-error/20 focus-visible:ring-error/20",
+          "border border-error/40 bg-error/8 text-error hover:bg-error/20 focus-visible:ring-error/20 disabled:border-border-subtle disabled:bg-surface-overlay disabled:text-text-muted",
         outline:
-          "border border-border-default bg-transparent text-text-primary hover:bg-surface-overlay",
+          "border border-border-default bg-transparent text-text-primary hover:bg-surface-overlay disabled:border-border-subtle disabled:text-text-muted",
         secondary:
-          "border border-border-default bg-surface-card text-text-primary hover:bg-surface-active",
+          "border border-border-default bg-surface-overlay text-text-primary hover:bg-surface-active disabled:border-border-subtle disabled:bg-surface-subtle disabled:text-text-muted",
         ghost:
-          "hover:bg-surface-overlay hover:text-text-primary",
-        link: "text-accent-strong underline-offset-4 hover:underline",
+          "hover:bg-surface-overlay hover:text-text-primary disabled:text-text-muted",
+        link: "text-accent-strong underline-offset-4 hover:underline disabled:text-text-muted",
       },
       size: {
         default: "h-11 px-[22px] py-[11px] min-h-[44px] min-w-[44px] has-[>svg]:px-4",

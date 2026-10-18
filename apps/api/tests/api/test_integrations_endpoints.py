@@ -19,6 +19,7 @@ elsewhere; here we patch ``_sync`` to avoid live network calls.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
@@ -28,10 +29,11 @@ from httpx import ASGITransport, AsyncClient, Response
 from domain.integrations.crypto import encrypt
 from infrastructure.auth.models import Athlete
 from main import app
-from presentation.api.integrations import get_integration_repo
+from presentation.api.integrations import get_integration_repo, get_sync_job_repo
 from presentation.auth.deps import get_current_athlete
 
 ATHLETE = Athlete(uuid4(), "int@example.com", "hash")
+JOB_ID = uuid4()
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +104,7 @@ async def test_disconnect_integration() -> None:
 
 @pytest.mark.no_db
 async def test_sync_integration_success() -> None:
-    """POST /integrations/{source}/sync accepts job immediately."""
+    """POST /integrations/{source}/sync answers with the queued job."""
     valid_ciphertext = encrypt({"api_key": "k", "athlete_id": "i12345"})
     repo = _FakeRepo(
         get_result=_row("intervals_icu", connected=True)
@@ -112,16 +114,21 @@ async def test_sync_integration_success() -> None:
 
     with patch(
         "presentation.api.integrations.run_sync_job", new_callable=AsyncMock
-    ) as mock_job:
+    ) as mock_job, patch(
+        "presentation.api.integrations.create_sync_job",
+        new_callable=AsyncMock,
+        return_value=_job(),
+    ):
         response = await _post_json("/api/v1/integrations/intervals_icu/sync", None)
 
     assert response.status_code == 200
     body = response.json()
     assert body["source"] == "intervals_icu"
-    assert body["status"] == "accepted"
-    assert body["upserted"] == 0
-    assert any(call[2] == "running" for call in repo.sync_status_calls)
+    assert body["status"] == "queued"
+    assert body["kind"] == "incremental"
     mock_job.assert_awaited_once()
+    assert mock_job.await_args is not None
+    assert mock_job.await_args.args[0] == JOB_ID
 
 
 
@@ -274,6 +281,36 @@ def _use_repo(repo: _FakeRepo) -> None:
     app.dependency_overrides.clear()
     app.dependency_overrides[get_current_athlete] = lambda: ATHLETE
     app.dependency_overrides[get_integration_repo] = lambda: repo
+    app.dependency_overrides[get_sync_job_repo] = _FakeJobRepo
+
+
+class _FakeJobRepo:
+    """No active job, nothing to sweep; the endpoint only asks those two."""
+
+    async def active(self, _athlete_id: UUID, _source: str) -> None:
+        return None
+
+    async def sweep_stale(
+        self,
+        athlete_id: UUID | None = None,
+        source: str | None = None,
+        stale_after_seconds: int = 300,
+    ) -> list[dict[str, object]]:
+        _ = (athlete_id, source, stale_after_seconds)
+        return []
+
+
+def _job(**overrides: object) -> dict[str, object]:
+    base: dict[str, object] = {
+        "id": JOB_ID,
+        "source": "intervals_icu",
+        "kind": "incremental",
+        "trigger": "manual",
+        "phase": "activities",
+        "status": "queued",
+        "created_at": datetime(2026, 10, 13, tzinfo=UTC),
+    }
+    return base | overrides
 
 
 async def _get(path: str) -> Response:

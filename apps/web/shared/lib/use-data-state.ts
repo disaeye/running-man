@@ -34,6 +34,14 @@ export const LOADING_LABEL = "加载中...";
 export const EMPTY_LABEL = "暂无数据";
 export const ERROR_LABEL = "加载失败";
 
+/**
+ * The placeholder for a value that exists as a field but has no measurement.
+ *
+ * One glyph for one meaning. The app previously used `--`, `—` and `——` in
+ * different components, which read as three different degrees of "unknown".
+ */
+export const NO_VALUE = "--";
+
 export interface UseDataStateInput<T> {
   data: T | null | undefined;
   error?: unknown;

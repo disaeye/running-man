@@ -55,7 +55,7 @@ export function MetricInlineDisclosure({
             className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-surface-raised px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 shadow-elevated transition-transform duration-200 ease-out sm:hidden"
           >
             <div aria-hidden className="mx-auto mb-3 h-1 w-9 rounded-full bg-text-muted/30" />
-            <p className="mb-2 text-footnote font-semibold uppercase tracking-wider text-text-secondary">
+            <p className="mb-2 text-footnote font-semibold text-text-secondary">
               {label}
             </p>
             {content}
@@ -87,7 +87,7 @@ function StructuredExplanation({ exp }: { exp: TermExplanation }) {
 
       {exp.reference && (
         <div className="rounded-lg bg-surface-overlay px-3 py-2">
-          <p className="mb-0.5 text-caption1 font-semibold uppercase tracking-wider text-text-muted">
+          <p className="mb-0.5 text-caption1 font-semibold text-text-muted">
             参考区间
           </p>
           <p className="tabular-nums text-caption1 text-text-secondary">

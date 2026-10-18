@@ -15,7 +15,7 @@
  * injecting `#FF0000` into a temp file and asserting the scanner catches it.
  */
 import { describe, expect, it } from "vitest";
-import { readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 
@@ -33,7 +33,6 @@ const HEX_RE = /#[0-9A-Fa-f]{3,8}\b/g;
 const PERMANENT_EXEMPT = new Set<string>([
   "app/globals.css", // token source of truth
   "shared/lib/chart-tokens.ts", // reads --color-* CSS vars at runtime
-  "app/globals.css.tokens.ts", // extracted token fixture module — owns hex values referenced by globals.css.test.ts
 ]);
 
 /**
@@ -42,10 +41,7 @@ const PERMANENT_EXEMPT = new Set<string>([
  * that will remove it. The list MUST shrink over time; new entries are NOT
  * allowed (the gate test rejects additions).
  */
-const TEMPORARY_ALLOWLIST = new Map<string, string>([
-  // TODO: migrate landing dark-theme arbitrary-value hex to globals.css tokens once the redesign lands.
-  ["app/(public)/landing/page.tsx", "WIP dark landing redesign uses Tailwind arbitrary hex values"],
-]);
+const TEMPORARY_ALLOWLIST = new Map<string, string>([]);
 
 interface HexViolation {
   file: string;
@@ -127,11 +123,14 @@ describe("hex-ban scanner", () => {
   });
 
   it("does NOT flag permanent exempt files", () => {
-    // The real-codebase gate below enforces this implicitly, but we assert
-    // the exempt set is non-empty and well-formed so regressions fail loudly.
-    expect(PERMANENT_EXEMPT.size).toBeGreaterThanOrEqual(3);
+    // The exempt set must be non-empty, well-formed, and every entry must still
+    // exist. A dangling entry silently exempts nothing while claiming to, which
+    // is how a stale fixture module stayed in this list after its test was
+    // deleted.
+    expect(PERMANENT_EXEMPT.size).toBeGreaterThanOrEqual(2);
     for (const path of PERMANENT_EXEMPT) {
       expect(path.endsWith(".css") || /\.(ts|tsx)$/.test(path)).toBe(true);
+      expect(existsSync(join(WEB_ROOT, path))).toBe(true);
     }
   });
 

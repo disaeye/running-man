@@ -17,7 +17,7 @@ export function PhaseTimeline({ goal }: PhaseTimelineProps) {
 
   return (
     <Card>
-      <h3 className="mb-4 text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+      <h3 className="mb-4 text-subheadline font-semibold text-text-muted">
         训练阶段
       </h3>
 
@@ -48,7 +48,7 @@ export function PhaseTimeline({ goal }: PhaseTimelineProps) {
                     ${isCurrent
                       ? "bg-accent text-accent-foreground shadow-[0_0_12px_var(--color-ctl)]"
                       : isPast
-                        ? "bg-ctl/30 text-ctl"
+                        ? "bg-ctl/30 text-text-primary"
                         : "bg-surface-overlay text-text-muted border border-border-subtle"
                     }
                   `.trim()}
@@ -77,7 +77,7 @@ export function PhaseTimeline({ goal }: PhaseTimelineProps) {
                 className={`
                   mt-2 text-center text-caption1 leading-tight
                   ${isCurrent
-                    ? "font-semibold text-ctl"
+                    ? "font-semibold text-text-primary"
                     : isPast
                       ? "text-text-secondary"
                       : "text-text-muted"

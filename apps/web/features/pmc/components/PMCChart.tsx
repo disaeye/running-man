@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
+import { useRef } from "react";
 import * as echarts from "echarts/core";
 import { LineChart } from "echarts/charts";
 import {
@@ -21,9 +21,7 @@ import { formatTss } from "@shared/lib/chart-preset";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { getTsbBands, type TsbBandTone } from "@features/pmc/lib/pmc-bands";
-import { RangeSelector, type RangeKey } from "./RangeSelector";
 import { PmcStatBlocks } from "./PmcStatBlocks";
-import { computeRange } from "@shared/lib/format";
 import { withAlpha } from "@shared/lib/chart-tokens";
 
 echarts.use([
@@ -51,18 +49,14 @@ function bandColor(tone: TsbBandTone, chartConfig: ChartConfig): string {
   }
 }
 
-function filterDataByRange(data: PmcPoint[], rangeKey: RangeKey): PmcPoint[] {
-  if (rangeKey === "All" || data.length === 0) return data;
-  const daysMap: Record<string, number> = { "1M": 30, "3M": 90, "6M": 180, "1Y": 365 };
-  const days = daysMap[rangeKey];
-  if (!days) return data;
-  const { from } = computeRange(days);
-  return data.filter((p) => p.day >= from);
-}
-
 interface PMCChartProps {
   data: PmcPoint[];
   annotations?: PmcAnnotation[];
+  /**
+   * Whether the chart draws its own title row. Off when the surrounding card
+   * already names the chart.
+   */
+  showTitle?: boolean;
 }
 
 function buildOption(
@@ -215,27 +209,29 @@ function buildOption(
   };
 }
 
-export function PMCChart({ data, annotations = [] }: PMCChartProps) {
+/**
+ * The PMC curve for whatever window the caller supplies.
+ *
+ * The chart used to carry its own `1月 / 3月 / 6月 / 1年 / 全部` selector while
+ * the analysis page header carried `30 天 / 90 天 / 1 年`. Two controls over one
+ * window, neither aware of the other: picking 1 年 above and 1月 in the card
+ * left the page describing one span and drawing another. The page owns the
+ * range; this component draws it.
+ */
+export function PMCChart({ data, annotations = [], showTitle = true }: PMCChartProps) {
   const chartConfig = useChartConfig();
-  const [rangeKey, setRangeKey] = useState<RangeKey>("3M");
-
-  const filteredData = useMemo(() => filterDataByRange(data, rangeKey), [data, rangeKey]);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      {showTitle && (
         <h3 className="text-title3 font-semibold text-text-primary">训练负荷趋势</h3>
-        <RangeSelector
-          activeRange={rangeKey}
-          onRangeChange={(_from, _to, key) => setRangeKey(key)}
-        />
-      </div>
-      {filteredData.length > 0 ? (
-        <PmcChartCanvas data={filteredData} chartConfig={chartConfig} annotations={annotations} />
+      )}
+      {data.length > 0 ? (
+        <PmcChartCanvas data={data} chartConfig={chartConfig} annotations={annotations} />
       ) : (
         <EmptyState title={EMPTY_LABEL} className="h-64 w-full sm:h-80" data-testid="pmc-chart-empty" />
       )}
-      {filteredData.length > 0 && <PmcStatBlocks data={filteredData} />}
+      {data.length > 0 && <PmcStatBlocks data={data} />}
     </div>
   );
 }

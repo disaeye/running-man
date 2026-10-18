@@ -127,7 +127,7 @@ export function PerformanceAbility() {
   return (
     <div className="flex flex-col gap-6">
       <section>
-        <h2 className="mb-3 text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+        <h2 className="mb-3 text-subheadline font-semibold text-text-muted">
           能力指标趋势
         </h2>
         <Card padding="none" className="min-h-[200px] lg:h-[340px]">
@@ -144,7 +144,7 @@ export function PerformanceAbility() {
           {!loading && !error && data.length === 0 && (
             <EmptyState
               title={EMPTY_LABEL}
-              description="系统会根据你的训练记录持续追踪 VO₂max 与配速变化"
+              description="系统会根据你的训练记录持续追踪最大摄氧量与配速变化"
             />
           )}
           {!loading && !error && data.length > 0 && (

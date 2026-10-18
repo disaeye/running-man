@@ -1,19 +1,30 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import uuid4
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
 
+from application.computation.runs import ComputationRunResult
+from domain.algorithms import algorithm_contract
+from domain.generated.algorithms import Algorithm
 from infrastructure.auth.models import Athlete
 from main import app
-from presentation.auth.deps import get_current_athlete
+from tests.api.physiology_endpoint_helpers import FakePool as _FakePool
+from tests.api.physiology_endpoint_helpers import get as _get
+from tests.api.physiology_endpoint_helpers import post as _post
+from tests.api.physiology_endpoint_helpers import use_pool
 
 ATHLETE = Athlete(uuid4(), "physiology@example.com", "hash")
+
+# Read from the contract so a version bump does not turn a cache-hit fixture into
+# a cache miss.
+PHYSIOLOGY_VERSION = algorithm_contract(Algorithm.PHYSIOLOGY).version
+
+
+def _use_pool(monkeypatch: pytest.MonkeyPatch, pool: _FakePool) -> None:
+    use_pool(monkeypatch, pool, ATHLETE)
 
 
 @pytest.fixture(autouse=True)
@@ -34,7 +45,7 @@ async def test_get_physiology_returns_cached_values_when_recent(
                 "lthr": 175,
                 "threshold_pace": 270.0,
                 "physiology_updated_at": recent,
-                "physiology_algorithm_version": "1.0.0",
+                "physiology_algorithm_version": PHYSIOLOGY_VERSION,
                 "physiology_computation_run_id": None,
             }
         ]
@@ -50,7 +61,7 @@ async def test_get_physiology_returns_cached_values_when_recent(
         "threshold_pace": 270.0,
         "data_sufficient": True,
         "confidence": "cached",
-        "algorithm_version": "1.0.0",
+        "algorithm_version": PHYSIOLOGY_VERSION,
         "computation_run_id": None,
         "freshness": "fresh",
         "source": "derived_metric_facts",
@@ -139,9 +150,9 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
         },
     )
     monkeypatch.setattr(
-        "application.physiology.service.estimate_threshold_pace",
+        "application.physiology.service.estimate_critical_speed",
         lambda _efforts: {
-            "threshold_pace_s_per_km": 270,
+            "critical_speed_s_per_km": 268,
             "critical_speed_ms": 3.7,
             "method": "critical_speed_model",
             "confidence": "low",
@@ -149,16 +160,59 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
             "effort_count": 4,
         },
     )
+    monkeypatch.setattr(
+        "application.physiology.service.vdot_from_efforts",
+        lambda _efforts: 50.0,
+    )
 
     async def persist(
         athlete_id: object,
         results: object,
         input_payload: object,
         window: object,
-    ) -> None:
+        effective_from: object,
+    ) -> dict[str, object]:
         persisted.append((athlete_id, results, input_payload, window))
+        return {"hr_max": 195}
 
+    async def backfill(
+        _repository: object, _athlete_id: object, _effective_from: object, _values: object
+    ) -> int:
+        return 0
+
+    async def earliest_step(_repository: object, _athlete_id: object) -> None:
+        return None
+
+    async def earliest_activity_day(
+        _repository: object, _athlete_id: object, _timezone: object
+    ) -> None:
+        return None
+
+    monkeypatch.setattr(
+        "infrastructure.repositories.thresholds.ThresholdRepo.backfill_earlier_gaps",
+        backfill,
+    )
+    monkeypatch.setattr(
+        "infrastructure.repositories.thresholds.ThresholdRepo.earliest", earliest_step
+    )
+    monkeypatch.setattr(
+        "infrastructure.repositories.physiology.PhysiologyRepo.earliest_activity_day",
+        earliest_activity_day,
+    )
     monkeypatch.setattr("application.physiology.service.persist_physiology_facts", persist)
+
+    async def rebuild_load(_athlete_id: object, **_kwargs: object) -> ComputationRunResult:
+        return ComputationRunResult(uuid4(), "success", 0)
+
+    async def rebuild_pmc(_athlete_id: object, **_kwargs: object) -> object:
+        return object()
+
+    monkeypatch.setattr(
+        "application.physiology.service.recompute_activity_load_facts", rebuild_load
+    )
+    monkeypatch.setattr(
+        "application.physiology.service.recompute_pmc_facts", rebuild_pmc
+    )
 
     response = await _post("/api/v1/athletes/me/auto-calculate")
 
@@ -172,7 +226,7 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
             "near_max_count": 1,
             "session_count": 1,
             "input_window_days": 730,
-            "algorithm_version": "1.0.0",
+            "algorithm_version": PHYSIOLOGY_VERSION,
         },
         "lthr": {
             "lthr": 175,
@@ -183,17 +237,18 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
             "source_20min": 175,
             "source_60min": None,
             "input_window_days": 365,
-            "algorithm_version": "1.0.0",
+            "algorithm_version": PHYSIOLOGY_VERSION,
         },
         "threshold_pace": {
-            "threshold_pace_s_per_km": 270,
+            "threshold_pace_s_per_km": 255,
             "critical_speed_ms": 3.7,
-            "method": "critical_speed_model",
+            "critical_speed_s_per_km": 268,
+            "method": "daniels_vdot_threshold",
             "confidence": "low",
             "data_sufficient": True,
             "effort_count": 4,
             "input_window_days": 365,
-            "algorithm_version": "1.0.0",
+            "algorithm_version": PHYSIOLOGY_VERSION,
         },
     }
     assert len(persisted) == 1
@@ -214,72 +269,4 @@ _STALE_RESPONSE = {
 }
 
 
-@dataclass(frozen=True)
-class _ExecutedQuery:
-    query: str
-    params: tuple[object, ...]
 
-
-class _FakePool:
-    def __init__(self, rows: Sequence[object]) -> None:
-        self.rows = list(rows)
-        self.executed: list[_ExecutedQuery] = []
-
-    def connection(self) -> _ConnectionContext:
-        return _ConnectionContext(_FakeConnection(self))
-
-
-class _ConnectionContext:
-    def __init__(self, conn: _FakeConnection) -> None:
-        self.conn = conn
-
-    async def __aenter__(self) -> _FakeConnection:
-        return self.conn
-
-    async def __aexit__(self, _exc_type: object, _exc: object, _tb: object) -> None:
-        return None
-
-
-class _FakeConnection:
-    def __init__(self, pool: _FakePool) -> None:
-        self.pool = pool
-
-    def cursor(self) -> _FakeCursor:
-        return _FakeCursor(self.pool)
-
-
-class _FakeCursor:
-    def __init__(self, pool: _FakePool) -> None:
-        self.pool = pool
-
-    async def execute(self, query: str, params: tuple[object, ...]) -> None:
-        self.pool.executed.append(_ExecutedQuery(query, params))
-
-    async def fetchone(self) -> Mapping[str, object] | None:
-        if not self.pool.rows:
-            return None
-        row = self.pool.rows.pop(0)
-        return row if isinstance(row, Mapping) else None
-
-    async def fetchall(self) -> list[Mapping[str, object]]:
-        if not self.pool.rows:
-            return []
-        row = self.pool.rows.pop(0)
-        return list(row) if isinstance(row, list) else []
-
-
-def _use_pool(monkeypatch: pytest.MonkeyPatch, pool: _FakePool) -> None:
-    app.dependency_overrides[get_current_athlete] = lambda: ATHLETE
-    monkeypatch.setattr("infrastructure.repositories.physiology.get_pool", lambda: pool)
-
-
-async def _get(path: str) -> Response:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        return await client.get(path)
-
-
-async def _post(path: str) -> Response:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        return await client.post(path)

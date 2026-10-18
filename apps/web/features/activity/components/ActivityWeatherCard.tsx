@@ -22,10 +22,10 @@ function windDirection(deg: number | null | undefined): string {
 export function ActivityWeatherCard({ weather }: ActivityWeatherCardProps) {
   return (
     <div
-      className="rounded-2xl border border-border-subtle bg-surface-card p-4"
+      className="rounded-xl border border-border-subtle bg-surface-card p-4"
       data-testid="activity-weather-card"
     >
-      <h3 className="text-caption1 font-semibold uppercase tracking-wider text-text-muted">
+      <h3 className="text-caption1 font-semibold text-text-muted">
         活动天气
       </h3>
       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">

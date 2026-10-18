@@ -35,7 +35,7 @@ async def test_recommendations_service_combines_readiness_load_and_calendar_inpu
 
     recommendations = await service.recommendations_for_day(ATHLETE_ID, target_day)
 
-    assert [item["type"] for item in recommendations] == ["rule_high_acwr", "rule_low_tsb", "rule_plan_ahead"]
+    assert [item["type"] for item in recommendations] == ["rule_high_acwr", "rule_plan_ahead"]
 
 
 def _make_training_paces(

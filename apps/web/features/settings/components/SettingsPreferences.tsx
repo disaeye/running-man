@@ -145,7 +145,7 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
         <label className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <span className="text-subheadline font-medium text-text-secondary">每周预期训练天数</span>
-            <span className="text-subheadline font-semibold text-accent">{days} 天/周</span>
+            <span className="text-subheadline font-semibold text-accent-strong">{days} 天/周</span>
           </div>
           <div className="flex items-center gap-3">
             <Input
@@ -166,7 +166,7 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
         <label className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <span className="text-subheadline font-medium text-text-secondary">单次训练最长时间</span>
-            <span className="text-subheadline font-semibold text-accent">{maxDuration} 分钟</span>
+            <span className="text-subheadline font-semibold text-accent-strong">{maxDuration} 分钟</span>
           </div>
           <div className="flex items-center gap-3">
             <Input
@@ -202,7 +202,7 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
                   return next;
                 });
               }}
-              className="size-5 rounded border-border-default text-accent focus:ring-accent accent-accent"
+              className="size-5 rounded border-border-default text-accent-strong focus:ring-accent accent-accent"
             />
           </label>
         </div>

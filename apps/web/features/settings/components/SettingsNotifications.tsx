@@ -36,7 +36,7 @@ function ToggleItem({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="size-5 rounded border-border-default text-accent focus:ring-accent accent-accent cursor-pointer"
+        className="size-5 cursor-pointer rounded border-border-default text-accent-strong focus:ring-accent accent-accent"
       />
     </label>
   );

@@ -125,7 +125,7 @@ async def _activity_inputs(
     return tuple(
         _activity_input(
             row,
-            hr_samples.get(_text(row["activity_id"]), ()),
+            hr_samples.get(_text(row["activity_id"]), ((), ())),
             pace_streams_by_activity.get(_text(row["activity_id"])),
             thresholds,
         )
@@ -155,27 +155,47 @@ async def _metric_samples(
     athlete_id: UUID,
     metric_type: str,
     activity_ids: set[str],
-) -> dict[str, tuple[float, ...]]:
+) -> dict[str, tuple[tuple[float, ...], tuple[float, ...]]]:
+    """Per-activity ``(elapsed_seconds, value)`` streams.
+
+    The elapsed time is measured from the activity's own start, so samples from
+    two different streams can be paired by timestamp instead of by their index
+    in an array.
+    """
     if not activity_ids:
         return {}
     query = (
-        "SELECT activity_id, value FROM activity_streams "
-        "WHERE athlete_id = %s AND metric_type = %s AND activity_id = ANY(%s) "
-        "ORDER BY activity_id, sample_time")
-    samples: dict[str, list[float]] = {}
+        "SELECT s.activity_id, "
+        "EXTRACT(EPOCH FROM s.sample_time - a.start_time) AS elapsed_s, "
+        "s.value FROM activity_streams s "
+        "JOIN activity_compute a ON a.activity_id = s.activity_id "
+        "WHERE s.athlete_id = %s AND s.metric_type = %s AND s.activity_id = ANY(%s) "
+        "AND s.sample_time IS NOT NULL "
+        "ORDER BY s.activity_id, s.sample_time")
+    times: dict[str, list[float]] = {}
+    values: dict[str, list[float]] = {}
     async with conn.cursor() as cur:
         _ = await cur.execute(query, (athlete_id, metric_type, sorted(activity_ids)))
         for row in await cur.fetchall():
-            samples.setdefault(_text(row["activity_id"]), []).append(float(row["value"]))
-    return {activity_id: tuple(values) for activity_id, values in samples.items()}
+            activity_id = _text(row["activity_id"])
+            elapsed = row["elapsed_s"]
+            if elapsed is None:
+                continue
+            times.setdefault(activity_id, []).append(float(elapsed))
+            values.setdefault(activity_id, []).append(float(row["value"]))
+    return {
+        activity_id: (tuple(times[activity_id]), tuple(values[activity_id]))
+        for activity_id in values
+    }
 
 
 def _activity_input(
     row: DictRow,
-    hr_samples: tuple[float, ...],
+    hr_stream: tuple[tuple[float, ...], tuple[float, ...]],
     pace_streams: tuple[tuple[float, ...], tuple[float, ...], tuple[float, ...]] | None,
     thresholds: list[ThresholdStep],
 ) -> ActivityLoadInput:
+    hr_times, hr_values = hr_stream
     start_time = cast(datetime, row["start_time"])
     target_date = cast(date, row["local_day"])
     sport = row["sport"]
@@ -190,7 +210,8 @@ def _activity_input(
         duration_s=cast(int, row["duration_s"]),
         sport=sport_str,
         avg_hr=cast(int | None, row["avg_hr"]),
-        hr_samples=hr_samples,
+        hr_samples=hr_values,
+        hr_sample_times=hr_times,
         lthr=cast(int | None, resolved["lthr"]),
         pace_streams=pace_streams if is_run else None,
         threshold_pace=float(threshold_pace) if is_run and threshold_pace else None,

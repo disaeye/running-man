@@ -22,12 +22,15 @@ def compute_recommendation(
     week_completed_tss: float,
     week_planned_tss: float,
     recent_activity_days: int,
+    chronic_ctl: float | None = None,
 ) -> Recommendation:
     score = cast(int, readiness["score"])
     planned = _next_event(events)
     risks = _risks(score, week_completed_tss, week_planned_tss, recent_activity_days)
     action, workout_type, intensity = _workout_choice(score, planned)
-    target_tss = _target_tss(score, planned, week_completed_tss, week_planned_tss)
+    target_tss = _target_tss(
+        score, planned, week_completed_tss, week_planned_tss, chronic_ctl
+    )
     return {
         "action": action,
         "workout_type": workout_type,
@@ -62,19 +65,47 @@ def _workout_choice(score: int, planned: Row | None) -> tuple[str, str, str]:
         return "train", "endurance", "moderate"
     return "recover", "recovery", "low"
 
-def _target_tss(score: int, planned: Row | None, completed: float, planned_week: float) -> int:
+def _target_tss(
+    score: int,
+    planned: Row | None,
+    completed: float,
+    planned_week: float,
+    chronic_ctl: float | None = None,
+) -> int:
+    """Load for today's session.
+
+    The unconditional 80 / 55 / 30 targets were the same for every athlete: a
+    beginner with a chronic load of 210 TSS a week was told to do 80 in a day,
+    and an athlete at 700 a week got the same 80, under a fifth of a normal day.
+    When the chronic load is known the target becomes a share of it.
+    """
     planned_tss = _num(planned, "predicted_tss")
-    level = band_for_score(score)["level"]
+    level = str(band_for_score(score)["level"])
     if planned_tss is not None:
         return _clamp_tss(planned_tss if level in ("high", "moderate") else planned_tss * 0.6)
     remaining = max(planned_week - completed, 0)
-    base = (
-        80 if level == "high"
-        else 55 if level == "moderate"
-        else 30 if level == "recovery"
-        else 0
-    )
-    return _clamp_tss(min(base, remaining or base))
+    base = _daily_share(level, chronic_ctl)
+    return _clamp_tss(min(base, remaining) if remaining > 0 else base)
+
+
+# Share of a normal training day, relative to chronic load / 7.
+_DAILY_SHARE: dict[str, float] = {
+    "high": 1.6,
+    "moderate": 1.0,
+    "recovery": 0.5,
+    "rest": 0.0,
+}
+
+
+def _daily_share(level: str, chronic_ctl: float | None) -> int:
+    """A day's load at ``level``, as a multiple of the daily chronic load.
+
+    CTL is itself a daily average, so CTL 60 means a normal day is about 60.
+    """
+    if chronic_ctl is not None and chronic_ctl > 0:
+        return round(chronic_ctl * _DAILY_SHARE.get(level, 0.0))
+    fallback = {"high": 80, "moderate": 55, "recovery": 30}
+    return fallback.get(level, 0)
 
 def _risks(score: int, completed: float, planned: float, recent_days: int) -> list[str]:
     risks: list[str] = []
@@ -121,11 +152,28 @@ def _reason(score: int, planned: Row | None, completed: float, planned_week: flo
     return f"今天{state}；本周还没有训练，也没有排定课表。"
 
 def _duration(score: int, target_tss: int) -> int:
+    """Minutes that produce ``target_tss`` at this session's intensity.
+
+    TSS = hours × IF² × 100, so minutes = TSS × 60 / (100 × IF²). Dividing the
+    target by 1.2/1.0/0.7 treated one TSS as one minute, which is only true at
+    IF ≈ 1: an easy session came out about twice as long as it should be, and
+    that figure is displayed as today's training time on the home page.
+    """
     if target_tss == 0:
         return 0
     level = band_for_score(score)["level"]
-    divisor = 1.2 if level == "high" else 1.0 if level == "moderate" else 0.7
-    return max(20, min(150, round(target_tss / divisor)))
+    intensity = _SESSION_IF.get(str(level), 0.7)
+    minutes = target_tss * 60.0 / (100.0 * intensity * intensity)
+    return max(15, min(180, round(minutes)))
+
+
+# Typical intensity factor of a session at each readiness level.
+_SESSION_IF: dict[str, float] = {
+    "high": 0.90,
+    "moderate": 0.78,
+    "recovery": 0.65,
+    "rest": 0.0,
+}
 
 def _next_event(events: list[Row]) -> Row | None:
     return events[0] if events else None

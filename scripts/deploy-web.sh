@@ -1,54 +1,99 @@
 #!/bin/bash
-# Deploy the Running Man frontend: build, restart the systemd service, verify.
+# Deploy the Running Man frontend: build into a private directory, swap it in,
+# restart the service, then prove the running process can serve its own build.
 #
-# Equivalent to the two commands in CLAUDE.md; kept as one step for convenience.
-# The build-then-restart is atomic from the service's POV: systemd swaps in a
-# fresh process only after build succeeds, so a stale server can never serve
-# chunks that no longer exist on disk.
+# Why the swap instead of building in place: `next start` reads its chunk
+# manifest once at boot. Overwriting `.next` while the service runs leaves the
+# old process advertising chunk files that the build just deleted, and the
+# symptom is silent — `GET /` keeps returning 200 with correct server-rendered
+# HTML, while every /_next/static request 500s and the browser renders the page
+# with no CSS. The asset probe at the end is what makes that state impossible to
+# call a successful deploy.
 #
 # Usage:
-#   scripts/deploy-web.sh          # build + restart + health check
-#   scripts/deploy-web.sh --check  # only verify the running service
+#   scripts/deploy-web.sh            # build + swap + restart + verify
+#   scripts/deploy-web.sh --check    # verify the live service, no build
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WEB_DIR="$REPO_ROOT/apps/web"
 SERVICE="running-man-web.service"
 PORT=31000
+BASE="http://localhost:$PORT"
 
-# --- --check: just verify the live service ---------------------------------
+cd "$WEB_DIR"
+
+verify() {
+  node scripts/verify-assets.mjs --base "$BASE" --dist .next
+}
+
+# --- --check: verify the live service ---------------------------------------
 if [[ "${1:-}" == "--check" ]]; then
-  echo "==> service status"
-  systemctl --user status "$SERVICE" --no-pager || true
   echo "==> http probe"
-  code="$(curl -sS -o /dev/null -w '%{http_code}' "http://localhost:$PORT/" || true)"
-  echo "GET / -> $code"
-  [[ "$code" == "200" ]] && echo "OK" || { echo "FAIL"; exit 1; }
+  curl -sS -o /dev/null -w "GET /login -> %{http_code}\n" "$BASE/login"
+  echo "==> asset probe"
+  verify
   exit 0
 fi
 
-# --- full deploy -----------------------------------------------------------
-echo "==> building (npm run build) in $WEB_DIR"
-cd "$WEB_DIR"
-npm run build
+STAMP="$(date +%Y%m%d%H%M%S)"
+# A fixed staging name, not a per-run one: `next build` appends its own
+# `distDir` patterns to tsconfig.json, so a stamped directory would grow that
+# include list by one entry on every deploy.
+BUILD_DIR=".next-build"
+PREV_DIR=".next-prev-$STAMP"
+
+echo "==> building into $BUILD_DIR"
+rm -rf "$BUILD_DIR"
+NEXT_DIST_DIR="$BUILD_DIR" npm run build
+
+for required in BUILD_ID build-manifest.json server static; do
+  if [[ ! -e "$BUILD_DIR/$required" ]]; then
+    echo "ERROR: $BUILD_DIR/$required is missing; the build did not complete" >&2
+    rm -rf "$BUILD_DIR"
+    exit 1
+  fi
+done
+
+echo "==> swapping $BUILD_DIR into place"
+swapped=0
+if [[ -d .next ]]; then
+  mv .next "$PREV_DIR"
+fi
+mv "$BUILD_DIR" .next
+swapped=1
+
+rollback() {
+  if [[ "$swapped" == "1" && -d "$PREV_DIR" ]]; then
+    echo "==> rolling back to the previous build" >&2
+    rm -rf .next
+    mv "$PREV_DIR" .next
+    systemctl --user restart "$SERVICE" || true
+  fi
+}
+trap rollback ERR
 
 echo "==> restarting $SERVICE"
 systemctl --user restart "$SERVICE"
 
-echo "==> waiting for service to come up (port $PORT)"
-ok=""
-for i in {1..30}; do
-  code="$(curl -sS -o /dev/null -w '%{http_code}' "http://localhost:$PORT/" 2>/dev/null || echo "000")"
-  if [[ "$code" == "200" ]]; then ok="1"; break; fi
+echo "==> waiting for $BASE"
+ready=""
+for _ in $(seq 1 30); do
+  if curl -sS -o /dev/null "$BASE/login" 2>/dev/null; then ready="1"; break; fi
   sleep 1
 done
-
-if [[ -z "$ok" ]]; then
-  echo "ERROR: service did not return 200 within 30s. Last status:" >&2
+if [[ -z "$ready" ]]; then
+  echo "ERROR: $SERVICE did not answer within 30s" >&2
   systemctl --user status "$SERVICE" --no-pager >&2 || true
-  echo "Hint: journalctl --user -u $SERVICE -n 50" >&2
-  exit 1
+  false
 fi
 
-echo "==> deployed. GET / -> $code"
-echo "    logs: journalctl --user -u $SERVICE -f"
+echo "==> verifying served assets"
+verify
+
+trap - ERR
+# Keep the newest previous build for manual rollback, drop older ones.
+ls -1dt .next-prev-* 2>/dev/null | tail -n +2 | xargs -r rm -rf
+ls -1dt .next-build* 2>/dev/null | xargs -r rm -rf
+
+echo "==> deployed. logs: journalctl --user -u $SERVICE -f"

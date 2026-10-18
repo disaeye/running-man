@@ -35,6 +35,7 @@ from domain.thresholds.resolver import (
     age_from_dob,
     resolve_all,
 )
+from domain.time import today_in_zone
 from infrastructure.repositories.athlete_profiles import AthleteProfileRepo
 from infrastructure.repositories.thresholds import ThresholdRepo
 
@@ -101,7 +102,15 @@ async def _fallbacks(
 
     dob = row.get("dob") if row else None
     if isinstance(dob, date):
-        age = age_from_dob(dob, target_date or date.today())
+        # Age feeds the HRmax formula, so it is evaluated on the athlete's own
+        # calendar day. A birthday that falls overnight UTC would otherwise be
+        # a day early or late, which is exactly the boundary where the estimate
+        # is worth re-deriving.
+        timezone = row.get("timezone") if row else None
+        age = age_from_dob(
+            dob,
+            target_date or today_in_zone(timezone if isinstance(timezone, str) else None),
+        )
         predicted = estimate_hr_max(age)
         if predicted is not None:
             out["hr_max"] = (predicted, "age_estimate")

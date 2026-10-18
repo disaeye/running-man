@@ -88,12 +88,57 @@ export function athleteToday(
   return isoDayInZone(now, timezone);
 }
 
+/**
+ * This week's range on the athlete's clock: Monday through today.
+ *
+ * `getWeekRange` in `@shared/lib/format` derives the weekday from the host's
+ * calendar. That is a different week whenever the athlete and the host disagree
+ * about which day it is — and Monday-anchoring makes the two answers differ by
+ * a whole week at the boundary, not just by a day. A week of planned sessions
+ * is exactly the range a one-week error corrupts most visibly.
+ *
+ * The day arithmetic runs on the already-resolved day key, so it cannot drift
+ * across a DST transition the way subtracting milliseconds would.
+ */
+export function athleteWeekRange(
+  timezone: string = DEFAULT_TIMEZONE,
+  now: Date = new Date(),
+): { from: string; to: string } {
+  const to = athleteToday(timezone, now);
+  const [year, month, day] = to.split("-").map(Number) as [number, number, number];
+  // Date.UTC(..., dow) with `dow` from getUTCDay: the resolved key is already
+  // the athlete's date, so its UTC weekday is the athlete's weekday.
+  const anchor = Date.UTC(year, month - 1, day);
+  const weekday = new Date(anchor).getUTCDay();
+  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+  const from = new Date(anchor + mondayOffset * 86_400_000);
+  return { from: from.toISOString().slice(0, 10), to };
+}
+
 export function athleteRange(
   days: number,
   timezone: string = DEFAULT_TIMEZONE,
   now: Date = new Date(),
 ): { from: string; to: string } {
-  const to = athleteToday(timezone, now);
+  return rangeEndingOn(athleteToday(timezone, now), days);
+}
+
+/**
+ * A `days`-wide window whose last day is `to`.
+ *
+ * Operates on an already-resolved day key rather than on an instant, so the
+ * result does not depend on where the code is running. Callers that have a day
+ * key in hand — a preset button rebuilding its window, a range the user picked —
+ * need this rather than `athleteRange`, which would re-derive today and discard
+ * the anchor they already have.
+ *
+ * `days` counts back from `to` inclusive, so `rangeEndingOn(key, 1)` is that
+ * single day.
+ */
+export function rangeEndingOn(
+  to: string,
+  days: number,
+): { from: string; to: string } {
   if (days <= 1) return { from: to, to };
   // `Date.UTC` arithmetic on the day key avoids DST jumps that would otherwise
   // drop or duplicate a day: the key is already the athlete's local date, and

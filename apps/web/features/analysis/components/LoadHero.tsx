@@ -29,7 +29,7 @@ export function LoadHero({
     <Card padding="md" data-testid="load-pmc-hero">
       <SectionHeader
         title="训练负荷趋势"
-        subtitle={`PMC · 体能 / 疲劳 / 状态 · ${rangeFrom} → ${rangeTo} · ${data.length} 个步点`}
+        subtitle={`PMC · 体能 / 疲劳 / 状态 · ${rangeFrom} → ${rangeTo}${data.length > 0 ? ` · ${data.length} 个数据点` : ""}`}
       />
       <div className="mt-4">
         {error ? (
@@ -48,7 +48,7 @@ export function LoadHero({
             此区间还没有训练负荷数据
           </div>
         ) : (
-          <PMCChart data={[...data]} />
+          <PMCChart data={[...data]} showTitle={false} />
         )}
       </div>
     </Card>

@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useCallback } from "react";
 import { Badge } from "@shared/ui/Badge";
 import { Button } from "@shared/ui/button";
-import { useToast } from "@shared/ui/Toast";
 import { useSyncDetail } from "@features/data/hooks/useSyncDetail";
+import { useSourceCoverage } from "@features/data/hooks/useSyncJobs";
+import { useIntervalsActions } from "@features/data/hooks/useIntervalsActions";
 import { IntervalsConnectDialog } from "./IntervalsConnectDialog";
+import { BackfillDialog } from "./BackfillDialog";
+import { DisconnectConfirmDialog } from "./DisconnectConfirmDialog";
 import { formatRelativeTime } from "@shared/lib/format";
 import {
   LastSyncDetailBlock,
   SyncProgressBanner,
   SyncErrorLine,
   SyncResultBlock,
-  type SyncResult,
 } from "./SourceCardShared";
 import type { IntegrationStatus, SyncFrequency } from "@features/data/hooks/useIntegrations";
 
@@ -25,8 +26,9 @@ const FREQ_OPTIONS = [
 interface Props {
   integration: IntegrationStatus | null;
   onConnect(id: string, key: string): Promise<void>;
-  onDisconnect(): Promise<void>;
+  onDisconnect(clearData: boolean): Promise<void>;
   onSync(): Promise<Record<string, unknown>>;
+  onBackfill(fromDate: string): Promise<void>;
   onSettingsChange(freq: SyncFrequency, autoSync: boolean): Promise<void>;
 }
 
@@ -50,7 +52,7 @@ function Subtitle({
   syncStatus?: string | null;
   isSyncing: boolean;
 }) {
-  if (!connected) return <>未连接</>;
+  if (!connected) return <>尚未连接，连接后可导入活动与健康数据</>;
   if (isSyncing || syncStatus === "running") return <>正在同步…</>;
   return <>{lastSync ? `最后同步 ${formatRelativeTime(lastSync)}` : "已授权"}</>;
 }
@@ -71,9 +73,17 @@ function DisconnectedView({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-function ConnectedActions({ onSync, onDisconnect, isBusy, integration, onSettingsChange }: {
+function ConnectedActions({
+  onSync,
+  onOpenBackfill,
+  onOpenDisconnect,
+  isBusy,
+  integration,
+  onSettingsChange,
+}: {
   onSync(): void;
-  onDisconnect(): void;
+  onOpenBackfill(): void;
+  onOpenDisconnect(): void;
   isBusy: string | null;
   integration: IntegrationStatus | null;
   onSettingsChange(freq: SyncFrequency, autoSync: boolean): Promise<void>;
@@ -81,9 +91,12 @@ function ConnectedActions({ onSync, onDisconnect, isBusy, integration, onSetting
   return (
     <>
       <Button size="sm" onClick={onSync} disabled={isBusy !== null}>
-        {isBusy === "sync" ? "同步进行中…" : "同步"}
+        {isBusy === "sync" ? "同步进行中…" : "增量同步"}
       </Button>
-      <Button size="sm" variant="secondary" onClick={onDisconnect} disabled={isBusy !== null}>
+      <Button size="sm" variant="secondary" onClick={onOpenBackfill} disabled={isBusy !== null}>
+        导入历史
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onOpenDisconnect} disabled={isBusy !== null}>
         {isBusy === "disconnect" ? "断开中…" : "断开"}
       </Button>
       <select
@@ -100,87 +113,39 @@ function ConnectedActions({ onSync, onDisconnect, isBusy, integration, onSetting
   );
 }
 
-function useIntervalsActions({ onConnect, onDisconnect, onSync }: {
-  onConnect(id: string, key: string): Promise<void>;
-  onDisconnect(): Promise<void>;
-  onSync(): Promise<Record<string, unknown>>;
-}) {
-  const { toast } = useToast();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [athleteId, setAthleteId] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [busy, setBusy] = useState<"connect" | "sync" | "disconnect" | null>(null);
-  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
-
-  const handleConnect = useCallback(async () => {
-    if (!athleteId.trim() || !apiKey.trim()) {
-      toast("请填写 Athlete ID 和 API Key", "warning");
-      return;
-    }
-    setBusy("connect");
-    try {
-      await onConnect(athleteId.trim(), apiKey.trim());
-      toast("Intervals.icu 已连接", "success");
-      setDialogOpen(false);
-      setAthleteId("");
-      setApiKey("");
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : "请检查 Athlete ID 与 API Key 是否正确";
-      toast(`连接失败: ${detail}`, "error");
-    } finally {
-      setBusy(null);
-    }
-  }, [athleteId, apiKey, onConnect, toast]);
-
-  const handleSync = useCallback(async () => {
-    setBusy("sync");
-    setSyncResult(null);
-    toast("同步已开始，完成后会自动更新", "info");
-    try {
-      const result = await onSync();
-      const upserted = (result.upserted as number) ?? 0;
-      const deduplicated = (result.deduplicated as number) ?? 0;
-      const total = (result.total_processed as number) ?? 0;
-      setSyncResult({ upserted, deduplicated, total_processed: total });
-      toast(`同步完成：新增/更新 ${upserted} 条，去重 ${deduplicated} 条，共处理 ${total} 条`, "success");
-    } catch (error) {
-      setSyncResult(null);
-      const msg = error instanceof Error && error.message ? error.message : "同步失败";
-      toast(msg.includes("版本") ? "同步超时或连接中断，请刷新查看是否已完成" : msg, "error");
-    } finally {
-      setBusy(null);
-    }
-  }, [onSync, toast]);
-
-  const handleDisconnect = useCallback(async () => {
-    setBusy("disconnect");
-    try {
-      await onDisconnect();
-      toast("已断开 Intervals.icu", "info");
-    } catch {
-      toast("断开失败", "error");
-    } finally {
-      setBusy(null);
-    }
-  }, [onDisconnect, toast]);
-
-  return { dialogOpen, setDialogOpen, athleteId, setAthleteId, apiKey, setApiKey, busy, syncResult, handleConnect, handleSync, handleDisconnect };
-}
-
 export function IntervalsSourceCard({
   integration,
   onConnect,
   onDisconnect,
   onSync,
+  onBackfill,
   onSettingsChange,
 }: Props) {
-  const { dialogOpen, setDialogOpen, athleteId, setAthleteId, apiKey, setApiKey, busy, syncResult, handleConnect, handleSync, handleDisconnect } = useIntervalsActions({ onConnect, onDisconnect, onSync });
+  const {
+    dialogOpen,
+    setDialogOpen,
+    backfillOpen,
+    setBackfillOpen,
+    disconnectOpen,
+    setDisconnectOpen,
+    athleteId,
+    setAthleteId,
+    apiKey,
+    setApiKey,
+    busy,
+    syncResult,
+    handleConnect,
+    handleSync,
+    handleStartBackfill,
+    handleConfirmDisconnect,
+  } = useIntervalsActions({ onConnect, onDisconnect, onSync, onBackfill });
 
   const connected = integration?.status === "connected";
   const { data: syncDetail } = useSyncDetail("intervals_icu");
+  const { coverage } = useSourceCoverage("intervals_icu");
   const lastSync = integration?.last_sync ?? syncDetail?.last_sync ?? null;
   const syncStatus = integration?.last_sync_status ?? syncDetail?.last_sync_status ?? null;
-  const isSyncing = busy === "sync" || syncStatus === "running";
+  const isSyncing = busy === "sync" || busy === "backfill" || syncStatus === "running";
   const staleness =
     integration?.staleness_bucket ?? syncDetail?.staleness_bucket ?? "unknown";
   const rawDetail = integration?.last_sync_detail ?? syncDetail?.last_sync_detail ?? null;
@@ -190,8 +155,8 @@ export function IntervalsSourceCard({
       : null;
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm space-y-4">
-      <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-4">
+    <div className="rounded-xl border border-border-subtle bg-surface-card p-5 space-y-4">
+      <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <IcuIcon />
           <div className="min-w-0">
@@ -201,21 +166,39 @@ export function IntervalsSourceCard({
             </p>
           </div>
         </div>
+        {/* One status badge. The staleness badge only means something once the
+            source is connected; before that both read 未连接 / 数据缺失. */}
         <div className="flex items-center gap-2">
-          <StalenessBadge bucket={staleness} />
+          {connected && <StalenessBadge bucket={staleness} />}
           <StatusBadge status={integration?.status ?? "disconnected"} />
         </div>
       </div>
 
       <LastSyncDetailBlock detail={lastSyncDetail} connected={connected} />
+
+      {connected && coverage?.firstActivityDate && (
+        <p className="text-caption1 text-text-muted">
+          数据覆盖：{coverage.firstActivityDate} 至 {coverage.lastActivityDate}（已导入 {coverage.activityCount} 条活动）
+        </p>
+      )}
+
       <SyncProgressBanner active={isSyncing} />
       <SyncErrorLine message={syncStatus === "failed" ? integration?.last_sync_error : null} />
       <SyncResultBlock result={syncResult} />
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {!connected
-          ? <DisconnectedView onOpen={() => setDialogOpen(true)} />
-          : <ConnectedActions onSync={handleSync} onDisconnect={handleDisconnect} isBusy={busy} integration={integration} onSettingsChange={onSettingsChange} />}
+        {!connected ? (
+          <DisconnectedView onOpen={() => setDialogOpen(true)} />
+        ) : (
+          <ConnectedActions
+            onSync={handleSync}
+            onOpenBackfill={() => setBackfillOpen(true)}
+            onOpenDisconnect={() => setDisconnectOpen(true)}
+            isBusy={busy}
+            integration={integration}
+            onSettingsChange={onSettingsChange}
+          />
+        )}
       </div>
 
       {integration?.error_count ? (
@@ -223,6 +206,8 @@ export function IntervalsSourceCard({
       ) : null}
 
       <IntervalsConnectDialog open={dialogOpen} onClose={() => setDialogOpen(false)} athleteId={athleteId} setAthleteId={setAthleteId} apiKey={apiKey} setApiKey={setApiKey} isBusy={busy} onConnect={handleConnect} />
+      <BackfillDialog open={backfillOpen} onClose={() => setBackfillOpen(false)} onStartBackfill={handleStartBackfill} isBusy={busy === "backfill"} />
+      <DisconnectConfirmDialog open={disconnectOpen} onClose={() => setDisconnectOpen(false)} onConfirm={handleConfirmDisconnect} isBusy={busy === "disconnect"} />
     </div>
   );
 }

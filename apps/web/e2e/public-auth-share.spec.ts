@@ -1,8 +1,8 @@
 /**
  * Public surfaces — Playwright discovery spec for Todo 8.
  *
- * Authored for the v6 public/auth/share redesign:
- *   `/landing`, `/login`, `/register`, `/_not-found`, `/share/[token]`
+ * Authored for the public/auth/share surfaces:
+ *   `/login`, `/register`, `/_not-found`, `/share/[token]`
  *
  * For this todo, only `npx playwright test --list --grep "public auth share"`
  * is required — served execution belongs to Todo 15 (and any served run
@@ -39,27 +39,37 @@ function jsonRoute(
 }
 
 test.describe("public auth share", () => {
-  test.describe("landing", () => {
-    test("renders the brand, feature grid, and CTAs without auth", async ({
+  // Every surface in this file is reachable without a session, so the shared
+  // authenticated storage state is dropped for the whole group.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test.describe("entry", () => {
+    // The app has no marketing surface: an unauthenticated visitor to `/` is
+    // sent to the sign-in form, and the retired `/landing` URL resolves the
+    // same way.
+    test("`/` opens the sign-in screen", async ({ page }) => {
+      await page.goto("/");
+
+      await expect(page).toHaveURL(/\/login/);
+      await expect(page.locator('input[name="email"]')).toBeVisible();
+      await expect(page.locator('button[type="submit"]')).toBeVisible();
+    });
+
+    test("the retired `/landing` URL resolves to the sign-in screen", async ({
       page,
     }) => {
       await page.goto("/landing");
 
-      // The hero heading is the value proposition, not the brand name (which
-      // appears in the header link instead).
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      await expect(page.getByRole("link", { name: /Running Man/ })).toBeVisible();
-      // The page's own CTA wording: a sign-in link plus register-intent links.
-      // Asserting the literal "注册" failed because the CTAs read 进入系统 /
-      // 建立你的节奏 / 免费建立档案 — the hrefs point at /register either way.
-      await expect(page.getByRole("link", { name: "登录" }).first()).toBeVisible();
-      await expect(page.locator('a[href="/register"]').first()).toBeVisible();
+      await expect(page).toHaveURL(/\/login/);
+      await expect(page.locator('input[name="email"]')).toBeVisible();
+    });
 
-      // No fake trust/legal links leaked onto the landing page.
-      await expect(page.getByText("Features")).toHaveCount(0);
-      await expect(page.getByText("Pricing")).toHaveCount(0);
-      await expect(page.getByText("About")).toHaveCount(0);
-      await expect(page.getByText("Privacy Policy")).toHaveCount(0);
+    test("carries no marketing copy or navigation", async ({ page }) => {
+      await page.goto("/login");
+
+      for (const label of ["Features", "Pricing", "About", "Privacy Policy", "ENDURANCE / OS"]) {
+        await expect(page.getByText(label)).toHaveCount(0);
+      }
     });
   });
 

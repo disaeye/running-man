@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { toISODate } from "@shared/lib/format";
+import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import { getReadinessApiV1InsightsReadinessGet } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
@@ -85,7 +85,8 @@ function mapReadiness(
 }
 
 export function useReadiness(day?: string): UseReadinessResult {
-  const target = day ?? toISODate(new Date());
+  const timezone = useAthleteTimezone();
+  const target = day ?? athleteToday(timezone);
   const params = { date: target };
   const { data, error, isLoading, mutate } = useSWR<ReadinessResponse>(
     ["/insights/readiness", { date: target }],

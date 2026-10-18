@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { ArrowUpRight, Calendar, Clock, Flame, Zap } from "lucide-react";
+import { Card } from "@shared/ui/Card";
+import { ZoneMeter } from "@shared/ui/ZoneMeter";
+import { formatZoneRange, zoneFor } from "@shared/lib/metric-zone";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { Assessment } from "@features/today/lib/readiness-presentation";
 import type { CoachRecommendation } from "@features/today/hooks/useCoachContext";
 import {
@@ -13,149 +17,201 @@ interface HomeDecisionCardProps {
   decision: CoachRecommendation | null;
   assessment: Assessment;
   dataStale: boolean;
-  onReload: () => void;
-  error: string | null;
+  tsb: number | null;
+  d7Tss: number | null;
 }
 
+const INTENSITY: Readonly<
+  Record<string, { readonly label: string; readonly tone: string }>
+> = {
+  high: { label: "高强度", tone: "text-zone-5" },
+  moderate: { label: "中等强度", tone: "text-zone-4" },
+  low: { label: "低强度", tone: "text-zone-2" },
+  none: { label: "休息", tone: "text-text-muted" },
+};
+
+/**
+ * The answer, and the three numbers that justify it.
+ *
+ * Today answers one question — what to do right now — so this is the only
+ * block on the page that carries a heading of its own weight. The evidence
+ * strip sits inside it rather than beside it: a readiness score, a TSB position
+ * and a seven-day load mean something as support for a decision, and read as
+ * three competing cards when they stand alone.
+ */
 export function HomeDecisionCard({
   decision,
   assessment,
   dataStale,
+  tsb,
+  d7Tss,
 }: HomeDecisionCardProps) {
   const targetTss = decision?.target_tss ?? 0;
   const targetDurationMin = decision?.duration_min ?? 0;
-  const targetIntensity = decision?.intensity ?? "low";
+  const intensity = INTENSITY[decision?.intensity ?? "low"] ?? INTENSITY.low!;
 
   const title = decisionTitle(decision, assessment);
   const reason = decisionReason(decision, assessment);
-
-  const intensityColor =
-    targetIntensity === "high"
-      ? "text-error"
-      : targetIntensity === "moderate"
-        ? "text-warning"
-        : "text-success";
-
-  const intensityLabel =
-    targetIntensity === "high"
-      ? "高强度"
-      : targetIntensity === "moderate"
-        ? "中等强度"
-        : "低强度";
-
   const hasPrescription = targetDurationMin > 0 || targetTss > 0;
+  const tsbZone = zoneFor("tsb", tsb);
 
   return (
-    <article
-      className="bento-decision glass-surface relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border-subtle p-4 sm:p-6"
-      aria-labelledby="decision-heading"
-    >
-      <div className="space-y-4 sm:space-y-5">
-        {/* Header line */}
-        <div className="flex items-center justify-between gap-2">
-          <h2 id="decision-heading" className="text-caption1 font-medium tracking-wide text-text-muted">
-            今日训练安排
-          </h2>
+    <Card padding="lg">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-caption1 font-medium tracking-wide text-text-muted">
+          今日训练安排
+        </h2>
+        <span
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption1 ${
+            dataStale
+              ? "bg-warning/10 text-warning"
+              : "bg-surface-overlay text-text-muted"
+          }`}
+        >
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption2 font-medium ${
-              !dataStale
-                ? "bg-success/10 text-success"
-                : "bg-warning/10 text-warning"
-            }`}
-          >
-            <span
-              className={`size-1.5 rounded-full ${
-                !dataStale ? "bg-success" : "bg-warning"
-              }`}
-            />
-            {!dataStale ? "已同步" : "已过期"}
-          </span>
-        </div>
-
-        {/* Main Instruction */}
-        <div>
-          <h3 className="text-title1 font-semibold tracking-tight text-text-primary sm:text-largeTitle">
-            {title}
-          </h3>
-          {reason && (
-            <p className="mt-2 text-subheadline leading-relaxed text-text-secondary">
-              {reason}
-            </p>
-          )}
-        </div>
-
-        {/* Action parameters: 3-column micro cards on both mobile & desktop */}
-        {hasPrescription && (
-          <div
-            className="grid grid-cols-3 gap-2 sm:gap-3.5"
-            data-testid="decision-prescription"
-          >
-            {/* Duration */}
-            <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-overlay/50 p-2.5 sm:p-3.5">
-              <div className="flex items-center gap-1.5 text-text-muted">
-                <Clock className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-                <span className="text-caption1 font-medium">时长</span>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="font-mono text-title3 font-semibold text-text-primary sm:text-title1">
-                  {targetDurationMin}
-                </span>
-                <span className="text-caption1 text-text-muted">分钟</span>
-              </div>
-            </div>
-
-            {/* Target Load */}
-            <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-overlay/50 p-2.5 sm:p-3.5">
-              <div className="flex items-center gap-1.5 text-text-muted">
-                <Flame className="size-3.5 shrink-0 text-amber-500" aria-hidden="true" />
-                <span className="text-caption1 font-medium">负荷</span>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="font-mono text-title3 font-semibold text-text-primary sm:text-title1">
-                  ~{Math.round(targetTss)}
-                </span>
-                <span className="text-caption1 text-text-muted">TSS</span>
-              </div>
-            </div>
-
-            {/* Intensity */}
-            <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-overlay/50 p-2.5 sm:p-3.5">
-              <div className="flex items-center gap-1.5 text-text-muted">
-                <Zap className={`size-3.5 shrink-0 ${intensityColor}`} aria-hidden="true" />
-                <span className="text-caption1 font-medium">强度</span>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className={`whitespace-nowrap text-subheadline font-semibold sm:text-title2 ${intensityColor}`}>
-                  {intensityLabel}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+            className={`size-1.5 rounded-full ${dataStale ? "bg-warning" : "bg-recovery-good"}`}
+            aria-hidden="true"
+          />
+          {dataStale ? "数据已过期" : "已同步"}
+        </span>
       </div>
 
-      {/* Footer / CTA Bar */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-3.5 sm:mt-5">
+      <h3 className="mt-3 text-display-sm font-semibold tracking-tight text-text-primary">
+        {title}
+      </h3>
+      {reason && (
+        <p className="mt-2 max-w-2xl text-subheadline leading-relaxed text-text-secondary">
+          {reason}
+        </p>
+      )}
+
+      {hasPrescription && (
+        <div
+          className="mt-5 flex flex-wrap items-baseline gap-x-8 gap-y-3"
+          data-testid="decision-prescription"
+        >
+          <Prescription
+            icon={<Clock className="size-3.5" aria-hidden="true" />}
+            label="时长"
+            value={`${targetDurationMin}`}
+            unit="分钟"
+          />
+          <Prescription
+            icon={<Flame className="size-3.5" aria-hidden="true" />}
+            label="目标负荷"
+            value={`~${Math.round(targetTss)}`}
+            unit="TSS"
+          />
+          <Prescription
+            icon={<Zap className={`size-3.5 ${intensity.tone}`} aria-hidden="true" />}
+            label="强度"
+            value={intensity.label}
+            tone={intensity.tone}
+          />
+        </div>
+      )}
+
+      <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border-subtle pt-4 sm:grid-cols-3">
+        <Evidence label="就绪状态">
+          <span className="font-mono text-title3 font-semibold tabular-nums text-text-primary">
+            {assessment.available ? `${Math.round(assessment.score)}` : NO_VALUE}
+          </span>
+          <span className="ml-1.5 text-caption1 text-text-muted">
+            {assessment.available ? assessment.levelLabel : "待建立基线"}
+          </span>
+        </Evidence>
+
+        <Evidence label="TSB 训练压力平衡">
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono text-title3 font-semibold tabular-nums text-text-primary">
+              {tsb == null ? NO_VALUE : `${tsb > 0 ? "+" : ""}${tsb.toFixed(1)}`}
+            </span>
+            {tsbZone && (
+              <span className="text-caption1 text-text-secondary">{tsbZone.label}</span>
+            )}
+          </div>
+          <ZoneMeter metricKey="tsb" value={tsb} compact className="mt-2" />
+        </Evidence>
+
+        <Evidence label="近 7 日负荷">
+          <span className="font-mono text-title3 font-semibold tabular-nums text-text-primary">
+            {d7Tss == null ? NO_VALUE : Math.round(d7Tss)}
+          </span>
+          <span className="ml-1.5 text-caption1 text-text-muted">TSS</span>
+        </Evidence>
+      </div>
+
+      {tsbZone && (
+        <p className="mt-3 text-caption1 leading-relaxed text-text-muted">
+          {tsbZone.label}（{formatZoneRange(tsbZone, 0)}）：{tsbZone.description}
+        </p>
+      )}
+
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <span className="text-caption1 text-text-muted">
-          {assessment.available ? `状态：${assessment.levelLabel}` : "待评估"}
+          {assessment.missing.length > 0
+            ? `缺少${assessment.missing.join("、")}`
+            : assessment.available
+              ? "恢复数据完整"
+              : "尚未评估"}
         </span>
         <div className="flex items-center gap-2">
           <Link
             href="/calendar"
-            className="focus-ring flex min-h-[36px] items-center gap-1.5 rounded-lg border border-border-default px-3 py-1.5 text-caption1 font-medium text-text-secondary transition-all hover:bg-surface-overlay hover:text-text-primary active:scale-95"
+            className="focus-ring flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle px-3 text-caption1 font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary"
           >
             <Calendar className="size-3.5" aria-hidden="true" />
             日历
           </Link>
           <Link
             href="/calendar?view=record"
-            className="focus-ring flex min-h-[36px] items-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-caption1 font-semibold text-on-primary shadow-sm transition-all duration-150 hover:bg-primary/90 active:scale-95"
+            className="focus-ring flex min-h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-caption1 font-semibold text-on-primary transition-colors hover:bg-primary-active"
           >
             前往执行
             <ArrowUpRight className="size-3.5" aria-hidden="true" />
           </Link>
         </div>
       </div>
-    </article>
+    </Card>
+  );
+}
+
+function Prescription({
+  icon,
+  label,
+  value,
+  unit,
+  tone = "text-text-primary",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  unit?: string;
+  tone?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-text-muted">{icon}</span>
+      <span className="text-caption1 text-text-muted">{label}</span>
+      <span className={`font-mono text-title3 font-semibold tabular-nums ${tone}`}>
+        {value}
+      </span>
+      {unit && <span className="text-caption1 text-text-muted">{unit}</span>}
+    </div>
+  );
+}
+
+function Evidence({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-caption1 text-text-muted">{label}</p>
+      <div className="mt-1">{children}</div>
+    </div>
   );
 }

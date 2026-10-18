@@ -7,6 +7,7 @@
 
 import { Button } from "@shared/ui/button";
 import { DateRangePicker } from "@shared/ui/DateRangePicker";
+import { rangeEndingOn, useAthleteTimezone } from "@shared/lib/training-day";
 import {
   ANALYSIS_RANGE_PRESETS,
   isPresetActive,
@@ -24,6 +25,7 @@ export function AnalysisRangeControls({
   onDateRangeChange,
   className,
 }: AnalysisRangeControlsProps) {
+  const timezone = useAthleteTimezone();
   return (
     <div
       className={`flex flex-wrap items-center justify-end gap-2 ${className ?? ""}`.trim()}
@@ -36,14 +38,12 @@ export function AnalysisRangeControls({
       >
         {ANALYSIS_RANGE_PRESETS.map((preset) => {
           const days = preset.days;
-          const active = isPresetActive(dateRange, days);
+          const active = isPresetActive(dateRange, days, timezone);
           return (
             <Button
               key={days}
               variant={active ? "default" : "ghost"}
-              onClick={() =>
-                onDateRangeChange(computePresetRange(days, dateRange.to))
-              }
+              onClick={() => onDateRangeChange(rangeEndingOn(dateRange.to, days))}
               aria-pressed={active}
             >
               {preset.label}
@@ -58,23 +58,4 @@ export function AnalysisRangeControls({
       />
     </div>
   );
-}
-
-function computePresetRange(days: number, today: string): AnalysisDateRange {
-  const [yearRaw, monthRaw, dayRaw] = today.split("-").map((part) => Number(part));
-  const year = yearRaw ?? 1970;
-  const month = monthRaw ?? 1;
-  const day = dayRaw ?? 1;
-  const todayDate = new Date(year, month - 1, day);
-  const fromDate = new Date(todayDate);
-  fromDate.setDate(todayDate.getDate() - (days - 1));
-  const fromIso = toISODateLocal(fromDate);
-  return { from: fromIso, to: today };
-}
-
-function toISODateLocal(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
 }

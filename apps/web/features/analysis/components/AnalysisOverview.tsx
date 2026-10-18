@@ -9,7 +9,6 @@ import type { AnalysisPageTab } from "@shared/config/canonical-routes";
 import { useAnalysisOverviewSummary } from "../lib/use-analysis-overview-summary";
 import {
   ANALYSIS_PILLAR_META,
-  analysisTabLabel,
 } from "../lib/analysis-pillars";
 
 type OverviewTab = Extract<
@@ -34,19 +33,25 @@ export function AnalysisOverview({ onSelectTab }: AnalysisOverviewProps) {
 
   return (
     <div className="page-stack" data-testid="analysis-overview-inner">
-      <Card padding="lg" className="relative overflow-hidden">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <Card padding="lg">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <h2
-              className="text-title1 font-semibold tracking-tight text-text-primary sm:text-display-sm"
+              className="text-title1 font-semibold tracking-tight text-text-primary"
               data-testid="analysis-overview-verdict"
             >
               {view.summary.verdict}
             </h2>
-            <p className="sr-only" data-testid="analysis-overview-next-step">
+            <p
+              className="mt-2 max-w-2xl text-subheadline leading-relaxed text-text-secondary"
+              data-testid="analysis-overview-next-step"
+            >
               {view.summary.nextStep}
             </p>
-            <p className="sr-only" data-testid="analysis-overview-sample-line">
+            <p
+              className="mt-3 text-caption1 text-text-muted"
+              data-testid="analysis-overview-sample-line"
+            >
               {view.summary.sampleLine}
             </p>
           </div>
@@ -87,6 +92,8 @@ export function AnalysisOverview({ onSelectTab }: AnalysisOverviewProps) {
               pillarId={pillar.pillarId}
               tabId={pillar.tabId as OverviewTab}
               title={meta.title}
+              description={meta.description}
+              ctaLabel={meta.ctaLabel}
               verdict={pillar.verdict}
               risk={pillar.risk}
               nextStep={pillar.nextStep}
@@ -101,7 +108,7 @@ export function AnalysisOverview({ onSelectTab }: AnalysisOverviewProps) {
           <h3 className="text-title3 font-semibold text-text-primary">PMC</h3>
           <span className="text-caption1 text-text-muted">CTL · ATL · TSB</span>
         </div>
-        <PMCChart data={view.pmc as PmcPoint[]} />
+        <PMCChart data={view.pmc as PmcPoint[]} showTitle={false} />
       </Card>
 
       {view.error != null && (
@@ -120,6 +127,8 @@ interface PillarBentoCardProps {
   readonly pillarId: string;
   readonly tabId: OverviewTab;
   readonly title: string;
+  readonly description: string;
+  readonly ctaLabel: string;
   readonly verdict: string;
   readonly risk: "low" | "medium" | "high";
   readonly nextStep: string;
@@ -130,57 +139,62 @@ function PillarBentoCard({
   pillarId,
   tabId,
   title,
+  description,
+  ctaLabel,
   verdict,
   risk,
   nextStep,
   onNavigate,
 }: PillarBentoCardProps) {
   return (
-    <button
-      type="button"
-      className="group focus-ring flex h-full min-h-[8.5rem] w-full cursor-pointer flex-col text-left"
+    <Card
+      role="button"
+      tabIndex={0}
+      padding="md"
+      className="group focus-ring flex h-full min-h-34 w-full cursor-pointer flex-col gap-2 text-left transition-colors hover:border-accent/40"
       data-testid={`analysis-pillar-${pillarId}`}
       data-pillar-id={pillarId}
-      aria-label={`${title} — ${verdict}`}
+      aria-label={`${title} — ${verdict}。${ctaLabel}`}
       onClick={() => onNavigate(tabId)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onNavigate(tabId);
+        }
+      }}
     >
-      <Card
-        padding="md"
-        className="flex h-full flex-col gap-2 transition-colors group-hover:border-accent/35"
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-caption1 font-medium text-text-muted">{title}</p>
+        <span
+          className={cn(
+            "size-2.5 rounded-full",
+            risk === "high"
+              ? "bg-error"
+              : risk === "medium"
+                ? "bg-warning"
+                : "bg-success",
+          )}
+          data-risk={risk}
+          aria-label={riskBadgeLabel(risk)}
+        />
+      </div>
+      <p className="text-caption1 leading-snug text-text-muted">{description}</p>
+      <h3
+        className="line-clamp-2 text-title3 font-semibold leading-snug text-text-primary"
+        data-testid={`analysis-pillar-verdict-${pillarId}`}
       >
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-caption1 font-medium text-text-muted">{title}</p>
-          <span
-            className={cn(
-              "h-2.5 w-2.5 rounded-full",
-              risk === "high"
-                ? "bg-error"
-                : risk === "medium"
-                  ? "bg-warning"
-                  : "bg-success",
-            )}
-            data-risk={risk}
-            aria-label={riskBadgeLabel(risk)}
-          />
-        </div>
-        <h3
-          className="text-title3 font-semibold leading-snug text-text-primary line-clamp-2"
-          data-testid={`analysis-pillar-verdict-${pillarId}`}
-        >
-          {verdict}
-        </h3>
-        {/* next step kept for tests, visually secondary */}
-        <p
-          className="sr-only"
-          data-testid={`analysis-pillar-next-step-${pillarId}`}
-        >
-          {nextStep}
-        </p>
-        <span className="text-caption1 font-medium text-accent-strong">
-          {analysisTabLabel(tabId)} →
-        </span>
-      </Card>
-    </button>
+        {verdict}
+      </h3>
+      <p
+        className="text-caption1 leading-relaxed text-text-secondary"
+        data-testid={`analysis-pillar-next-step-${pillarId}`}
+      >
+        {nextStep}
+      </p>
+      <span className="mt-auto text-caption1 font-medium text-accent-strong">
+        {ctaLabel} →
+      </span>
+    </Card>
   );
 }
 

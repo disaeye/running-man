@@ -56,9 +56,17 @@ async def test_pace_activity_facts_are_current_and_repeat_is_skipped(
     assert first.status == "success"
     assert second.status == "skipped"
     assert second.rows_affected == 0
-    assert facts["normalized_graded_pace"] > 0
-    assert facts["intensity_factor"] > 0
-    assert facts["tss"] > 0
+    # The seed is 180 samples at a constant 3 m/s with threshold_pace 270, so
+    # every value here has one right answer. `> 0` passed while the 4th-power
+    # weighting was being applied to pace instead of speed, which is the defect
+    # these numbers exist to catch:
+    #   NGP = 1000 / 3                 = 333.33 s/km
+    #   IF  = 270 / 333.33             = 0.810
+    #   rTSS = 1800 x 0.810^2 / 3600 x 100 = 32.8
+    assert facts["normalized_graded_pace"] == pytest.approx(333.3, abs=0.5)
+    assert facts["gap_avg"] == pytest.approx(333.3, abs=0.5)
+    assert facts["intensity_factor"] == pytest.approx(0.810, abs=0.005)
+    assert facts["tss"] == pytest.approx(32.8, abs=0.3)
 
 
 async def test_activity_without_pace_or_lthr_does_not_fabricate_tss(

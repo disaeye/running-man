@@ -65,7 +65,7 @@ export function CalendarDaySheet({
             <div className="flex flex-col gap-5 px-4 pb-6">
               {hasActivities && (
                 <section className="flex flex-col gap-3" aria-label="实际训练">
-                  <h3 className="text-caption1 font-semibold uppercase tracking-wider text-text-muted">
+                  <h3 className="text-caption1 font-semibold text-text-muted">
                     实际
                   </h3>
                   {activities.map((activity) => (
@@ -85,7 +85,7 @@ export function CalendarDaySheet({
               {editingEvent && <PlanPacePrescription event={editingEvent} />}
 
               <section className="flex flex-col gap-3" aria-label="记录实际训练">
-                <h3 className="text-caption1 font-semibold uppercase tracking-wider text-text-muted">
+                <h3 className="text-caption1 font-semibold text-text-muted">
                   {hasActivities ? "补录训练" : "记录实际训练"}
                 </h3>
                 <ManualActivityForm
@@ -105,7 +105,7 @@ export function CalendarDaySheet({
 
               <section className="flex flex-col gap-3" aria-label="计划训练">
                 {hasActivities && (
-                  <h3 className="text-caption1 font-semibold uppercase tracking-wider text-text-muted">
+                  <h3 className="text-caption1 font-semibold text-text-muted">
                     计划
                   </h3>
                 )}

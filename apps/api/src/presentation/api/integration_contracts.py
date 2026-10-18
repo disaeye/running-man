@@ -67,6 +67,63 @@ class IntegrationSyncResponse(BaseModel):
     status: str
 
 
+class BackfillRequest(IntegrationRequestModel):
+    """Start of the history an athlete wants imported; the window runs to today."""
+
+    from_date: date
+
+
+class SyncJobError(BaseModel):
+    """One activity whose streams could not be fetched, for the retry action."""
+
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    activity_id: str
+    message: str
+
+
+class SyncJobResponse(BaseModel):
+    """One triggered sync, including the counters the progress UI polls."""
+
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    id: UUID
+    source: str
+    kind: str
+    trigger: str
+    phase: str
+    status: str
+    window_start: date | None = None
+    window_end: date | None = None
+    windows_total: int = 0
+    windows_done: int = 0
+    activities_seen: int = 0
+    activities_upserted: int = 0
+    activities_deduplicated: int = 0
+    streams_inserted: int = 0
+    wellness_days: int = 0
+    ghosts_deleted: int = 0
+    errors_count: int = 0
+    errors: list[SyncJobError] = []
+    cancel_requested: bool = False
+    error: str | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    heartbeat_at: datetime | None = None
+    created_at: datetime
+
+
+class SourceCoverageResponse(BaseModel):
+    """Imported range for one source, so the UI can offer an earlier import."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source: str
+    first_activity_date: date | None = None
+    last_activity_date: date | None = None
+    activity_count: int = 0
+
+
 class SyncRunResponse(BaseModel):
     model_config = ConfigDict(extra="ignore", frozen=True)
 

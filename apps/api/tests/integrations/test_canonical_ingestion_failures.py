@@ -136,7 +136,7 @@ async def test_invalid_intervals_record_persists_sync_error_not_fact_row(
 ) -> None:
     ensure_failure_schema(db_conn, ATHLETE_ID)
 
-    stats, _activities = await sync._sync_window(
+    stats, _activities = await sync.sync_activity_window(
         str(ATHLETE_ID), InvalidIntervalsClient(), db_conn, date(2026, 7, 15), date(2026, 7, 15)
     )
 
@@ -157,14 +157,6 @@ async def test_invalid_intervals_record_persists_sync_error_not_fact_row(
     assert _row_text(error_row) == ("intervals_icu", "activity", "unknown_sport")
 
 
-@pytest.mark.skip(
-    reason=(
-        "App regression: src/infrastructure/integrations/intervals/sync.py:210 reads "
-        "params[22] as source_hash, but activity_params moved the hash to index 21 when "
-        "commit 046d3e9 dropped the 'intensity' field — secondary_duplicate_exists always "
-        "receives None, so the quarantine never fires. Fix sync.py index before re-enabling."
-    )
-)
 @pytest.mark.asyncio
 async def test_secondary_source_duplicate_is_quarantined(db_conn: psycopg.Connection) -> None:
     ensure_failure_schema(db_conn, ATHLETE_ID)
@@ -211,7 +203,7 @@ async def async_duplicate_sync(db_conn: psycopg.Connection) -> tuple[object, obj
                 }
             ]
 
-    return await sync._sync_window(
+    return await sync.sync_activity_window(
         str(ATHLETE_ID), DuplicateIntervalsClient(), db_conn, date(2026, 7, 15), date(2026, 7, 15)
     )
 

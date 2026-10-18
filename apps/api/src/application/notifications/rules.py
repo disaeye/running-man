@@ -5,6 +5,9 @@ from decimal import Decimal
 from typing import Protocol, cast
 from uuid import UUID
 
+from domain.time import UTC as _FALLBACK_TIMEZONE
+from domain.time import today_in_zone
+
 RECOVERY_RISK_THRESHOLD = 30
 PLAN_DEVIATION_THRESHOLD = 0.30
 PLAN_DEVIATION_LOOKBACK_DAYS = 7
@@ -43,7 +46,10 @@ class NotificationPayload:
 async def check_recovery_risk(
     athlete_id: UUID, conn: AsyncDbConnection, target_day: date | None = None
 ) -> RuleResult | None:
-    day = target_day or date.today()
+    # The scanner resolves the athlete's day and passes it in; this fallback
+    # only covers a direct call with no day, and must not claim the host's
+    # calendar day is the athlete's.
+    day = target_day or today_in_zone(_FALLBACK_TIMEZONE)
     if not await _pref_enabled(conn, athlete_id, "recovery_risk_alert"):
         return None
     score = await _latest_readiness_score(conn, athlete_id, day)
@@ -61,7 +67,10 @@ async def check_recovery_risk(
 async def check_sync_failure(
     athlete_id: UUID, conn: AsyncDbConnection, target_day: date | None = None
 ) -> RuleResult | None:
-    day = target_day or date.today()
+    # The scanner resolves the athlete's day and passes it in; this fallback
+    # only covers a direct call with no day, and must not claim the host's
+    # calendar day is the athlete's.
+    day = target_day or today_in_zone(_FALLBACK_TIMEZONE)
     if not await _pref_enabled(conn, athlete_id, "sync_failure_alert"):
         return None
     failed = await _latest_failed_sync(conn, athlete_id)
@@ -79,7 +88,10 @@ async def check_sync_failure(
 async def check_plan_deviation(
     athlete_id: UUID, conn: AsyncDbConnection, target_day: date | None = None
 ) -> RuleResult | None:
-    day = target_day or date.today()
+    # The scanner resolves the athlete's day and passes it in; this fallback
+    # only covers a direct call with no day, and must not claim the host's
+    # calendar day is the athlete's.
+    day = target_day or today_in_zone(_FALLBACK_TIMEZONE)
     if not await _pref_enabled(conn, athlete_id, "plan_deviation_alert"):
         return None
     start = day - timedelta(days=PLAN_DEVIATION_LOOKBACK_DAYS - 1)
@@ -103,7 +115,10 @@ async def check_plan_deviation(
 async def check_today_reminder(
     athlete_id: UUID, conn: AsyncDbConnection, target_day: date | None = None
 ) -> RuleResult | None:
-    day = target_day or date.today()
+    # The scanner resolves the athlete's day and passes it in; this fallback
+    # only covers a direct call with no day, and must not claim the host's
+    # calendar day is the athlete's.
+    day = target_day or today_in_zone(_FALLBACK_TIMEZONE)
     if not await _pref_enabled(conn, athlete_id, "today_reminder"):
         return None
     event = await _today_unfinished_event(conn, athlete_id, day)

@@ -19,23 +19,74 @@ type RadarDim = {
   readonly key: keyof AbilityScores;
   readonly label: string;
   readonly axisLabel: string;
-  readonly scale: string;
+  /** How the number is produced, in athlete-facing Chinese. */
+  readonly basis: string;
 };
 
 const RUNNING_RADAR_DIMS = [
-  { key: "endurance", label: "耐力", axisLabel: "耐力 (CTL)", scale: "0=CTL 0 · 50=CTL 25 · 100=CTL 50+" },
-  { key: "speed", label: "速度", axisLabel: "速度 (5K配速)", scale: "0=7:00/km · 50=5:15/km · 100=3:30/km" },
-  { key: "strength", label: "力量", axisLabel: "力量 (e1RM)", scale: "0=无记录 · 50≈6项 · 100≈13项" },
-  { key: "recovery", label: "恢复", axisLabel: "恢复 (Readiness)", scale: "0=恢复不足 · 50=中性 · 100=状态充足" },
-  { key: "consistency", label: "一致性", axisLabel: "一致性 (30日)", scale: "0=0天 · 50=15天 · 100=30天" },
+  {
+    key: "endurance",
+    label: "耐力",
+    axisLabel: "耐力",
+    basis: "由长期训练负荷 CTL 换算，CTL 50 计满分。",
+  },
+  {
+    key: "speed",
+    label: "速度",
+    axisLabel: "速度",
+    basis: "取 5 公里以上跑步活动的最好配速，3:30/km 计满分，7:00/km 计 0。",
+  },
+  {
+    key: "strength",
+    label: "力量",
+    axisLabel: "力量",
+    basis: "按已记录的力量动作数量换算，13 项计满分。",
+  },
+  {
+    key: "recovery",
+    label: "恢复",
+    axisLabel: "恢复",
+    basis: "取当日恢复评分；没有可用的睡眠、心率或负荷输入时不计分。",
+  },
+  {
+    key: "consistency",
+    label: "一致性",
+    axisLabel: "一致性",
+    basis: "按最近 30 天有训练的天数换算，30 天计满分。",
+  },
 ] as const satisfies readonly RadarDim[];
 
 const CYCLING_RADAR_DIMS = [
-  { key: "endurance", label: "耐力", axisLabel: "耐力 (CTL)", scale: "0=CTL 0 · 50=CTL 25 · 100=CTL 50+" },
-  { key: "speed", label: "功率", axisLabel: "功率 (FTP)", scale: "0=无功率 · 50=稳定功率输出 · 100=高质量功率曲线" },
-  { key: "strength", label: "力量", axisLabel: "力量 (e1RM)", scale: "0=无记录 · 50≈6项 · 100≈13项" },
-  { key: "recovery", label: "恢复", axisLabel: "恢复 (Readiness)", scale: "0=恢复不足 · 50=中性 · 100=状态充足" },
-  { key: "consistency", label: "一致性", axisLabel: "一致性 (30日)", scale: "0=0天 · 50=15天 · 100=30天" },
+  {
+    key: "endurance",
+    label: "耐力",
+    axisLabel: "耐力",
+    basis: "由长期训练负荷 CTL 换算，CTL 50 计满分。",
+  },
+  {
+    key: "speed",
+    label: "功率",
+    axisLabel: "功率",
+    basis: "按功率曲线的代表性水平换算；没有功率计时不计分。",
+  },
+  {
+    key: "strength",
+    label: "力量",
+    axisLabel: "力量",
+    basis: "按已记录的力量动作数量换算，13 项计满分。",
+  },
+  {
+    key: "recovery",
+    label: "恢复",
+    axisLabel: "恢复",
+    basis: "取当日恢复评分；没有可用的睡眠、心率或负荷输入时不计分。",
+  },
+  {
+    key: "consistency",
+    label: "一致性",
+    axisLabel: "一致性",
+    basis: "按最近 30 天有训练的天数换算，30 天计满分。",
+  },
 ] as const satisfies readonly RadarDim[];
 
 export interface AbilityScores {
@@ -47,26 +98,24 @@ export interface AbilityScores {
 }
 
 /**
- * 5-axis ability radar (endurance / speed / strength / recovery / consistency).
- * Scores are derived client-side from existing hooks — no new API calls.
- * 耐力 from CTL · 速度 from best 5km-equivalent run pace · 力量 from strength e1RM count ·
- * 恢复 from readiness · 一致性 from distinct training days in the last 30 days.
+ * Five-axis ability radar. Every score is a direct function of data that
+ * exists; a dimension with no input scores 0 and is left out of the summary
+ * row, so an empty account sees an empty state rather than a chart of zeros.
+ *
+ * 恢复 specifically reads `data_sufficient`. The API fills the score with a
+ * neutral midpoint when nothing was measured, which is numerically identical to
+ * an athlete who genuinely scored 50 — presenting it would contradict the Today
+ * page, which shows the same number as 待建立基线.
  */
 type AbilityRadarProps = {
   readonly sport?: string | null;
   readonly dateRange?: { readonly from: string; readonly to: string };
 };
 
-export function AbilityRadar({
-  sport = null,
-  dateRange,
-}: AbilityRadarProps) {
+export function AbilityRadar({ sport = null, dateRange }: AbilityRadarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartConfig = useChartConfig();
-  const yearAgo = useMemo(
-    () => dateRange ?? computeRange(365),
-    [dateRange],
-  );
+  const yearAgo = useMemo(() => dateRange ?? computeRange(365), [dateRange]);
   const sportFamily = getAnalysisSportFamily(sport);
   const radarDims = radarDimsForSport(sportFamily);
 
@@ -80,64 +129,77 @@ export function AbilityRadar({
     const endurance = Math.min(100, Math.max(0, (ctl / 50) * 100));
     const speed = deriveSpeedScore(runs);
     const strength = e1rm.length > 0 ? Math.min(100, e1rm.length * 8) : 0;
-    const recovery = readiness?.local_readiness?.score ?? 0;
+    const localReadiness = readiness?.local_readiness;
+    const recovery =
+      localReadiness?.data_sufficient === true ? localReadiness.score : 0;
     const trainingDays = new Set(runs.map((a) => a.start_time.slice(0, 10)));
     const consistency = Math.min(100, (trainingDays.size / 30) * 100);
     return { endurance, speed, strength, recovery, consistency };
   }, [pmc, runs, e1rm, readiness]);
 
-  const hasAnySignal =
-    scores.endurance > 0 ||
-    scores.speed > 0 ||
-    scores.strength > 0 ||
-    scores.recovery > 0 ||
-    scores.consistency > 0;
+  const measured = radarDims.filter((dim) => scores[dim.key] > 0);
+  const hasAnySignal = measured.length > 0;
 
   useECharts(
     containerRef,
-    () => buildRadarOption(radarDims.map((d) => d.axisLabel), radarDims.map((d) => scores[d.key]), chartConfig),
+    () =>
+      buildRadarOption(
+        radarDims.map((dim) => dim.axisLabel),
+        radarDims.map((dim) => scores[dim.key]),
+        chartConfig,
+      ),
     [scores.endurance, scores.speed, scores.strength, scores.recovery, scores.consistency, chartConfig],
     { chartConfig },
   );
 
   return (
-    <Card padding="md" className="min-h-[320px]" data-testid="ability-radar-card">
+    <Card padding="md" data-testid="ability-radar-card">
       <SectionHeader title="能力雷达" subtitle="耐力 · 速度 · 力量 · 恢复 · 一致性" />
+
       {hasAnySignal ? (
-        <div ref={containerRef} className="mt-3 h-[320px] w-full" data-testid="ability-radar" />
+        <>
+          <div ref={containerRef} className="mt-3 h-[300px] w-full" data-testid="ability-radar" />
+          <ul className="mt-2 grid grid-cols-5 gap-2 text-center text-caption1 text-text-muted">
+            {radarDims.map((dim) => (
+              <li
+                key={dim.key}
+                className="flex flex-col rounded-lg bg-surface-sunken px-1 py-2"
+              >
+                <span
+                  className={`font-mono text-subheadline font-semibold tabular-nums ${
+                    scores[dim.key] > 0 ? "text-text-primary" : "text-text-muted"
+                  }`}
+                >
+                  {scores[dim.key] > 0 ? Math.round(scores[dim.key]) : "--"}
+                </span>
+                <span>{dim.label}</span>
+              </li>
+            ))}
+          </ul>
+        </>
       ) : (
         <div className="mt-3 flex h-[280px] items-center justify-center">
           <EmptyState
             title="暂无能力数据"
-            description="导入活动、连接可穿戴设备、记录训练后，雷达图将自动生成"
+            description="导入活动、连接可穿戴设备、记录训练后，雷达图会按已有数据生成。"
           />
         </div>
       )}
-      <ul className="mt-2 grid grid-cols-5 gap-2 text-center text-caption2 text-text-muted">
-        {radarDims.map((d) => (
-          <li
-            key={d.key}
-            className="flex flex-col rounded-lg bg-surface-overlay/55 px-1 py-2"
-          >
-            <span className="font-mono text-subheadline font-semibold tabular-nums text-text-primary">
-              {Math.round(scores[d.key])}
-            </span>
-            <span>{d.label}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-3 border-t border-border-subtle pt-3 text-caption2 text-text-muted">
-        <p className="font-medium text-text-secondary">
-          刻度说明：0 / 50 / 100 分别代表低基线、中等参考、优秀参考。
+
+      <details className="mt-3 border-t border-border-subtle pt-3 text-caption1 text-text-muted">
+        <summary className="cursor-pointer text-text-secondary">每项得分怎么算</summary>
+        <p className="mt-2">
+          0 / 50 / 100 分别代表低基线、中等参考、优秀参考。
         </p>
-        <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-          {radarDims.map((d) => (
-            <li key={d.key}>
-              {d.axisLabel}: {d.scale}
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          {radarDims.map((dim) => (
+            <li key={dim.key}>
+              <span className="font-medium text-text-secondary">{dim.label}：</span>
+              {dim.basis}
             </li>
           ))}
         </ul>
-      </div>
+      </details>
     </Card>
   );
 }
@@ -167,7 +229,11 @@ function deriveSpeedScore(
   return Math.round(100 - ((bestPaceSecPerKm - FAST) / (SLOW - FAST)) * 100);
 }
 
-function buildRadarOption(labels: string[], values: number[], chartConfig: ChartConfig): echarts.EChartsCoreOption {
+function buildRadarOption(
+  labels: string[],
+  values: number[],
+  chartConfig: ChartConfig,
+): echarts.EChartsCoreOption {
   const c = chartConfig.colors;
   return {
     radar: {

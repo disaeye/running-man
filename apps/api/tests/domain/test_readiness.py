@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
-from domain.insights.readiness import compute_readiness, compute_recommendation
-from domain.insights.recommendation import _reason
+from domain.insights.readiness import compute_readiness
+from domain.insights.recommendation import _reason, compute_recommendation
 
 
 def test_readiness_returns_score_and_factors() -> None:
@@ -113,3 +113,44 @@ class TestRecommendationReason:
 
         assert "176" in reason
         assert "300" in reason
+
+
+def test_a_missing_factor_does_not_pull_the_score_towards_fifty() -> None:
+    """Only load data is available; the score must keep the load signal's range."""
+    target = date(2026, 10, 17)
+    prev = target - timedelta(days=1)
+    far = prev - timedelta(days=7)
+
+    def score_for(tsb: float) -> int:
+        loads = [
+            {"day": far, "tsb": tsb, "atl": 40.0},
+            {"day": prev, "tsb": tsb, "atl": 40.0},
+        ]
+        return compute_readiness(target, [], loads)["score"]
+
+    # Weighting missing sleep/RHR/HRV at a synthetic 50 used to compress every
+    # outcome into 41-65, so the "rest" band was unreachable.
+    assert score_for(-30) < 40
+    assert score_for(20) > 90
+    assert score_for(20) - score_for(-30) > 50
+
+
+def test_readiness_uses_the_day_before_not_the_session_just_run() -> None:
+    target = date(2026, 10, 17)
+    prev = target - timedelta(days=1)
+    # Yesterday closed at TSB +10; today's completed session dropped it to -3.
+    loads = [
+        {"day": prev, "tsb": 10.0, "atl": 30.0},
+        {"day": target, "tsb": -3.0, "atl": 52.0},
+    ]
+
+    result = compute_readiness(target, [], loads)
+
+    tsb_detail = next(f["detail"] for f in result["factors"] if f["name"] == "tsb")
+    assert "+10.0" in tsb_detail
+
+
+def test_missing_inputs_are_reported_as_unmeasured() -> None:
+    result = compute_readiness(date(2026, 10, 17), [], [])
+
+    assert result["data_sufficient"] is False

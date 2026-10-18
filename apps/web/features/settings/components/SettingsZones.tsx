@@ -43,9 +43,24 @@ export interface SettingsZonesProps {
 
 const REQUIREMENT_LABEL: Record<string, string> = {
   hr_max: "最大心率",
-  lthr: "乳酸阈心率 (LTHR)",
+  lthr: "乳酸阈心率",
   resting_hr: "静息心率",
 };
+
+/**
+ * Pace zone bounds, formatted here rather than inline in the list.
+ *
+ * A boundary of 0 means "open", which the previous inline expression printed
+ * as an em dash between the two numbers — a range that read like a value.
+ */
+function formatPaceRange(minSeconds: number, maxSeconds: number | null): string {
+  const format = (seconds: number) =>
+    `${Math.floor(seconds / 60)}'${String(Math.round(seconds % 60)).padStart(2, "0")}"`;
+  if (minSeconds <= 0 && maxSeconds == null) return "不限";
+  if (minSeconds <= 0) return `快于 ${format(maxSeconds as number)}`;
+  if (maxSeconds == null) return `慢于 ${format(minSeconds)}`;
+  return `${format(minSeconds)} – ${format(maxSeconds)}`;
+}
 
 function zonesToDrafts(zones: Zone[]): DraftRow[] {
   return zones.map((z) => ({
@@ -158,13 +173,9 @@ export function SettingsZones({
           </div>
           <div className="grid grid-cols-5 gap-1.5 overflow-hidden rounded-xl border border-border/40 bg-muted/20 p-1.5">
             {hrZones.map((z, idx) => {
-              const colors = [
-                "bg-sky-500/15 text-sky-400 border-sky-500/30",
-                "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-                "bg-lime-500/15 text-lime-400 border-lime-500/30",
-                "bg-amber-500/15 text-amber-400 border-amber-500/30",
-                "bg-rose-500/15 text-rose-400 border-rose-500/30",
-              ];
+              const colors = [1, 2, 3, 4, 5].map(
+                (zone) => `bg-zone-${zone}/15 text-zone-${zone} border-zone-${zone}/30`,
+              );
               return (
                 <div
                   key={z.zone}
@@ -208,13 +219,7 @@ export function SettingsZones({
               >
                 <span className="font-medium text-text-primary">Z{z.zone} {z.name}</span>
                 <span className="mt-0.5 block font-mono tabular-nums text-text-secondary">
-                  {z.min_value > 0
-                    ? `${Math.floor(z.min_value / 60)}'${String(Math.round(z.min_value % 60)).padStart(2, "0")}"`
-                    : "—"}
-                  –
-                  {z.max_value != null
-                    ? `${Math.floor(z.max_value / 60)}'${String(Math.round(z.max_value % 60)).padStart(2, "0")}"`
-                    : "—"}
+                  {formatPaceRange(z.min_value, z.max_value)}
                 </span>
               </li>
             ))}

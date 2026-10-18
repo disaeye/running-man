@@ -32,6 +32,11 @@ WEB_DIR: Final = REPO_ROOT / "apps" / "web"
 E2E_BASE_URL: Final = "http://localhost:28801"
 E2E_SERVICE: Final = "running-man-e2e.service"
 
+# The dist directory the gate builds into and the e2e unit serves from. Kept
+# separate from `.next` so a gate run can never disturb the production service,
+# which holds the manifest it read at boot.
+GATE_DIST_DIR: Final = ".next-gate"
+
 # The bundled Playwright browsers are not downloaded on this host; the system
 # Chrome works and is what the suite has been verified against.
 CHROME_CANDIDATES: Final = (
@@ -102,7 +107,7 @@ def prepare_server() -> str | None:
     """
     if not _unit_exists():
         return None
-    build_id = WEB_DIR / ".next" / "BUILD_ID"
+    build_id = WEB_DIR / GATE_DIST_DIR / "BUILD_ID"
     if build_id.exists() and not _restart_needed():
         return None
     try:
@@ -162,7 +167,7 @@ def _restart_needed() -> bool:
     ``systemctl show`` reports both sides in the same monotonic clock domain, so
     the comparison is exact rather than a guess from file mtimes.
     """
-    build_monotonic = _file_mtime_monotonic(WEB_DIR / ".next" / "BUILD_ID")
+    build_monotonic = _file_mtime_monotonic(WEB_DIR / GATE_DIST_DIR / "BUILD_ID")
     start_monotonic = _service_start_monotonic()
     if build_monotonic is None or start_monotonic is None:
         # Cannot tell; restarting is cheap and always safe.

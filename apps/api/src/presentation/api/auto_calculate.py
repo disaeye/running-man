@@ -4,8 +4,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from application.physiology.algorithm_contract import algorithm_contract, physiology_window_days
+from application.physiology.physiology_windows import physiology_window_days
 from application.physiology.service import cached_physiology, calculate_physiology
+from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
 from domain.generated.metrics import Metric
 from infrastructure.auth.models import Athlete

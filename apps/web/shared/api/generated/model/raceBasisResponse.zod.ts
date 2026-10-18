@@ -10,10 +10,10 @@ export const RaceBasisResponse = zod.object({
   "cross_check": zod.object({
   "confidence": zod.union([zod.enum(['high', 'medium', 'low']),zod.null()]),
   "critical_speed_ms": zod.union([zod.number(),zod.null()]),
+  "critical_speed_pace_s_per_km": zod.union([zod.number(),zod.null()]),
   "data_sufficient": zod.boolean(),
   "effort_count": zod.number(),
   "method": zod.union([zod.literal("critical_speed_model"),zod.null()]),
-  "threshold_pace_s_per_km": zod.union([zod.number(),zod.null()]),
   "w_prime_m": zod.union([zod.number(),zod.null()])
 }),
   "exponent": zod.number(),

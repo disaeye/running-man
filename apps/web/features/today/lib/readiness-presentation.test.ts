@@ -85,6 +85,9 @@ describe("assessReadiness", () => {
     const result = assessReadiness({ score: 50, level: "recovery", factors: NO_DATA });
 
     expect(result.missing).toEqual(["睡眠", "静息心率", "HRV"]);
+    // The same inputs by contract key, so a caller can suppress a derived
+    // number without matching on the display copy.
+    expect(result.missingKeys).toEqual(["sleep", "resting_hr", "hrv"]);
   });
 
   it("does not report missing inputs when everything was measured", () => {
@@ -105,7 +108,7 @@ describe("assessReadiness", () => {
       factors: [{ name: "sleep", detail: "睡眠 4.0h" }],
     });
 
-    expect(result.levelLabel).toBe("需要恢复");
+    expect(result.levelLabel).toBe("恢复优先");
     expect(result.windowLabel).toBe("ADAPTIVE WINDOW");
   });
 
@@ -139,6 +142,7 @@ const NOT_ASSESSED: Assessment = {
   levelLabel: "",
   windowLabel: "AWAITING DATA",
   missing: ["睡眠", "静息心率"],
+  missingKeys: ["sleep", "resting_hr"],
 };
 
 const ASSESSED: Assessment = {
@@ -147,6 +151,7 @@ const ASSESSED: Assessment = {
   levelLabel: "状态稳定",
   windowLabel: "ADAPTIVE WINDOW",
   missing: [],
+  missingKeys: [],
 };
 
 describe("decisionTitle", () => {

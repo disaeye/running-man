@@ -49,7 +49,7 @@ export function ReadinessHeroCard({ score, level }: ReadinessHeroCardProps) {
   return (
     <div
       data-testid="readiness-hero"
-      className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4.5 p-4 sm:p-5 rounded-2xl bg-card border border-border/80 shadow-xs hover:shadow-sm transition-all duration-200 overflow-hidden"
+      className="relative flex flex-col items-start gap-4 overflow-hidden rounded-xl border border-border-subtle bg-surface-card p-4 sm:flex-row sm:items-center sm:p-5"
     >
       <div
         className="pointer-events-none absolute -right-8 -top-8 size-36 rounded-full blur-2xl opacity-15"

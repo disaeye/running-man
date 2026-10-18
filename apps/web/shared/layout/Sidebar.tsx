@@ -85,7 +85,7 @@ export function Sidebar() {
               {/* type-scale-allow */}
               <span className="shell-title truncate text-[17px] font-semibold text-text-primary">Running Man</span>
             </div>
-            <p className="mt-1 pl-9 font-mono text-caption2 uppercase tracking-[0.2em] text-text-muted">endurance / OS</p>
+            <p className="mt-1 pl-9 text-caption1 text-text-muted">耐力训练记录</p>
           </Link>
         )}
         {collapsed && <span className="grid size-8 place-items-center rounded-[10px] bg-primary text-on-primary shadow-[0_0_20px_rgba(90,111,154,.25)]" aria-hidden="true"><span className="size-2 rounded-full bg-on-primary" /></span>}
@@ -100,7 +100,7 @@ export function Sidebar() {
         </button>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-6" aria-label="工作区">
-        {!collapsed && <p className="mb-3 px-3 font-mono text-caption2 uppercase tracking-[0.2em] text-text-muted">Workspace</p>}
+        {!collapsed && <p className="mb-3 px-3 text-caption1 text-text-muted">导航</p>}
         <ul className="space-y-1.5">
           {NAV_ENTRIES.map((item, index) => {
             const active = activeId === item.id;
@@ -128,7 +128,7 @@ export function Sidebar() {
       </nav>
       <div className="border-t border-border-subtle p-3">
         <div className={cn("flex items-center", collapsed ? "justify-center" : "justify-between px-1")}>
-          {!collapsed && <span className="font-mono text-caption2 uppercase tracking-[0.14em] text-text-muted">Theme</span>}
+          {!collapsed && <span className="text-caption1 text-text-muted">主题</span>}
           <ThemeToggle />
         </div>
       </div>

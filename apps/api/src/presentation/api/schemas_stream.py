@@ -10,3 +10,10 @@ class StreamPoint(BaseModel):
     lat: float | None = None
     lon: float | None = None
     alt: float | None = None
+
+
+class ActivityStreamSyncResponse(BaseModel):
+    """Result of re-downloading one activity's streams."""
+
+    activity_id: str
+    streams_inserted: int

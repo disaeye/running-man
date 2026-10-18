@@ -2,7 +2,7 @@ import pytest
 
 from domain.physiology.threshold_pace import (
     EffortPoint,
-    estimate_threshold_pace,
+    estimate_critical_speed,
     extract_efforts_from_activities,
 )
 
@@ -19,11 +19,11 @@ def test_threshold_pace_four_efforts_estimates_430_per_km() -> None:
         _effort(9088.89, 2400),
     ]
 
-    result = estimate_threshold_pace(efforts)
+    result = estimate_critical_speed(efforts)
 
     assert result["data_sufficient"] is True
     assert result["method"] == "critical_speed_model"
-    assert result["threshold_pace_s_per_km"] == pytest.approx(270, abs=5)
+    assert result["critical_speed_s_per_km"] == pytest.approx(270, abs=5)
     assert result["critical_speed_ms"] == pytest.approx(3.704, abs=0.005)
 
 
@@ -37,15 +37,15 @@ def test_threshold_pace_regression_accuracy_with_six_efforts() -> None:
         _effort(15000, 4005),
     ]
 
-    result = estimate_threshold_pace(efforts)
+    result = estimate_critical_speed(efforts)
 
-    assert result["threshold_pace_s_per_km"] == pytest.approx(270, abs=5)
+    assert result["critical_speed_s_per_km"] == pytest.approx(270, abs=5)
     assert result["confidence"] == "high"
     assert result["effort_count"] == 6
 
 
 def test_threshold_pace_insufficient_valid_efforts_returns_none() -> None:
-    result = estimate_threshold_pace(
+    result = estimate_critical_speed(
         [
             _effort(1500, 360),
             _effort(3000, 765),
@@ -54,7 +54,7 @@ def test_threshold_pace_insufficient_valid_efforts_returns_none() -> None:
     )
 
     assert result == {
-        "threshold_pace_s_per_km": None,
+        "critical_speed_s_per_km": None,
         "critical_speed_ms": None,
         "confidence": None,
         "data_sufficient": False,
@@ -72,15 +72,15 @@ def test_threshold_pace_filters_invalid_short_efforts_before_regression() -> Non
         _effort(9088.89, 2400),
     ]
 
-    result = estimate_threshold_pace(efforts)
+    result = estimate_critical_speed(efforts)
 
     assert result["data_sufficient"] is True
     assert result["effort_count"] == 4
-    assert result["threshold_pace_s_per_km"] == pytest.approx(270, abs=5)
+    assert result["critical_speed_s_per_km"] == pytest.approx(270, abs=5)
 
 
 def test_threshold_pace_rejects_identical_duration_edge_case() -> None:
-    result = estimate_threshold_pace(
+    result = estimate_critical_speed(
         [
             _effort(1400, 360),
             _effort(1500, 360),
@@ -89,7 +89,7 @@ def test_threshold_pace_rejects_identical_duration_edge_case() -> None:
         ]
     )
 
-    assert result["threshold_pace_s_per_km"] is None
+    assert result["critical_speed_s_per_km"] is None
     assert result["data_sufficient"] is False
     assert result["effort_count"] == 4
 
@@ -185,7 +185,7 @@ class TestEffortIntensityFilter:
         points = extract_efforts_from_activities(
             [EASY_RUN, RACE_EFFORT, TEMPO_EFFORT, STEADY_RUN, LONG_EASY_RUN], lthr=182
         )
-        result = estimate_threshold_pace(points)
+        result = estimate_critical_speed(points)
 
         assert result["data_sufficient"] is False
-        assert result["threshold_pace_s_per_km"] is None
+        assert result["critical_speed_s_per_km"] is None

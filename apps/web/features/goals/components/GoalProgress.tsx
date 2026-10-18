@@ -30,7 +30,7 @@ export function GoalProgress({ goal }: GoalProgressProps) {
 
   return (
     <Card>
-      <h3 className="mb-3 text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+      <h3 className="mb-3 text-subheadline font-semibold text-text-muted">
         进度建议
       </h3>
 

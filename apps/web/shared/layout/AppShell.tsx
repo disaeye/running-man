@@ -84,7 +84,7 @@ export function AppShell({ children, onAvatarClick }: AppShellProps) {
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="hidden h-6 w-px bg-border-default sm:block" aria-hidden="true" />
                   <div className="min-w-0">
-                    <p className="truncate font-mono text-caption1 uppercase tracking-[0.18em] text-text-muted">RUNNING MAN / {pageTitle}</p>
+                    <p className="truncate text-caption1 text-text-secondary">{pageTitle}</p>
                     <p className="hidden truncate text-caption1 text-text-secondary sm:block">{dateLabel}</p>
                   </div>
                 </div>

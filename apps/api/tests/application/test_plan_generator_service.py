@@ -12,7 +12,7 @@ async def test_generate_plan_dry_run_does_not_write_to_db() -> None:
     goal_id = uuid4()
     conn = FakeConnection(athlete_id, goal_id)
 
-    result = await generate_plan(athlete_id, goal_id, conn, dry_run=True)
+    result = await generate_plan(athlete_id, goal_id, conn, dry_run=True, today=date(2026, 1, 1))
 
     assert result["phases_created"] > 0
     assert result["events_created"] > 0

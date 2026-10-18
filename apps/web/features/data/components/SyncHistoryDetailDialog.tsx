@@ -5,6 +5,7 @@ import { Badge } from "@shared/ui/Badge";
 import { Button } from "@shared/ui/button";
 import type { SyncRunRow } from "../hooks/useSyncRuns";
 import { formatRelativeTime } from "@shared/lib/format";
+import { SyncErrorRetryList, type SyncErrorItem } from "./SyncErrorRetryList";
 
 interface SyncHistoryDetailDialogProps {
   run: SyncRunRow | null;
@@ -214,6 +215,10 @@ export function SyncHistoryDetailDialog({
               </p>
             </div>
           )}
+
+          <SyncErrorRetryList
+            errors={Array.isArray(detailObj?.errors) ? (detailObj.errors as SyncErrorItem[]) : []}
+          />
 
           {/* Detailed JSON Payload if available */}
           {detailObj && Object.keys(detailObj).length > 0 && (

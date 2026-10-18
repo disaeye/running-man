@@ -1,13 +1,13 @@
 from datetime import date
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 
+from application.integrations.sync_jobs import StreamFetchError, refetch_activity_streams
 from infrastructure.auth.models import Athlete
-from infrastructure.parsing.models import FitSample
 from infrastructure.repositories.activity import ActivityRepo
 from infrastructure.repositories.integrations import UserIntegrationRepo
 from infrastructure.repositories.upload_provenance import finish_upload_run, start_upload_run
+from presentation.api._upload_batch_helpers import process_one_upload, recompute_after_upload
 from presentation.api._upload_helpers import (
     file_type,
     parse_upload,
@@ -28,6 +28,7 @@ from presentation.api.activity_read import (
 from presentation.api.activity_read import (
     list_activities as read_activities,
 )
+from presentation.api.integration_helpers import decrypt_credentials
 from presentation.api.schemas import (
     ActivityDetail,
     ActivitySummary,
@@ -35,14 +36,15 @@ from presentation.api.schemas import (
     LapResponse,
 )
 from presentation.api.schemas_core import (
-    BatchUploadItem,
     BatchUploadResponse,
     BulkDeleteResponse,
 )
-from presentation.api.schemas_stream import StreamPoint
+from presentation.api.schemas_stream import ActivityStreamSyncResponse, StreamPoint
 from presentation.auth.deps import get_current_athlete
 
 router = APIRouter(prefix="/activities", tags=["activities"])
+
+_INTERVALS_SOURCE = "intervals_icu"
 
 BATCH_MAX_FILES = 20
 BATCH_MAX_FILE_BYTES = 50 * 1024 * 1024  # 50 MB per file
@@ -82,7 +84,7 @@ async def upload_activity(
         if laps and not deduplicated:
             await repo.upsert_laps(athlete.id, str(row["activity_id"]), laps)
         activity = ActivitySummary.model_validate(row)
-        job_generation = await _recompute_after_upload(athlete.id)
+        job_generation = await recompute_after_upload(athlete.id)
     except Exception as error:
         await finish_upload_run(
             run_id,
@@ -129,12 +131,12 @@ async def batch_upload_activities(
         )
 
     run_id = await start_upload_run(athlete.id, files=len(files))
-    results = [await _process_one(upload, athlete.id, repo) for upload in files]
+    results = [await process_one_upload(upload, athlete.id, repo) for upload in files]
     failed = sum(1 for r in results if r.status == "failed")
     duplicates = sum(1 for r in results if r.status == "duplicate")
     succeeded = sum(1 for r in results if r.status == "success")
     if any(r.status == "success" for r in results):
-        generation = await _recompute_after_upload(athlete.id)
+        generation = await recompute_after_upload(athlete.id)
     else:
         generation = None
     error_messages = [f"{r.filename}: {r.error}" for r in results if r.status == "failed"]
@@ -152,68 +154,6 @@ async def batch_upload_activities(
         recompute_status="queued" if generation is not None else None,
         recompute_generation=generation,
     )
-
-
-async def _process_one(
-    upload: UploadFile, athlete_id: UUID, repo: ActivityRepo
-) -> BatchUploadItem:
-    filename = upload.filename or "unknown"
-    try:
-        result = await _attempt_upload(upload, athlete_id, repo)
-    except _BatchError as failure:
-        return BatchUploadItem(filename=filename, status="failed", error=str(failure))
-    return BatchUploadItem(
-        filename=filename, status=str(result["status"]), activity_id=str(result["activity_id"])
-    )
-
-
-async def _attempt_upload(
-    upload: UploadFile, athlete_id: UUID, repo: ActivityRepo
-) -> dict[str, object]:
-    try:
-        data = await upload.read()
-    except Exception as exc:
-        raise _BatchError(f"read error: {exc}") from exc
-    samples, metadata, ftype, laps = _parse_one(filename=upload.filename or "unknown", data=data)
-    summary = summary_from_samples(samples, ftype, upload.filename, metadata)
-    streams = streams_from_samples(samples)
-    try:
-        row = await repo.upsert_upload(athlete_id, summary, streams)
-    except Exception as exc:
-        raise _BatchError(f"store error: {exc}") from exc
-    if bool(row.get("deduplicated")):
-        return {"status": "duplicate", "activity_id": str(row["activity_id"])}
-    if laps:
-        await repo.upsert_laps(athlete_id, str(row["activity_id"]), laps)
-    return {"status": "success", "activity_id": str(row["activity_id"])}
-
-
-async def _recompute_after_upload(athlete_id: UUID) -> int:
-    """Recompute load + PMC facts after upload; mirrors sync/delete paths."""
-    from application.computation.orchestration import enqueue_activity_recompute
-
-    return await enqueue_activity_recompute(athlete_id, "upload")
-
-
-class _BatchError(Exception):
-    """Internal control-flow signal for per-file failures during batch upload."""
-
-
-def _parse_one(
-    filename: str, data: bytes
-) -> tuple[list[FitSample], dict[str, object], str, list[dict[str, object]]]:
-    if len(data) > BATCH_MAX_FILE_BYTES:
-        raise _BatchError(f"file exceeds {BATCH_MAX_FILE_BYTES} byte limit")
-    try:
-        ftype = file_type(filename)
-        samples, metadata, laps = parse_upload(data, ftype)
-    except HTTPException as exc:
-        raise _BatchError(str(exc.detail)) from exc
-    except Exception as exc:
-        raise _BatchError(f"parse error: {exc}") from exc
-    if not samples:
-        raise _BatchError("activity file has no samples")
-    return samples, metadata, ftype, laps
 
 
 @router.get("", response_model=list[ActivitySummary])
@@ -251,6 +191,35 @@ async def get_laps(
     repo: ActivityRepo = Depends(get_activity_repo),
 ) -> list[LapResponse]:
     return await read_laps(activity_id, athlete, repo)
+
+
+@router.post("/{activity_id}/streams/sync", response_model=ActivityStreamSyncResponse)
+async def resync_activity_streams(
+    activity_id: str,
+    athlete: Athlete = Depends(get_current_athlete),
+    repo: ActivityRepo = Depends(get_activity_repo),
+    integrations: UserIntegrationRepo = Depends(get_integration_repo),
+) -> ActivityStreamSyncResponse:
+    """Re-download one activity's streams from Intervals.icu.
+
+    Backs the retry action on a failed sync entry, so repairing one activity
+    does not require re-running the whole sync window.
+    """
+    if not await repo.exists(activity_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="activity not found")
+    row = await integrations.get(athlete.id, _INTERVALS_SOURCE)
+    if row is None or not row.get("connected"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="intervals_icu not connected"
+        )
+    credentials_data = decrypt_credentials(row)
+    try:
+        inserted = await refetch_activity_streams(athlete.id, activity_id, credentials_data)
+    except StreamFetchError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(error)
+        ) from error
+    return ActivityStreamSyncResponse(activity_id=activity_id, streams_inserted=inserted)
 
 
 @router.get(

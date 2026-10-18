@@ -12,9 +12,11 @@ Usage:
   scripts/run_gates.py web api    # selected groups
   scripts/run_gates.py --fast     # skip next build (slowest gate)
 
-pytest is SKIPPED unless the dedicated test database is reachable. The test
-DSN comes from TEST_DATABASE_URL (default in apps/api/conftest.py), e.g.
-  export TEST_DATABASE_URL='postgresql://user:pw@127.0.0.1:5432/test_running_man'
+pytest always runs; it is never skipped. The DSN comes from TEST_DATABASE_URL,
+failing that `wind_runner_test` is derived from the app's own DATABASE_URL by
+`apps/api/testsupport.py`. Nothing credential-bearing lives in this file.
+Override explicitly with:
+  export TEST_DATABASE_URL='postgresql://user:pw@host:5432/other_test_db'
 Exit code is non-zero when any gate fails.
 """
 from __future__ import annotations
@@ -36,51 +38,8 @@ import gate_e2e as _e2e  # noqa: E402
 API_DIR: Final = REPO_ROOT / "apps" / "api"
 WEB_DIR: Final = REPO_ROOT / "apps" / "web"
 
-# Test database DSN. Kept in sync with the default in apps/api/conftest.py;
-# TEST_DATABASE_URL overrides it. The default carries no credentials, so it is
-# safe to keep in version control.
-TEST_DATABASE_URL: Final = os.environ.get(
-    "TEST_DATABASE_URL",
-    "postgresql://postgres@127.0.0.1:5432/test_running_man",
-)
-
+# pytest is part of the gate and never skipped; see `api_gates`.
 FAIL_OUTPUT_TAIL: Final = 40
-
-
-def redact(dsn: str) -> str:
-    """Strip the password from a DSN so it is safe to print in gate output."""
-    scheme, _, rest = dsn.partition("://")
-    if "@" not in rest:
-        return dsn
-    credentials, _, host = rest.rpartition("@")
-    user, _, _ = credentials.partition(":")
-    return f"{scheme}://{user}:***@{host}"
-
-
-def test_db_reachable() -> bool:
-    """True when the test database accepts a connection.
-
-    Probes with the same DSN the pytest suite will use, so the gate and the
-    tests can never disagree about whether the database is available.
-    """
-    python = str(API_DIR / ".venv/bin/python")
-    probe = (
-        "import sys, psycopg\n"
-        "try:\n"
-        f"    psycopg.connect({TEST_DATABASE_URL!r}, connect_timeout=3).close()\n"
-        "except Exception:\n"
-        "    sys.exit(1)\n"
-    )
-    try:
-        return subprocess.run(
-            [python, "-c", probe],
-            cwd=API_DIR,
-            capture_output=True,
-            timeout=15,
-            check=False,
-        ).returncode == 0
-    except (OSError, subprocess.SubprocessError):
-        return False
 
 
 @dataclass(slots=True)
@@ -92,6 +51,7 @@ class Gate:
     timeout: int = 300
     skip_reason: str | None = None
     failure_hint: str = ""
+    env: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -123,91 +83,38 @@ def shutil_which(tool: str, path: str) -> bool:
 
 def api_gates() -> list[Gate]:
     python = str(API_DIR / ".venv/bin/python")
+    openapi_chk = "../../scripts/check_openapi_compatibility.py"
+    openapi_json = "../../contracts/v1/openapi.json"
     gates = [
         Gate("api", "ruff", [str(API_DIR / ".venv/bin/ruff"), "check", "."], API_DIR),
         Gate("api", "mypy", [str(API_DIR / ".venv/bin/mypy"), "src", "tests"], API_DIR, 600),
-        Gate(
-            "api",
-            "openapi response models",
-            [python, "../../scripts/check_response_models.py", "--app", "main:app", "--json"],
-            API_DIR,
-        ),
-        Gate(
-            "api",
-            "openapi contract drift",
-            [
-                python,
-                "../../scripts/export_openapi.py",
-                "--app",
-                "main:app",
-                "--check",
-                "../../contracts/v1/openapi.json",
-            ],
-            API_DIR,
-        ),
-        Gate(
-            "api",
-            "openapi compatibility",
-            [
-                python,
-                "../../scripts/check_openapi_compatibility.py",
-                "../../contracts/v1/openapi.json",
-                "../../contracts/v1/openapi.json",
-                "--json",
-            ],
-            API_DIR,
-        ),
+        Gate("api", "openapi response models", [python, "../../scripts/check_response_models.py", "--app", "main:app", "--json"], API_DIR),
+        Gate("api", "openapi contract drift", [python, "../../scripts/export_openapi.py", "--app", "main:app", "--check", openapi_json], API_DIR),
+        Gate("api", "openapi compatibility", [python, openapi_chk, openapi_json, openapi_json, "--json"], API_DIR),
     ]
-    if not test_db_reachable():
-        reason = (
-            f"test database unreachable ({redact(TEST_DATABASE_URL)}) — set "
-            "TEST_DATABASE_URL to a provisioned test DB (docs/operations.md)"
-        )
-        gates.append(Gate("api", "pytest", ["true"], API_DIR, skip_reason=reason))
-    else:
-        gates.append(
-            Gate("api", "pytest", [python, "-m", "pytest", "-q"], API_DIR, 900)
-        )
+    # pytest always runs. It used to be skipped when the test database was
+    # unreachable, which hid every runtime defect that only a real request or a
+    # real table can expose: a response model that forbids extra fields being fed
+    # one at runtime, a fixture asserting a hardcoded version, a test that only
+    # holds for half the day. A missing DSN now fails here, at conftest import,
+    # with the reason `testsupport.test_dsn()` raises.
+    gates.append(Gate("api", "pytest", [python, "-m", "pytest", "-q"], API_DIR, 900))
     return gates
 
 
 def contract_gates() -> list[Gate]:
+    python = str(API_DIR / ".venv/bin/python")
+    hint = "generated files differ from the index — if you just ran generate_data_contract.py or edited generators, commit the output"
     return [
-        Gate(
-            "contract",
-            "validate v1 contract",
-            ["python3", "scripts/validate_data_contract.py", "contracts/v1", "--json"],
-            REPO_ROOT,
-        ),
-        Gate(
-            "contract",
-            "generate semantic registries",
-            ["python3", "scripts/generate_data_contract.py", "contracts/v1", "--json"],
-            REPO_ROOT,
-        ),
-        Gate(
-            "contract",
-            "check generated registry drift",
-            ["python3", "scripts/check_generated_data_contract.py", "--json"],
-            REPO_ROOT,
-        ),
-        Gate(
-            "contract",
-            "generated files checked in",
-            [
-                "git",
-                "diff",
-                "--exit-code",
-                "--",
-                "apps/api/src/domain/generated",
-                "apps/web/shared/config/generated",
-            ],
-            REPO_ROOT,
-            failure_hint=(
-                "generated files differ from the index — if you just ran "
-                "generate_data_contract.py or edited generators, commit the output"
-            ),
-        ),
+        Gate("contract", "validate v1 contract", [python, "scripts/validate_data_contract.py", "contracts/v1", "--json"], REPO_ROOT),
+        Gate("contract", "generate semantic registries", [python, "scripts/generate_data_contract.py", "contracts/v1", "--json"], REPO_ROOT),
+        Gate("contract", "check generated registry drift", [python, "scripts/check_generated_data_contract.py", "--json"], REPO_ROOT),
+        Gate("contract", "metric semantics (web)", [python, "scripts/check_metric_semantics.py"], REPO_ROOT),
+        Gate("contract", "design tokens vs DESIGN.md", [python, "scripts/check_design_tokens.py"], REPO_ROOT),
+        Gate("contract", "web tokens (panels, palette, type)", [python, "scripts/check_web_tokens.py"], REPO_ROOT),
+        Gate("contract", "token contrast (WCAG AA)", [python, "scripts/check_contrast.py", "--baseline", "scripts/contrast_baseline.json"], REPO_ROOT),
+        Gate("contract", "algorithm reference values", [python, "scripts/check_algorithm_references.py"], REPO_ROOT),
+        Gate("contract", "generated files checked in", ["git", "diff", "--exit-code", "--", "apps/api/src/domain/generated", "apps/web/shared/config/generated"], REPO_ROOT, failure_hint=hint),
         Gate("contract", "file-size (repo)", ["python3", "scripts/lint_file_size.py"], REPO_ROOT),
     ]
 
@@ -217,17 +124,24 @@ def web_gates(fast: bool) -> list[Gate]:
         Gate("web", "eslint", ["npm", "run", "lint", "--", "--max-warnings=0"], WEB_DIR, 600),
         Gate("web", "tsc", ["node", "node_modules/typescript/bin/tsc", "--noEmit"], WEB_DIR),
         Gate("web", "vitest", ["npm", "run", "test"], WEB_DIR),
-        Gate(
-            "web",
-            "file-size (apps/web)",
-            ["python3", "scripts/lint_file_size.py", "apps/web"],
-            REPO_ROOT,
-        ),
+        Gate("web", "file-size (apps/web)", ["python3", "scripts/lint_file_size.py", "apps/web"], REPO_ROOT),
     ]
     if fast:
         gates.append(Gate("web", "next build", ["true"], WEB_DIR, skip_reason="--fast"))
     else:
-        gates.append(Gate("web", "next build", ["npm", "run", "build"], WEB_DIR, 600))
+        # Build into the gate's own directory. `npm run build` writes to
+        # NEXT_DIST_DIR, and the production service is serving `.next`; a build
+        # that overwrote it would break the live site without failing anything.
+        gates.append(
+            Gate(
+                "web",
+                "next build",
+                ["npm", "run", "build"],
+                WEB_DIR,
+                600,
+                env={"NEXT_DIST_DIR": _e2e.GATE_DIST_DIR},
+            )
+        )
     gates.append(e2e_gate(fast))
     return gates
 
@@ -251,13 +165,15 @@ def run_gate(gate: Gate) -> Result:
     env = dict(os.environ)
     if gate.name.startswith("e2e"):
         # Restart here, not when the gate list is built: `next build` runs
-        # earlier in this same process and rewrites .next, so any restart that
-        # happened before it would leave the server on the previous manifest —
-        # the exact mismatch that made pages fail to hydrate.
+        # earlier in this same process and rewrites the gate dist directory, so
+        # any restart that happened before it would leave the server on the
+        # previous manifest — the exact mismatch that made pages fail to
+        # hydrate.
         note = _e2e.prepare_server()
         if note:
             print(f"  ! {note}", flush=True)
-        env = _e2e.e2e_env()
+        env.update(_e2e.e2e_env())
+    env.update(gate.env)
     started = time.monotonic()
     try:
         completed = subprocess.run(

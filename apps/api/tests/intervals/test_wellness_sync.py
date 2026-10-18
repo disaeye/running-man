@@ -41,7 +41,6 @@ def _insert_athlete(db: psycopg.Connection) -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="VCR cassette stale — athlete ID mismatch; re-record needed")
 @pytest.mark.asyncio
 async def test_sync_wellness_inserts_records(db_conn: psycopg.Connection) -> None:
     _insert_athlete(db_conn)
@@ -87,7 +86,6 @@ async def test_sync_wellness_inserts_records(db_conn: psycopg.Connection) -> Non
     assert rows[1][5] == 63  # sleep_score as float → stored as SMALLINT
 
 
-@pytest.mark.skip(reason="VCR cassette stale — athlete ID mismatch; re-record needed")
 @pytest.mark.asyncio
 async def test_sync_wellness_dedup(db_conn: psycopg.Connection) -> None:
     """Calling sync_wellness twice with the same window upserts but does

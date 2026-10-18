@@ -4,6 +4,7 @@ from datetime import date
 from typing import Any, cast
 from uuid import UUID
 
+from domain.time import local_day_sql
 from infrastructure.db.pool import ConnectionContext, get_pool
 from infrastructure.repositories.activity_manual import create_manual_activity
 from infrastructure.repositories.activity_reads import ActivityReadRepo
@@ -215,6 +216,32 @@ class ActivityRepo:
             if row is None:
                 return 0
             return int(row["n"] if isinstance(row, dict) else row[0])
+
+    async def data_range(self, athlete_id: UUID, source: str | None) -> dict[str, object]:
+        """First and last imported local activity day for one source.
+
+        The day key resolves against the athlete's zone, so a late-evening run
+        does not report the previous day as the start of the range.
+        """
+        day = local_day_sql("ath.timezone", column="a.start_time")
+        source_filter = "" if source is None else " AND a.source = %s"
+        params: list[object] = [athlete_id]
+        if source is not None:
+            params.append(source)
+        async with _connect() as conn, conn.cursor() as cur:
+            _ = await cur.execute(
+                f"""
+                SELECT min({day}) AS first_day, max({day}) AS last_day, count(*) AS total
+                FROM activity_summary a
+                JOIN athletes ath ON ath.id = a.athlete_id
+                WHERE a.athlete_id = %s AND a.deleted_at IS NULL{source_filter}
+                """,
+                tuple(params),
+            )
+            row = await cur.fetchone()
+        if row is None:
+            return {"first_day": None, "last_day": None, "total": 0}
+        return dict(row)
 
     async def delete_all(self, athlete_id: UUID) -> int:
         """Delete all activities for an athlete (+ streams/laps). Returns 0 remaining."""

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from statistics import mean
 
 from domain.insights.prs import max_sustained_power
 from domain.insights.zones import Zone
-from domain.load.decoupling import aerobic_decoupling
+from domain.load.decoupling import aerobic_decoupling, pair_by_time
 from domain.load.normalized_power import normalized_power
 from domain.load.tss import estimate_tss, intensity_factor
 
@@ -57,7 +58,11 @@ def compute_power_curve(
 
 
 def compute_summary(
-    streams: dict[str, list[float]], duration_s: int, ftp: int | None
+    streams: dict[str, list[float]],
+    duration_s: int,
+    ftp: int | None,
+    *,
+    stream_times: Mapping[str, Sequence[float]] | None = None,
 ) -> dict[str, float | int | None]:
     powers = streams.get("power", [])
     heart_rates = streams.get("heart_rate", [])
@@ -66,8 +71,24 @@ def compute_summary(
     if_value = intensity_factor(np_value, ftp) if np_value and ftp else None
     tss_value = estimate_tss(duration_s=duration_s, np=np_value, ftp=ftp) if ftp else None
     effort = powers or speeds
-    cardio = heart_rates[: len(effort)] if effort else []
-    decoupling = aerobic_decoupling(effort[: len(cardio)], cardio) if cardio else None
+    cardio_times = (stream_times or {}).get("heart_rate")
+    effort_times = (stream_times or {}).get("power" if powers else "speed")
+    effort_values: Sequence[float]
+    cardio: Sequence[float]
+    if effort and cardio_times and effort_times:
+        effort_values, cardio = pair_by_time(
+            effort_times, effort, cardio_times, heart_rates
+        )
+    else:
+        # Without timestamps the two streams can only be aligned by position,
+        # so the shorter one bounds the comparison.
+        cardio = heart_rates[: len(effort)] if effort else []
+        effort_values = effort[: len(cardio)]
+    decoupling = (
+        aerobic_decoupling(effort_values, cardio, duration_s=float(duration_s))
+        if cardio
+        else None
+    )
     return {
         "np": round(np_value) if np_value is not None else None,
         "if": round(if_value, 2) if if_value is not None else None,
@@ -83,6 +104,24 @@ def streams_by_metric(rows: Sequence[Mapping[str, object]]) -> dict[str, list[fl
         value = row.get("value")
         if isinstance(metric, str) and isinstance(value, int | float):
             grouped.setdefault(metric, []).append(float(value))
+    return grouped
+
+
+def stream_times_by_metric(
+    rows: Sequence[Mapping[str, object]],
+) -> dict[str, list[float]]:
+    """Sample timestamps per metric, in epoch seconds.
+
+    Used to pair streams by time rather than by their index in an array. Both
+    streams come from the same activity, so absolute seconds give the right
+    alignment and keep the tolerance meaningful.
+    """
+    grouped: dict[str, list[float]] = {}
+    for row in rows:
+        metric = row.get("metric_type")
+        sample_time = row.get("sample_time")
+        if isinstance(metric, str) and isinstance(sample_time, datetime):
+            grouped.setdefault(metric, []).append(sample_time.timestamp())
     return grouped
 
 

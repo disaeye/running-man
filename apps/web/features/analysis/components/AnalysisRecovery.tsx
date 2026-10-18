@@ -19,7 +19,7 @@ import { MenstrualPhaseStrip } from "@features/health/components/MenstrualPhaseS
 import { useWellness } from "@features/health/hooks/useWellness";
 import { usePmcData, type PmcPoint } from "@features/pmc/hooks/usePmcData";
 import { useReadiness } from "@features/today/hooks/useReadiness";
-import { toISODate } from "@shared/lib/format";
+import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
 import { useAnalysisRange } from "../lib/analysis-range";
 import {
   ReadinessDriverHistory,
@@ -29,7 +29,7 @@ import {
 
 export function AnalysisRecovery() {
   const { range } = useAnalysisRange();
-  const today = toISODate(new Date());
+  const today = athleteToday(useAthleteTimezone());
   const { data: wellness, loading, error } = useWellness(range.from, range.to);
   const { data: loads } = usePmcData(range.from, range.to);
   const { data: readiness } = useReadiness(today);
@@ -68,7 +68,7 @@ export function AnalysisRecovery() {
 
           <ChartShell
             title="综合健康趋势"
-            subtitle="RHR / 体重"
+            subtitle="静息心率 / 体重"
             provenance={`${range.from} → ${range.to} · ${wellness.length} 天`}
           >
             <HealthChart data={wellness} />
@@ -83,7 +83,7 @@ export function AnalysisRecovery() {
             </ChartShell>
           </div>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <ChartShell title="VO₂max" subtitle="ml/kg/min">
+            <ChartShell title="最大摄氧量" subtitle="ml/kg/min">
               <VO2maxTrend data={wellness} />
             </ChartShell>
             <TrainingRecoveryCorrelation wellness={wellness} loads={loads} />

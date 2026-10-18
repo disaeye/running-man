@@ -23,7 +23,7 @@ export function RecoverySparseState() {
     <Card padding="md" data-testid="recovery-sparse-state">
       <SectionHeader title="恢复诊断需要至少 3 天健康记录" />
       <p className="mt-3 text-footnote leading-relaxed text-text-secondary">
-        记录睡眠、静息心率、HRV 或 VO₂max 后，Analysis 会把恢复趋势与训练负荷放在同一时间轴解释，而不是给出单日行动建议。
+        记录睡眠、静息心率、心率变异或最大摄氧量后，这里会把恢复趋势与训练负荷放在同一时间轴对比，而不只给单日结论。
       </p>
     </Card>
   );
@@ -48,13 +48,13 @@ export function RecoveryDiagnosisCard({
     >
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
-          <p className="text-caption1 font-medium uppercase tracking-wider text-text-muted">
+          <p className="text-caption1 font-medium text-text-muted">
             恢复
           </p>
           <h3 className={`mt-1.5 text-title2 font-semibold ${diagnosis.tone}`}>
             {diagnosis.title}
           </h3>
-          <p className="sr-only">{diagnosis.detail}</p>
+          <p className="mt-1 text-caption1 leading-relaxed text-text-secondary">{diagnosis.detail}</p>
         </div>
         <Badge variant={diagnosis.variant} className="w-fit text-subheadline">
           {diagnosis.badge}
@@ -102,7 +102,7 @@ export function ReadinessDriverHistory({
                 {factor.score != null ? `${Math.round(factor.score)}` : factor.impact}
               </Badge>
             </div>
-            <p className="sr-only">{factor.detail}</p>
+            <p className="mt-1 text-caption1 leading-snug text-text-secondary">{factor.detail}</p>
           </div>
         ))}
       </div>

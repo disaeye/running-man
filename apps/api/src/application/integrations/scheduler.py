@@ -8,20 +8,20 @@ indicator claimed the sync link was fine.
 
 This module is the missing reader. It runs on a timer, decides which athletes
 are *due* for a sync from their stored settings, and runs them through the same
-job the manual button uses — so there is one sync path, not two.
+durable job the manual button uses — so there is one sync path, not two.
 
 Design decisions worth stating:
 
 * **Due, not periodic.** A single timer at a fixed cadence would either sync
   daily users hourly or hourly users daily. Instead the timer runs often and
   each athlete is checked against their own frequency and their last sync time.
-* **Never overlap.** An athlete whose previous sync is still ``running`` is
-  skipped, as is one synced more recently than the jitter window allows. The
-  manual endpoint makes the same check; a timer that ignored it could stack
-  concurrent syncs on the same account.
+* **Never overlap.** An athlete with a queued or running sync job is skipped, as
+  is one synced more recently than the jitter window allows. The manual
+  endpoint relies on the same active-job guard; a timer that ignored it could
+  stack concurrent syncs on the same account.
 * **Failures are recorded, not raised.** One athlete's expired credentials must
   not stop the others, and the failure has to be visible in the app — so it is
-  written to ``integration_sync_runs``/``integration_sync_errors`` through the
+  written to the job row (and mirrored onto the integration row) through the
   normal job path and the run continues.
 * **No credentials in logs.** Only the source name and athlete id are logged.
 """
@@ -30,21 +30,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from time import monotonic
 from typing import Final
 from uuid import UUID
 
 import anyio
+import psycopg
 
+from application.integrations.sync_jobs import create_sync_job, run_sync_job
 from infrastructure.db.pool import close_pool, get_pool, open_pool
-from infrastructure.repositories.activity import ActivitySyncStats
-from infrastructure.repositories.integrations import UserIntegrationRepo
-from presentation.api.integration_helpers import decrypt_credentials, sync
-from presentation.api.integration_sync_detail import (
-    IntegrationSyncResult,
-    empty_sync_result,
-    sync_detail,
-)
+from presentation.api.integration_helpers import decrypt_credentials
 
 # Cadence a frequency maps to. ``manual`` is absent on purpose: it means "never
 # sync without being asked", which is the setting's whole point.
@@ -124,11 +118,17 @@ async def collect_targets(now: datetime) -> tuple[list[SyncTarget], list[str]]:
     async with get_pool().connection() as conn, conn.cursor() as cur:
         _ = await cur.execute(
             """
-            SELECT athlete_id, source, settings, credentials,
-                   last_sync_at, last_sync_status
-            FROM user_integrations
-            WHERE connected = true
-            ORDER BY athlete_id, source
+            SELECT i.athlete_id, i.source, i.settings, i.credentials,
+                   i.last_sync_at, i.last_sync_status
+            FROM user_integrations i
+            WHERE i.connected = true
+              AND NOT EXISTS (
+                  SELECT 1 FROM integration_sync_jobs j
+                  WHERE j.athlete_id = i.athlete_id
+                    AND j.source = i.source
+                    AND j.status IN ('queued', 'running')
+              )
+            ORDER BY i.athlete_id, i.source
             """
         )
         rows = [dict(row) for row in await cur.fetchall()]
@@ -151,6 +151,9 @@ async def collect_targets(now: datetime) -> tuple[list[SyncTarget], list[str]]:
             continue
         if row.get("last_sync_status") == "running":
             # A previous run is still going; stacking another would double-write.
+            # The NOT EXISTS guard above already excludes athletes with an
+            # active job, so this only catches a status left behind by an older
+            # build of the sync path.
             skipped.append(f"{source}:already_running")
             continue
 
@@ -218,35 +221,18 @@ async def run_due_syncs(now: datetime | None = None) -> ScheduleReport:
 
 
 async def _run_one(target: SyncTarget) -> bool:
-    """Run one sync through the manual path, recording the outcome either way."""
-    repo = UserIntegrationRepo()
-    started_at = monotonic()
-    running_detail = sync_detail(empty_sync_result(), started_at, "running", None)
-    await repo.update_sync_status(
-        target.athlete_id, target.source, "running", None, running_detail
-    )
+    """Run one sync as a durable job, recording the outcome either way."""
     try:
-        result = await sync(target.source, target.athlete_id, target.credentials)
-    except Exception as error:
-        message = f"{type(error).__name__}: {error}"
-        detail = sync_detail(empty_sync_result(), started_at, "failed", message)
-        await repo.update_sync_status(
-            target.athlete_id, target.source, "failed", message, detail
+        job = await create_sync_job(
+            target.athlete_id, target.source, "incremental", "auto"
         )
-        return False
-
-    detail = sync_detail(_as_result(result), started_at, "success", None)
-    await repo.update_sync_status(
-        target.athlete_id, target.source, "success", None, detail
+    except psycopg.errors.UniqueViolation:
+        # Another trigger won the race; its job covers this athlete already.
+        return True
+    outcome = await run_sync_job(
+        UUID(str(job["id"])), target.athlete_id, target.source, target.credentials
     )
-    return True
-
-
-def _as_result(result: ActivitySyncStats | IntegrationSyncResult) -> IntegrationSyncResult:
-    """Normalize the two shapes the sync layer can return."""
-    if isinstance(result, IntegrationSyncResult):
-        return result
-    return IntegrationSyncResult(activity_stats=result)
+    return outcome.status == "success"
 
 
 async def main() -> int:

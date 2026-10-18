@@ -78,7 +78,7 @@ npm run dev
 npm run lint && npm run test
 
 # Frontend production (systemd, port 31000)
-cd apps/web && npm run build && systemctl --user restart running-man-web.service
+./scripts/deploy-web.sh   # build into a private dir, swap, restart, verify assets
 # See CLAUDE.md "Public access topology" and docs/operations.md
 
 # Backend on this host (systemd, port 31001)
@@ -117,4 +117,4 @@ python scripts/reconcile_intervals_icu.py --athlete-id <uuid> --days 90
 | `infra/db/` | Retired schema location — DDL authority lives in `apps/api/alembic/versions` (see `infra/db/schema/README.md`) |
 | `scripts/` | Backup, restore, benchmark, reconciliation tools |
 
-See `docs/architecture.md`, `docs/api-versioning.md`, `docs/clean-code.md`, and `docs/operations.md`.
+See `docs/architecture.md`, `docs/api-versioning.md`, `docs/clean-code.md`, `docs/operations.md`, and `docs/product-gap-analysis.md` (product design gap analysis), `docs/sync-experience.md` (sync experience walkthrough & redesign), `docs/experience-walkthrough.md` (walkthrough method).

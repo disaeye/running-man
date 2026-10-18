@@ -1,7 +1,13 @@
 from datetime import date, timedelta
-from itertools import pairwise
 from typing import Literal, TypedDict
 
+from domain.insights.plan_intensity import (
+    INTENSITY_DISTRIBUTION_WEIGHT,
+    SESSION_SPACING_WEIGHT,
+    intensity_score,
+    session_duration,
+    spacing_score,
+)
 from domain.insights.weekly_progress import (
     WeekProgress,
     as_date,
@@ -12,25 +18,17 @@ from domain.insights.weekly_progress import (
 )
 
 VOLUME_ADEQUACY_WEIGHT = 30.0
-INTENSITY_DISTRIBUTION_WEIGHT = 25.0
 REST_DAY_PLACEMENT_WEIGHT = 20.0
-SESSION_SPACING_WEIGHT = 15.0
 WEEKLY_CONSISTENCY_WEIGHT = 10.0
 
 A_GRADE_MIN_SCORE = 85
 B_PLUS_GRADE_MIN_SCORE = 70
 B_GRADE_MIN_SCORE = 55
 
-LOW_INTENSITY_TSS_MAX = 50.0
-HIGH_INTENSITY_TSS_MIN = 100.0
-POLARIZED_LOW_INTENSITY_MIN_RATIO = 0.70
-POLARIZED_HIGH_INTENSITY_MAX_RATIO = 0.25
 MIN_REST_DAYS_PER_WEEK = 1
 MAX_ITEMS_PER_SECTION = 3
 MIN_WELL_MATCHED_VOLUME_RATIO = 0.85
 MAX_WELL_MATCHED_VOLUME_RATIO = 1.10
-MIN_DAYS_FOR_SPACING = 2
-MAX_CLOSE_HIGH_INTENSITY_RATIO = 0.25
 Grade = Literal["A", "B+", "B", "C"]
 
 
@@ -45,6 +43,8 @@ class PlanQuality(TypedDict):
 class PlanInputs(TypedDict):
     weeks: list[WeekProgress]
     planned_tss: list[float]
+    planned_types: list[str]
+    planned_durations: list[float]
     planned_days: set[date]
     actual_days: set[date]
 
@@ -60,9 +60,11 @@ def compute_plan_quality(
         return _quality(0.0, [], ["所选周期没有训练计划"], ["先为本周安排至少3次训练"])
     parts = {
         "volume": _volume_score(inputs["weeks"]),
-        "intensity": _intensity_score(inputs["planned_tss"]),
+        "intensity": intensity_score(
+            inputs["planned_types"], inputs["planned_durations"], inputs["planned_tss"]
+        ),
         "rest": _rest_score(inputs["planned_days"], start, end),
-        "spacing": _spacing_score(inputs["planned_days"], inputs["planned_tss"]),
+        "spacing": spacing_score(inputs["planned_days"], inputs["planned_types"]),
         "consistency": _consistency_score(inputs["planned_days"], inputs["actual_days"]),
     }
     return _quality(sum(parts.values()), _strengths(parts), _risks(parts), _recommendations(parts))
@@ -90,9 +92,25 @@ def _plan_inputs(
     planned_tss = [
         num(event.get("predicted_tss")) for event in planned_events if in_range(event, start, end)
     ]
+    planned_types = [
+        str(event.get("training_type"))
+        for event in planned_events
+        if in_range(event, start, end)
+        and isinstance(event.get("training_type"), str)
+        and num(event.get("predicted_tss")) > 0
+    ]
+    planned_durations = [
+        session_duration(event)
+        for event in planned_events
+        if in_range(event, start, end)
+        and isinstance(event.get("training_type"), str)
+        and num(event.get("predicted_tss")) > 0
+    ]
     return {
         "weeks": compute_weekly_progress(planned_events, activities, start, end),
         "planned_tss": [tss for tss in planned_tss if tss > 0],
+        "planned_types": planned_types,
+        "planned_durations": planned_durations,
         "planned_days": {
             as_date(event.get("start_time"))
             for event in planned_events
@@ -115,14 +133,6 @@ def _volume_score(weeks: list[WeekProgress]) -> float:
     return max(0.0, VOLUME_ADEQUACY_WEIGHT * (1 - min(abs(1 - ratio), 1)))
 
 
-def _intensity_score(planned_tss: list[float]) -> float:
-    low = sum(1 for tss in planned_tss if tss <= LOW_INTENSITY_TSS_MAX) / len(planned_tss)
-    high = sum(1 for tss in planned_tss if tss >= HIGH_INTENSITY_TSS_MIN) / len(planned_tss)
-    low_score = min(low / POLARIZED_LOW_INTENSITY_MIN_RATIO, 1.0) * 0.6
-    high_score = (1.0 if high <= POLARIZED_HIGH_INTENSITY_MAX_RATIO else 0.5) * 0.4
-    return (low_score + high_score) * INTENSITY_DISTRIBUTION_WEIGHT
-
-
 def _rest_score(planned_days: set[date], start: date, end: date) -> float:
     scores: list[float] = []
     current = week_start(start)
@@ -132,17 +142,6 @@ def _rest_score(planned_days: set[date], start: date, end: date) -> float:
             scores.append(1.0 if 7 - sessions >= MIN_REST_DAYS_PER_WEEK else 0.0)
         current += timedelta(days=7)
     return _avg(scores) * REST_DAY_PLACEMENT_WEIGHT
-
-
-def _spacing_score(planned_days: set[date], planned_tss: list[float]) -> float:
-    if len(planned_days) < MIN_DAYS_FOR_SPACING:
-        return SESSION_SPACING_WEIGHT
-    sorted_days = sorted(planned_days)
-    close_pairs = sum(1 for first, second in pairwise(sorted_days) if (second - first).days <= 1)
-    high_ratio = sum(1 for tss in planned_tss if tss >= HIGH_INTENSITY_TSS_MIN) / len(planned_tss)
-    if close_pairs == 0 or high_ratio <= MAX_CLOSE_HIGH_INTENSITY_RATIO:
-        return SESSION_SPACING_WEIGHT
-    return SESSION_SPACING_WEIGHT * 0.5
 
 
 def _consistency_score(planned_days: set[date], actual_days: set[date]) -> float:

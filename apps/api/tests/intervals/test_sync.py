@@ -106,7 +106,6 @@ def ensure_activity_summary(db_conn: psycopg.Connection) -> None:
         )
 
 
-@pytest.mark.skip(reason="VCR cassette stale — athlete ID mismatch; re-record needed")
 @pytest.mark.asyncio
 async def test_incremental_inserts_activities(
     db_conn: psycopg.Connection, monkeypatch: pytest.MonkeyPatch
@@ -129,14 +128,13 @@ async def test_incremental_inserts_activities(
         )
         rows = cur.fetchall()
 
-    assert count.activity_stats.total_processed == 18
+    assert count.activity_stats.total_processed == 20
     assert count.stream_result.inserted == 0
-    assert len(rows) == 18
-    assert rows[0][:3] == ("i156878360", "app:i156878360", "Run")
+    assert len(rows) == 20
+    assert rows[0][:3] == ("i156878360", "app:i156878360", "run")
     assert rows[0][3:] == (16010.0, 5601)
 
 
-@pytest.mark.skip(reason="VCR cassette stale — athlete ID mismatch; re-record needed")
 @pytest.mark.asyncio
 async def test_dedup_keeps_row_count_stable(
     db_conn: psycopg.Connection, monkeypatch: pytest.MonkeyPatch
@@ -147,11 +145,11 @@ async def test_dedup_keeps_row_count_stable(
 
     async with IntervalsClient(api_key="API_KEY_PLACEHOLDER", rate_limiter=NoopLimiter()) as client:
         cassette_client = CassetteActivitiesClient(client)
-        with validation_vcr().use_cassette(str(CASSETTE)):
+        with validation_vcr().use_cassette(str(CASSETTE), allow_playback_repeats=True):
             await sync.backfill_activities(
                 TEST_ATHLETE_ID, cassette_client, db_conn, date(2026, 5, 17), date(2026, 6, 16)
             )
-        with validation_vcr().use_cassette(str(CASSETTE)):
+        with validation_vcr().use_cassette(str(CASSETTE), allow_playback_repeats=True):
             await sync.backfill_activities(
                 TEST_ATHLETE_ID, cassette_client, db_conn, date(2026, 5, 17), date(2026, 6, 16)
             )
@@ -162,7 +160,7 @@ async def test_dedup_keeps_row_count_stable(
         )
         row = cur.fetchone()
         assert row is not None
-        assert row[0] == 18
+        assert row[0] == 20
 
 
 @pytest.mark.asyncio

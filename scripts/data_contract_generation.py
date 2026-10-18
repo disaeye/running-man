@@ -88,13 +88,26 @@ def render_python(file_name: str, collection: str, contract: Contract) -> str:
             raise ValueError(f"unknown Python generated file {unreachable}")
 
 
+# Contract fields that exist to validate the algorithms and are not published to
+# either registry. `reference_cases` carries expected values for the contract
+# gate; no runtime code reads them.
+VALIDATION_ONLY_FIELDS: Final = frozenset({"reference_cases"})
+
+
+def published(entries: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [
+        {key: value for key, value in entry.items() if key not in VALIDATION_ONLY_FIELDS}
+        for entry in entries
+    ]
+
+
 def render_python_definitions(
     enum_name: str, definition_name: str, entries: list[dict[str, object]]
 ) -> str:
     enum_members = "\n".join(
         f"    {upper_snake(str(entry['key']))} = {json.dumps(entry['key'])}" for entry in entries
     )
-    rendered = python_literal(entries)
+    rendered = python_literal(published(entries))
     return (
         f"{GENERATED_HEADER_PY}\nfrom enum import StrEnum\nfrom typing import Final\n\n\n"
         f"class {enum_name}(StrEnum):\n{enum_members}\n\n"
@@ -184,7 +197,7 @@ def render_typescript_readiness_bands(entries: list[dict[str, object]]) -> str:
 
 
 def index_by_key(entries: list[dict[str, object]]) -> dict[str, dict[str, object]]:
-    return {str(entry["key"]): entry for entry in entries}
+    return {str(entry["key"]): entry for entry in published(entries)}
 
 
 def alias_entries(entries: list[dict[str, object]]) -> dict[str, str]:

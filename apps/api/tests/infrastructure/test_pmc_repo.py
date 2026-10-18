@@ -95,7 +95,13 @@ async def test_sport_filtered_tss_uses_full_filtered_history(
     )
 
     assert result == {date(2026, 1, 1): 20.0, date(2026, 7, 1): 50.0}
-    assert cursor.params == (athlete_id, "Run", date(2026, 7, 31))
+    # The day key resolves the athlete's zone from their own profile row, so
+    # athlete_id is bound once for that subquery and once for the filter. The
+    # sport-filtered series has to agree with the stored all-sports series,
+    # which `application/load/pmc_facts` writes with the athlete's zone.
+    assert cursor.params == (athlete_id, athlete_id, "Run", athlete_id, date(2026, 7, 31))
+    assert "AT TIME ZONE" in cursor.queries[0]
+    assert "start_time::date" not in cursor.queries[0]
     assert "current_activity_facts" in cursor.queries[0]
     assert "daily_load" not in cursor.queries[0]
 

@@ -11,7 +11,7 @@ import type { NextRequest } from "next/server";
  * readiness score, a fake athlete profile). Verified against production at the
  * time: `curl /settings` with no cookie returned 200 instead of a redirect.
  */
-const PUBLIC_PATHS = ["/landing", "/login", "/register", "/share", "/robots.txt"];
+const PUBLIC_PATHS = ["/login", "/register", "/share", "/robots.txt"];
 
 /**
  * Routes that require a session.
@@ -31,6 +31,9 @@ const PROTECTED_PATHS = [
   "/calendar",
   "/goals",
   "/settings",
+  // Developer gallery of primitives. Nothing links to it, and it is part of
+  // the platform rather than a public page.
+  "/showcase",
 ];
 
 /** Where an unauthenticated visitor is sent. */
@@ -40,12 +43,20 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const accessToken = request.cookies.get("access_token")?.value;
 
-  // `/` is the dashboard for a signed-in athlete and the landing page
-  // otherwise. Both are legitimate, so this branch reads the cookie rather
-  // than short-circuiting like the old `if (pathname === "/")` did.
+  // `/landing` was a marketing surface. The app opens straight into the
+  // sign-in screen now, so the old URL points at `/` and the branch below
+  // decides between the dashboard and the login form.
+  if (pathname === "/landing") {
+    return NextResponse.redirect(new URL("/", request.url), 308);
+  }
+
+  // `/` is the dashboard for a signed-in athlete and the sign-in screen
+  // otherwise. The sign-in screen is a redirect rather than a rewrite so the
+  // address bar and the cookie flow match what a native app does: you are at
+  // the login page, and after signing in you land on the content.
   if (pathname === "/") {
     if (accessToken) return NextResponse.next();
-    return NextResponse.rewrite(new URL("/landing", request.url));
+    return redirectToLogin(request);
   }
 
   // Backward-compat: /settings?section=strength was re-homed to
@@ -55,6 +66,13 @@ export function middleware(request: NextRequest) {
   if (pathname === "/settings" && request.nextUrl.searchParams.get("section") === "strength") {
     if (!accessToken) return redirectToLogin(request);
     return NextResponse.redirect(new URL("/calendar?view=strength", request.url), 308);
+  }
+
+  // Signing in twice is a dead end: an athlete who already has a session and
+  // lands on the sign-in screen goes straight to the dashboard, which is what
+  // opening the app does.
+  if ((pathname === "/login" || pathname === "/register") && accessToken) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   if (isPublicPath(pathname)) return NextResponse.next();

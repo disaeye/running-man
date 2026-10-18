@@ -104,7 +104,7 @@ export function buildLoadPillar(
       tabId: "load",
       verdict: "训练负荷待接入更多活动",
       risk: "low",
-      nextStep: "导入基础训练活动后，Analysis 会基于 CTL / ATL / TSB 给出趋势解读。",
+      nextStep: "导入基础训练活动后，负荷趋势会基于 CTL / ATL / TSB 给出解读。",
     };
   }
   const risk = aggregateLoadRisk(diagnosis);
@@ -113,7 +113,7 @@ export function buildLoadPillar(
       ? "先稳住恢复节奏，避免在 ACWR 偏高或过载窗口继续加量。"
       : risk === "medium"
         ? "保持当前训练分布，盯紧 TSB 与 ACWR 是否进入稳定区间。"
-        : "维持当前负荷分布即可，Analysis 会持续比对 30-365 天趋势。";
+        : "维持当前负荷分布即可，系统会持续比对 30-365 天趋势。";
   return {
     pillarId: "load",
     tabId: "load",
@@ -173,11 +173,11 @@ function sampleAbilityLine(
   if (sample.thresholdPace != null) {
     parts.push(`阈值配速已建立 ${formatPaceShort(sample.thresholdPace)}`);
   }
-  if (sample.lthr != null) parts.push(`LTHR ${Math.round(sample.lthr)} bpm`);
-  if (sample.ftp != null) parts.push(`FTP ${Math.round(sample.ftp)} W`);
-  if (sample.vo2max != null) parts.push(`VO₂max ${sample.vo2max.toFixed(1)} ml/kg/min`);
+  if (sample.lthr != null) parts.push(`乳酸阈心率 ${Math.round(sample.lthr)} bpm`);
+  if (sample.ftp != null) parts.push(`功能性阈值功率 ${Math.round(sample.ftp)} W`);
+  if (sample.vo2max != null) parts.push(`最大摄氧量 ${sample.vo2max.toFixed(1)} ml/kg/min`);
   if (parts.length === 0) {
-    return family === "cycling" ? "骑行功率主线尚未建立" : "训练表现基线正在建立";
+    return family === "cycling" ? "骑行功率基线尚未建立" : "训练能力基线正在建立";
   }
   return parts.join(" · ");
 }
@@ -200,7 +200,7 @@ export function buildAbilityPillar(
       nextStep:
         family === "cycling"
           ? "同步包含功率曲线的骑行活动后会生成 FTP 与功率趋势。"
-          : "同步包含 GPS 或比赛结果的跑步活动后会生成阈值配速与 PR 趋势。",
+          : "同步包含 GPS 或比赛结果的跑步活动后，会生成阈值配速与最佳成绩趋势。",
     };
   }
   return {

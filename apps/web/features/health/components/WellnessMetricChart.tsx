@@ -10,6 +10,8 @@ import { useECharts } from "@shared/hooks/useECharts";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
 import { METRIC_REGISTRY, type MetricKey } from "@shared/config/generated/metric-registry";
+import { hasZones } from "@shared/lib/metric-zone";
+import { ZoneMeter } from "@shared/ui/ZoneMeter";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
@@ -64,7 +66,7 @@ export function WellnessMetricChart({
   return (
     <div className="relative">
       <div className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+        <h3 className="text-subheadline font-semibold text-text-muted">
           {definition.display_name}
         </h3>
         <span className="text-caption1 text-text-muted">
@@ -75,6 +77,14 @@ export function WellnessMetricChart({
         </span>
       </div>
       <div ref={containerRef} className="min-h-[200px] w-full lg:h-[180px]" data-testid={`wellness-${metricKey}-chart`} />
+      {hasZones(metricKey) && lastValue != null && (
+        <ZoneMeter
+          metricKey={metricKey}
+          value={lastValue}
+          precision={definition.ui_precision}
+          className="mt-1"
+        />
+      )}
       {!hasData && (
         <div className="absolute inset-0 flex items-center justify-center bg-surface-card">
           <EmptyState

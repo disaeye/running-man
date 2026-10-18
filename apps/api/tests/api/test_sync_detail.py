@@ -1,118 +1,35 @@
-"""Tests for sync detail building (success + failure paths).
+"""What a finished job writes onto the integration row.
 
-Uses the HTTP sync endpoint with a patched ``_sync`` so we can control what
-``IntegrationSyncResult`` is returned without making network calls.
+The job row is the source of truth for progress; ``user_integrations`` keeps a
+denormalized copy so the source card and the staleness badge keep working. These
+tests pin that copy: a running marker with empty counts first, then the terminal
+status with the job's accumulated numbers.
 
-  - Success:   detail JSONB contains counts, stages, no errors
-  - Failure:   detail JSONB contains errors[] and stage marked "failed"
+The executor itself is faked here — its own behaviour is covered by
+``tests/integration/test_sync_jobs.py``.
 """
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 
-from domain.integrations.crypto import encrypt
+from application.integrations import sync_jobs as execution
+from application.integrations.sync_jobs import JobOutcome
 from infrastructure.auth.models import Athlete
-from main import app
-from presentation.api.integrations import get_integration_repo, get_integrations_pool
-from presentation.auth.deps import get_current_athlete
+
+ATHLETE = Athlete(uuid4(), "sync-detail2@example.com", "hash")
+JOB_ID = uuid4()
 
 pytestmark = pytest.mark.no_db
 
-ATHLETE = Athlete(uuid4(), "sync-detail2@example.com", "hash")
 
-
-async def test_sync_detail_success_builds_full_detail() -> None:
-    """Accepting sync marks status running with empty counts."""
-    repo = _SyncDetailRepo()
-    _use_repo(repo)
-
-    with patch("presentation.api.integrations.run_sync_job", new_callable=AsyncMock) as mock_job:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.post("/api/v1/integrations/intervals_icu/sync")
-
-    assert response.status_code == 200
-    assert response.json()["status"] == "accepted"
-    assert len(repo.status_calls) == 1
-    _athlete_id, source, status, error, detail = repo.status_calls[0]
-    assert source == "intervals_icu"
-    assert status == "running"
-    assert error is None
-    assert detail is not None
-    assert detail["counts"]["activities_upserted"] == 0
-    assert detail["stages"] == [{"name": "sync", "status": "running"}]
-    mock_job.assert_awaited_once()
-
-
-async def test_sync_detail_failure_populates_errors() -> None:
-    """Background job failure path writes failed status detail."""
-    from presentation.api.integration_sync_job import run_sync_job
-
-    repo = _SyncDetailRepo()
-    # Directly exercise job with patched repo path
-    with patch("presentation.api.integration_sync_job.UserIntegrationRepo", return_value=repo):
-        with patch(
-            "presentation.api.integration_sync_job.sync",
-            new_callable=AsyncMock,
-            side_effect=ValueError("API rate limit exceeded"),
-        ):
-            await run_sync_job(
-                "intervals_icu",
-                ATHLETE.id,
-                {"api_key": "k", "athlete_id": "i1"},
-                0.0,
-            )
-
-    assert len(repo.status_calls) == 1
-    _a, source, status, error, detail = repo.status_calls[0]
-    assert source == "intervals_icu"
-    assert status == "failed"
-    assert error is not None and "rate limit" in error.lower()
-    assert detail["stages"][0]["status"] == "failed"
-
-
-async def test_sync_detail_zero_counts_no_error() -> None:
-    """Accepting a no-op sync still records running status first."""
-    repo = _SyncDetailRepo()
-    _use_repo(repo)
-
-    with patch("presentation.api.integrations.run_sync_job", new_callable=AsyncMock):
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.post("/api/v1/integrations/intervals_icu/sync")
-
-    assert response.status_code == 200
-    assert response.json()["status"] == "accepted"
-    assert len(repo.status_calls) >= 1
-    _athlete_id, _source, status, _error, detail = repo.status_calls[0]
-    assert status == "running"
-    assert detail["stages"][0]["status"] == "running"
-
-
-
-# ---------------------------------------------------------------------------
-# Fake repo
-# ---------------------------------------------------------------------------
-
-
-class _SyncDetailRepo:
-    """Fake repo that tracks update_sync_status calls."""
+class _StatusRepo:
+    """Records every ``update_sync_status`` call in order."""
 
     def __init__(self) -> None:
         self.status_calls: list[tuple[UUID, str, str, str | None, dict[str, object] | None]] = []
-
-    async def get(self, _athlete_id: UUID, _source: str) -> dict[str, object] | None:
-        return {
-            "athlete_id": str(ATHLETE.id),
-            "source": "intervals_icu",
-            "connected": True,
-            "credentials": {"ciphertext": encrypt({"api_key": "k", "athlete_id": "i123"})},
-        }
 
     async def update_sync_status(
         self,
@@ -125,8 +42,97 @@ class _SyncDetailRepo:
         self.status_calls.append((athlete_id, source, status, error, detail))
 
 
-def _use_repo(repo: _SyncDetailRepo) -> None:
-    app.dependency_overrides.clear()
-    app.dependency_overrides[get_current_athlete] = lambda: ATHLETE
-    app.dependency_overrides[get_integration_repo] = lambda: repo
-    app.dependency_overrides[get_integrations_pool] = lambda: None
+def _detail(**counts: int) -> dict[str, object]:
+    return {
+        "counts": {
+            "activities_upserted": counts.get("upserted", 0),
+            "activities_deduped": counts.get("deduplicated", 0),
+            "wellness_days": counts.get("wellness", 0),
+            "streams_inserted": counts.get("streams", 0),
+            "ghosts_deleted": counts.get("ghosts", 0),
+        },
+        "duration_ms": 1200,
+        "stages": [{"name": "sync", "status": counts.get("status", "success")}],
+        "errors": [],
+        "job_id": str(JOB_ID),
+    }
+
+
+def _prepare(monkeypatch: pytest.MonkeyPatch, outcome: JobOutcome) -> _StatusRepo:
+    repo = _StatusRepo()
+    monkeypatch.setattr(execution, "UserIntegrationRepo", lambda: repo)
+    monkeypatch.setattr(execution, "execute_job", lambda _job_id, _credentials: outcome)
+    return repo
+
+
+async def test_running_marker_is_written_before_the_job_starts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _prepare(
+        monkeypatch, JobOutcome("success", None, _detail(upserted=3, status="success"))
+    )
+
+    await execution.run_sync_job(JOB_ID, ATHLETE.id, "intervals_icu", {"api_key": "k"})
+
+    assert len(repo.status_calls) == 2
+    running, finished = repo.status_calls
+    assert running[:4] == (ATHLETE.id, "intervals_icu", "running", None)
+    assert running[4] is not None
+    assert running[4]["counts"] == {
+        "activities_upserted": 0,
+        "activities_deduped": 0,
+        "wellness_days": 0,
+        "streams_inserted": 0,
+        "ghosts_deleted": 0,
+    }
+    assert running[4]["stages"] == [{"name": "sync", "status": "running"}]
+    assert finished[:4] == (ATHLETE.id, "intervals_icu", "success", None)
+    assert finished[4] is not None
+    assert finished[4]["counts"]["activities_upserted"] == 3
+
+
+async def test_failure_writes_the_reason_and_the_failed_stage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _prepare(
+        monkeypatch,
+        JobOutcome(
+            "failed",
+            "ValueError: API rate limit exceeded",
+            _detail(status="failed"),
+        ),
+    )
+
+    await execution.run_sync_job(JOB_ID, ATHLETE.id, "intervals_icu", {"api_key": "k"})
+
+    _athlete_id, source, status, error, detail = repo.status_calls[-1]
+    assert source == "intervals_icu"
+    assert status == "failed"
+    assert error is not None and "rate limit" in error.lower()
+    assert detail is not None
+    assert detail["stages"] == [{"name": "sync", "status": "failed"}]
+
+
+async def test_cancel_is_reported_as_cancelled_not_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _prepare(
+        monkeypatch, JobOutcome("cancelled", "已取消", _detail(status="cancelled"))
+    )
+
+    await execution.run_sync_job(JOB_ID, ATHLETE.id, "intervals_icu", {"api_key": "k"})
+
+    assert repo.status_calls[-1][2] == "cancelled"
+
+
+async def test_terminal_detail_carries_the_job_id_for_the_retry_ui(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _prepare(monkeypatch, JobOutcome("success", None, _detail()))
+
+    await execution.run_sync_job(JOB_ID, ATHLETE.id, "intervals_icu", {"api_key": "k"})
+
+    detail = repo.status_calls[-1][4]
+    assert detail is not None
+    assert detail["job_id"] == str(JOB_ID)
+    assert isinstance(detail["duration_ms"], int)

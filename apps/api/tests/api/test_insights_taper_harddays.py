@@ -54,13 +54,13 @@ async def _fake_hard_day_loads(
     _athlete_id: UUID, _start: date, _end: date
 ) -> list[dict[str, object]]:
     return [
-        {"day": date(2026, 6, 1), "tss": 50.0, "tsb": 10.0},
-        {"day": date(2026, 6, 2), "tss": 120.0, "tsb": 5.0},
-        {"day": date(2026, 6, 3), "tss": 130.0, "tsb": 0.0},
-        {"day": date(2026, 6, 4), "tss": 90.0, "tsb": 8.0},
-        {"day": date(2026, 6, 5), "tss": 110.0, "tsb": 3.0},
-        {"day": date(2026, 6, 6), "tss": 110.0, "tsb": 2.0},
-        {"day": date(2026, 6, 7), "tss": 80.0, "tsb": 6.0},
+        {"day": date(2026, 6, 1), "tss": 50.0, "tsb": 10.0, "ctl": 60.0},
+        {"day": date(2026, 6, 2), "tss": 120.0, "tsb": 5.0, "ctl": 60.0},
+        {"day": date(2026, 6, 3), "tss": 130.0, "tsb": 0.0, "ctl": 60.0},
+        {"day": date(2026, 6, 4), "tss": 90.0, "tsb": 8.0, "ctl": 60.0},
+        {"day": date(2026, 6, 5), "tss": 110.0, "tsb": 3.0, "ctl": 60.0},
+        {"day": date(2026, 6, 6), "tss": 110.0, "tsb": 2.0, "ctl": 60.0},
+        {"day": date(2026, 6, 7), "tss": 80.0, "tsb": 6.0, "ctl": 60.0},
     ]
 
 
@@ -166,7 +166,7 @@ async def test_taper_no_reduction_means_not_tapering() -> None:
 
 @pytest.mark.no_db
 async def test_hard_days_detects_consecutive_high_tss() -> None:
-    """Consecutive days with TSS > 100 should be reported as runs."""
+    """Runs of days above 1.5x the athlete's CTL are reported as hard."""
     _use_athlete()
     monkeypatch = pytest.MonkeyPatch()
     monkeypatch.setattr(insights, "_daily_loads_for_range", _fake_hard_day_loads)

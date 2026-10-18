@@ -16,6 +16,13 @@ const eslintConfig = defineConfig([
   },
   globalIgnores([
     ".next/**",
+    // Build output directories. Each producer builds into its own so a running
+    // server never loses the chunks it is serving; they are generated code and
+    // must stay out of lint the same way `.next` does.
+    ".next-gate/**",
+    ".next-build/**",
+    ".next-prev-*/**",
+    ".omo/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

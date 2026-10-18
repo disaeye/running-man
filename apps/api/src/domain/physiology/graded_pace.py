@@ -20,16 +20,22 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Final
 
-# Minetti et al. (2002) net energy cost of running vs grade, fit as a
-# polynomial of grade (fraction). Coefficients for grade in [-0.45, 0.45].
-# Cost is expressed relative to flat (grade=0 → multiplier 1.0).
-# Source: Minetti "Energy cost of locomotion in humans at different speeds"
-# Strava's GAP uses a similar cost-surface derived from this curve.
+# Minetti et al. (2002) net energy cost of running vs grade, as published:
+#
+#   Cr(g) = 155.4g⁵ − 30.4g⁴ − 43.3g³ + 46.3g² + 19.5g + 3.6   [J·kg⁻¹·m⁻¹]
+#
+# The constant term 3.6 J·kg⁻¹·m⁻¹ is the cost of running on the flat, so the
+# multiplier this module needs is Cr(g) / Cr(0). The polynomial is kept in its
+# published form and normalized at evaluation time; splitting the coefficients
+# by hand is how a term goes missing.
 _MINETTI_COEFFS: Final[tuple[float, ...]] = (
-    155.4,
-    -30.4,
-    -8.31,   # grade^2 (flat baseline baked into normalization below)
+    155.4,   # grade^5
+    -30.4,   # grade^4
+    -43.3,   # grade^3
+    46.3,    # grade^2
+    19.5,    # grade
 )
+_MINETTI_FLAT_COST: Final = 3.6
 
 
 # Lowest multiplier treated as physically plausible on a descent.
@@ -61,23 +67,29 @@ def grade_cost_multiplier(grade: float) -> float:
     ``grade`` is rise/run, so 0.0 is flat and returns 1.0. Climbing costs more;
     descending costs less, down to :data:`MIN_DESCENT_MULTIPLIER`.
 
-    Based on Minetti et al. (2002), ``Cr = 155.4g⁵ − 30.4g⁴ − 8.31g³ + 4.14g + 1``
-    normalized so flat = 1.0. The polynomial is evaluated only where it is
-    trustworthy (see :data:`_TRUSTED_DOWNHILL_GRADE`); steeper descents are
-    pinned to the floor rather than allowed to approach zero, which would make
-    downhill running appear nearly free.
+    Evaluates the published Minetti et al. (2002) cost polynomial and divides by
+    its flat value, so the result is a multiplier with flat = 1.0. The
+    polynomial is trusted only where it was measured
+    (see :data:`_TRUSTED_DOWNHILL_GRADE`); steeper descents are pinned to the
+    floor rather than allowed to approach zero, which would make downhill
+    running appear nearly free.
+
+    Reference points after normalization: +10% → 1.658, +20% → 2.502,
+    −10% → 0.598.
     """
     g = max(-0.45, min(0.45, grade))
     if g < _TRUSTED_DOWNHILL_GRADE:
         return MIN_DESCENT_MULTIPLIER
-    raw = (
-        _MINETTI_COEFFS[0] * g**5
-        + _MINETTI_COEFFS[1] * g**4
-        + _MINETTI_COEFFS[2] * g**3
-        + 4.14 * g
-        + 1.0
+    c5, c4, c3, c2, c1 = _MINETTI_COEFFS
+    cost = (
+        c5 * g**5
+        + c4 * g**4
+        + c3 * g**3
+        + c2 * g**2
+        + c1 * g
+        + _MINETTI_FLAT_COST
     )
-    return max(raw, MIN_DESCENT_MULTIPLIER)
+    return max(cost / _MINETTI_FLAT_COST, MIN_DESCENT_MULTIPLIER)
 
 
 def sample_grade(
@@ -182,23 +194,37 @@ def normalized_graded_pace(
     """NGP (s/km) — the 4th-power smoothed GAP, analogous to Normalized Power.
 
     Running's equivalent of NP: smooth the GAP stream with a 30-sample rolling
-    mean, raise to the 4th power, average, take the 4th root. This captures the
+    mean, apply the 4th-power mean, and convert back to pace. This captures the
     strain of variable-pace running (intervals, surges) the way a flat average
-    cannot. Requires ≥ ``window`` samples.
+    cannot.
+
+    The averaging happens in the **speed** domain, because that is where the
+    4th power means "harder". Pace is s/km, so a larger number is slower: taking
+    the 4th power of pace weights the easiest segments of a session and pushes
+    NGP slower than the average, which is the opposite of the metric's purpose.
+    A 2:1 interval session reads IF 0.95 in the speed domain and 0.85 in the
+    pace domain.
+
+    The consequence of the direction: for any session with varying pace,
+    ``NGP <= average pace``. Equality holds only at constant pace.
     """
     gaps = grade_adjusted_pace_series(
         distances=distances, altitudes=altitudes, times=times
     )
     if len(gaps) < window:
         return None
-    # Rolling mean over moving samples only: a zero marks an interval with no
-    # distance, and including it as a pace would report the athlete as slower
-    # than they ran.
-    rolling = _rolling_mean([g for g in gaps if g > 0], window)
+    # A zero GAP means no distance covered in that interval: the athlete was
+    # stationary, so the interval contributes 0 m/s. It stays in place rather
+    # than being removed, because dropping samples shortens the series and
+    # slides the time base of every later window.
+    speeds = [1000.0 / gap if gap > 0.0 else 0.0 for gap in gaps]
+    rolling = _rolling_mean(speeds, window)
     if not rolling:
         return None
-    fourth_power_sum = sum(v**4 for v in rolling)
-    return (fourth_power_sum / len(rolling)) ** 0.25
+    mean_fourth = sum(v**4 for v in rolling) / len(rolling)
+    if mean_fourth <= 0.0:
+        return None
+    return 1000.0 / mean_fourth**0.25
 
 
 def _raw_pace(

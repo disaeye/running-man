@@ -14,13 +14,13 @@ A write to ``PUT /athletes/me`` records a new threshold step dated today,
 leaving the value in force for past activities untouched.
 """
 
-from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
 from application.thresholds.effective import resolve_effective_thresholds
 from domain.thresholds.resolver import ThresholdField
+from domain.time import today_in_zone
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.athlete_profiles import AthleteProfileRepo
 from infrastructure.repositories.thresholds import ThresholdRepo
@@ -84,16 +84,23 @@ async def update_me(
     if notif_prefs is not None:
         profile_values["notification_prefs"] = notif_prefs
     _ = await AthleteProfileRepo().update(athlete.id, profile_values)
-    _ = await _record_thresholds(athlete.id, body)
+    _ = await _record_thresholds(athlete.id, body, athlete.timezone)
     return await me(athlete)
 
 
-async def _record_thresholds(athlete_id: object, body: AthleteProfileUpdate) -> int:
+async def _record_thresholds(
+    athlete_id: object, body: AthleteProfileUpdate, timezone: str | None = None
+) -> int:
     """Persist any threshold fields present in the payload as today's step.
 
     Uses ``exclude_unset`` so an unrelated profile edit (changing a name, say)
     does not stamp a duplicate threshold row.
     """
+    # The step is stamped with an effective date, and threshold history is
+    # bucketed on the athlete's calendar day like every other day-keyed fact.
+    # Stamping it on the host's date would make a reading entered at 08:00 in
+    # Shanghai apply only to the previous day's sessions.
+    today = today_in_zone(timezone)
     supplied: dict[str, object] = {
         field: value
         for field in _THRESHOLD_COLS
@@ -104,7 +111,7 @@ async def _record_thresholds(athlete_id: object, body: AthleteProfileUpdate) -> 
     repo = ThresholdRepo()
     _ = await repo.upsert(
         athlete_id,  # type: ignore[arg-type]
-        date.today(),
+        today,
         supplied,
         source="manual",
     )
@@ -115,7 +122,7 @@ async def _record_thresholds(athlete_id: object, body: AthleteProfileUpdate) -> 
     # touched, so this widens coverage rather than rewriting history.
     _ = await repo.backfill_earlier_gaps(
         athlete_id,  # type: ignore[arg-type]
-        date.today(),
+        today,
         supplied,
     )
     return len(supplied)

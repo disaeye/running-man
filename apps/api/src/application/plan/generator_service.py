@@ -69,6 +69,7 @@ async def generate_plan(
     rest_days: int | None = None,
     preferred_days_off: list[int] | None = None,
     weekly_tss: float | None = None,
+    today: date | None = None,
 ) -> dict[str, object]:
     goal = await _load_goal(athlete_id, goal_id, db_conn)
     target_date = goal.get("target_date")
@@ -77,7 +78,8 @@ async def generate_plan(
 
     settings = await athlete_settings(athlete_id, db_conn)
     timezone = ZoneInfo(settings.timezone)
-    today = datetime.now(timezone).date()
+    if today is None:
+        today = datetime.now(timezone).date()
     if target_date < today:
         raise ValueError("目标日期已过去")
 
@@ -169,11 +171,15 @@ async def _load_goal(
 
 def _planned_events(context: PlanContext) -> list[dict[str, object]]:
     planned: list[dict[str, object]] = []
-    first_week_start = context.today - timedelta(days=context.today.weekday())
     for phase in context.phases:
         week_start = phase.start_date - timedelta(days=phase.start_date.weekday())
+        # Week number is phase-relative: the 4th week of a build block is where
+        # the recovery week belongs. Counting from the start of the whole plan
+        # put it at an arbitrary point inside a phase.
+        phase_week_start = week_start
         while week_start <= phase.end_date:
-            week_number = max((week_start - first_week_start).days // 7, 0)
+            week_number = max((week_start - phase_week_start).days // 7, 0)
+            weekly_tss = phase.weekly_tss_for(week_start)
             for day_offset in range(7):
                 event_day = week_start + timedelta(days=day_offset)
                 if event_day < max(phase.start_date, context.today) or event_day > phase.end_date:
@@ -181,7 +187,7 @@ def _planned_events(context: PlanContext) -> list[dict[str, object]]:
                 if context.race_title is not None and event_day == context.race_date:
                     continue
                 day = generate_weekly_plan(
-                    phase.target_weekly_tss,
+                    weekly_tss,
                     context.sport,
                     context.options.rest_days,
                     context.options.preferred_days_off,

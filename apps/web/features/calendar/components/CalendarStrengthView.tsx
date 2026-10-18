@@ -26,7 +26,7 @@ export function CalendarStrengthView() {
   return (
     <div className="flex flex-col gap-5">
       <section>
-        <h2 className="mb-3 text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+        <h2 className="mb-3 text-subheadline font-semibold text-text-muted">
           训练日志
         </h2>
         <StrengthTabContent />
@@ -48,7 +48,7 @@ function StrengthAnalyticsBlock() {
     <section className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+          <h2 className="text-subheadline font-semibold text-text-muted">
             力量分析
           </h2>
           <p className="mt-0.5 font-mono text-caption1 text-text-muted">
@@ -81,20 +81,20 @@ function StrengthAnalyticsBlock() {
         <>
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <Card padding="md">
-              <h3 className="mb-4 text-subheadline font-semibold uppercase tracking-wider text-text-primary">
+              <h3 className="mb-4 text-subheadline font-semibold text-text-primary">
                 肌群容量
               </h3>
               <MuscleVolumeChart data={muscleVolume} />
             </Card>
             <Card padding="md">
-              <h3 className="mb-4 text-subheadline font-semibold uppercase tracking-wider text-text-primary">
+              <h3 className="mb-4 text-subheadline font-semibold text-text-primary">
                 肌群分布
               </h3>
               <MuscleDistribution data={distribution} />
             </Card>
           </div>
           <Card padding="md">
-            <h3 className="mb-4 text-subheadline font-semibold uppercase tracking-wider text-text-primary">
+            <h3 className="mb-4 text-subheadline font-semibold text-text-primary">
               预估 1RM (e1RM)
             </h3>
             <E1rmTable data={e1rm} />

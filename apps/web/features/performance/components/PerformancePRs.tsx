@@ -65,8 +65,8 @@ export function PerformancePRs() {
   if (records.length === 0) {
     return (
       <EmptyState
-        title="暂无个人纪录"
-        description="当你的训练数据积累到一定程度，系统将自动识别并突出显示你的最佳表现"
+        title="暂无最佳成绩"
+        description="训练数据积累到一定程度后，系统会自动识别并列出你的最佳表现。"
       />
     );
   }
@@ -77,7 +77,7 @@ export function PerformancePRs() {
         const config = getSportConfig(sport);
         return (
           <section key={sport}>
-            <h2 className="mb-4 text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+            <h2 className="mb-4 text-subheadline font-semibold text-text-muted">
               {config.label || sport}
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

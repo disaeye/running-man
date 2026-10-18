@@ -3,7 +3,20 @@ from __future__ import annotations
 from datetime import date
 from uuid import UUID
 
+import psycopg
+
 from infrastructure.db.pool import ConnectionContext, get_pool
+
+
+def last_wellness_day(conn: psycopg.Connection, athlete_id: int | str) -> date | None:
+    """Newest stored wellness day, so an incremental refresh starts from it."""
+    with conn.cursor() as cur:
+        _ = cur.execute(
+            "SELECT max(day) FROM health_wellness WHERE athlete_id = %s",
+            (athlete_id,),
+        )
+        row = cur.fetchone()
+    return row[0] if row and row[0] is not None else None
 
 
 def _connect() -> ConnectionContext:

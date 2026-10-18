@@ -8,10 +8,13 @@ from psycopg import AsyncConnection
 from psycopg.rows import DictRow
 
 _MANUAL_GOAL_TYPES = {"event", "weight"}
+# ``consistency`` counts distinct training days, so it must key on the athlete's
+# calendar day for the same reason the range filter below does: an evening run
+# belongs to the day it was run locally, not to the previous UTC date.
 _PROGRESS_COLUMNS = {
     "distance": "SUM(distance_m)",
     "time": "SUM(duration_s)",
-    "consistency": "COUNT(DISTINCT start_time::date)",
+    "consistency": "COUNT(DISTINCT (a.start_time AT TIME ZONE COALESCE(ath.timezone, 'UTC'))::date)",  # noqa: E501
 }
 _GOAL_FIELDS = """
 goal_id, athlete_id, type::text AS type, title, target_value, current_value, unit::text AS unit,

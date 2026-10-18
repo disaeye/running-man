@@ -146,7 +146,7 @@ export function SyncHistoryList() {
           <div className="space-y-2"><p className="font-medium text-text-secondary">暂无符合条件的同步记录</p><p className="text-caption1 text-text-muted">发起手动同步或连接数据源后，每次同步的详细吞吐和健康数据将在此记录。</p></div>
         </Card>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border-default bg-surface-card shadow-xs">
+        <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface-card">
           <table className="w-full border-collapse text-left text-caption1">
             <thead>
               <tr className="border-b border-border-default bg-surface-sunken/60 text-text-secondary font-medium">

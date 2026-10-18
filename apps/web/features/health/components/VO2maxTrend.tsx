@@ -122,7 +122,7 @@ export function VO2maxTrend({ data }: VO2maxTrendProps) {
   return (
     <Card padding="md">
       <header className="mb-4 flex items-baseline justify-between">
-        <h3 className="text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+        <h3 className="text-subheadline font-semibold text-text-muted">
           VO₂max 趋势
         </h3>
         {level && (
@@ -142,7 +142,9 @@ export function VO2maxTrend({ data }: VO2maxTrendProps) {
         <DeltaStat label="90日变化" delta={stats.delta90} />
       </div>
       {!sex && (
-        <p className="mt-3 text-caption1 text-text-muted">分类基于混合性别标准</p>
+        <p className="mt-3 text-caption1 text-text-muted">
+          未填写性别，分类按男女合并标准
+        </p>
       )}
 
       <div className="relative">
@@ -173,18 +175,19 @@ function Vo2Stat({ label, value, unit }: { label: string; value: string; unit?: 
 }
 
 function DeltaStat({ label, delta }: { label: string; delta: number | null }) {
-  const tone =
+  const dot =
     delta == null
-      ? "text-text-muted"
+      ? "bg-text-muted"
       : delta > 0.5
-        ? "text-recovery-good"
+        ? "bg-recovery-good"
         : delta < -0.5
-          ? "text-recovery-poor"
-          : "text-text-primary";
+          ? "bg-recovery-poor"
+          : "bg-text-primary";
   return (
     <div className="flex flex-col gap-1">
       <span className="text-caption1 text-text-secondary">{label}</span>
-      <span className={`font-mono text-title1 font-bold ${tone}`}>
+      <span className="flex items-center gap-1.5 font-mono text-title1 font-bold text-text-primary">
+        <span aria-hidden className={`h-2 w-2 rounded-full ${dot}`} />
         {delta != null ? `${delta > 0 ? "+" : ""}${delta.toFixed(1)}` : "--"}
       </span>
       <span className="text-caption2 text-text-muted">ml/kg/min</span>

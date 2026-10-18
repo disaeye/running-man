@@ -12,6 +12,7 @@ import {
 } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
 import { ActivityRestoreActions } from "@features/activity/components/ActivityFlagActions";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 
 interface FlaggedActivity {
   activityId: string;
@@ -58,7 +59,7 @@ export function FlaggedActivitiesSection() {
     <div className="space-y-6" data-testid="flagged-activities">
       <FlaggedList
         title="已忽略的训练"
-        description="保留在记录中，但不计入训练负荷、PMC、个人纪录与心率区间统计。"
+        description="保留在记录中，但不计入训练负荷、PMC、最佳成绩与心率区间统计。"
         rows={ignored.data}
         loading={ignored.isLoading}
         mode="ignored"
@@ -123,7 +124,7 @@ function FlaggedList({
                   {formatDate(item.startTime)}
                 </span>
                 <span className="font-mono text-caption1 text-text-muted">
-                  {item.distanceM != null ? formatDistance(item.distanceM) : "—"}
+                  {item.distanceM != null ? formatDistance(item.distanceM) : NO_VALUE}
                   {item.durationS != null && ` · ${formatDuration(item.durationS)}`}
                 </span>
                 <span className="ml-auto">

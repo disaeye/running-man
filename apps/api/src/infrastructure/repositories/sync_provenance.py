@@ -17,6 +17,7 @@ def start_sync_run(
     source: str,
     window_start: date,
     window_end: date,
+    job_id: UUID | None = None,
 ) -> UUID | None:
     if not _tables_exist(conn, "integration_sync_runs"):
         return None
@@ -24,11 +25,11 @@ def start_sync_run(
         _ = cur.execute(
             """
             INSERT INTO integration_sync_runs (
-                athlete_id, source, trigger, window_start, window_end, status
-            ) VALUES (%s, %s, 'adapter', %s, %s, 'running')
+                athlete_id, source, trigger, window_start, window_end, status, job_id
+            ) VALUES (%s, %s, 'adapter', %s, %s, 'running', %s)
             RETURNING id
             """,
-            (athlete_id, source, window_start, window_end),
+            (athlete_id, source, window_start, window_end, job_id),
         )
         row = cur.fetchone()
     return row[0] if row else None

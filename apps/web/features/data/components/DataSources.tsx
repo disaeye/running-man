@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Skeleton } from "@shared/ui/Skeleton";
 import { useIntegrations } from "@features/data/hooks/useIntegrations";
+import { startBackfill } from "@features/data/hooks/useSyncJobs";
 import { IntervalsSourceCard } from "./IntervalsSourceCard";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { SyncStatusOverview } from "./SyncStatusOverview";
@@ -27,7 +28,8 @@ export function DataSources() {
   const handleSyncSource = async (source: "intervals_icu"): Promise<Record<string, unknown>> => {
     setSyncingSource(source);
     try {
-      return (await syncIntegration(source)) ?? {};
+      const summary = await syncIntegration(source);
+      return { ...summary };
     } finally {
       setSyncingSource(null);
     }
@@ -47,7 +49,7 @@ export function DataSources() {
       {/* 1. Global Sync & Data Source Overview Metrics */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+          <h2 className="text-subheadline font-semibold text-text-muted">
             数据源与同步概览
           </h2>
         </div>
@@ -73,7 +75,7 @@ export function DataSources() {
             {/* Primary Source: Intervals.icu */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-caption1 font-semibold uppercase tracking-wider text-accent-strong">
+                <span className="text-caption1 font-semibold text-accent-strong">
                   推荐 · 核心数据枢纽
                 </span>
               </div>
@@ -85,8 +87,11 @@ export function DataSources() {
                     api_key: apiKey,
                   });
                 }}
-                onDisconnect={() => disconnectIntegration("intervals_icu")}
+                onDisconnect={(clearData) => disconnectIntegration("intervals_icu", clearData)}
                 onSync={() => handleSyncSource("intervals_icu")}
+                onBackfill={async (fromDate) => {
+                  await startBackfill("intervals_icu", fromDate);
+                }}
                 onSettingsChange={async (freq, autoSync) => {
                   await updateIntegrationSettings("intervals_icu", {
                     sync_frequency: freq,
@@ -101,7 +106,7 @@ export function DataSources() {
 
         {/* Tab 2: Sync History & Audit Log */}
         <TabsContent value="history" className="pt-4 space-y-4">
-          <div className="rounded-2xl border border-border-default bg-surface-card p-5 shadow-sm space-y-4">
+          <div className="rounded-xl border border-border-subtle bg-surface-card p-5 space-y-4">
             <div>
               <h3 className="text-subheadline font-semibold text-text-primary">
                 数据源同步历史与执行审计
@@ -117,7 +122,7 @@ export function DataSources() {
         {/* Tab 3: Data Health & Quality Diagnostics */}
         <TabsContent value="health" className="pt-4 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="rounded-2xl border border-border-default bg-surface-card p-5 shadow-sm space-y-4">
+            <div className="rounded-xl border border-border-subtle bg-surface-card p-5 space-y-4">
               <div>
                 <h3 className="text-subheadline font-semibold text-text-primary">
                   数据连续性与健康度
@@ -130,7 +135,7 @@ export function DataSources() {
               <RecomputeStatusCard />
             </div>
 
-            <div className="rounded-2xl border border-border-default bg-surface-card p-5 shadow-sm space-y-4">
+            <div className="rounded-xl border border-border-subtle bg-surface-card p-5 space-y-4">
               <div>
                 <h3 className="text-subheadline font-semibold text-text-primary">
                   数据质量与完整度检查

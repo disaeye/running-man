@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { toISODate } from "@shared/lib/format";
+import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import { getCoachContextApiV1InsightsCoachContextGet } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
@@ -150,7 +150,12 @@ function mapCoachContext(raw: Generated.CoachContextResponseOutput): CoachContex
 }
 
 export function useCoachContext(day?: string): UseCoachContextResult {
-  const target = day ?? toISODate(new Date());
+  // The recommendation is for the athlete's training day. Using the host's
+  // calendar instead means a traveller sees yesterday's plan for their
+  // workout, and an athlete east of Greenwich gets tomorrow's advice on the
+  // evening before.
+  const timezone = useAthleteTimezone();
+  const target = day ?? athleteToday(timezone);
   const params = { date: target };
   const { data, error, isLoading, mutate } = useSWR<CoachContext>(
     ["/insights/coach-context", { date: target }],

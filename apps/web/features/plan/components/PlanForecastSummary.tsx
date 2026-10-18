@@ -69,7 +69,7 @@ export function PlanForecastSummary({ events, points, planned }: Props) {
         <div className="flex items-baseline justify-between gap-3">
           <p className="text-subheadline font-semibold text-text-primary">28 日训练负荷预测</p>
           <Badge variant={risk === "high" ? "error" : risk === "fresh" ? "success" : "warning"}>
-            {risk === "high" ? "高风险" : risk === "fresh" ? "状态良好" : "中等负荷"}
+            {risk === "high" ? "高风险" : risk === "fresh" ? "状态良好" : "负荷适中"}
           </Badge>
         </div>
 

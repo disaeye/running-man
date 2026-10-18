@@ -668,6 +668,25 @@
         "title": "ActivityStatsResponse",
         "type": "object"
       },
+      "ActivityStreamSyncResponse": {
+        "description": "Result of re-downloading one activity's streams.",
+        "properties": {
+          "activity_id": {
+            "title": "Activity Id",
+            "type": "string"
+          },
+          "streams_inserted": {
+            "title": "Streams Inserted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "activity_id",
+          "streams_inserted"
+        ],
+        "title": "ActivityStreamSyncResponse",
+        "type": "object"
+      },
       "ActivitySummary": {
         "properties": {
           "activity_id": {
@@ -1617,6 +1636,22 @@
           "threshold_pace"
         ],
         "title": "AutoCalculateResponse",
+        "type": "object"
+      },
+      "BackfillRequest": {
+        "additionalProperties": false,
+        "description": "Start of the history an athlete wants imported; the window runs to today.",
+        "properties": {
+          "from_date": {
+            "format": "date",
+            "title": "From Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_date"
+        ],
+        "title": "BackfillRequest",
         "type": "object"
       },
       "BatchUploadItem": {
@@ -4302,39 +4337,6 @@
         "title": "IntegrationSettingsUpdate",
         "type": "object"
       },
-      "IntegrationSyncResponse": {
-        "properties": {
-          "deduplicated": {
-            "title": "Deduplicated",
-            "type": "integer"
-          },
-          "source": {
-            "title": "Source",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "total_processed": {
-            "title": "Total Processed",
-            "type": "integer"
-          },
-          "upserted": {
-            "title": "Upserted",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "source",
-          "upserted",
-          "deduplicated",
-          "total_processed",
-          "status"
-        ],
-        "title": "IntegrationSyncResponse",
-        "type": "object"
-      },
       "IntensityDistributionResponse": {
         "additionalProperties": false,
         "properties": {
@@ -6262,6 +6264,17 @@
             ],
             "title": "Critical Speed Ms"
           },
+          "critical_speed_pace_s_per_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critical Speed Pace S Per Km"
+          },
           "data_sufficient": {
             "title": "Data Sufficient",
             "type": "boolean"
@@ -6282,17 +6295,6 @@
             ],
             "title": "Method"
           },
-          "threshold_pace_s_per_km": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Threshold Pace S Per Km"
-          },
           "w_prime_m": {
             "anyOf": [
               {
@@ -6308,7 +6310,7 @@
         "required": [
           "critical_speed_ms",
           "w_prime_m",
-          "threshold_pace_s_per_km",
+          "critical_speed_pace_s_per_km",
           "confidence",
           "data_sufficient",
           "method",
@@ -7804,6 +7806,49 @@
         "title": "SleepNightResponse",
         "type": "object"
       },
+      "SourceCoverageResponse": {
+        "description": "Imported range for one source, so the UI can offer an earlier import.",
+        "properties": {
+          "activity_count": {
+            "default": 0,
+            "title": "Activity Count",
+            "type": "integer"
+          },
+          "first_activity_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Activity Date"
+          },
+          "last_activity_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity Date"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "SourceCoverageResponse",
+        "type": "object"
+      },
       "SourceReadinessResponse": {
         "properties": {
           "observed_on": {
@@ -7922,6 +7967,200 @@
           "value"
         ],
         "title": "StreamPoint",
+        "type": "object"
+      },
+      "SyncJobError": {
+        "description": "One activity whose streams could not be fetched, for the retry action.",
+        "properties": {
+          "activity_id": {
+            "title": "Activity Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "activity_id",
+          "message"
+        ],
+        "title": "SyncJobError",
+        "type": "object"
+      },
+      "SyncJobResponse": {
+        "description": "One triggered sync, including the counters the progress UI polls.",
+        "properties": {
+          "activities_deduplicated": {
+            "default": 0,
+            "title": "Activities Deduplicated",
+            "type": "integer"
+          },
+          "activities_seen": {
+            "default": 0,
+            "title": "Activities Seen",
+            "type": "integer"
+          },
+          "activities_upserted": {
+            "default": 0,
+            "title": "Activities Upserted",
+            "type": "integer"
+          },
+          "cancel_requested": {
+            "default": false,
+            "title": "Cancel Requested",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SyncJobError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "errors_count": {
+            "default": 0,
+            "title": "Errors Count",
+            "type": "integer"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "ghosts_deleted": {
+            "default": 0,
+            "title": "Ghosts Deleted",
+            "type": "integer"
+          },
+          "heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heartbeat At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "streams_inserted": {
+            "default": 0,
+            "title": "Streams Inserted",
+            "type": "integer"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          },
+          "wellness_days": {
+            "default": 0,
+            "title": "Wellness Days",
+            "type": "integer"
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window End"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Start"
+          },
+          "windows_done": {
+            "default": 0,
+            "title": "Windows Done",
+            "type": "integer"
+          },
+          "windows_total": {
+            "default": 0,
+            "title": "Windows Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "kind",
+          "trigger",
+          "phase",
+          "status",
+          "created_at"
+        ],
+        "title": "SyncJobResponse",
         "type": "object"
       },
       "SyncRunResponse": {
@@ -8116,6 +8355,17 @@
             ],
             "title": "Critical Speed Ms"
           },
+          "critical_speed_s_per_km": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critical Speed S Per Km"
+          },
           "data_sufficient": {
             "title": "Data Sufficient",
             "type": "boolean"
@@ -8154,6 +8404,7 @@
         "required": [
           "threshold_pace_s_per_km",
           "critical_speed_ms",
+          "critical_speed_s_per_km",
           "method",
           "confidence",
           "data_sufficient",
@@ -10721,6 +10972,49 @@
         ]
       }
     },
+    "/api/v1/activities/{activity_id}/streams/sync": {
+      "post": {
+        "description": "Re-download one activity's streams from Intervals.icu.\n\nBacks the retry action on a failed sync entry, so repairing one activity\ndoes not require re-running the whole sync window.",
+        "operationId": "resync_activity_streams_api_v1_activities_activity_id_streams_sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityStreamSyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resync Activity Streams",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
     "/api/v1/athletes/me": {
       "get": {
         "operationId": "me_api_v1_athletes_me_get",
@@ -12970,6 +13264,59 @@
         ]
       }
     },
+    "/api/v1/integrations/{source}/backfill": {
+      "post": {
+        "description": "Import history from ``from_date`` to today, one calendar month per window.",
+        "operationId": "backfill_integration_api_v1_integrations_source_backfill_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backfill Integration",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
     "/api/v1/integrations/{source}/connect": {
       "put": {
         "operationId": "connect_integration_api_v1_integrations_source_connect_put",
@@ -13022,8 +13369,52 @@
         ]
       }
     },
+    "/api/v1/integrations/{source}/coverage": {
+      "get": {
+        "description": "Imported date range for this source, so the athlete can see the boundary.",
+        "operationId": "source_coverage_api_v1_integrations_source_coverage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Source Coverage",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
     "/api/v1/integrations/{source}/disconnect": {
       "delete": {
+        "description": "Drop the connection, optionally deleting everything already imported.",
         "operationId": "disconnect_integration_api_v1_integrations_source_disconnect_delete",
         "parameters": [
           {
@@ -13033,6 +13424,16 @@
             "schema": {
               "title": "Source",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "clear_data",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Clear Data",
+              "type": "boolean"
             }
           }
         ],
@@ -13052,6 +13453,110 @@
           }
         },
         "summary": "Disconnect Integration",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/{source}/jobs/current": {
+      "get": {
+        "description": "Latest job for this source, running or finished.",
+        "operationId": "current_sync_job_api_v1_integrations_source_jobs_current_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SyncJobResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Current Sync Job Api V1 Integrations Source Jobs Current Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Current Sync Job",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/{source}/jobs/{job_id}/cancel": {
+      "post": {
+        "description": "Ask a running job to stop; the runner honours it at the next phase boundary.",
+        "operationId": "cancel_sync_job_api_v1_integrations_source_jobs_job_id_cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Sync Job",
         "tags": [
           "integrations"
         ]
@@ -13111,6 +13616,7 @@
     },
     "/api/v1/integrations/{source}/sync": {
       "post": {
+        "description": "Queue an incremental sync and return the job the UI polls for progress.",
         "operationId": "sync_integration_api_v1_integrations_source_sync_post",
         "parameters": [
           {
@@ -13128,7 +13634,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IntegrationSyncResponse"
+                  "$ref": "#/components/schemas/SyncJobResponse"
                 }
               }
             },

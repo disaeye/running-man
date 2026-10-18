@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { EmptyState } from "@shared/ui/EmptyState";
-import { SectionHeader } from "@shared/ui/SectionHeader";
 import { Skeleton } from "@shared/ui/Skeleton";
 import { SessionCard } from "@features/activity/components/SessionCard";
 import type { ActivitySummary } from "@shared/types/activity";
@@ -24,17 +23,17 @@ export function HomeRecentTraining({
       data-testid="home-recent"
       aria-label="最近训练"
     >
-      <SectionHeader
-        title="最近训练"
-        action={
-          <Link
-            href="/calendar?view=list"
-            className="text-caption1 font-medium text-accent-strong transition-opacity hover:opacity-80 focus-ring"
-          >
-            全部 →
-          </Link>
-        }
-      />
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-caption1 font-medium tracking-wide text-text-muted">
+          最近训练
+        </h2>
+        <Link
+          href="/calendar?view=list"
+          className="focus-ring text-caption1 font-medium text-accent-strong transition-opacity hover:opacity-80"
+        >
+          全部 →
+        </Link>
+      </div>
       <RecentTrainingBody activities={activities} loading={loading} />
     </section>
   );

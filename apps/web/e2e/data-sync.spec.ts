@@ -32,7 +32,7 @@ test.describe("Data Sync", () => {
   test("shows sync health content", async ({ page }) => {
     await page.goto("/settings?section=data");
 
-    await expect(page.getByText("同步稳定性与健康")).toBeVisible({
+    await expect(page.getByText("同步稳定性")).toBeVisible({
       timeout: 10000,
     });
   });

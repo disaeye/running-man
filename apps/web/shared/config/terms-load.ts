@@ -1,6 +1,11 @@
 import { METRIC_REGISTRY } from "@shared/config/generated/metric-registry";
+import { zoneReference } from "@shared/lib/metric-zone";
 
-/** 训练负荷与强度类术语（PMC / 功率体系） */
+/**
+ * Training-load terms. The `reference` line for every banded metric is
+ * generated from `contracts/v1/metrics.yaml`, so the glossary cannot drift from
+ * the chips and charts that use the same bands.
+ */
 export const TERMS_LOAD = {
   TSS: {
     label: METRIC_REGISTRY.tss.display_name,
@@ -14,7 +19,7 @@ export const TERMS_LOAD = {
     label: METRIC_REGISTRY.ctl.display_name,
     explanation: {
       summary: "长期训练负荷 (CTL) — 42 天 TSS 的指数加权均值，代表长期累计体能。",
-      reference: "< 20 新手 · 20–40 中等 · > 40 精英",
+      reference: zoneReference("ctl", 0),
       note: "基于 PMC 模型，非直接体能测量。"
     },
   },
@@ -22,7 +27,7 @@ export const TERMS_LOAD = {
     label: METRIC_REGISTRY.atl.display_name,
     explanation: {
       summary: "短期训练负荷 (ATL) — 7 天 TSS 的加权均值，代表近期疲劳程度。",
-      reference: "< 15 低负荷 · 15–40 中等 · > 40 高负荷",
+      reference: zoneReference("atl", 0),
       note: "7 天衰减基于行业惯例。"
     },
   },
@@ -30,16 +35,16 @@ export const TERMS_LOAD = {
     label: METRIC_REGISTRY.tsb.display_name,
     explanation: {
       summary: "训练压力平衡 (TSB) — CTL 减 ATL，反映短期疲劳与长期体能的平衡。",
-      reference: "正值 = 恢复充分 · 负值 = 疲劳 · < -30 过度训练风险",
-      note: "行业标准恢复指标。"
+      reference: zoneReference("tsb", 0),
+      note: "与 ACWR 可能给出相反信号：短期决策看 TSB，负荷变化速率看 ACWR。"
     },
   },
   ACWR: {
     label: METRIC_REGISTRY.acwr.display_name,
     explanation: {
       summary: "急慢性负荷比 (ACWR) — 7 天 EWMA 负荷与 28 天 EWMA 负荷的比值。",
-      reference: "0.8–1.3 安全区 · > 1.5 损伤风险高",
-      note: "独立于 PMC 的 42 天窗口。"
+      reference: zoneReference("acwr", 2),
+      note: "损伤预测效力在近年文献中存在争议，作为辅助参考。"
     },
   },
   NP: {

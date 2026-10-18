@@ -23,7 +23,6 @@ class FixedDate(date):
         return cls(2026, 6, 16)
 
 
-@pytest.mark.skip(reason="VCR cassette stale — athlete ID mismatch; re-record needed")
 async def test_backfill_activities_replays_vcr(db_conn: psycopg.Connection) -> None:
     ensure_tables(db_conn)
     seed_athlete(db_conn, ATHLETE_ID, "backfill@example.com")
@@ -40,15 +39,40 @@ async def test_backfill_activities_replays_vcr(db_conn: psycopg.Connection) -> N
 async def test_incremental_skips_completed_window(
     db_conn: psycopg.Connection, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(sync, "date", FixedDate)
     ensure_tables(db_conn)
     seed_athlete(db_conn, ATHLETE_ID, "backfill@example.com")
     _insert_latest(db_conn, date(2026, 6, 16))
+    # "Today" is the athlete's local day now, not the host's, so the freeze has
+    # to be applied to the helper the sync path actually consults. Patching
+    # `sync.date` used to work because the window was built from `date.today()`.
+    monkeypatch.setattr(sync, "_athlete_today", lambda _conn, _athlete: FixedDate(2026, 6, 16))
 
     count = await sync.sync_activities_incremental(ATHLETE_ID, FailingClient(), db_conn)
 
     assert count.total_processed == 0
     assert _count(db_conn) == 1
+
+
+async def test_incremental_resume_cursor_follows_the_athlete_timezone(
+    db_conn: psycopg.Connection,
+) -> None:
+    """The resume cursor is a date handed to the upstream API, so it has to be
+    the athlete's latest local day. A 21:00Z run is already the next day in
+    Shanghai, and resuming from the UTC date would re-request it forever."""
+    ensure_tables(db_conn)
+    seed_athlete(db_conn, ATHLETE_ID, "backfill-tz@example.com")
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "UPDATE athletes SET timezone = 'Asia/Shanghai' WHERE id = %s",
+            (ATHLETE_ID,),
+        )
+        cur.execute(
+            "INSERT INTO activity_summary (activity_id, athlete_id, start_time, sport) "
+            "VALUES ('tz-probe', %s, '2026-06-16T21:00:00+00:00', 'run')",
+            (ATHLETE_ID,),
+        )
+
+    assert sync._next_sync_date(ATHLETE_ID, db_conn) == date(2026, 6, 18)
 
 
 class NoopLimiter:

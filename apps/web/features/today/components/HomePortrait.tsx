@@ -2,27 +2,38 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, RefreshCw } from "lucide-react";
+import { Card } from "@shared/ui/Card";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { useActivities } from "@features/activity/hooks/useActivities";
 import { usePmcData } from "@features/pmc/hooks/usePmcData";
 import { useWellness } from "@features/health/hooks/useWellness";
 import { useCoachContext } from "@features/today/hooks/useCoachContext";
-import { computeRange } from "@shared/lib/format";
+import { athleteRange, useAthleteTimezone } from "@shared/lib/training-day";
 import { assessReadiness, isStaleData } from "@features/today/lib/readiness-presentation";
 import { useClientDateLabel, useClientGreeting } from "@shared/lib/client-date";
 import { HomeDecisionCard } from "./HomeDecisionCard";
 import { HomeBodySignals } from "./HomeBodySignals";
-import { HomePmcPulse } from "./HomePmcPulse";
 import { WeeklyHorizonMatrix } from "./WeeklyHorizonMatrix";
 import { HomeRecentTraining } from "./HomeRecentTraining";
 
 const RECENT_DAYS = 7;
 const TREND_DAYS = 30;
 
+/**
+ * Today is a decision page: one answer, the evidence for it, then the context
+ * needed to act on it. The evidence lives inside the answer block rather than
+ * beside it, so the page has one thing to read first instead of six panels of
+ * equal weight competing for the eye.
+ */
 export function HomePortrait() {
-  const range7d = useMemo(() => computeRange(RECENT_DAYS), []);
-  const range30d = useMemo(() => computeRange(TREND_DAYS), []);
+  // Anchored to the athlete's training day, not the host's. The calendar tab
+  // already buckets by the athlete's zone, so a browser-local anchor here makes
+  // the same session show up on two different days depending on which tab is
+  // open.
+  const timezone = useAthleteTimezone();
+  const range7d = useMemo(() => athleteRange(RECENT_DAYS, timezone), [timezone]);
+  const range30d = useMemo(() => athleteRange(TREND_DAYS, timezone), [timezone]);
 
   const profileQuery = useProfile();
   const coachQuery = useCoachContext();
@@ -41,7 +52,11 @@ export function HomePortrait() {
   const dataStale = isStaleData(coachQuery.data?.data_freshness?.activities?.staleness_bucket);
 
   const decision = coachQuery.data?.recommendation ?? null;
-  const decisionError = [coachQuery.error, recent.error, pmc.error, wellness.error].find((v): v is string => Boolean(v)) ?? null;
+  const decisionError =
+    [coachQuery.error, recent.error, pmc.error, wellness.error].find((value): value is string =>
+      Boolean(value),
+    ) ?? null;
+
   const reloadDecision = () => {
     coachQuery.reload();
     recent.reload();
@@ -49,183 +64,156 @@ export function HomePortrait() {
     wellness.reload();
   };
 
-  const lastPmc = pmc.data.at(-1) ?? null;
-  const latestWellness = wellness.data.at(-1);
+  const latestPmc = pmc.data.at(-1) ?? null;
+  const rawTsb = latestPmc?.tsb ?? coachQuery.data?.recent_load?.current_tsb ?? null;
+  // A TSB of 0 with no load history is the EWMA's zero seed, not a measurement.
+  // The API already reports 负荷平衡 as a missing input in that state, so the
+  // number is suppressed rather than presented as "balanced".
+  const tsb = assessment.missingKeys.includes("tsb") ? null : rawTsb;
+  const d7Tss =
+    coachQuery.data?.recent_load?.d7_tss ??
+    (pmc.data.length > 0
+      ? pmc.data.slice(-RECENT_DAYS).reduce((total, point) => total + (point.tss ?? 0), 0)
+      : null);
 
+  const latestWellness = wellness.data.at(-1);
   const sleepAvg7d = coachQuery.data?.recovery_signals?.sleep_avg_7d;
   const caveats = coachQuery.data?.missing_data_caveats ?? [];
 
+  // Nothing at all in the last 30 days: no sessions, no health records, and no
+  // load history for the server to place a TSB in. An account in that state
+  // used to get four missing-input warnings, two empty states, a "数据已过期"
+  // badge and a zeroed week grid, with the only action at the bottom of the
+  // page. It gets a starting point instead.
+  const hasRecentData =
+    recent.data.length > 0 || wellness.data.length > 0 || tsb !== null;
+
   return (
-    <div className="space-y-6 pb-12" data-testid="home-portrait">
-      {/* 1. Integrated Hero Greeting */}
-      <section className="relative overflow-hidden rounded-2xl border border-border-subtle bg-surface-overlay/20 p-4 sm:p-6" aria-labelledby="home-title">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-caption1 font-medium text-text-muted">
-              <span>{briefDate}</span>
-              <span>·</span>
-              <span>今日训练概览</span>
-            </div>
-            <h1 id="home-title" className="text-display-sm font-semibold tracking-tight text-text-primary sm:text-display-md">
-              {firstName ? `${greeting} · ${firstName}` : greeting}
-            </h1>
-          </div>
+    <div className="page-stack" data-testid="home-portrait">
+      <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border-subtle pb-4">
+        <div className="min-w-0">
+          <p className="text-caption1 text-text-muted">{briefDate}</p>
+          <h1
+            id="home-title"
+            className="mt-1 text-display-sm font-semibold tracking-tight text-text-primary"
+          >
+            {firstName ? `${greeting} · ${firstName}` : greeting}
+          </h1>
+        </div>
+        <Link
+          href="/analysis"
+          className="focus-ring flex items-center gap-1 text-caption1 font-medium text-text-muted transition-colors hover:text-text-primary"
+        >
+          训练分析
+          <ArrowUpRight className="size-3.5" aria-hidden="true" />
+        </Link>
+      </header>
 
-          {/* Quick HUD */}
-          <div className="flex items-center gap-2.5 sm:gap-3" aria-label="今日核心摘要">
-            <div className="flex items-center gap-2.5 rounded-xl border border-border-subtle bg-surface-overlay/70 px-3.5 py-2 backdrop-blur-md">
-              <span className={`size-2 rounded-full ${assessment.available ? "bg-primary" : "bg-text-muted"}`} />
-              <div>
-                <span className="block text-caption1 text-text-muted">就绪状态</span>
-                <span className="font-mono text-headline font-semibold text-text-primary">
-                  {assessment.available ? `${Math.round(assessment.score)} 分` : "待评估"}
-                </span>
+      {decisionError && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-error/30 bg-error/5 px-4 py-3 text-caption1 text-error"
+          role="alert"
+        >
+          <span>{decisionError}</span>
+          <button
+            type="button"
+            onClick={reloadDecision}
+            className="focus-ring flex items-center gap-1.5 rounded-lg border border-error/30 px-2.5 py-1 font-medium"
+          >
+            <RefreshCw className="size-3.5" aria-hidden="true" />
+            重试
+          </button>
+        </div>
+      )}
+
+      {!hasRecentData ? (
+        <StartingPoint />
+      ) : (
+        <>
+          <HomeDecisionCard
+            decision={decision}
+            assessment={assessment}
+            dataStale={dataStale}
+            tsb={tsb}
+            d7Tss={d7Tss}
+          />
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <HomeBodySignals
+              latestWellness={latestWellness}
+              sleepAvg7d={sleepAvg7d}
+              caveats={caveats}
+            />
+            <Card padding="md" aria-labelledby="week-heading">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 id="week-heading" className="text-caption1 font-medium tracking-wide text-text-muted">
+                  本周训练轨迹
+                </h2>
+                <Link
+                  href="/calendar"
+                  className="focus-ring flex items-center gap-1 text-caption1 font-medium text-text-muted transition-colors hover:text-text-primary"
+                >
+                  日历
+                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                </Link>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 rounded-xl border border-border-subtle bg-surface-overlay/70 px-3.5 py-2 backdrop-blur-md">
-              <span className="size-2 rounded-full bg-accent" />
-              <div>
-                <span className="block text-caption1 text-text-muted">近7日负荷</span>
-                <span className="font-mono text-headline font-semibold text-text-primary">
-                  {coachQuery.data?.recent_load?.d7_tss != null ? `${Math.round(coachQuery.data.recent_load.d7_tss)} TSS` : "--"}
-                </span>
-              </div>
-            </div>
+              <WeeklyHorizonMatrix />
+            </Card>
           </div>
-        </div>
-      </section>
 
-      {/* 2. Bento Grid: Decision, Signals, Metrics, Week, Load, Recent */}
-      <div className="bento">
-        {/* Bento 1: Decision Card */}
-        <HomeDecisionCard
-          decision={decision}
-          assessment={assessment}
-          dataStale={dataStale}
-          onReload={reloadDecision}
-          error={decisionError}
-        />
-
-        {/* Bento 2: Load Metric Rail */}
-        <div className="bento-metric-rail grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3" aria-label="训练负荷关键指标">
-          <MetricTile
-            label="CTL"
-            sub="长期体能"
-            value={lastPmc?.ctl != null ? lastPmc.ctl.toFixed(1) : "--"}
-            status="体能基准"
-            color="text-primary"
-          />
-          <MetricTile
-            label="ATL"
-            sub="短期疲劳"
-            value={lastPmc?.atl != null ? lastPmc.atl.toFixed(1) : "--"}
-            status="近期负荷"
-            color="text-accent"
-          />
-          <MetricTile
-            label="TSB"
-            sub="竞技状态"
-            value={lastPmc?.tsb != null ? (lastPmc.tsb > 0 ? `+${lastPmc.tsb.toFixed(1)}` : lastPmc.tsb.toFixed(1)) : "--"}
-            status={getTsbStatusLabel(lastPmc?.tsb)}
-            color={lastPmc?.tsb != null && lastPmc.tsb >= 0 ? "text-emerald-400" : "text-amber-400"}
-          />
-          <MetricTile
-            label="ACWR"
-            sub="急性/慢性比"
-            value={lastPmc?.acwr != null ? lastPmc.acwr.toFixed(2) : "--"}
-            status={getAcwrStatusLabel(lastPmc?.acwr)}
-            color="text-text-primary"
-          />
-        </div>
-
-        {/* Bento 3: Body Signals Panel */}
-        <HomeBodySignals
-          latestWellness={latestWellness}
-          sleepAvg7d={sleepAvg7d}
-          caveats={caveats}
-          assessment={assessment}
-        />
-
-        {/* Bento 4: Weekly Horizon Matrix */}
-        <div className="bento-week glass-surface flex flex-col justify-between rounded-2xl border border-border-subtle p-4 sm:p-6" aria-labelledby="week-heading">
-          <div>
-            <div className="flex items-center justify-between">
-              <h2 id="week-heading" className="text-caption1 font-medium tracking-wide text-text-muted">
-                本周训练轨迹
-              </h2>
-              <Link href="/calendar" className="focus-ring flex items-center gap-1 text-caption1 font-medium text-text-muted hover:text-text-primary">
-                日历视图
-                <ArrowUpRight className="size-3.5" aria-hidden="true" />
-              </Link>
-            </div>
-            <WeeklyHorizonMatrix />
-          </div>
-        </div>
-
-        {/* Bento 5: Load Pulse */}
-        <HomePmcPulse
-          points={pmc.data}
-          fallback={coachQuery.data?.recent_load ?? null}
-        />
-
-        {/* Bento 6: Recent Activities */}
-        <div className="bento-recent glass-surface rounded-2xl border border-border-subtle p-4 sm:p-6">
-          <HomeRecentTraining
-            activities={recent.data}
-            loading={recent.loading}
-          />
-        </div>
-      </div>
+          <Card padding="md">
+            <HomeRecentTraining activities={recent.data} loading={recent.loading} />
+          </Card>
+        </>
+      )}
     </div>
   );
 }
 
-function getTsbStatusLabel(tsb: number | null | undefined): string | undefined {
-  if (tsb == null) return undefined;
-  if (tsb > 5) return "状态充沛";
-  if (tsb >= -10) return "平衡适应";
-  if (tsb >= -30) return "有效超量";
-  return "过度疲劳";
-}
+/** What an account with no data in the last 30 days sees instead of the dashboard. */
+function StartingPoint() {
+  const steps = [
+    {
+      title: "连接数据源",
+      body: "用 Intervals.icu 把历史活动、心率和睡眠同步进来。",
+      href: "/settings?section=data",
+      action: "去连接",
+    },
+    {
+      title: "填写阈值",
+      body: "最大心率、乳酸阈心率和阈值配速决定心率与配速区间。",
+      href: "/settings?section=training",
+      action: "去填写",
+    },
+    {
+      title: "回来看今天的建议",
+      body: "有数据之后，这里会给出今天该练什么、强度多少，以及为什么。",
+      href: "/analysis",
+      action: "了解分析",
+    },
+  ];
 
-function getAcwrStatusLabel(acwr: number | null | undefined): string | undefined {
-  if (acwr == null) return undefined;
-  if (acwr >= 0.8 && acwr <= 1.3) return "最佳区间";
-  if (acwr > 1.3 && acwr <= 1.5) return "负荷上升";
-  if (acwr > 1.5) return "过载风险";
-  return "负荷较低";
-}
-
-function MetricTile({
-  label,
-  sub,
-  value,
-  status,
-  color,
-}: {
-  label: string;
-  sub: string;
-  value: string;
-  status?: string;
-  color: string;
-}) {
   return (
-    <div className="glass-surface flex flex-col justify-between rounded-xl border border-border-subtle p-3 sm:p-4 transition-transform duration-150 active:scale-95">
-      <div className="flex items-center justify-between gap-1">
-        <span className="font-mono text-caption1 font-semibold text-text-primary">{label}</span>
-        <span className="text-caption1 text-text-muted">{sub}</span>
-      </div>
-      <div className="mt-2 flex items-baseline justify-between gap-1.5">
-        <span className={`font-mono text-title2 font-bold tracking-tight sm:text-title1 ${color}`}>
-          {value}
-        </span>
-        {status && (
-          <span className="truncate rounded-md bg-surface-overlay/80 px-1.5 py-0.5 text-caption2 font-medium text-text-secondary">
-            {status}
-          </span>
-        )}
-      </div>
-    </div>
+    <Card padding="lg" data-testid="home-starting-point">
+      <h2 className="text-title2 font-semibold text-text-primary">最近 30 天还没有训练或健康记录</h2>
+      <p className="mt-1.5 max-w-2xl text-subheadline leading-relaxed text-text-secondary">
+        这个页面会回答问题「今天该做什么」。它需要一点数据才能开始。
+      </p>
+      <ol className="mt-5 flex flex-col gap-3 border-t border-border-subtle pt-4">
+        {steps.map((step, index) => (
+          <li key={step.title} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="font-mono text-caption1 text-text-muted">{index + 1}</span>
+            <span className="text-subheadline font-medium text-text-primary">{step.title}</span>
+            <span className="text-caption1 text-text-muted">{step.body}</span>
+            <Link
+              href={step.href}
+              className="focus-ring ml-auto text-caption1 font-medium text-accent-strong underline-offset-4 hover:underline"
+            >
+              {step.action} →
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </Card>
   );
 }

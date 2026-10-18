@@ -339,7 +339,7 @@ metrics:
     materialization: source_input
     ui_precision: 0
     source: { table: health_wellness, column: menstrual_phase, aggregation: latest }
-    note: "Intervals.icu 原始阶段编号，未在本系统内映射为阶段名称。"
+    note: "Intervals.icu 阶段名映射为编号：PERIOD=1、FOLLICULAR=2、OVULATION=3、LUTEAL=4。"
 
   - key: menstrual_phase_predicted
     display_name: 预测生理周期阶段 (Predicted Menstrual Phase)
@@ -352,7 +352,7 @@ metrics:
     materialization: source_input
     ui_precision: 0
     source: { table: health_wellness, column: menstrual_phase_predicted, aggregation: latest }
-    note: "Intervals.icu 原始阶段编号，未在本系统内映射为阶段名称。"
+    note: "Intervals.icu 阶段名映射为编号：PERIOD=1、FOLLICULAR=2、OVULATION=3、LUTEAL=4。"
 
   - key: fatigue
     display_name: 主观疲劳 (Fatigue)

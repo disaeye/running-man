@@ -38,9 +38,9 @@ REQUIRED_FIELDS: Final = {
     "readiness_bands": ("min_score", "level", "label", "max_intensity", "color", "recommendation"),
 }
 EXPECTED_ALGORITHM_VERSIONS: Final = {
-    "activity_load": "1.0.0",
+    "activity_load": "1.1.0",
     "pmc": "1.0.0",
-    "physiology": "1.0.0",
+    "physiology": "1.1.0",
 }
 EXPECTED_METRIC_UNITS: Final = {
     "distance_m": "m",

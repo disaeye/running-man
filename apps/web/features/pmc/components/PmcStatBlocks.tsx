@@ -43,17 +43,20 @@ export function PmcStatBlocks({ data }: { data: PmcPoint[] }) {
   const tsbDelta = delta7(tsbSeries);
 
   const stats = [
-    { label: "CTL", value: latest?.ctl.toFixed(1) ?? "--", delta: ctlDelta, colorClass: "text-ctl" },
-    { label: "ATL", value: latest?.atl.toFixed(1) ?? "--", delta: atlDelta, colorClass: "text-atl" },
-    { label: "TSB", value: latest?.tsb.toFixed(1) ?? "--", delta: tsbDelta, colorClass: "text-tsb" },
+    { label: "CTL", value: latest?.ctl.toFixed(1) ?? "--", delta: ctlDelta, dotClass: "bg-ctl" },
+    { label: "ATL", value: latest?.atl.toFixed(1) ?? "--", delta: atlDelta, dotClass: "bg-atl" },
+    { label: "TSB", value: latest?.tsb.toFixed(1) ?? "--", delta: tsbDelta, dotClass: "bg-tsb" },
   ];
 
   return (
     <div className="grid grid-cols-3 gap-3" data-testid="pmc-stat-blocks">
       {stats.map((s) => (
         <div key={s.label} className="flex flex-col items-center gap-0.5">
-          <span className="text-caption2 font-medium text-text-muted">{s.label}</span>
-          <span className={`font-mono tabular-nums text-display-sm font-bold ${s.colorClass}`}>
+          <span className="flex items-center gap-1 text-caption2 font-medium text-text-muted">
+            <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${s.dotClass}`} />
+            {s.label}
+          </span>
+          <span className="font-mono tabular-nums text-display-sm font-bold text-text-primary">
             {s.value}
           </span>
           <span className="flex items-center gap-0.5 text-caption2">

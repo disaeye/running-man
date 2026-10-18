@@ -46,9 +46,9 @@ export function AnalysisPerformanceNarrative() {
   return (
     <Card padding="md" data-testid="analysis-performance-narrative">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-title3 font-semibold text-text-primary">
+        <h2 className="text-title3 font-semibold text-text-primary">
           {narrativeCopy.title}
-        </h3>
+        </h2>
       </div>
 
       {/* Compact metric chips — numbers first, no essay body */}
@@ -63,12 +63,11 @@ export function AnalysisPerformanceNarrative() {
         ))}
       </div>
 
-      {/* Hidden body keeps a few contract phrases without painting AI prose */}
-      <p className="sr-only">{narrativeCopy.body}</p>
+      <p className="mt-3 text-caption1 leading-relaxed text-text-secondary">{narrativeCopy.body}</p>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-surface-overlay/55 px-3 py-3">
-          <p className="text-caption1 font-medium text-text-muted">VO₂max</p>
+          <p className="text-caption1 font-medium text-text-muted">最大摄氧量</p>
           <p className="mt-1 font-mono text-subheadline font-semibold tabular-nums text-text-primary">
             {changeText}
           </p>
@@ -79,7 +78,7 @@ export function AnalysisPerformanceNarrative() {
             records.length === 0 ? "analysis-pr-empty-source" : "analysis-pr-source"
           }
         >
-          <p className="text-caption1 font-medium text-text-muted">PR</p>
+          <p className="text-caption1 font-medium text-text-muted">最佳成绩</p>
           <p className="mt-1 text-subheadline text-text-primary">{prText}</p>
         </div>
       </div>
@@ -94,16 +93,16 @@ function buildPhysiologyLine(values: {
 }): readonly string[] {
   return [
     `阈值配速 ${formatThresholdPace(values.thresholdPace)}`,
-    values.lthr != null ? `LTHR ${Math.round(values.lthr)} bpm` : "缺少 LTHR",
+    values.lthr != null ? `乳酸阈心率 ${Math.round(values.lthr)} bpm` : "缺少乳酸阈心率",
     values.vo2max != null
-      ? `VO₂max ${values.vo2max.toFixed(1)} ml/kg/min`
-      : "缺少 VO₂max",
+      ? `最大摄氧量 ${values.vo2max.toFixed(1)} ml/kg/min`
+      : "缺少最大摄氧量",
   ];
 }
 
 function cyclingChips(ftp: number | null): string[] {
   return [
-    ftp != null ? `FTP ${Math.round(ftp)} W` : "缺 FTP",
+    ftp != null ? `功能性阈值功率 ${Math.round(ftp)} W` : "缺少功能性阈值功率",
     "功率曲线",
     "TSS",
   ];
@@ -123,14 +122,14 @@ function performanceNarrativeCopy({
     return {
       title: "骑行功率主线",
       // Contract phrases kept in sr-only body — not the visual lead.
-      body: `${chips.join(" · ")}。功率曲线和训练负荷用于判断爬坡、节奏和间歇输出是否稳定。FTP 保持为骑行首要基准。`,
+      body: `${chips.join(" · ")}。功率曲线和训练负荷用于判断爬坡、节奏和间歇输出是否稳定。`,
       chips,
     };
   }
   return {
-    title: "跑步表现主线",
-    body: `${physiology.join(" · ")}。比赛预测 · PR / 最佳努力。`,
-    chips: [...physiology, "比赛预测", "PR / 最佳努力"],
+    title: "跑步能力",
+    body: `${physiology.join(" · ")}。比赛预测与最佳成绩共同反映当前能力。`,
+    chips: [...physiology, "比赛预测", "最佳成绩"],
   };
 }
 
@@ -151,8 +150,8 @@ function personalRecordText(
 ): string {
   if (recordCount > 0) return `${recordCount} 条`;
   return sportFamily === "cycling"
-    ? "缺少 PR / 最佳努力来源：同步包含功率曲线或爬坡输出的骑行活动后会生成趋势。"
-    : "缺少 PR / 最佳努力来源：同步包含 GPS 或比赛结果的跑步活动后会生成趋势。";
+    ? "缺少最佳成绩记录：同步包含功率曲线或爬坡输出的骑行活动后会生成趋势。"
+    : "缺少最佳成绩记录：同步包含 GPS 或比赛结果的跑步活动后会生成趋势。";
 }
 
 function latestVo2(

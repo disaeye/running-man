@@ -102,7 +102,7 @@ function cardProps(metric: AnalysisMetricDescriptor, values: MetricValues): Card
 function thresholdPaceCard(values: MetricValues): CardProps {
   return {
     label: "阈值配速",
-    tooltip: "乳酸阈值配速 — 1小时比赛配速 (min/km)",
+    tooltip: "乳酸阈值配速 — 约一小时全力配速 (min/km)",
     value: formatThresholdPace(values.thresholdPace),
     current: values.thresholdPace,
     prior: null,
@@ -113,8 +113,8 @@ function thresholdPaceCard(values: MetricValues): CardProps {
 
 function lthrCard(values: MetricValues): CardProps {
   return {
-    label: "LTHR",
-    tooltip: "乳酸阈值心率 — 1小时比赛心率 (bpm)",
+    label: "乳酸阈心率",
+    tooltip: "约一小时全力可持续的心率 (bpm)",
     value: values.lthr != null ? `${Math.round(values.lthr)}` : "--",
     current: values.lthr,
     prior: null,
@@ -126,8 +126,8 @@ function lthrCard(values: MetricValues): CardProps {
 
 function vo2Card(values: MetricValues): CardProps {
   return {
-    label: "VO₂max",
-    tooltip: "最大摄氧量 (ml/kg/min) — 有氧能力金标准",
+    label: "最大摄氧量",
+    tooltip: "有氧能力指标 (ml/kg/min)",
     value: values.vo2Latest != null ? values.vo2Latest.toFixed(1) : "--",
     current: values.vo2Latest,
     prior: values.vo2Prior,
@@ -169,21 +169,20 @@ function MetricCardWithDelta(props: CardProps & { readonly "data-testid": string
           <span className="text-footnote font-medium text-text-secondary">{props.unit}</span>
         )}
       </p>
-      <div className="mt-1 flex items-baseline gap-1 text-caption1">
+      <div className="mt-1 text-caption1">
         {deltaDisplay && props.prior != null ? (
           <span
             className={`inline-flex items-center gap-1 font-mono font-semibold ${deltaDisplay.tone}`}
           >
-            <deltaDisplay.Icon className="h-3 w-3" aria-hidden />
-            {absDelta.toFixed(absDelta < 1 ? 2 : 1)} {props.unit ?? ""}
+            <deltaDisplay.Icon className="size-3" aria-hidden />
+            较上周 {absDelta.toFixed(absDelta < 1 ? 2 : 1)} {props.unit ?? ""}
           </span>
         ) : (
-          <span className="text-text-muted">较上周暂无历史</span>
+          <span className="text-text-muted">较上周暂无对比</span>
         )}
-        <span className="text-text-muted">vs 上周</span>
       </div>
       {props.note && (
-        <p className="mt-1 text-caption2 text-text-muted">{props.note}</p>
+        <p className="mt-1 text-caption1 leading-snug text-text-muted">{props.note}</p>
       )}
     </div>
   );
@@ -208,9 +207,9 @@ function formatThresholdPace(seconds: number | null): string {
 }
 
 function vo2ClassificationNote(sex: string | null | undefined): string {
-  if (sex === "male" || sex === "M") return "VO₂ 分类基于男性标准";
-  if (sex === "female" || sex === "F") return "VO₂ 分类基于女性标准";
-  return "VO₂ 分类基于混合性别标准";
+  if (sex === "male" || sex === "M") return "分类参考男性标准";
+  if (sex === "female" || sex === "F") return "分类参考女性标准";
+  return "未填写性别，按男女合并标准分类";
 }
 
 function latestVo2(rows: readonly WellnessRow[]): number | null {

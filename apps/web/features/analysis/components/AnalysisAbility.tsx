@@ -85,7 +85,7 @@ export function AnalysisAbility() {
       <div data-testid="ability-more">
         <button
           type="button"
-          className="focus-ring flex w-full min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-[var(--glass-bg)] px-4 py-3 text-left transition-colors hover:bg-surface-overlay/60"
+          className="focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-card px-4 py-3 text-left transition-colors hover:bg-surface-overlay"
           aria-expanded={moreOpen}
           onClick={() => setMoreOpen((v) => !v)}
           data-testid="ability-more-toggle"
@@ -138,7 +138,7 @@ function AbilitySummary() {
   if (!text) return null;
   return (
     <Card padding="md" data-testid="analysis-ability-summary-card">
-      <p className="text-caption1 font-medium uppercase tracking-wider text-text-muted">
+      <p className="text-caption1 font-medium text-text-muted">
         表现判断
       </p>
       <p
@@ -187,15 +187,15 @@ const SUMMARY_TEXT_BY_METRIC: Record<
       ? `阈值配速 ${formatThresholdPace(values.thresholdPace)}`
       : null,
   lthr: (values) =>
-    values.lthr != null ? `LTHR ${Math.round(values.lthr)} bpm` : null,
+    values.lthr != null ? `乳酸阈心率 ${Math.round(values.lthr)} bpm` : null,
   vo2max: (values) =>
     values.vo2max != null
-      ? `VO₂max ${values.vo2max.toFixed(1)} ml/kg/min`
+      ? `最大摄氧量 ${values.vo2max.toFixed(1)} ml/kg/min`
       : null,
   raceSignal: (values) =>
     values.thresholdPace != null ? "临界速度信号已建立" : null,
   ftp: (values) =>
-    values.ftp != null ? `FTP ${Math.round(values.ftp)} W` : null,
+    values.ftp != null ? `功能性阈值功率 ${Math.round(values.ftp)} W` : null,
   power: (values) =>
     values.ftp != null ? `功率基准 ${Math.round(values.ftp)} W` : null,
   trainingLoad: () => null,

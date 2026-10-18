@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
 from application.physiology.service import cached_physiology
-from domain.physiology.vdot import training_paces
+from domain.physiology.vdot import _T_PCT_HIGH, _vo2_from_velocity, training_paces
+from domain.time import today_in_zone
 from infrastructure.auth.models import Athlete
 from presentation.auth.deps import get_current_athlete
 
@@ -70,7 +70,9 @@ async def get_ability(
 
     threshold_pace = float(cached.threshold_pace)
     vdot_value = _vdot_proxy_from_threshold(threshold_pace)
-    day = date.today().isoformat()
+    # Stamped with the athlete's day so the snapshot sorts after their real
+    # ability history instead of landing on whatever date the host thinks it is.
+    day = today_in_zone(athlete.timezone).isoformat()
     point = AbilityPointResponse(
         date=day,
         vo2max=round(vdot_value, 1) if vdot_value else None,
@@ -100,11 +102,19 @@ async def get_ability_current(
 
 
 def _vdot_proxy_from_threshold(threshold_pace_s_km: float) -> float | None:
+    """Invert threshold pace back to a VDOT.
+
+    Threshold sits at 88% of VDOT in the oxygen domain, so the inverse is
+    ``VDOT = VO2(v_threshold) / 0.88`` using Daniels' cost curve. Dividing the
+    velocity by 0.88 and applying a linear oxygen cost skips the quadratic and
+    reports a VDOT about 20% too high.
+    """
     if threshold_pace_s_km <= 0:
         return None
-    threshold_m_per_min = 60.0 / threshold_pace_s_km * 1000.0
-    v_vo2max = threshold_m_per_min / 0.88
-    return v_vo2max * 0.2 + 3.5
+    velocity_m_per_min = 60000.0 / threshold_pace_s_km
+    observed_vo2 = _vo2_from_velocity(velocity_m_per_min)
+    vdot = observed_vo2 / _T_PCT_HIGH
+    return vdot if vdot > 0 else None
 
 
 def _paces_response(paces: dict[str, dict[str, float]]) -> TrainingPacesResponse:

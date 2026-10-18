@@ -90,17 +90,15 @@ export function AnalysisLoad() {
 }
 
 function DiagnosisCard({ card }: { readonly card: LoadDiagnosisCard }) {
-  const fill = toneFill(card.tone);
   return (
     <div
       data-testid={card.testId}
-      title={card.detail}
-      className="flex flex-col gap-2 rounded-xl bg-surface-overlay/55 px-4 py-3.5 tabular-nums"
+      className="flex flex-col gap-1.5 rounded-lg bg-surface-sunken px-4 py-3"
     >
       <div className="flex items-center justify-between gap-3">
         <p className="text-caption1 font-medium text-text-muted">{card.label}</p>
         <span
-          className={`h-2.5 w-2.5 rounded-full ${toneDotClass(card.tone)}`}
+          className={`size-2 rounded-full ${toneDotClass(card.tone)}`}
           aria-hidden
         />
       </div>
@@ -109,42 +107,9 @@ function DiagnosisCard({ card }: { readonly card: LoadDiagnosisCard }) {
       >
         {card.value}
       </p>
-      <div className="h-1.5 overflow-hidden rounded-full bg-surface-sunken">
-        <div
-          className={`h-full rounded-full ${toneBarClass(card.tone)}`}
-          style={{ width: `${fill}%` }}
-        />
-      </div>
-      <span className="sr-only">{card.detail}</span>
+      <p className="text-caption1 leading-snug text-text-secondary">{card.detail}</p>
     </div>
   );
-}
-
-function toneFill(tone: LoadDiagnosisCard["tone"]): number {
-  switch (tone) {
-    case "success":
-      return 72;
-    case "warning":
-      return 55;
-    case "error":
-      return 88;
-    case "accent":
-    default:
-      return 40;
-  }
-}
-
-function toneBarClass(tone: LoadDiagnosisCard["tone"]): string {
-  switch (tone) {
-    case "accent":
-      return "bg-accent";
-    case "success":
-      return "bg-success";
-    case "warning":
-      return "bg-warning";
-    case "error":
-      return "bg-error";
-  }
 }
 
 function toneTextClass(tone: LoadDiagnosisCard["tone"]): string {

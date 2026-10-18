@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Build output directory. `next start` reads its chunk manifest once at boot
+  // and never re-reads it, so replacing the directory a running server is
+  // serving from leaves that process advertising chunk files that no longer
+  // exist: the HTML still loads, every /_next/static request 500s, and the page
+  // renders with no CSS at all. Every producer therefore builds into its own
+  // directory and swaps it in only after the build succeeds.
+  //   production   .next        (scripts/deploy-web.sh swaps this atomically)
+  //   gates / e2e  .next-gate   (scripts/run_gates.py)
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   experimental: {
     // This host has 3.7GB RAM total. Keep build-time memory in check so
     // `next build` does not OOM: webpackMemoryOptimizations lowers peak
@@ -46,8 +55,17 @@ const nextConfig = {
       { source: "/trends", destination: "/analysis?tab=load", permanent: true },
       { source: "/data", destination: "/settings?section=data", permanent: true },
       { source: "/export", destination: "/settings?section=data", permanent: true },
-      { source: "/strength", destination: "/calendar?view=strength", permanent: true },
-      { source: "/strength/analytics", destination: "/calendar?view=strength", permanent: true },
+      { source: "/strength", destination: "/calendar?view=list", permanent: true },
+      { source: "/strength/analytics", destination: "/calendar?view=list", permanent: true },
+      // `?view=strength` was a fourth calendar tab with no view of its own — it
+      // highlighted and then rendered the week grid. Strength content lives in
+      // the log view, so the old URL normalises there.
+      {
+        source: "/calendar",
+        has: [{ type: "query", key: "view", value: "strength" }],
+        destination: "/calendar?view=list",
+        permanent: true,
+      },
       { source: "/performance", destination: "/analysis?tab=performance", permanent: true },
       { source: "/gear", destination: "/settings", permanent: true },
       { source: "/library", destination: "/settings", permanent: true },

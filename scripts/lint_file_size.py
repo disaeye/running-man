@@ -93,7 +93,13 @@ def is_ignored_line(stripped: str, path: Path) -> bool:
 
 
 def has_excluded_part(path: Path) -> bool:
-    return any(part in EXCLUDED_DIRS for part in path.parts)
+    """Build output is excluded by prefix: every producer writes to its own
+    `.next*` directory so a running server never loses the chunks it serves,
+    which means `.next`, `.next-gate`, `.next-build` and
+    `.next-prev-<stamp>` all exist at once."""
+    return any(
+        part in EXCLUDED_DIRS or part.startswith(".next") for part in path.parts
+    )
 
 
 def collect_explicit_files(paths: Iterable[Path]) -> list[Path]:

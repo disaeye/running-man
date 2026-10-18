@@ -24,6 +24,7 @@ from domain.insights.zones import (
     weekly_breakdown,
 )
 from domain.thresholds.resolver import ThresholdStep, resolve_all
+from domain.time import today_in_zone
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.thresholds import ThresholdRepo
 from infrastructure.repositories.zone_scheme import get_hr_scheme
@@ -42,6 +43,7 @@ from presentation.api.insights_activity_queries import _activities_for_range, _a
 from presentation.api.insights_contracts import intensity_distribution_item
 from presentation.api.insights_helpers import (
     _activities_with_power,
+    _ctl_value,
     _daily_loads_for_range,
     _date_range,
     _planned_events,
@@ -103,7 +105,7 @@ async def get_intensity_distribution(
     or a strength session bucketed with them would report intensities it never
     reached. Non-running activities are excluded rather than mis-bucketed.
     """
-    range_start, range_end = _date_range(start, end)
+    range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
     activities = [
         row
         for row in await _activities_for_range(athlete.id, range_start, range_end)
@@ -118,6 +120,7 @@ async def get_intensity_distribution(
             cast(ActivityLike, cast(object, row)),
             streams.get(str(row["activity_id"]), []),
             _zones_at(thresholds, scheme, row.get("start_time")),
+            athlete.timezone,
         )
         for row in activities
     ]
@@ -163,7 +166,7 @@ async def get_weekly_progress(
     start: Annotated[date | None, Query(alias="from")] = None,
     end: Annotated[date | None, Query(alias="to")] = None,
 ) -> list[WeeklyProgressResponse]:
-    range_start, range_end = _date_range(start, end)
+    range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
     events = await _planned_events(athlete.id, range_start, range_end)
     activities = await _activities_for_range(athlete.id, range_start, range_end)
     weekly_progress = compute_weekly_progress(events, activities, range_start, range_end)
@@ -176,7 +179,7 @@ async def get_plan_quality(
     start: Annotated[date | None, Query(alias="from")] = None,
     end: Annotated[date | None, Query(alias="to")] = None,
 ) -> PlanQualityResponse:
-    range_start, range_end = _date_range(start, end)
+    range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
     events = await _planned_events(athlete.id, range_start, range_end)
     activities = await _activities_for_range(athlete.id, range_start, range_end)
     quality = compute_plan_quality(events, activities, range_start, range_end)
@@ -204,7 +207,7 @@ async def get_taper(
     end: Annotated[date | None, Query(alias="to")] = None,
     race_date: Annotated[date | None, Query(alias="race_date")] = None,
 ) -> TaperResponse:
-    range_start, range_end = _date_range(start, end)
+    range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
     loads = await _daily_loads_for_range(athlete.id, range_start, range_end)
     assessment = assess_taper(loads, race_date)
     return TaperResponse(
@@ -221,10 +224,11 @@ async def get_hard_days(
     start: Annotated[date | None, Query(alias="from")] = None,
     end: Annotated[date | None, Query(alias="to")] = None,
 ) -> list[HardDayRangeResponse]:
-    range_start, range_end = _date_range(start, end)
+    range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
     loads = await _daily_loads_for_range(athlete.id, range_start, range_end)
     tss_values = [_tss_value(row) for row in loads]
-    runs = detect_consecutive_hard_days(tss_values)
+    ctl_values = [_ctl_value(row) for row in loads]
+    runs = detect_consecutive_hard_days(tss_values, ctl_values)
     return [
         HardDayRangeResponse(start_index=start_idx, end_index=end_idx)
         for start_idx, end_idx in runs
@@ -259,12 +263,18 @@ async def recompute_insights(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
     body: RecomputeRequest | None = None,
 ) -> RecomputeResponse:
-    now = date.today()
+    # A recompute job rebuilds every derived fact for the athlete, so it takes
+    # no range. A supplied range is therefore only ever validated, never
+    # forwarded, and the defaults below exist to make a one-sided request
+    # checkable rather than to scope the work.
+    now = today_in_zone(athlete.timezone)
     from_date = body.from_date if body and body.from_date else now - timedelta(days=90)
     to_date = body.to_date if body and body.to_date else now
 
     if (to_date - from_date).days > RECOMPUTE_MAX_DAYS:
         raise HTTPException(status_code=400, detail="Date range cannot exceed 365 days")
+    if to_date < from_date:
+        raise HTTPException(status_code=400, detail="`to` must not precede `from`")
 
     generation = await enqueue_activity_recompute(athlete.id, "manual")
     return RecomputeResponse(

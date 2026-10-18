@@ -1,4 +1,8 @@
-import { describeTsb, type PmcZone } from "@features/pmc/components/pmcSemantics";
+import {
+  describeAcwr,
+  describeTsb,
+  type PmcZone,
+} from "@features/pmc/components/pmcSemantics";
 import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
 import type { WeekProgress } from "@features/today/hooks/useWeeklyProgress";
 
@@ -103,53 +107,36 @@ function buildTssTrendCard(data: readonly PmcPoint[]): LoadDiagnosisCard {
   };
 }
 
-function buildAcwrCard(acwr: number | null): LoadDiagnosisCard {
-  if (acwr == null) {
-    return {
-      testId: "load-acwr-risk-diagnosis",
-      label: "ACWR 风险",
-      value: "ACWR 待计算",
-      detail: "ACWR --",
-      tone: "accent",
-    };
-  }
-  if (acwr > 1.3) {
-    return {
-      testId: "load-acwr-risk-diagnosis",
-      label: "ACWR 风险",
-      value: `ACWR ${acwr.toFixed(2)} 偏高`,
-      detail: "ACWR 高",
-      tone: "error",
-    };
-  }
-  if (acwr < 0.8) {
-    return {
-      testId: "load-acwr-risk-diagnosis",
-      label: "ACWR 风险",
-      value: `ACWR ${acwr.toFixed(2)} 偏低`,
-      detail: "ACWR 低",
-      tone: "warning",
-    };
-  }
-  return {
-    testId: "load-acwr-risk-diagnosis",
-    label: "ACWR 风险",
-    value: `ACWR ${acwr.toFixed(2)} 稳定`,
-    detail: "ACWR 稳",
-    tone: "success",
-  };
-}
-
-const TSB_TONE_MAP: Record<PmcZone["tone"], LoadDiagnosisCard["tone"]> = {
+const TONE_MAP: Record<PmcZone["tone"], LoadDiagnosisCard["tone"]> = {
   danger: "error",
   caution: "warning",
   safe: "success",
   neutral: "accent",
 };
 
+function buildAcwrCard(acwr: number | null): LoadDiagnosisCard {
+  if (acwr == null) {
+    return {
+      testId: "load-acwr-risk-diagnosis",
+      label: "ACWR 负荷比",
+      value: "ACWR 待计算",
+      detail: "ACWR --",
+      tone: "accent",
+    };
+  }
+  const zone = describeAcwr(acwr);
+  return {
+    testId: "load-acwr-risk-diagnosis",
+    label: "ACWR 负荷比",
+    value: `${zone?.label ?? "ACWR"} ${acwr.toFixed(2)}`,
+    detail: zone?.description ?? "ACWR 平衡",
+    tone: zone ? TONE_MAP[zone.tone] : "accent",
+  };
+}
+
 function buildTsbCard(tsb: number): LoadDiagnosisCard {
   const zone = describeTsb(tsb);
-  const tone = zone ? TSB_TONE_MAP[zone.tone] : "accent";
+  const tone = zone ? TONE_MAP[zone.tone] : "accent";
   const formatted = tsb > 0 ? `+${tsb.toFixed(1)}` : tsb.toFixed(1);
   return {
     testId: "load-tsb-window-diagnosis",

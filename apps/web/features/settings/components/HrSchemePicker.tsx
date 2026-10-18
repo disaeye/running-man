@@ -68,7 +68,7 @@ export function HrSchemePicker({ current, options, saving, citation, onSelect }:
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className={`text-caption1 font-semibold ${active ? "text-primary" : "text-text-primary"}`}>
+                <span className={`text-caption1 font-semibold ${active ? "text-accent-strong" : "text-text-primary"}`}>
                   {option.label}
                 </span>
                 {active && <Badge variant="info">当前</Badge>}
@@ -86,9 +86,13 @@ export function HrSchemePicker({ current, options, saving, citation, onSelect }:
         })}
       </div>
       {citation && (
-        <p className="mt-2 text-caption1 leading-relaxed text-text-muted" data-testid="hr-scheme-citation">
-          出处：{citation}
-        </p>
+        <details
+          className="mt-2 text-caption1 text-text-muted"
+          data-testid="hr-scheme-citation"
+        >
+          <summary className="cursor-pointer text-text-secondary">依据与出处</summary>
+          <p className="mt-1.5 leading-relaxed">{citation}</p>
+        </details>
       )}
     </div>
   );

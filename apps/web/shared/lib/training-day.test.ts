@@ -4,7 +4,9 @@ import {
   activityLocalDay,
   athleteRange,
   athleteToday,
+  athleteWeekRange,
   isoDayInZone,
+  rangeEndingOn,
 } from "@shared/lib/training-day";
 
 /**
@@ -114,6 +116,121 @@ describe("athleteRange", () => {
     expect(athleteRange(7, NEW_YORK, now)).toEqual({
       from: "2026-03-04",
       to: "2026-03-10",
+    });
+  });
+});
+
+describe("rangeEndingOn", () => {
+  it("counts back from the supplied key, not from today", () => {
+    // A preset button rebuilds its window around the range's own end. Anchoring
+    // on "today" here would silently jump the window when the user has paged
+    // away from the present.
+    expect(rangeEndingOn("2026-09-11", 7)).toEqual({
+      from: "2026-09-05",
+      to: "2026-09-11",
+    });
+  });
+
+  it("returns the single key for days <= 1", () => {
+    expect(rangeEndingOn("2026-09-11", 1)).toEqual({
+      from: "2026-09-11",
+      to: "2026-09-11",
+    });
+  });
+
+  it("matches athleteRange when the key is the athlete's today", () => {
+    const now = new Date("2026-09-11T12:00:00Z");
+    const key = athleteToday(SHANGHAI, now);
+    expect(rangeEndingOn(key, 30)).toEqual(athleteRange(30, SHANGHAI, now));
+  });
+
+  it("crosses a month boundary", () => {
+    expect(rangeEndingOn("2026-09-03", 7).from).toBe("2026-08-28");
+  });
+});
+
+describe("athleteWeekRange", () => {
+  it("runs Monday through today", () => {
+    // 2026-09-11 is a Friday.
+    const now = new Date("2026-09-11T12:00:00Z");
+    expect(athleteWeekRange("UTC", now)).toEqual({
+      from: "2026-09-07",
+      to: "2026-09-11",
+    });
+  });
+
+  it("treats Sunday as the end of the week, not the start", () => {
+    // 2026-09-13 is a Sunday; the ISO week began on the 7th.
+    const now = new Date("2026-09-13T12:00:00Z");
+    expect(athleteWeekRange("UTC", now)).toEqual({
+      from: "2026-09-07",
+      to: "2026-09-13",
+    });
+  });
+
+  it("starts Monday on exactly the Monday when today is Monday", () => {
+    const now = new Date("2026-09-07T12:00:00Z");
+    expect(athleteWeekRange("UTC", now)).toEqual({
+      from: "2026-09-07",
+      to: "2026-09-07",
+    });
+  });
+
+  /**
+   * Monday anchoring is why this one is worth pinning: when the athlete and the
+   * host disagree about the date, the two answers differ by a whole week, not by
+   * a day. The host's week below is the 8th–14th; the athlete is already on the
+   * 7th–13th.
+   */
+  it("rolls the week over when the host is still on the previous Sunday", () => {
+    // 16:00Z on Sunday the 13th is already Monday the 14th in Shanghai (UTC+8).
+    // The athlete's week is therefore the 14th alone, while a host-local week
+    // would still be showing 7th–13th — the two disagree about which week every
+    // planned session belongs to, not merely about its last day.
+    const now = new Date("2026-09-13T16:00:00Z");
+    expect(athleteWeekRange(SHANGHAI, now)).toEqual({
+      from: "2026-09-14",
+      to: "2026-09-14",
+    });
+  });
+
+  it("keeps the athlete's week when the host is a day behind", () => {
+    // 03:00Z on Monday the 14th is still Sunday the 13th in New York (UTC-4),
+    // and that Sunday closes the week that began on the 7th. Anchoring on the
+    // host would instead open a brand new week starting on the 14th.
+    const now = new Date("2026-09-14T03:00:00Z");
+    expect(athleteWeekRange(NEW_YORK, now)).toEqual({
+      from: "2026-09-07",
+      to: "2026-09-13",
+    });
+  });
+
+  it("keeps the athlete's week when the athlete is on Sunday but the host is not", () => {
+    // 17:00Z on Sunday the 13th is still the 13th in New York (Sunday, UTC-4),
+    // while Shanghai has already rolled into Monday the 14th. Monday anchoring
+    // on the host would start the week on the 14th and silently drop the 13th.
+    const now = new Date("2026-09-13T17:00:00Z");
+    expect(athleteWeekRange(NEW_YORK, now)).toEqual({
+      from: "2026-09-07",
+      to: "2026-09-13",
+    });
+  });
+
+  it("crosses a month boundary", () => {
+    // 2026-10-01 is a Thursday; that week began on the 28th of September.
+    const now = new Date("2026-10-01T12:00:00Z");
+    expect(athleteWeekRange("UTC", now)).toEqual({
+      from: "2026-09-28",
+      to: "2026-10-01",
+    });
+  });
+
+  it("crosses a year boundary", () => {
+    // 2027-01-01 is a Friday; that week began on 2026-12-28.
+    const now = new Date("2027-01-01T12:00:00Z");
+    expect(athleteWeekRange("UTC", now)).toEqual({
+      from: "2026-12-28",
+      to: "2027-01-01",
     });
   });
 });

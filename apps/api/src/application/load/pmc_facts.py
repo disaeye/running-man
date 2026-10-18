@@ -15,9 +15,12 @@ from application.computation.service import (
     PreparedComputation,
     execute_idempotent_computation,
 )
+from domain.algorithms import algorithm_contract
+from domain.generated.algorithms import Algorithm
 from domain.load.pmc import build_pmc_series
 
-ALGORITHM_VERSION: Final = "1.0.0"
+# Stamped on every PMC fact; read from the contract, never declared here.
+ALGORITHM_VERSION: Final = algorithm_contract(Algorithm.PMC).version
 COMPUTATION_KIND: Final = "pmc"
 PMC_METRIC_UNITS: Final = {
     "daily_tss": "points",

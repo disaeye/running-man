@@ -71,7 +71,11 @@ class LthrEstimateResponse(PerformanceAnalyticsResponse):
 
 class ThresholdPaceEstimateResponse(PerformanceAnalyticsResponse):
     threshold_pace_s_per_km: int | None
+    # The critical-speed asymptote, kept as a cross-check on the threshold pace.
+    # It is slower than any sustained performance the athlete has produced, so it
+    # informs rather than replaces `threshold_pace_s_per_km`.
     critical_speed_ms: float | None
+    critical_speed_s_per_km: int | None
     method: str | None
     confidence: Literal["high", "medium", "low"] | None
     data_sufficient: bool

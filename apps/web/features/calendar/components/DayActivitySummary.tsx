@@ -28,21 +28,21 @@ export function DayActivitySummary({ activity }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-border-default bg-surface-card p-4">
         <div>
-          <p className="text-caption1 font-semibold uppercase tracking-wider text-text-secondary">距离</p>
+          <p className="text-caption1 font-semibold text-text-secondary">距离</p>
           <p className="mt-1 font-mono text-title3 font-bold text-text-primary">{formatDistance(activity.distance_m)}</p>
         </div>
         <div>
-          <p className="text-caption1 font-semibold uppercase tracking-wider text-text-secondary">时长</p>
+          <p className="text-caption1 font-semibold text-text-secondary">时长</p>
           <p className="mt-1 font-mono text-title3 font-bold text-text-primary">{formatDuration(activity.duration_s)}</p>
         </div>
         <div>
-          <p className="text-caption2 font-semibold uppercase tracking-wider text-text-secondary">TSS</p>
+          <p className="text-caption2 font-semibold text-text-secondary">TSS</p>
           <p className="mt-1 font-mono text-title3 font-bold text-text-primary">
             {activity.tss != null ? Math.round(activity.tss) : "--"}
           </p>
         </div>
         <div>
-          <p className="text-caption1 font-semibold uppercase tracking-wider text-text-secondary">平均心率</p>
+          <p className="text-caption1 font-semibold text-text-secondary">平均心率</p>
           <p className="mt-1 font-mono text-title3 font-bold text-text-primary">{formatHeartRate(activity.avg_hr)}</p>
         </div>
       </div>

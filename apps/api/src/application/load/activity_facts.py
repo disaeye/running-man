@@ -5,9 +5,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Final
 
+from domain.algorithms import algorithm_contract
+from domain.generated.algorithms import Algorithm
 from domain.insights.zone_schemes import HR_SCHEMES, hr_zones_for_scheme
-from domain.load.decoupling import aerobic_decoupling
-from domain.load.normalized_power import normalized_power
+from domain.load.decoupling import aerobic_decoupling, efficiency_factor, pair_by_time
 from domain.load.tss import (
     hr_tss,
     pace_intensity_factor,
@@ -17,7 +18,11 @@ from domain.physiology.graded_pace import average_gap, normalized_graded_pace
 
 from .hr_zones import compute_hr_zone_times, compute_hr_zone_times_from_samples
 
-ALGORITHM_VERSION: Final = "1.0.0"
+# Every derived fact is stamped with this version. It comes from
+# contracts/v1/algorithms.yaml through the generated registry: a second copy in
+# this module stayed at 1.0.0 through an algorithm change, so facts computed with
+# the new maths kept the old stamp and nothing superseded them.
+ALGORITHM_VERSION: Final = algorithm_contract(Algorithm.ACTIVITY_LOAD).version
 
 # hrTSS is defined against LTHR-derived zones, so load computation pins this
 # scheme regardless of which scheme the athlete views their zones through.
@@ -34,7 +39,8 @@ class ActivityLoadInput:
     duration_s: int
     sport: str | None
     avg_hr: int | None
-    hr_samples: tuple[float, ...]  # per-second HR stream, empty if unavailable
+    hr_samples: tuple[float, ...]  # per-sample HR values, empty if unavailable
+    hr_sample_times: tuple[float, ...]  # elapsed seconds at each HR sample
     lthr: int | None
     pace_streams: tuple[tuple[float, ...], tuple[float, ...], tuple[float, ...]] | None
     threshold_pace: float | None  # s/km, resolved for the activity date
@@ -108,20 +114,23 @@ def _maybe_record_decoupling(
     time?' — they are diagnostic, not load. Only meaningful for steady-state
     efforts ≥ 20 min with paired cardio.
     """
-    if not activity.hr_samples:
+    if not activity.hr_samples or not activity.hr_sample_times:
         return
-    effort_series = _effort_series(activity, effort)
-    if effort_series is None:
+    series = _effort_with_times(activity, effort)
+    if series is None:
         return
-    n = min(len(effort_series), len(activity.hr_samples))
-    if n < MIN_PAIRED_SAMPLES:
+    effort_times, effort_values = series
+    paired_effort, paired_hr = pair_by_time(
+        effort_times, effort_values, activity.hr_sample_times, activity.hr_samples
+    )
+    if len(paired_effort) < MIN_PAIRED_SAMPLES:
         return
-    effort_values = effort_series[:n]
-    cardio = activity.hr_samples[:n]
-    ef = _efficiency_factor_public(effort_values, cardio)
+    ef = efficiency_factor(paired_effort, paired_hr)
     if ef is not None:
         facts.append(_fact(activity, "efficiency_factor", "ratio", ef, f"{effort}_ef"))
-    decoupling = aerobic_decoupling(effort_values, cardio)
+    decoupling = aerobic_decoupling(
+        paired_effort, paired_hr, duration_s=float(activity.duration_s)
+    )
     if decoupling is not None:
         facts.append(
             _fact(
@@ -134,12 +143,16 @@ def _maybe_record_decoupling(
         )
 
 
-def _effort_series(
+def _effort_with_times(
     activity: ActivityLoadInput, effort: str
-) -> tuple[float, ...] | None:
+) -> tuple[tuple[float, ...], tuple[float, ...]] | None:
+    """Effort values paired with their own timestamps."""
     if effort == "pace" and activity.pace_streams is not None:
         distances, _altitudes, times = activity.pace_streams
-        return _pace_effort_from_streams(distances, times)
+        values = _pace_effort_from_streams(distances, times)
+        if values is None:
+            return None
+        return times[: len(values)], values
     return None
 
 
@@ -156,18 +169,6 @@ def _pace_effort_from_streams(
         dt = times[i] - times[i - 1]
         speeds.append(dd / dt if dt > 0 and dd >= 0 else 0.0)
     return tuple(speeds)
-
-
-def _efficiency_factor_public(
-    effort_values: Sequence[float], cardio_values: Sequence[float]
-) -> float | None:
-    np_value = normalized_power(effort_values)
-    if np_value is None or not cardio_values:
-        return None
-    avg_hr = sum(cardio_values) / len(cardio_values)
-    if avg_hr <= 0:
-        return None
-    return np_value / avg_hr
 
 
 def _hr_tss(activity: ActivityLoadInput) -> float | None:
@@ -244,6 +245,7 @@ def fingerprint_inputs(activities: Sequence[ActivityLoadInput]) -> str:
             "lthr": activity.lthr,
             "threshold_pace": activity.threshold_pace,
             "hr_samples_digest": _series_digest(activity.hr_samples),
+            "hr_sample_times_digest": _series_digest(activity.hr_sample_times),
             "pace_streams_digest": _pace_digest(activity.pace_streams),
         }
         for activity in activities

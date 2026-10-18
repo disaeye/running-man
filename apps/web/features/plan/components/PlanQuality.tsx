@@ -67,25 +67,25 @@ export function PlanQuality({ from, to }: PlanQualityProps) {
     <Card padding="md" data-testid="plan-quality-card">
       <div className="flex items-start gap-4">
         <ScoreRing value={data.score} max={100} size={72} color={ringColor} ariaLabel={`计划评分 ${data.score}`}>
-          <span className="text-title3 font-bold" style={{ color: ringColor }}>
-            {data.grade ?? "-"}
+          <span className="font-mono text-title3 font-bold tabular-nums" style={{ color: ringColor }}>
+            {Math.round(data.score)}
           </span>
         </ScoreRing>
 
         <div className="flex flex-1 flex-col gap-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-subheadline font-semibold text-text-primary">计划评分: {label}</h3>
+            <h3 className="text-subheadline font-semibold text-text-primary">计划评分：{label}</h3>
             {data.grade && <Badge variant={badgeVariant}>{data.grade}</Badge>}
           </div>
 
           <p className="text-caption1 text-text-secondary">{data.message}</p>
 
-          <div className="grid grid-cols-3 gap-2 rounded-lg border border-border-default bg-surface-card p-3 text-center max-sm:grid-cols-1">
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-border-subtle bg-surface-sunken p-3 text-center max-sm:grid-cols-1">
             <div>
               <p className="text-caption1 text-text-muted">本周 TSS</p>
               <p className="text-subheadline font-bold tabular-nums text-text-primary">
                 {Math.round(data.weekly_tss)}
-                <span className="text-caption2 text-text-muted">/{Math.round(data.target_tss)}</span>
+                <span className="text-caption1 text-text-muted">/{Math.round(data.target_tss)}</span>
               </p>
             </div>
             <div>
@@ -94,10 +94,7 @@ export function PlanQuality({ from, to }: PlanQualityProps) {
                 {data.key_sessions_completed}/{data.key_sessions_total}
               </p>
             </div>
-            <div>
-              <p className="text-caption1 text-text-muted">评分</p>
-              <p className="text-subheadline font-bold tabular-nums" style={{ color: ringColor }}>{data.score}</p>
-            </div>
+
           </div>
 
           {data.concerns.length > 0 && (

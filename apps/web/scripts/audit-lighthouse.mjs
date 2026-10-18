@@ -11,7 +11,7 @@ const AUTH_FILE = "e2e/.auth/storageState.json";
 const RUNS = 3;
 const EVIDENCE_DIR = "../../.omo/evidence/frontend-product-experience-redesign/implementation/task-15-frontend-product-experience-redesign";
 const AUDIT_ROUTES = [
-  { path: "/landing", kind: "public" }, { path: "/login", kind: "public" }, { path: "/register", kind: "public" },
+  { path: "/login", kind: "public" }, { path: "/register", kind: "public" },
   { path: "/_not-found", kind: "not-found" }, { path: "/", kind: "authenticated" }, { path: "/calendar?view=week", kind: "authenticated" },
   { path: "/calendar?view=list", kind: "authenticated" }, { path: "/analysis", kind: "authenticated" }, { path: "/analysis?tab=performance", kind: "authenticated" },
   { path: "/goals", kind: "authenticated" }, { path: "/settings?section=data", kind: "authenticated" }, { path: "/settings?section=strength", kind: "authenticated" },

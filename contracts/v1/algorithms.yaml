@@ -1,10 +1,27 @@
 version: 1
 algorithms:
   - key: activity_load
-    version: 1.0.0
+    version: 1.1.0
     input_window_days: 1
     materialization: stored_fact
     outputs: [normalized_power, intensity_factor, tss, normalized_graded_pace, gap_avg, efficiency_factor, aerobic_decoupling_pct, rtss]
+    # Numeric anchors. Every entry is evaluated by
+    # scripts/check_algorithm_references.py against the shipped code, so a
+    # coefficient that drifts fails the contract gate instead of quietly
+    # rescaling every derived load.
+    reference_cases:
+      - name: minetti_cost_at_10_percent_climb
+        expect: { grade_cost_multiplier: 1.658 }
+        tolerance: 0.005
+        inputs: { grade: 0.10 }
+      - name: minetti_cost_at_20_percent_climb
+        expect: { grade_cost_multiplier: 2.502 }
+        tolerance: 0.005
+        inputs: { grade: 0.20 }
+      - name: minetti_cost_at_10_percent_descent
+        expect: { grade_cost_multiplier: 0.598 }
+        tolerance: 0.01
+        inputs: { grade: -0.10 }
   - key: pmc
     version: 1.0.0
     input_window_days: 1
@@ -12,7 +29,7 @@ algorithms:
     history_policy: full_available_history
     outputs: [daily_tss, ctl, atl, tsb, acwr]
   - key: physiology
-    version: 1.0.0
+    version: 1.1.0
     input_window_days: 365
     materialization: stored_fact
     calculations:
@@ -20,8 +37,41 @@ algorithms:
       - { key: lthr, input_window_days: 365 }
       - { key: threshold_pace, input_window_days: 365 }
     outputs: [hr_max, lthr, threshold_pace]
+    reference_cases:
+      - name: lthr_from_best_effort_windows
+        # LTHR = max(0.98 x best 20-minute, best 60-minute). Five qualifying
+        # 20-minute windows is the minimum for the estimate.
+        inputs:
+          best_20min_hrs: [178, 179, 180, 180, 180]
+          best_60min_hrs: [175]
+        expect: { lthr: 176 }
+        tolerance: 0
+      - name: threshold_pace_from_vdot_50
+        # LT2 threshold pace, 88% of VDOT in the oxygen domain.
+        inputs: { vdot: 50 }
+        expect: { threshold_pace_s_per_km: 256 }
+        tolerance: 3
   - key: vdot
-    version: 1.0.0
+    version: 1.1.0
     input_window_days: 365
     materialization: stored_fact
     outputs: [vdot]
+    reference_cases:
+      - name: vdot_from_5k_in_20_minutes
+        inputs: { distance_m: 5000, time_s: 1200 }
+        expect: { vdot: 49.8 }
+        tolerance: 0.2
+      - name: vdot_from_10k_in_41_20
+        inputs: { distance_m: 10000, time_s: 2480 }
+        expect: { vdot: 50.0 }
+        tolerance: 0.3
+      - name: daniels_easy_pace_for_vdot_50
+        # Published: 5:34–6:13/km.
+        inputs: { vdot: 50 }
+        expect: { easy_min_s_per_km: 334, easy_max_s_per_km: 373 }
+        tolerance: 4
+      - name: daniels_threshold_pace_for_vdot_50
+        # Published: 4:15/km.
+        inputs: { vdot: 50 }
+        expect: { threshold_min_s_per_km: 255 }
+        tolerance: 4

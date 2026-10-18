@@ -1,20 +1,26 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
 
 import pytest
 
+from application.computation.runs import ComputationRunResult
 from application.physiology import service
 from application.physiology.facts import (
     ComputationWindow,
     PhysiologyResults,
     persist_physiology_facts,
 )
+from domain.algorithms import algorithm_contract
+from domain.generated.algorithms import Algorithm
 from infrastructure.repositories.physiology import PhysiologyRepo
 
 pytestmark = pytest.mark.no_db
+
+# Read from the contract so a version bump does not require editing fixtures.
+PHYSIOLOGY_VERSION = algorithm_contract(Algorithm.PHYSIOLOGY).version
 
 ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000001")
 
@@ -97,6 +103,7 @@ async def test_insufficient_data_writes_run_without_fabricated_facts(
             start=datetime(2024, 7, 15, tzinfo=UTC),
             end=datetime(2026, 7, 15, tzinfo=UTC),
         ),
+        effective_from=date(2026, 7, 15),
     )
 
     queries = [row.query for row in pool.executed]
@@ -129,6 +136,7 @@ async def test_physiology_facts_store_units_methods_confidence_and_run_version(
             start=datetime(2024, 7, 15, tzinfo=UTC),
             end=datetime(2026, 7, 15, tzinfo=UTC),
         ),
+        effective_from=date(2026, 7, 15),
     )
 
     fact_params = [row.params for row in pool.executed if "INSERT INTO derived_metric_facts" in row.query]
@@ -137,7 +145,7 @@ async def test_physiology_facts_store_units_methods_confidence_and_run_version(
         ("lthr", "bpm", run_id, "best_effort_window", 0.6),
         ("threshold_pace", "s_km", run_id, "critical_speed_model", 0.3),
     ]
-    assert all(params[6] == "1.0.0" for params in fact_params)
+    assert all(params[6] == PHYSIOLOGY_VERSION for params in fact_params)
 
     # Thresholds are recorded as a dated step rather than written to columns on
     # `athletes` — those were removed when thresholds became time-versioned, so
@@ -149,7 +157,10 @@ async def test_physiology_facts_store_units_methods_confidence_and_run_version(
     assert len(threshold_writes) == 1
     params = threshold_writes[0].params
     assert params[0] == ATHLETE_ID
-    assert params[-1] == "1.0.0"  # algorithm_version
+    # Parameter positions follow the columns, which change with the estimate, so
+    # the version and the effective date are asserted by value.
+    assert PHYSIOLOGY_VERSION in params
+    assert date(2026, 7, 15) in params
     assert "source','estimated" not in threshold_writes[0].query  # sanity: literal in SQL
     assert "estimated" in threshold_writes[0].query
 
@@ -178,8 +189,26 @@ async def test_contract_window_routes_each_algorithm_to_owned_window(
         _results: PhysiologyResults,
         _input_payload: object,
         _window: ComputationWindow,
-    ) -> None:
+        effective_from: date,
+    ) -> dict[str, object]:
+        assert effective_from == date(2026, 7, 15)
+        return {"hr_max": 190}
+
+    async def timezone(_repository: PhysiologyRepo, _athlete_id: UUID) -> str:
+        return "UTC"
+
+    async def earliest_activity_day(
+        _repository: PhysiologyRepo, _athlete_id: UUID, _timezone: str
+    ) -> date:
+        return date(2026, 7, 15)
+
+    async def earliest_step(_repository: object, _athlete_id: UUID) -> None:
         return None
+
+    async def backfill(
+        _repository: object, _athlete_id: UUID, _effective_from: date, _values: object
+    ) -> int:
+        return 0
 
     async def activities(
         _repository: PhysiologyRepo, athlete_id: UUID, window_start: datetime, window_end: datetime
@@ -193,13 +222,40 @@ async def test_contract_window_routes_each_algorithm_to_owned_window(
 
     monkeypatch.setattr(service.PhysiologyRepo, "activities", activities)
     monkeypatch.setattr(service.PhysiologyRepo, "heart_rate_window", heart_rate_window)
+    monkeypatch.setattr(service.PhysiologyRepo, "timezone", timezone)
+    monkeypatch.setattr(
+        service.PhysiologyRepo, "earliest_activity_day", earliest_activity_day
+    )
+    monkeypatch.setattr(service.ThresholdRepo, "earliest", earliest_step)
+    monkeypatch.setattr(service.ThresholdRepo, "backfill_earlier_gaps", backfill)
     monkeypatch.setattr(service, "persist_physiology_facts", persist)
+
+    async def rebuild_load(_athlete_id: object, **_kwargs: object) -> ComputationRunResult:
+        return ComputationRunResult(uuid4(), "success", 0)
+
+    async def rebuild_pmc(_athlete_id: object, **_kwargs: object) -> object:
+        return object()
+
+    monkeypatch.setattr(service, "recompute_activity_load_facts", rebuild_load)
+    monkeypatch.setattr(service, "recompute_pmc_facts", rebuild_pmc)
     monkeypatch.setattr(service, "estimate_hrmax", lambda _values: {"hr_max": 190})
     monkeypatch.setattr(service, "estimate_lthr", lambda _a, _b: {"lthr": 176})
     monkeypatch.setattr(
         service,
-        "estimate_threshold_pace",
-        lambda _efforts: {"threshold_pace_s_per_km": 270},
+        "extract_efforts_from_activities",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(service, "vdot_from_efforts", lambda _efforts: 50.0)
+    monkeypatch.setattr(
+        service,
+        "estimate_critical_speed",
+        lambda _efforts: {
+            "critical_speed_s_per_km": 268,
+            "critical_speed_ms": 3.73,
+            "confidence": "medium",
+            "data_sufficient": True,
+            "effort_count": 3,
+        },
     )
 
     await service.calculate_physiology(ATHLETE_ID)

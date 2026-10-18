@@ -30,9 +30,14 @@ export function EmptyState({
           {icon}
         </div>
       )}
-      <h2 className="text-callout font-semibold text-text-primary">
+      {/*
+       * A message, not a section. This used to be an <h2>, which put the empty
+       * state at the same outline level as the card that contained it: the
+       * "最近训练" section and its own "还没有训练记录" line became siblings.
+       */}
+      <p className="text-callout font-semibold text-text-primary">
         {title}
-      </h2>
+      </p>
       {description && (
         <p className="max-w-sm text-subheadline text-text-secondary">
           {description}

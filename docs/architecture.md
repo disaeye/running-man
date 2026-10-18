@@ -147,7 +147,7 @@ features/     One directory per feature, each with colocated components/ + hooks
               pmc, today, activity, analysis, health, goals, strength, calendar,
               plan, performance, trends, data, settings, auth
 shared/       Cross-feature primitives depended on BY features/, never the reverse
-              ui (shadcn/ui), layout, lib, types, config, hooks, marketing
+              ui (shadcn/ui), layout, lib, types, config, hooks
 ```
 
 Path aliases (`tsconfig.json`): `@shared/*` → `./shared/*`, `@features/*` → `./features/*`.

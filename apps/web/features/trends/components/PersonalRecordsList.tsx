@@ -38,8 +38,8 @@ export function PersonalRecordsList({ sport = null }: PersonalRecordsListProps) 
 
 function emptyGuidance(sportFamily: ReturnType<typeof getAnalysisSportFamily>): string {
   return sportFamily === "cycling"
-    ? "暂无 PR / 最佳努力记录：同步包含功率曲线或爬坡输出的骑行活动后会生成。"
-    : "暂无 PR / 最佳努力记录：同步包含 GPS 或比赛结果的跑步活动后会生成。";
+    ? "暂无最佳成绩记录：同步包含功率曲线或爬坡输出的骑行活动后会生成。"
+    : "暂无最佳成绩记录：同步包含 GPS 或比赛结果的跑步活动后会生成。";
 }
 
 function Message({

@@ -5,6 +5,8 @@ from datetime import date, datetime, timedelta
 from math import ceil, floor
 from typing import Final, Literal, TypedDict, cast
 
+from domain.time import DEFAULT_TIMEZONE, local_day
+
 DistributionType = Literal["polarized", "pyramidal", "threshold", "high-volume"]
 MetricSource = Literal["heart_rate", "power", "summary"]
 
@@ -67,18 +69,24 @@ def activity_distribution(
     activity: ActivityLike,
     streams: Sequence[Mapping[str, object]],
     hr_zones: Sequence[Zone] | None,
+    timezone: str | None = DEFAULT_TIMEZONE,
 ) -> ActivityDistribution:
     """Time in HR zones, from per-sample data when present, else the session mean.
 
     Zones are passed in rather than derived here: the athlete's scheme decides
     the boundaries (see ``domain.insights.zone_schemes``), and showing the same
     activity against two schemes must not require recomputing anything else.
+
+    ``timezone`` decides which training day the activity belongs to. It is not
+    optional in spirit: ``start_time`` arrives as an aware instant, and reading
+    its date directly converts in UTC, which files an evening Asia/Shanghai run
+    under the previous day and moves it into the wrong week bucket downstream.
     """
     duration_s = _positive_int(activity.get("duration_s"))
     if duration_s == 0:
-        return ActivityDistribution(_activity_date(activity), empty_by_zone(), None)
+        return ActivityDistribution(_activity_date(activity, timezone), empty_by_zone(), None)
     if not hr_zones:
-        return ActivityDistribution(_activity_date(activity), empty_by_zone(), None)
+        return ActivityDistribution(_activity_date(activity, timezone), empty_by_zone(), None)
     hr_values = _metric_values(streams, "heart_rate")
     if hr_values:
         return _from_values(
@@ -87,13 +95,14 @@ def activity_distribution(
             duration_s,
             lambda value: zone_for_value(value, hr_zones),
             "heart_rate",
+            timezone,
         )
     avg_hr = _positive_float(activity.get("avg_hr"))
     if avg_hr:
         zone = zone_for_value(avg_hr, hr_zones)
         if zone is not None:
-            return _from_summary(activity, duration_s, zone)
-    return ActivityDistribution(_activity_date(activity), empty_by_zone(), None)
+            return _from_summary(activity, duration_s, zone, timezone)
+    return ActivityDistribution(_activity_date(activity, timezone), empty_by_zone(), None)
 
 
 def combine_distributions(distributions: Iterable[ActivityDistribution]) -> dict[str, float]:
@@ -209,6 +218,7 @@ def _from_values(
     duration_s: int,
     zone_for_value: Callable[[float], int | None],
     source: MetricSource,
+    timezone: str | None,
 ) -> ActivityDistribution:
     by_zone = empty_by_zone()
     seconds_per_sample = duration_s / len(values)
@@ -219,13 +229,15 @@ def _from_values(
         # genuinely unbucketed, and the totals will reflect that.
         if zone is not None:
             by_zone[f"z{zone}"] += seconds_per_sample / 60
-    return ActivityDistribution(_activity_date(activity), _rounded(by_zone), source)
+    return ActivityDistribution(_activity_date(activity, timezone), _rounded(by_zone), source)
 
 
-def _from_summary(activity: ActivityLike, duration_s: int, zone: int) -> ActivityDistribution:
+def _from_summary(
+    activity: ActivityLike, duration_s: int, zone: int, timezone: str | None
+) -> ActivityDistribution:
     by_zone = empty_by_zone()
     by_zone[f"z{zone}"] = duration_s / 60
-    return ActivityDistribution(_activity_date(activity), _rounded(by_zone), "summary")
+    return ActivityDistribution(_activity_date(activity, timezone), _rounded(by_zone), "summary")
 
 
 def _metric_values(streams: Sequence[Mapping[str, object]], metric_type: str) -> list[float]:
@@ -236,11 +248,17 @@ def _metric_values(streams: Sequence[Mapping[str, object]], metric_type: str) ->
     ]
 
 
-def _activity_date(activity: ActivityLike) -> date:
+def _activity_date(activity: ActivityLike, timezone: str | None) -> date:
     start_time = activity.get("start_time")
+    if isinstance(start_time, datetime) and start_time.tzinfo is not None:
+        return local_day(start_time, timezone)
     if isinstance(start_time, datetime):
-        return start_time.date()
-    return date.today()
+        # A naive timestamp has no zone to convert from, so no rule can pick the
+        # right day for it. Fail rather than guess: a wrong week bucket is
+        # silently wrong, whereas this names the bad row.
+        raise ValueError("activity start_time must be timezone-aware to derive its day")
+    # No timestamp at all: the caller cannot attribute the session to a day.
+    raise ValueError("activity has no start_time to derive its training day from")
 
 
 def _positive_int(value: object) -> int:

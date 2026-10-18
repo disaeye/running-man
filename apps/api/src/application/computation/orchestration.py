@@ -12,7 +12,7 @@ from psycopg.rows import DictRow
 from application.computation.runs import ComputationRunResult
 from application.load.pmc_facts import recompute_pmc_facts
 from application.load.recompute import recompute_activity_load_facts
-from application.physiology.algorithm_contract import algorithm_contract
+from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
 from infrastructure.db.pool import get_pool, open_pool
 from infrastructure.repositories.recompute_jobs import RecomputeJobRepo

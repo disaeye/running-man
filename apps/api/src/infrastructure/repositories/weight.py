@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from typing import Any
 from uuid import UUID
 
+from domain.time import today_in_zone
 from infrastructure.db.pool import get_pool
 
 MIN_FOR_TREND = 2
@@ -16,6 +17,19 @@ MIN_FOR_TREND = 2
 
 class WeightRepo:
     """Repository for weight entries backed by the health_wellness table."""
+
+    async def _timezone(self, athlete_id: UUID) -> str | None:
+        """The athlete's IANA zone, or None when the profile has none.
+
+        None is the domain's "fall back to UTC" input, so a profile with no zone
+        still gets a definite day rather than an error.
+        """
+        async with get_pool().connection() as conn:
+            cur = conn.cursor()
+            await cur.execute("SELECT timezone FROM athletes WHERE id = %s", (athlete_id,))
+            row = await cur.fetchone()
+        value = row["timezone"] if row else None
+        return value if isinstance(value, str) and value.strip() else None
 
     async def list_entries(
         self,
@@ -79,7 +93,11 @@ class WeightRepo:
 
         Returns None for all fields when no data exists in the window.
         """
-        today = date.today()
+        # `health_wellness.day` is a day key already bucketed on the athlete's
+        # zone, so the window has to start from the same clock. Comparing it
+        # against the host's date would drop the athlete's most recent reading
+        # for part of every day east of Greenwich.
+        today = today_in_zone(await self._timezone(athlete_id))
         thirty_days_ago = today - timedelta(days=30)
         query = """
             SELECT day, weight

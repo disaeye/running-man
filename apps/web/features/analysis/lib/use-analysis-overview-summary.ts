@@ -6,7 +6,7 @@
 
 import { useMemo } from "react";
 import { useMemo as useMemoRef } from "react";
-import { computeRange } from "@shared/lib/format";
+import { athleteRange, useAthleteTimezone } from "@shared/lib/training-day";
 import { usePmcData, type PmcPoint } from "@features/pmc/hooks/usePmcData";
 import { useWellness } from "@features/health/hooks/useWellness";
 import { useReadiness } from "@features/today/hooks/useReadiness";
@@ -37,7 +37,8 @@ export function useAnalysisOverviewSummary(): UseAnalysisOverviewSummaryResult {
   // Use a fixed 90-day window so the overview is deterministic regardless
   // of any user-selected range. The page-level range only governs the
   // detail tabs (load/recovery), not the verdict/risk/next-step summary.
-  const range = useMemo(() => computeRange(90), []);
+  const timezone = useAthleteTimezone();
+  const range = useMemo(() => athleteRange(90, timezone), [timezone]);
 
   const pmcQuery = usePmcData(range.from, range.to);
   const wellnessQuery = useWellness(range.from, range.to);

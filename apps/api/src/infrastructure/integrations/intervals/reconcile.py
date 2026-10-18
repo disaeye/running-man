@@ -16,6 +16,11 @@ from collections.abc import Mapping, Sequence
 
 import psycopg
 
+from domain.time import local_day_sql
+from infrastructure.integrations.intervals.sync_helpers import (
+    athlete_timezone as _athlete_timezone,
+)
+
 logger = logging.getLogger(__name__)
 
 _GHOST_SOURCE_PREFIX = "intervals.icu"
@@ -75,15 +80,21 @@ def _local_interval_ids(
     window_start: object,
     window_end: object,
 ) -> set[str]:
+    # Same reason as the sync window: this filter has to select the rows the
+    # upstream list call covered, and that list call is bounded by the
+    # athlete's local dates. Filtering on the session zone would leave an
+    # evening activity in the window unmatched and wrongly delete it as a ghost.
+    day = local_day_sql("%s")
+    zone = _athlete_timezone(conn, athlete_id)
     with conn.cursor() as cur:
         _ = cur.execute(
-            """
+            f"""
             SELECT activity_id FROM activity_summary
             WHERE athlete_id = %s
               AND source = %s
-              AND start_time::date BETWEEN %s AND %s
+              AND {day} BETWEEN %s AND %s
             """,
-            (athlete_id, _GHOST_SOURCE_PREFIX, window_start, window_end),
+            (athlete_id, _GHOST_SOURCE_PREFIX, zone, window_start, window_end),
         )
         return {_decode_id(row[0]) for row in cur.fetchall()}
 

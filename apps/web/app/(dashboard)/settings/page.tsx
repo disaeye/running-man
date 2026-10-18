@@ -80,10 +80,10 @@ function SettingsPageContent() {
   return (
     <div className="page-stack" data-testid="athlete-profile-page">
       <section className="flex flex-wrap items-end justify-between gap-6 border-b border-border-subtle pb-7" aria-labelledby="profile-title">
-        <div><p className="mb-3 font-mono text-caption2 uppercase tracking-[0.24em] text-primary">PROFILE / CONFIGURATION</p><h1 id="profile-title" className="text-display-md text-text-primary">运动员档案</h1><p className="mt-3 max-w-xl text-subheadline text-text-secondary">让系统了解你的身体，也让每一个区间有据可依。</p></div>
-        <div className="hidden rounded-lg border border-border-default bg-surface-sunken/60 px-4 py-3 sm:block"><p className="font-mono text-caption2 uppercase tracking-[0.16em] text-text-muted">ATHLETE STATUS</p><p className={`mt-1 text-subheadline ${profile ? "text-primary" : "text-warning"}`}>{profileLoading ? "LOADING" : profile ? "PROFILE ONLINE" : "PROFILE UNAVAILABLE"}</p></div>
+        <div><h1 id="profile-title" className="text-display-md text-text-primary">运动员档案</h1><p className="mt-1.5 max-w-xl text-subheadline text-text-secondary">阈值决定心率与配速区间，也决定负荷与建议是否成立。</p></div>
+        <div className="hidden rounded-lg border border-border-subtle bg-surface-sunken px-4 py-3 sm:block"><p className="text-caption1 text-text-muted">档案状态</p><p className={`mt-1 text-subheadline ${profile ? "text-accent-strong" : "text-warning"}`}>{profileLoading ? "读取中" : profile ? "档案已加载" : "未加载"}</p></div>
       </section>
-      <div className="glass-surface rounded-xl p-5 sm:p-6"><AthleteProfileSummary profile={profile} loading={profileLoading} /></div>
+      <Card padding="md"><AthleteProfileSummary profile={profile} loading={profileLoading} /></Card>
       <div className="flex flex-wrap gap-2 border-b border-border-subtle pb-3">
         {PROFILE_TABS.map((tab) => {
           const Icon = tab.icon;

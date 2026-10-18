@@ -91,7 +91,7 @@ export function ZoneEditor({ title, zones, unit, drafts, errors, editable, onCha
             if (!d) return null;
             const isLast = d.max_pct === "";
             const error = errors.get(z.zone);
-            const inputCls = `w-16 rounded-md border bg-muted/30 px-2 py-1 text-right text-xs font-mono tabular-nums text-foreground focus:border-sky-500 focus:outline-none ${error ? "border-rose-500" : "border-border/50"}`;
+            const inputCls = `w-16 rounded-md border bg-surface-sunken px-2 py-1 text-right text-xs font-mono tabular-nums text-text-primary focus:border-accent focus:outline-none ${error ? "border-error" : "border-border-subtle"}`;
             return (
               <tr key={z.zone} className="border-b border-border/30">
                 <td className="py-2.5 whitespace-nowrap">

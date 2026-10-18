@@ -1,36 +1,36 @@
-# Running Man Frontend Design System (v8.5 — 5cm Quiet Winter)
+# Running Man Frontend Design System
 
-> Source of truth: `apps/web/app/globals.css`. Every color, font size, radius, shadow, and motion token maps to a CSS variable that lives there. Never introduce a raw hex in a component — add the token to `globals.css` first.
+> Source of truth: `apps/web/app/globals.css`. Every colour, size, spacing, motion value in this document is a CSS variable defined there, and `scripts/check_design_tokens.py` fails the contract gate when a table row here disagrees with the stylesheet. Never introduce a raw hex in a component — add the token to `globals.css` first.
 >
-> **v8.5 — 5cm Quiet Winter**: Content `max-w-5xl`. Accent is Winter Sky Indigo (`#5a6f9a`) — dusk sky from Makoto Shinkai films (*5cm Per Second* / *5cm Per Second*). Canvas soft dusk-paper (`#eef2f6`). Atmosphere: low-alpha indigo + sakura + golden-hour washes. Clear liquid glass. Chart data colors unchanged. Not film assets or cel-shading.
+> Canvas is dusk paper `#f4f6f8`, accent is Winter Sky Indigo `#5a6f9a`, content column is `64rem`. Atmosphere is low-alpha indigo and amber washes on `.shell-atmosphere`; chrome is the only surface that uses `backdrop-filter`.
 
 ---
 
-## 0. Research Log & Runtime Audit
+## 0. Design Research & Layout Constraints
 
-### 0.1 Design Research
+### 0.1 Sources
 
-- **Linear / Vercel / Notion**: Cool-neutral canvases, single saturated accent reserved for interactive chrome, hairline borders over shadows, type at editorial density.
-- **Apple HIG web surfaces**: Hairline elevation, weight ladder 300/400/600 (no 500), tabular figures for metrics, Action Blue as the single interactive color.
-- **Strava / COROS / Training Peaks**: Activity traces, PMC curves, zone ladders, fitness/freshness/form triplets, intensity heatmaps. Endures the cool-neutral canvas and tight typographic grid.
-- **Okabe-Ito qualitative palette** (via `chart-tokens.ts`): Color-vision-deficiency-safe categorical encoding for chart series, layered on top of the data-semantic PMC colors that survive unchanged from v6.
-- **Geist via `next/font`**: Tight-tracked sans (Vercel voice) at 15px body and 32–48px fluid display numerals.
+- **Linear / Vercel / Notion**: cool-neutral canvas, one saturated accent reserved for interactive chrome, hairline borders instead of shadows, type at editorial density.
+- **Apple HIG web surfaces**: hairline elevation, weight ladder 300/400/600 (no 500), tabular figures for metrics.
+- **Strava / COROS / Training Peaks**: activity traces, PMC curves, zone ladders, fitness/freshness/form triplets, intensity heatmaps — all on a cool-neutral canvas with a tight typographic grid.
+- **Okabe-Ito qualitative palette** (`chart-tokens.ts`): colour-vision-deficiency-safe categorical encoding, layered over the data-semantic PMC colours.
+- **Geist via `next/font`**: tight-tracked sans at 15px body and fluid display numerals.
 
-### 0.2 Runtime Audit (16 screenshots, 2026-07-17)
+### 0.2 Layout Constraints That Hold
 
-10 desktop (1440px) + 6 mobile (375px) screenshots captured in `.omo/evidence/frontend-product-experience-redesign/`. Key findings rolled into v7:
+These were each discovered by getting them wrong, and each has a gate or a token behind it now:
 
-- Mobile tab bar overlaps last content row → safe-area + `pb-24` rule preserved.
-- Chart tooltips clip viewport edges → tooltips kept inside `bg-surface-raised border rounded-lg shadow-elevated`.
-- Sidebar collapsed width tight for icons → 68px collapsed padding preserved.
-- Login form layout shift on mobile focus → unchanged from v6.
-- Dark mode chart contrast → improved via cyan-300 (`#22d3ee`) accent-strong on dark for AA text.
+- The mobile tab bar covers the last content row unless `--mobile-nav-height` is reserved; pages never hard-code `pb-24`.
+- Chart tooltips clip at viewport edges; they stay inside `bg-surface-raised` with `--shadow-elevated`.
+- The collapsed sidebar is 68px; icons need that much padding to stay legible.
+- The login form shifts on mobile focus when the card has no fixed vertical rhythm.
+- `--color-accent` fails AA as text on the dark panel; accent text uses `--color-accent-strong`.
 
 ---
 
 ## 1. Product Character
 
-Running Man is a **calm dusk cockpit** — soft paper, twilight indigo chrome, quiet sakura/amber sky light. Inspired by Makoto Shinkai's color climate (5cm Per Second / 5cm Per Second): indigo dusk, cherry blossom pink, golden-hour amber — as *atmosphere and one accent*, not illustration.
+Running Man is a **calm dusk cockpit** — soft paper, twilight indigo chrome, quiet sakura and amber sky light. Colour climate: indigo dusk, cherry-blossom pink, golden-hour amber — as atmosphere and one accent, never as illustration.
 
 Three principles:
 
@@ -67,7 +67,7 @@ Every page answers a primary question. Layout, density, and chart choices serve 
 | Mode | Purpose | Layout Behavior |
 |---|---|---|
 | **Showcase** | Single artifact in focus (activity detail, PR card) | Large hero, generous whitespace, one-up chart |
-| **Decision** | Action-oriented dashboard (Today, Goals) | KPI strip + recommendation + 2-up detail |
+| **Decision** | Action-oriented dashboard (Today, Goals) | One answer block with its evidence inside it, then the panels needed to act |
 | **Browse** | Scannable list (calendar, activity list, strength log) | Compact rows, pagination/infinite scroll, filter bar |
 | **Analysis** | Multi-metric comparison (PMC, trends, intensity) | Dense chart grid, linked tooltips, range selector |
 | **Configuration** | Settings and data management | Form-heavy, sectioned cards, inline validation |
@@ -78,39 +78,63 @@ Every page answers a primary question. Layout, density, and chart choices serve 
 
 All tokens live in `app/globals.css` under `:root` (light, default) and `.dark` (toggle). Tailwind reads them via `@theme inline`. Light is the default; the dark theme is opt-in via `next-themes`. **Never introduce a raw hex in a component** — add the token to `globals.css` first.
 
-### 3.1 Core Palette (v8.1 Winter Sky Indigo — dusk paper + energy orange)
+### 3.1 Core Palette
 
-| Role | Light | Dark | Token |
+Every row is verified against `app/globals.css` by `scripts/check_design_tokens.py`; a token that is documented here and absent there, or a value that disagrees, fails the contract gate.
+
+| Token | Light | Dark | Role |
 |---|---|---|---|
-| Page background (dusk paper) | `#eef2f6` | `#0d0d0d` | `surface-base` |
-| Raised surface (sidebar, sticky bars) | `#ffffff` | `#1d1d1f` | `surface-raised` |
-| Card surface | `#ffffff` | `#1a1a1a` | `surface-card` |
-| Overlay / pearl (ghost button fill) | `#f0f0ee` | `#272729` | `surface-overlay` |
-| Primary text (near-black ink) | `#1d1d1f` | `#ffffff` | `text-primary` / `ink` |
-| Secondary text | `#333333` | `#cccccc` | `text-secondary` |
-| Muted text | `#6e6e73` | `#8e8e93` | `text-muted` |
-| Accent fill (Winter Sky Indigo) | `#5a6f9a` | `#5a6f9a` | `accent` / `primary` |
-| Accent text (AA on canvas) | `#3f4d99` | `#b4bdf0` | `accent-strong` |
-| Chart accent | `#5a6f9a` | `#9aa6e0` | `chart-accent` |
-| Focus ring | `#9aa6e0` | `#9aa6e0` | `ring` |
-| Near-black ink panel (utility surface) | `#1d1d1f` | `#000000` | `surface-dark` |
-| Glass fill | `white 78%` | `card 72%` | `--glass-bg` |
-| Glass rim | warm white/peach | orange 18% | `--glass-border` |
+| `--color-surface-base` | `#f4f6f8` | `#080a0f` | Page canvas |
+| `--color-surface-card` | `#ffffff` | `#10151e` | Panel fill |
+| `--color-surface-raised` | `#ffffff` | `#0f131b` | Sticky chrome |
+| `--color-surface-overlay` | `#eaeff4` | `#151b25` | Ghost fill, hover |
+| `--color-surface-sunken` | `#e9eef3` | `#05070a` | Inset wells |
+| `--color-text-primary` | `#141c24` | `#edf3f8` | Body ink |
+| `--color-text-secondary` | `#4b5b6d` | `#a5b1bd` | Secondary copy |
+| `--color-text-muted` | `#55667a` | `#8595a5` | Captions, provenance |
+| `--color-accent` | `#5a6f9a` | `#5a6f9a` | Accent fill |
+| `--color-accent-strong` | `#405072` | `#9aaecf` | Accent text (AA) |
+| `--color-primary` | `#5a6f9a` | `#5a6f9a` | Primary CTA |
+| `--color-ring` | `#5a6f9a` | `#7a8fb5` | Focus ring |
+| `--color-border-subtle` | `rgba(45, 62, 80, 0.18)` | `rgba(171, 198, 214, 0.12)` | Hairline edge |
+| `--color-border-default` | `rgba(45, 62, 80, 0.26)` | `rgba(171, 198, 214, 0.2)` | Control border |
+| `--glass-bg` | `rgba(255, 255, 255, 0.85)` | `rgba(16, 21, 30, 0.78)` | Chrome glass fill |
+| `--glass-border` | `rgba(45, 62, 80, 0.12)` | `rgba(171, 198, 214, 0.16)` | Chrome glass rim |
 
-**Single-accent rule**: Winter Sky Indigo (`#5a6f9a`) carries every interactive element. In dark mode, fills stay orange-500 but accent *text* switches to orange-300 (`#b4bdf0`) for AA contrast. There is no second chrome color.
+**Single-accent rule**: Winter Sky Indigo carries every interactive element. `--color-accent` is a fill; text that sits on the canvas uses `--color-accent-strong`, which is the value tuned to pass AA against `--color-surface-base`. There is no second chrome colour.
 
-**Restrained reference (not a brand copy)**: warmth + 14px radii + quiet linen field inspired by modern anime UI / mobile game HUD energy, while staying a real training dashboard. PMC/zone/sport tokens remain data semantics only.
+**Glass belongs to chrome only.** `--glass-bg` and its blur are applied to the sidebar, the sticky header and the mobile tab bar. Panels use `--color-surface-card` with a hairline edge: stacking `backdrop-filter` on six panels blurs the dusk atmosphere into flat white and costs compositing on every scroll.
 
-### 3.2 Data-Semantic Colors (preserved from v6)
+### 3.2 Data-Semantic Colours
 
-These encode training meaning and are **chart series and category labels only** — never used for chrome, buttons, or links.
+These encode training meaning and are **chart series and category labels only** — never chrome, buttons or links. Verified by the same gate as §3.1.
 
-- **PMC**, preserved: `ctl` light `#0066cc` / dark `#2997ff` (Action Blue / Sky Blue family), `atl` light `#8742AF` / dark `#BF7EE8` (violet), `tsb` light `#946018` / dark `#E8B454` (gold).
-- **Health**: `hr-rest`, `sleep`, `weight` brightened on dark for AA contrast.
-- **Zones**: `zone-1` through `zone-5`, brightened on dark.
-- **Recovery**: `recovery-good` (green), `recovery-moderate` (gold), `recovery-poor` (red).
-- **Goals**: `goal-on-track`, `goal-behind`, `goal-at-risk` — same green/gold/red ladder.
-- **Sport identity**: `sport-run`, `sport-ride`, `sport-workout`, etc. — read via `getSportConfig(sport).color`.
+Status colours are also the text colour for their state. `--color-success`, `--color-warning`, `--color-error`, `--color-info` and `--color-calendar-today` may set status copy ("恢复良好", "数据已过期") as long as they reach 4.5:1 against every surface, which `scripts/check_contrast.py` enforces. `--color-ctl`, `--color-atl`, `--color-tsb` and the `recovery-*` family stay series colours: a number that carries meaning in its value uses `--color-text-primary`, and the colour moves to the dot or bar beside it.
+
+| Token | Light | Dark | Meaning |
+|---|---|---|---|
+| `--color-ctl` | `#0284c7` | `#59e1ff` | 体能 (CTL) |
+| `--color-atl` | `#7c3aed` | `#b88cff` | 疲劳 (ATL) |
+| `--color-tsb` | `#d97706` | `#ffc857` | 状态 (TSB) |
+| `--color-hr-rest` | `#e11d48` | `#ff788f` | 静息心率 |
+| `--color-sleep` | `#0284c7` | `#59e1ff` | 睡眠 |
+| `--color-weight` | `#16a34a` | `#82d69d` | 体重 |
+| `--color-zone-1` | `#64748b` | `#71808c` | Z1 恢复 |
+| `--color-zone-2` | `#0284c7` | `#59e1ff` | Z2 耐力 |
+| `--color-zone-3` | `#16a34a` | `#52a86d` | Z3 节奏 |
+| `--color-zone-4` | `#d97706` | `#ffc857` | Z4 阈值 |
+| `--color-zone-5` | `#dc2626` | `#ff667d` | Z5 无氧 |
+| `--color-recovery-good` | `#16a34a` | `#52a86d` | 恢复良好 |
+| `--color-recovery-moderate` | `#d97706` | `#ffc857` | 恢复一般 |
+| `--color-recovery-poor` | `#dc2626` | `#ff667d` | 恢复不足 |
+| `--color-goal-on-track` | `#16a34a` | `#52a86d` | 目标在轨 |
+| `--color-goal-behind` | `#d97706` | `#ffc857` | 目标滞后 |
+| `--color-goal-at-risk` | `#dc2626` | `#ff667d` | 目标有风险 |
+| `--color-sport-run` | `#e11d48` | `#ff788f` | 跑步 |
+| `--color-sport-ride` | `#0284c7` | `#59e1ff` | 骑行 |
+| `--color-sport-workout` | `#d97706` | `#ffc857` | 健身 |
+
+Sport colours are read through `getSportConfig(sport).color`; never map a sport to a colour anywhere else.
 
 ### 3.3 Decorative Tint Group
 
@@ -118,7 +142,7 @@ Six decorative tints for chips, badges, insight cards, empty states: `decor-rose
 
 ### 3.4 Scoped Accent Roles
 
-Purpose-specific slots: `data-emphasis`, `load-heatmap`, `calendar-today`, `active-phase`. Light values stay `#0066cc`; dark values brightened to `#2997ff`. These are for specific dashboard contexts, not general decoration.
+Purpose-specific slots: `--color-data-emphasis`, `--color-load-heatmap`, `--color-calendar-today`, `--color-active-phase`. These are for specific dashboard contexts, not general decoration.
 
 ### 3.5 Gradient Policy
 
@@ -152,42 +176,37 @@ The test: if removing the gradient removes information the user needs, it is per
 - **Mixed CJK/Latin body**: `lang` attribute scopes tracking suppression. Latin words embedded in CJK inherit surrounding CJK metrics.
 - **Terminology**: Use established Chinese endurance terms — 训练负荷 (training load), 最大摄氧量 (VO2max), 乳酸阈 (lactate threshold / LTHR), 静息心率 (resting HR), 心率变异 (HRV). Do not translate metric abbreviations (TSS, CTL, ATL, TSB remain Latin).
 
-### 4.3 Type Scale (v7 — compact body 15px)
+### 4.3 Type Scale
 
-**Display tokens** (headlines, heroes — tight-tracked sans, fluid on phones):
+Each row names the CSS variable that `@theme inline` exposes, so the size in this table and the size the browser renders are the same number. `scripts/check_design_tokens.py` compares them.
 
-| Class | Size (clamp) | Line-height | Tracking | Usage |
-|---|---|---|---|---|
-| `text-display-xl` | 40–48px | 1.07 | -0.024em | Hero headline |
-| `text-display-lg` | 32–40px | 1.10 | -0.018em | Tile / page-title |
-| `text-display-md` | 32px | 1.47 | -0.018em | Section heads |
-| `text-display-sm` | 28px | 1.14 | -0.010em | Lead / subcopy |
-
-**SF Pro Text / iOS scale** — tuned to v7 compact body 15px:
-
-| Class | Size | Usage |
-|---|---|---|
-| `text-largeTitle` | 28px | Large titles |
-| `text-title1` | 24px | Major section headers |
-| `text-title2` | 22px | Card titles, sheet headers |
-| `text-title3` | 20px | Sub-section headers |
-| `text-headline` | 15px | Emphasized body (semibold) |
-| `text-body` | 15px | Default body copy (v7 compact — was 17px in v6) |
-| `text-callout` | 14px | Secondary body, control labels |
-| `text-subheadline` | 13px | List row titles |
-| `text-footnote` | 13px | Captions, helper text |
-| `text-caption1` | 12px | Metadata, small badges |
-| `text-caption2` | 11px | Ultra-compact **Latin-only** labels — never Chinese |
+| Token | Size | Line-height | Usage |
+|---|---|---|---|
+| `--text-display-xl` | `clamp(2.5rem, 5vw, 3rem)` | 1.15 | Hero headline |
+| `--text-display-lg` | `clamp(2rem, 4vw, 2.5rem)` | 1.2 | Tile / page title |
+| `--text-display-md` | `clamp(1.75rem, 3vw, 2rem)` | 1.25 | Section head |
+| `--text-display-sm` | `28px` | 1.3 | Lead / answer headline |
+| `--text-largeTitle` | `28px` | 1.4 | Large title |
+| `--text-title1` | `24px` | 1.4 | Major section header |
+| `--text-title2` | `22px` | 1.4 | Card title, sheet header |
+| `--text-title3` | `20px` | 1.4 | Sub-section header, metric value |
+| `--text-headline` | `15px` | 1.5 | Emphasised body (semibold) |
+| `--text-body` | `15px` | 1.5 | Default body copy |
+| `--text-callout` | `14px` | 1.5 | Secondary body, control label |
+| `--text-subheadline` | `13px` | 1.5 | List row title, supporting copy |
+| `--text-footnote` | `13px` | 1.5 | Helper text |
+| `--text-caption1` | `12px` | 1.5 | Metadata, badges, provenance |
+| `--text-caption2` | `11px` | 1.5 | Latin-only labels — never Chinese |
 
 ### 4.4 Principles
 
-- **Body at 15px, not 17px.** v7's compact body lets data and advice share the same column width without horizontal scroll.
-- **Chinese never below 12px.** CJK glyphs carry far more strokes per em than Latin, and below 12px they smear — a rendered comparison puts the crossover exactly there. `text-caption2` (11px) is therefore Latin-only; Chinese labels start at `text-caption1`. Enforced by `scripts/type-scale.test.ts`.
-- **Use the tokens, not arbitrary sizes.** The scale above is the contract. `text-[13px]` bypasses it and means a global scale change silently misses that element; the gate rejects arbitrary sizes except where a `type-scale-allow` comment records why (currently only the sidebar wordmark, which is sized to its container).
+- **Body at 15px.** Compact body lets data and advice share the same column width without horizontal scroll.
+- **Chinese never below 12px.** CJK glyphs carry far more strokes per em than Latin, and below 12px they smear. `text-caption2` (11px) is therefore Latin-only; Chinese labels start at `text-caption1`. Enforced by `scripts/type-scale.test.ts`.
+- **Use the tokens, not arbitrary sizes.** `text-[13px]` bypasses the scale, so a global change silently misses that element. The gate rejects arbitrary sizes except where a `type-scale-allow` comment records why.
 - **The mono stack names CJK faces.** `font-mono` is for tabular figures and Latin labels; Chinese inside it still resolves to PingFang/YaHei rather than a generic monospace face.
-- **Weight 600, not 700, for headlines.** Weight 500 is deliberately absent.
+- **Weight 600 for headlines, 700 for numerals.** Weight 500 is deliberately absent.
 - **Weight 300 is real and rare.** Reserved for airy moments.
-- **Line-height**: Display 1.07–1.14 (tight). Body 1.50 (editorial — never tighten below).
+- **Line-height**: display 1.15–1.3 (tight), body 1.5 (never tighter).
 
 ### 4.5 Number Rendering
 
@@ -208,7 +227,7 @@ All metric values use **tabular figures** (`font-feature-settings: "tnum" 1`, se
 | `5` | 20px | Default card padding |
 | `6` | 24px | Section spacing, card grid gutters |
 | `8` | 32px | Card padding (editorial default) |
-| `10` | 40px | v7 — intermediate rhythm |
+| `10` | 40px | Intermediate rhythm |
 | `12` | 48px | Hero spacing |
 | `16` | 64px | Page breathing room |
 | `section` | 80px | Major section breaks |
@@ -217,11 +236,18 @@ All metric values use **tabular figures** (`font-feature-settings: "tnum" 1`, se
 
 ```
 /* Owned by AppShell — do not re-declare on pages */
-.shell-main { padding via --shell-pad-y (2.25rem) + --mobile-nav-height }
-.page-stack { gap: var(--shell-gap) /* 2rem / 32px */ }
+.shell-main { padding via --shell-pad-y + --mobile-nav-height }
+.page-stack { gap: var(--shell-gap) }
 ```
 
-Content width `max-w-5xl` (`--shell-content-max`). Mobile bottom clearance via `--mobile-nav-height` (not hard-coded `pb-24` on pages).
+| Token | Value | Role |
+|---|---|---|
+| `--shell-content-max` | `64rem` | Content column width |
+| `--shell-pad-x` | `clamp(1rem, 3vw, 3.5rem)` | Horizontal page padding |
+| `--shell-pad-y` | `clamp(1.25rem, 4vw, 3.25rem)` | Vertical page padding |
+| `--shell-gap` | `clamp(1rem, 2vw, 2rem)` | Gap between stacked sections |
+| `--shell-header-h` | `4.75rem` | Sticky header height |
+| `--mobile-nav-height` | `4.5rem` | Bottom tab bar clearance |
 
 ### 5.3 Grid
 
@@ -334,7 +360,7 @@ Every chart container follows this structure:
 6. **Provenance**: Data source + date range in `text-caption1 text-text-muted` below the chart (`caption1`, not `caption2` — the line is Chinese). Format: "数据来源: Intervals.icu · 2026-01-01 至 2026-07-17"
 7. **Empty state**: Centered icon + message (`text-body text-text-muted`). No chart rendered. Message explains why (no data, no selection, loading error).
 
-### 7.3 Chart Color Rules (v7)
+### 7.3 Chart Colour Rules
 
 - Chart series use semantic tokens: `ctl`, `atl`, `tsb`, `zone-1`..`zone-5`, `sport-run`, etc.
 - Chart accent (`chart-accent`) for emphasis lines, current-value markers, selection highlights.
@@ -433,13 +459,12 @@ export default function Page() {
 - Visual size may be smaller (e.g., 24px icon) but the hit area must be >= 44x44 via padding or min-width/min-height.
 - Desktop does not have this constraint but should maintain >= 32x32 for usability.
 
-### 10.2 Color & Contrast
+### 10.2 Colour & Contrast
 
-- All text must pass WCAG AA (4.5:1 for body, 3:1 for large text >= 18px or >= 14px bold).
-- Winter Sky Indigo (`#5a6f9a`) fill with white text: passes AA large/button text.
-- Accent-strong light (`#3f4d99`) on dusk paper (`#eef2f6`): passes AA body text.
-- Accent-strong dark (`#b4bdf0`) on near-black (`#0d0d0d`): passes AA.
-- Data-semantic colors are for charts/categories, not for text conveying critical information without additional encoding (shape, label, pattern).
+- All text passes WCAG AA: 4.5:1 for body, 3:1 for large text (>= 18px, or >= 14px bold).
+- `--color-accent` fill with `--color-on-accent` white: passes for button text.
+- Accent text uses `--color-accent-strong`, never `--color-accent`. Measured: 7.5:1 on the light canvas `#f4f6f8`, 8.1:1 on the dark panel `#10151e`. `--color-accent` on the dark panel is 3.7:1 and fails body text; `scripts/check_web_tokens.py` rejects it.
+- Data-semantic colours are for charts and category labels, not for text that carries critical information without a second encoding (shape, label, pattern).
 
 ### 10.3 Keyboard Navigation
 
@@ -496,32 +521,28 @@ export default function Page() {
 
 | Level | Treatment | Usage |
 |---|---|---|
-| Flat | No shadow, hairline border | All cards, buttons, text |
-| Soft hairline | 1px `border-border-default` | Utility cards, list rows |
-| Backdrop blur / liquid glass | `.glass-surface` / `.glass-surface-strong` | Cards, sticky header, sidebar, mobile tab bar |
-| Product shadow | `rgba(0, 0, 0, 0.04) 1px 3px + 0.06 4px 12px` (light) / denser (dark) | Popovers, sheets only |
+| Flat | 1px hairline, no shadow | Every panel (`Card`), buttons, text |
+| Chrome glass | `.glass-surface` / `.glass-surface-strong` | Sidebar, sticky header, mobile tab bar — never panels |
+| Overlay shadow | `--shadow-elevated` | Popovers, dialogs, sheets |
 
-**`shadow-card` is a soft dual-layer depth under glass.** Prefer `.glass-surface` over raw `bg-surface-card` for panels.
+`--shadow-card` and `--shadow-sheet` exist for overlays. Panels carry no shadow: a page of six shadowed cards reads as six competing layers, and the hairline is enough to separate a panel from the canvas.
 
-### Border Radius Scale (v7)
+### Border Radius
 
-| Token | Value | Usage |
+Tailwind's default scale, used as written. There is no `--radius-*` token layer; a second scale that nothing read was how the previous table drifted away from the rendered result.
+
+| Class | Value | Usage |
 |---|---|---|
-| `radius-xs` | 5px | Inline link chips (rare) |
-| `radius-sm` | 8px | Dark utility buttons, inline imagery |
-| `radius-md` | 11px | Pearl capsule buttons |
-| `radius-lg` | 20px | Restrained glass cards |
-| `radius-xl` | 20px | Pills / large shells |
-| `radius-xl` | 22px | Config panels |
-| `radius-2xl` | 28px | Large panels |
-| `radius-3xl` | 36px | Sheet top corners |
-| (pill) | `rounded-full` | Primary CTAs, configurator chips |
+| `rounded-lg` | 8px | Buttons, chips, inputs |
+| `rounded-xl` | 12px | Every panel (`Card`) |
+| `rounded-2xl` | 16px | Dialogs, sheets |
+| `rounded-full` | 9999px | Pills, dots, avatars |
 
 ---
 
-## 14. Dual Mode (Light + Dark — v7)
+## 14. Dual Mode (Light + Dark)
 
-Light mode: dusk paper (`#eef2f6`), liquid glass, Winter Sky Indigo (`#5a6f9a`), soft sakura/amber atmosphere. Dark mode: night sky (`#0a0c12`), indigo `#8a9bb8` chrome, accent text `#b4bdf0`. Data-semantic palette unchanged in meaning.
+Light mode: dusk paper `--color-surface-base` `#f4f6f8`, Winter Sky Indigo chrome, sakura/amber atmosphere. Dark mode: night sky `#080a0f`, `--color-accent-strong` `#9aaecf` for accent text. Data-semantic palette unchanged in meaning; both modes read the same tokens.
 
 Theme transitions: `transition: background-color 200ms ease, color 200ms ease` on `body`. ECharts re-init via a single `useECharts` swap point keeps dual-mode charts in lockstep with the toggle.
 
@@ -529,13 +550,12 @@ Theme transitions: `transition: background-color 200ms ease, color 200ms ease` o
 
 ## 15. Accepted Debt
 
-| Debt | Reason | Owner | Resolution Target |
-|---|---|---|---|
-| Legacy `font-serif` class resolves to sans | Backward compatibility with pre-v7 heading markup | Next migration wave | Remove after all pages migrated |
-| Some chart files still use raw hex (see `hex-ban.test.ts` allowlist) | Incremental migration to `chart-tokens.ts` | W10 cleanup sweep | Zero raw hex after chart migration |
-| `text-accent` / `text-primary` bare classes in legacy pages | Pre-v7 aliasing before `bg-primary` migrations landed | W10 cleanup sweep | Zero bare classes after migration |
-| React dev tooling (react-scan, react-grab) not yet wired | react-scan@0.5.7 Node import fails under Node 24 (missing JSON import attribute) | Todo 4 | After compatibility verification or runtime fix |
-| Playwright E2E uses storage-state auth | Pre-v7 auth setup | Todo 4 | After bootstrap script integration |
+| Debt | Reason |
+|---|---|
+| Playwright E2E uses storage-state auth | The suite boots against a real backend; a scripted login would add a second auth path that production does not use. `npm run qa:auth-bootstrap` mints the state from the app's own JWT secret. |
+| React dev tooling (react-scan, react-grab) not wired | react-scan@0.5.7 fails to import under Node 24. |
+
+`--color-accent` is a fill token. In dark mode it measures 3.7:1 against `--color-surface-card`, so accent-coloured *text* uses `--color-accent-strong` (8.1:1 dark, 7.5:1 light). `scripts/check_web_tokens.py` enforces the panel, palette and type rules that the rest of this document describes.
 
 ---
 
@@ -544,28 +564,30 @@ Theme transitions: `transition: background-color 200ms ease, color 200ms ease` o
 ### Do
 - Reference tokens (`bg-surface-card`, `text-text-primary`) — never raw hex.
 - Use Winter Sky Indigo for **every** interactive element.
-- Prefer `.glass-surface` for cards/chrome; content shell `max-w-5xl`.
-- Restrained = 14px radii + warm atmosphere only — not mascot clutter or rainbow gradients.
-- Use `text-accent-strong` for accent-colored text.
+- Build panels with `Card`. One radius (`rounded-xl`), one hairline edge, no shadow.
+- Reserve `.glass-surface` for chrome: sidebar, sticky header, mobile tab bar.
+- Use `text-accent-strong` for accent-coloured text; `--color-accent` is a fill.
+- Resolve every banded metric through `zoneFor()` / `metricZones()` so the number, its band and the band's explanation come from `contracts/v1/metrics.yaml`.
 - Set headlines in sans with negative letter-spacing.
-- Run body copy at 15px — compact v7 voice.
-- Apply `rounded-lg` (12px) to cards; `rounded-full` to primary CTAs.
+- Run body copy at 15px.
+- Use `rounded-full` for primary CTAs.
 - Use `chart-accent` for chart emphasis.
 - Apply `transform: scale(0.95)` as the active/press state on buttons.
 - Use Lucide icons — never emojis.
-- Preserve data-semantic colors (PMC, zones, sport, health, recovery, goals).
+- Preserve data-semantic colours (PMC, zones, sport, health, recovery, goals).
 - Test both light and dark mode for every component.
 - Ensure >= 44px touch targets on mobile.
-- Include chart provenance (data source + date range).
+- Include chart provenance (data source + date range) at `text-caption1`.
 - Use information-bearing gradients for heatmaps, route traces, intensity bands.
 
 ### Don't
-- Don't introduce a second accent color.
-- Don't add shadows to cards, buttons, or text.
+- Don't introduce a second accent colour.
+- Don't add shadows to panels, buttons, or text.
+- Don't nest panels. A group inside one panel is a `border-t` separator.
 - Don't use decorative gradients.
 - Don't set body copy at weight 500.
 - Don't round full-bleed sections.
-- Don't tighten body line-height below 1.50.
+- Don't tighten body line-height below 1.5.
 - Don't use raw hex codes — add tokens to `globals.css` first.
 - Don't use `h-screen` — use `min-h-[100dvh]`.
 - Don't animate `width`, `height`, `top`, `left`.
@@ -573,7 +595,7 @@ Theme transitions: `transition: background-color 200ms ease, color 200ms ease` o
 - Don't write generic SaaS copy — be athlete-specific.
 - Don't make touch targets < 44px on mobile.
 - Don't render charts without provenance and empty states.
-- Don't reintroduce v6's parchment canvas, 17px body, SF Pro, or 18px radius.
-- Don't use Cormorant / serif display — keep Geist.
-- Don't reintroduce full-bleed sparse layouts without product decision; default content width is `max-w-5xl`.
-- Don't flood the UI with secondary neon colors; indigo is the only chrome accent — sakura/amber are atmosphere-only.
+- Don't put Chinese at `text-caption2`; that step is 11px and Latin-only.
+- Don't widen the content column past `--shell-content-max` (`64rem`).
+- Don't hard-code a band boundary or a band label in a component; the contract owns them.
+- Don't flood the UI with secondary colours; indigo is the only chrome accent — sakura and amber are atmosphere only.

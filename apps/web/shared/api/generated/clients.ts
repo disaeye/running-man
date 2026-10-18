@@ -12,6 +12,7 @@ import {
   ActivityAnalysisResponse,
   ActivityDetail,
   ActivityStatsResponse,
+  ActivityStreamSyncResponse,
   ActivityUploadResponse,
   AthleteMe,
   AthleteResponse,
@@ -28,7 +29,6 @@ import {
   HealthResponse,
   IgnoreResult,
   IntegrationResponse,
-  IntegrationSyncResponse,
   LoginResponse,
   ManualActivityResponse,
   MetricSeriesBatchResponse,
@@ -51,6 +51,8 @@ import {
   ShoeAssignmentResponse,
   ShoeResponse,
   SleepAnalysisResponse,
+  SourceCoverageResponse,
+  SyncJobResponse,
   TaperResponse,
   TrainingRecommendationResponse,
   WebhookAckResponse,
@@ -68,6 +70,7 @@ import type {
   ActivitiesCsvApiV1ExportActivitiesCsvGetParams,
   ActivitySummary,
   AthleteProfileUpdate,
+  BackfillRequest,
   BodyBatchUploadActivitiesApiV1ActivitiesBatchUploadPost,
   BodyUploadActivityApiV1ActivitiesUploadPost,
   BulkIgnoreRequest,
@@ -75,6 +78,7 @@ import type {
   CalendarEventUpdate,
   ConnectIntegrationRequest,
   DeleteActivitiesBulkApiV1ActivitiesDeleteParams,
+  DisconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteParams,
   E1rmTrendApiV1StrengthAnalyticsE1rmGetParams,
   E1rmTrendResponse,
   ExportActivityApiV1ActivitiesActivityIdExportGetParams,
@@ -1201,6 +1205,61 @@ export const getStreamsApiV1ActivitiesActivityIdStreamsGet = async (activityId: 
 
   const data: getStreamsApiV1ActivitiesActivityIdStreamsGetResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getStreamsApiV1ActivitiesActivityIdStreamsGetResponse
+}
+
+
+
+export type resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponse200 = {
+  data: ActivityStreamSyncResponse
+  status: 200
+}
+
+export type resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponseSuccess = (resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponse200) & {
+  headers: Headers;
+};
+export type resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponseError = (resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponse422) & {
+  headers: Headers;
+};
+
+export type resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponse = (resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponseSuccess | resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponseError)
+
+export const getResyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostUrl = (activityId: string,) => {
+
+
+
+
+  return `/api/v1/activities/${activityId}/streams/sync`
+}
+
+/**
+ * Re-download one activity's streams from Intervals.icu.
+ *
+ * Backs the retry action on a failed sync entry, so repairing one activity
+ * does not require re-running the whole sync window.
+ * @summary Resync Activity Streams
+ */
+export const resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPost = async (activityId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getResyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostUrl(activityId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ActivityStreamSyncResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPostResponse
 }
 
 
@@ -4025,6 +4084,59 @@ export const getIntegrationApiV1IntegrationsSourceGet = async (source: string, o
 
 
 
+export type backfillIntegrationApiV1IntegrationsSourceBackfillPostResponse200 = {
+  data: SyncJobResponse
+  status: 200
+}
+
+export type backfillIntegrationApiV1IntegrationsSourceBackfillPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type backfillIntegrationApiV1IntegrationsSourceBackfillPostResponseSuccess = (backfillIntegrationApiV1IntegrationsSourceBackfillPostResponse200) & {
+  headers: Headers;
+};
+export type backfillIntegrationApiV1IntegrationsSourceBackfillPostResponseError = (backfillIntegrationApiV1IntegrationsSourceBackfillPostResponse422) & {
+  headers: Headers;
+};
+
+export type backfillIntegrationApiV1IntegrationsSourceBackfillPostResponse = (backfillIntegrationApiV1IntegrationsSourceBackfillPostResponseSuccess | backfillIntegrationApiV1IntegrationsSourceBackfillPostResponseError)
+
+export const getBackfillIntegrationApiV1IntegrationsSourceBackfillPostUrl = (source: string,) => {
+
+
+
+
+  return `/api/v1/integrations/${source}/backfill`
+}
+
+/**
+ * Import history from ``from_date`` to today, one calendar month per window.
+ * @summary Backfill Integration
+ */
+export const backfillIntegrationApiV1IntegrationsSourceBackfillPost = async (source: string,
+    backfillRequest: BackfillRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<backfillIntegrationApiV1IntegrationsSourceBackfillPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getBackfillIntegrationApiV1IntegrationsSourceBackfillPostUrl(source),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(backfillRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? SyncJobResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as backfillIntegrationApiV1IntegrationsSourceBackfillPostResponse
+}
+
+
+
 export type connectIntegrationApiV1IntegrationsSourceConnectPutResponse200 = {
   data: IntegrationResponse
   status: 200
@@ -4077,6 +4189,58 @@ export const connectIntegrationApiV1IntegrationsSourceConnectPut = async (source
 
 
 
+export type sourceCoverageApiV1IntegrationsSourceCoverageGetResponse200 = {
+  data: SourceCoverageResponse
+  status: 200
+}
+
+export type sourceCoverageApiV1IntegrationsSourceCoverageGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type sourceCoverageApiV1IntegrationsSourceCoverageGetResponseSuccess = (sourceCoverageApiV1IntegrationsSourceCoverageGetResponse200) & {
+  headers: Headers;
+};
+export type sourceCoverageApiV1IntegrationsSourceCoverageGetResponseError = (sourceCoverageApiV1IntegrationsSourceCoverageGetResponse422) & {
+  headers: Headers;
+};
+
+export type sourceCoverageApiV1IntegrationsSourceCoverageGetResponse = (sourceCoverageApiV1IntegrationsSourceCoverageGetResponseSuccess | sourceCoverageApiV1IntegrationsSourceCoverageGetResponseError)
+
+export const getSourceCoverageApiV1IntegrationsSourceCoverageGetUrl = (source: string,) => {
+
+
+
+
+  return `/api/v1/integrations/${source}/coverage`
+}
+
+/**
+ * Imported date range for this source, so the athlete can see the boundary.
+ * @summary Source Coverage
+ */
+export const sourceCoverageApiV1IntegrationsSourceCoverageGet = async (source: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<sourceCoverageApiV1IntegrationsSourceCoverageGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getSourceCoverageApiV1IntegrationsSourceCoverageGetUrl(source),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? SourceCoverageResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as sourceCoverageApiV1IntegrationsSourceCoverageGetResponse
+}
+
+
+
 export type disconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteResponse204 = {
   data: void
   status: 204
@@ -4096,20 +4260,30 @@ export type disconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteResponse
 
 export type disconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteResponse = (disconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteResponseSuccess | disconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteResponseError)
 
-export const getDisconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteUrl = (source: string,) => {
+export const getDisconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteUrl = (source: string,
+    params?: DisconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/integrations/${source}/disconnect`
+  return stringifiedParams.length > 0 ? `/api/v1/integrations/${source}/disconnect?${stringifiedParams}` : `/api/v1/integrations/${source}/disconnect`
 }
 
 /**
+ * Drop the connection, optionally deleting everything already imported.
  * @summary Disconnect Integration
  */
-export const disconnectIntegrationApiV1IntegrationsSourceDisconnectDelete = async (source: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<disconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteResponse> => {
+export const disconnectIntegrationApiV1IntegrationsSourceDisconnectDelete = async (source: string,
+    params?: DisconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<disconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteResponse> => {
 
-  const res = await (fetchFn ?? fetch)(getDisconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteUrl(source),
+  const res = await (fetchFn ?? fetch)(getDisconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteUrl(source,params),
   {
     ...options,
     method: 'DELETE'
@@ -4123,6 +4297,111 @@ export const disconnectIntegrationApiV1IntegrationsSourceDisconnectDelete = asyn
 
   const data: disconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteResponse['data'] = body ? JSON.parse(body) : undefined
   return { data, status: res.status, headers: res.headers } as disconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteResponse
+}
+
+
+
+export type currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponse200 = {
+  data: SyncJobResponse | null
+  status: 200
+}
+
+export type currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponseSuccess = (currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponse200) & {
+  headers: Headers;
+};
+export type currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponseError = (currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponse422) & {
+  headers: Headers;
+};
+
+export type currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponse = (currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponseSuccess | currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponseError)
+
+export const getCurrentSyncJobApiV1IntegrationsSourceJobsCurrentGetUrl = (source: string,) => {
+
+
+
+
+  return `/api/v1/integrations/${source}/jobs/current`
+}
+
+/**
+ * Latest job for this source, running or finished.
+ * @summary Current Sync Job
+ */
+export const currentSyncJobApiV1IntegrationsSourceJobsCurrentGet = async (source: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getCurrentSyncJobApiV1IntegrationsSourceJobsCurrentGetUrl(source),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as currentSyncJobApiV1IntegrationsSourceJobsCurrentGetResponse
+}
+
+
+
+export type cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponse200 = {
+  data: SyncJobResponse
+  status: 200
+}
+
+export type cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponseSuccess = (cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponse200) & {
+  headers: Headers;
+};
+export type cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponseError = (cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponse422) & {
+  headers: Headers;
+};
+
+export type cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponse = (cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponseSuccess | cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponseError)
+
+export const getCancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostUrl = (source: string,
+    jobId: string,) => {
+
+
+
+
+  return `/api/v1/integrations/${source}/jobs/${jobId}/cancel`
+}
+
+/**
+ * Ask a running job to stop; the runner honours it at the next phase boundary.
+ * @summary Cancel Sync Job
+ */
+export const cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPost = async (source: string,
+    jobId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getCancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostUrl(source,jobId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? SyncJobResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponse
 }
 
 
@@ -4180,7 +4459,7 @@ export const updateSettingsApiV1IntegrationsSourceSettingsPut = async (source: s
 
 
 export type syncIntegrationApiV1IntegrationsSourceSyncPostResponse200 = {
-  data: IntegrationSyncResponse
+  data: SyncJobResponse
   status: 200
 }
 
@@ -4207,6 +4486,7 @@ export const getSyncIntegrationApiV1IntegrationsSourceSyncPostUrl = (source: str
 }
 
 /**
+ * Queue an incremental sync and return the job the UI polls for progress.
  * @summary Sync Integration
  */
 export const syncIntegrationApiV1IntegrationsSourceSyncPost = async (source: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<syncIntegrationApiV1IntegrationsSourceSyncPostResponse> => {
@@ -4224,7 +4504,7 @@ export const syncIntegrationApiV1IntegrationsSourceSyncPost = async (source: str
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? IntegrationSyncResponse.parse(parsedBody) : parsedBody
+  const data = contentType.includes('json') ? SyncJobResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as syncIntegrationApiV1IntegrationsSourceSyncPostResponse
 }
 

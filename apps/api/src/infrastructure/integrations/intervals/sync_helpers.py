@@ -6,7 +6,10 @@ from collections.abc import Mapping, Sequence
 from datetime import date, timedelta
 from typing import Any, cast
 
+import psycopg
+
 from domain.ingestion import DistanceUnit, canonical_distance, canonical_sport
+from domain.time import local_day_sql, resolve_zone
 from infrastructure.parsing.models import FitSample
 from infrastructure.polyline_encoder import encode_polyline, extract_gps_from_raw
 from infrastructure.repositories.activity import compute_source_hash
@@ -156,6 +159,79 @@ def as_date(value: date | str) -> date:
     if isinstance(value, _DATE_TYPE):
         return value
     return date.fromisoformat(value)
+
+
+def athlete_timezone(conn: psycopg.Connection, athlete_id: int | str) -> str:
+    """The athlete's IANA zone, read from their profile row.
+
+    Sync bounds are dates handed to an upstream HTTP API and to ``BETWEEN``
+    filters on ``timestamptz`` columns. Both only mean "the athlete's day" when
+    the zone used to build them is the athlete's rather than the server's.
+    """
+    with conn.cursor() as cur:
+        _ = cur.execute(
+            "SELECT timezone FROM athletes WHERE id = %s",
+            (athlete_id,),
+        )
+        row = cur.fetchone()
+    value = row[0] if row else None
+    if not isinstance(value, str) or not value.strip():
+        return "UTC"
+    # `resolve_zone` exists so an unusable profile value becomes UTC instead of
+    # raising mid-sync; the key it returns is the zone Postgres will use.
+    return str(resolve_zone(value))
+
+
+def athlete_today(conn: psycopg.Connection, athlete_id: int | str) -> date:
+    """Today on the athlete's clock.
+
+    ``date.today()`` is the host's calendar day. On a UTC host with an athlete
+    east of Greenwich, every upstream sync window is a day behind, so a
+    late-evening activity is requested for the wrong day and never arrives.
+    """
+    with conn.cursor() as cur:
+        _ = cur.execute(
+            "SELECT (now() AT TIME ZONE %s)::date",
+            (athlete_timezone(conn, athlete_id),),
+        )
+        row = cur.fetchone()
+    value = row[0] if row else None
+    if isinstance(value, date):
+        return value
+    raise TypeError("expected a date from the athlete's local today")
+
+
+def next_sync_date(
+    athlete_id: int | str,
+    conn: psycopg.Connection,
+    today: date,
+    lookback_days: int,
+) -> date:
+    """The first local day an incremental sync still has to request.
+
+    Returns ``today + 1`` when the newest stored activity is already on the
+    athlete's current day, which the caller compares against ``today`` to decide
+    that there is nothing left to fetch.
+
+    ``start_time`` is timestamptz, so a bare ``::date`` would cast it in the
+    session zone (UTC) and move the cursor a whole day for an athlete east of
+    Greenwich — the upstream API would then re-request a day it already has,
+    forever. The cursor is a date handed to that API, so it is their local day.
+    """
+    day = local_day_sql("%s")
+    with conn.cursor() as cur:
+        _ = cur.execute(
+            f"SELECT max({day}) FROM activity_summary WHERE athlete_id = %s",
+            (athlete_timezone(conn, athlete_id), athlete_id),
+        )
+        row = cur.fetchone()
+
+    latest = row[0] if row else None
+    if latest is None:
+        return today - timedelta(days=lookback_days)
+    if isinstance(latest, date):
+        return latest + timedelta(days=1)
+    raise TypeError("activity_summary.start_time must be a timestamp")
 
 
 def _activity_distance_m(activity: Mapping[str, object]) -> float | None:

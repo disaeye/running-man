@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { getWeekRange } from "@shared/lib/format";
+import { athleteWeekRange, useAthleteTimezone } from "@shared/lib/training-day";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import { getWeeklyProgressApiV1InsightsWeeklyProgressGet } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
@@ -29,7 +29,11 @@ export function useWeeklyProgress(
   from?: string,
   to?: string,
 ): UseWeeklyProgressResult {
-  const range = { from: from ?? getWeekRange().from, to: to ?? getWeekRange().to };
+  // Monday-anchored, so a host/athlete day disagreement shifts the whole week
+  // rather than one edge of it.
+  const timezone = useAthleteTimezone();
+  const week = athleteWeekRange(timezone);
+  const range = { from: from ?? week.from, to: to ?? week.to };
   const params = { from: range.from, to: range.to };
   const { data, error, isLoading } = useSWR<WeekProgress[]>(
     ["/insights/weekly-progress", { from: range.from, to: range.to }],

@@ -119,7 +119,7 @@ export function RestingHRTrend({ data }: RestingHRTrendProps) {
   return (
     <Card padding="md">
       <header className="mb-4 flex items-baseline justify-between">
-        <h3 className="text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+        <h3 className="text-subheadline font-semibold text-text-muted">
           静息心率趋势
         </h3>
         <span className="text-caption1 text-text-muted">28日滚动中位数 · ±{RHR_ANOMALY_BPM} bpm</span>
@@ -141,16 +141,18 @@ export function RestingHRTrend({ data }: RestingHRTrendProps) {
           <span className="text-caption1 text-text-secondary">较基线偏离</span>
           <div className="flex items-baseline gap-2">
             <span
-              className={`font-mono text-title1 font-bold ${
+              aria-hidden
+              className={`h-2 w-2 shrink-0 self-center rounded-full ${
                 stats.deviation == null
-                  ? "text-text-muted"
-                    : Math.abs(stats.deviation) > RHR_ANOMALY_BPM
-                    ? "text-recovery-poor"
+                  ? "bg-text-muted"
+                  : Math.abs(stats.deviation) > RHR_ANOMALY_BPM
+                    ? "bg-recovery-poor"
                     : stats.deviation > 0
-                      ? "text-recovery-moderate"
-                      : "text-recovery-good"
+                      ? "bg-recovery-moderate"
+                      : "bg-recovery-good"
               }`}
-            >
+            />
+            <span className="font-mono text-title1 font-bold text-text-primary">
               {stats.deviation != null ? `${stats.deviation > 0 ? "+" : ""}${stats.deviation.toFixed(0)}` : "--"}
             </span>
             <span className="text-caption1 text-text-muted">bpm</span>

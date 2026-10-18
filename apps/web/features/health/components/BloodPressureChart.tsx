@@ -40,7 +40,7 @@ export function BloodPressureChart({ data }: BloodPressureChartProps) {
   return (
     <div className="relative">
       <div className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+        <h3 className="text-subheadline font-semibold text-text-muted">
           血压
         </h3>
         <span className="text-caption1 text-text-muted">

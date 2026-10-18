@@ -12,6 +12,7 @@ import { GoalsPageSkeleton } from "@features/goals/components/GoalsPageSkeleton"
 import { FlagIcon } from "@features/goals/components/FlagIcon";
 import { GoalsErrorBanner } from "@features/goals/components/GoalsErrorBanner";
 import { GoalDetail } from "@features/goals/components/GoalDetail";
+import { Card } from "@shared/ui/Card";
 import { useGoalsPageHandlers } from "@features/goals/hooks/useGoalsPageHandlers";
 
 export default function GoalsPage() {
@@ -62,16 +63,20 @@ export default function GoalsPage() {
   return (
     <div className="page-stack" data-testid="goals-page">
       <section className="flex flex-wrap items-end justify-between gap-6 border-b border-border-subtle pb-7" aria-labelledby="goals-title">
-        <div><p className="mb-3 font-mono text-caption2 uppercase tracking-[0.24em] text-primary">GOALS / SEASON ARC</p><h1 id="goals-title" className="text-display-md text-text-primary">赛季目标与阶段里程碑</h1><p className="mt-3 max-w-xl text-subheadline text-text-secondary">每一个训练日，都是通往目标日期的一小段距离。</p></div>
-        <Button onClick={handlers.handleOpenCreate} size="sm" className="gap-1.5"><Plus className="size-3.5" /><span>创建新目标</span></Button>
+        <div><h1 id="goals-title" className="text-display-md text-text-primary">赛季目标与阶段里程碑</h1><p className="mt-1.5 max-w-xl text-subheadline text-text-secondary">为比赛或里程碑设定目标日期，系统据此倒推训练阶段与每周负荷。</p></div>
+        {/* When the page is empty the empty state carries the only create action,
+            so the header does not offer a second, differently-named copy of it. */}
+        {goals.length > 0 && (
+          <Button onClick={handlers.handleOpenCreate} size="sm" className="gap-1.5"><Plus className="size-3.5" /><span>创建新目标</span></Button>
+        )}
       </section>
       <GoalsErrorBanner error={error} goalError={goalError} effectiveGoalId={effectiveGoalId} currentGoal={currentGoal} />
       {goals.length === 0 ? (
-        <div className="glass-surface rounded-xl p-8">
+        <Card padding="lg">
           <EmptyState
             icon={<FlagIcon />}
             title="还没有创建任何训练目标"
-            description="创建你的第一个赛季比赛目标或里程碑，开启科学减量与备赛推演"
+            description="设定一个比赛或里程碑目标后，这里会显示倒计时、阶段划分与达成进度。"
             action={
               <Button onClick={handlers.handleOpenCreate} className="mt-4 gap-1.5">
                 <Plus className="size-4" />
@@ -79,17 +84,17 @@ export default function GoalsPage() {
               </Button>
             }
           />
-        </div>
+        </Card>
       ) : (
         <div className="space-y-6">
           {orderableGoals.length > 1 && (
-            <div className="glass-surface rounded-lg p-3">
+            <Card padding="sm">
               <GoalSelector
                 goals={orderableGoals}
                 selectedId={effectiveGoalId}
                 onSelect={setSelectedGoalId}
               />
-            </div>
+            </Card>
           )}
           <GoalDetail
             goal={currentGoal}

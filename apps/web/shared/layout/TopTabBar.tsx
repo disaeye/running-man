@@ -63,7 +63,7 @@ export function MobileTabBar() {
               className={cn(
                 "focus-ring relative flex min-h-[50px] min-w-0 flex-col items-center justify-center rounded-xl px-1 py-1 select-none transition-all duration-150 active:scale-90",
                 isActive
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 text-accent-strong"
                   : "text-text-muted hover:bg-surface-overlay/60 hover:text-text-primary active:opacity-75",
               )}
             >
@@ -77,7 +77,7 @@ export function MobileTabBar() {
               <span
                 className={cn(
                   "mt-1 text-caption2 leading-tight transition-colors duration-150",
-                  isActive ? "font-semibold text-primary" : "font-normal",
+                  isActive ? "font-semibold text-accent-strong" : "font-normal",
                 )}
               >
                 {tab.label}

@@ -51,6 +51,26 @@ ciphertext SHA-256, ciphertext size, schema revision, timestamp, and format; it
 must never contain database URLs, credentials, age identities, or plaintext dump
 paths.
 
+## Test database
+
+The pytest suite and `scripts/run_gates.py` both read their DSN from
+`apps/api/testsupport.py`. With `TEST_DATABASE_URL` unset it derives the DSN from
+the app's own `DATABASE_URL`, replacing the database name with `wind_runner_test`.
+That keeps the credential out of version control and lets the suite run without
+anyone exporting it. The derivation refuses to run when the result would name the
+source database.
+
+The role needs `CREATE` on the `public` schema of `wind_runner_test`; the
+database-backed tests build their own schema there. PostgreSQL 15 and later do
+not grant that to `PUBLIC` by default:
+
+```sql
+GRANT CREATE ON SCHEMA public TO wind_runner;
+```
+
+Run it against `wind_runner_test` only. Without it every DB-backed test fails with
+`permission denied for schema public`.
+
 ## Restore drill
 
 ```bash
@@ -222,15 +242,28 @@ The production frontend lives on this host as `running-man-web.service` (port 31
 
 ```bash
 systemctl --user status  running-man-web.service running-man-api.service
-systemctl --user restart running-man-web.service   # after `npm run build`
+scripts/deploy-web.sh                                # build, swap, restart, verify assets
+scripts/deploy-web.sh --check                        # verify without rebuilding
 journalctl --user -u running-man-web.service -f
 ```
+
+`deploy-web.sh` builds into `.next-build` and swaps it into `.next` only after the build succeeds, then probes every `/_next/` asset referenced by the served HTML. Building in place while the service runs is the failure this avoids: the process keeps the manifest it read at boot, the build deletes those chunk files, and the result is a page that returns 200 with correct HTML and no CSS. Running `npm run build` directly in `apps/web` reproduces that state; the gates build into `.next-gate` instead.
 
 The browser only ever sees the CDN domain. `/api/*`, `/auth/*` and `/webhooks/*` are rewritten server-side to `API_URL` in `apps/web/.env`, so the HttpOnly auth cookie stays same-origin and no CORS configuration is required (the API registers no CORS middleware).
 
 > Historical note: the frontend used to be deployed to Vercel (`running-man-ten.vercel.app`) while only the API ran here. That split is retired — running both sides under one origin removes the cross-site cookie problem entirely.
 
-> Historical note: the frontend previously ran under systemd as `running-man-web.service` on port 28801 (`scripts/deploy-web.sh`). That port is now 31000; `scripts/deploy-web.sh` still works and drives the same unit.
+> Historical note: the frontend previously ran under systemd as `running-man-web.service` on port 28801. That port is now 31000; `scripts/deploy-web.sh` drives the same unit.
+
+### Build output directories
+
+| Producer | `NEXT_DIST_DIR` | Served by |
+|---|---|---|
+| `scripts/deploy-web.sh` | `.next-build` → swapped to `.next` | `running-man-web.service` |
+| `scripts/run_gates.py web` | `.next-gate` | `running-man-e2e.service` |
+| manual `npm run build` | `.next` | **nothing should be running** |
+
+`next.config.js` reads `NEXT_DIST_DIR`, so a producer can never overwrite the directory another process is serving from. The e2e unit sets it in its own `Environment=`.
 
 ### Never kill Next.js by process name
 

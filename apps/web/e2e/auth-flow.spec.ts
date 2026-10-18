@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("public auth share", () => {
+test.describe("auth", () => {
+  // These exercise the sign-in flow itself, so they run without the shared
+  // authenticated storage state.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test("login form renders", async ({ page }) => {
     await page.goto("/login");
     await expect(page.locator('input[name="email"]')).toBeVisible();

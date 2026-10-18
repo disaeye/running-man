@@ -84,12 +84,12 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
 
       {/* Header: title + countdown badge */}
       <div className="flex items-center justify-between">
-        <h3 className="text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+        <h3 className="text-subheadline font-semibold text-text-muted">
           比赛准备度
         </h3>
         <div className="flex items-center gap-1.5 rounded-full bg-surface-overlay px-3 py-1">
           <span className="text-caption1 text-text-muted">距比赛</span>
-          <span className="font-mono tabular-nums text-callout font-bold text-ctl">{days}</span>
+          <span className="font-mono tabular-nums text-callout font-bold text-text-primary">{days}</span>
           <span className="text-caption1 text-text-muted">天</span>
         </div>
       </div>
@@ -160,7 +160,7 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
                       ${isCurrent
                         ? "bg-accent text-accent-foreground shadow-[0_0_10px_var(--color-ctl)]"
                         : isPast
-                          ? "bg-ctl/30 text-ctl"
+                          ? "bg-ctl/30 text-text-primary"
                           : "bg-surface-overlay text-text-muted border border-border-subtle"
                       }
                     `.trim()}
@@ -175,7 +175,7 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
                 <span
                   className={`mt-1.5 text-center text-caption2 leading-tight ${
                     isCurrent
-                      ? "font-semibold text-ctl"
+                      ? "font-semibold text-text-primary"
                       : isPast
                         ? "text-text-secondary"
                         : "text-text-muted"

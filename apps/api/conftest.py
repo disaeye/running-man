@@ -1,7 +1,6 @@
 """pytest configuration: PostgreSQL fixture + VCR.py setup."""
 
 import asyncio
-import os
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from typing import cast
@@ -12,18 +11,16 @@ from _pytest.fixtures import SubRequest
 
 from infrastructure.auth.settings import settings as app_settings
 from infrastructure.db.pool import close_pool, open_pool
+from testsupport import test_dsn
 
 # Test database DSN. Plain TCP, no unix-socket indirection: the DSN is the
 # single source of truth for every DB-backed test (several import it from here
 # instead of hardcoding their own copy).
 #
-# The default carries no credentials, so it is safe to keep in version
-# control. Any real environment must supply its own:
-#   export TEST_DATABASE_URL='postgresql://user:pw@host:5432/test_running_man'
-TEST_DSN = os.environ.get(
-    "TEST_DATABASE_URL",
-    "postgresql://postgres@127.0.0.1:5432/test_running_man",
-)
+# `testsupport.test_dsn` prefers TEST_DATABASE_URL and otherwise derives
+# `wind_runner_test` from the app's own DATABASE_URL, so the credential stays out
+# of version control and the suite runs without anyone exporting it by hand.
+TEST_DSN = test_dsn()
 
 
 @pytest.fixture(scope="session")
@@ -74,6 +71,18 @@ async def app_pool_on_test_database() -> AsyncGenerator[None, None]:
             # The event loop the pool was opened on has already shut down. The
             # process is exiting, so the connections go with it.
             pass
+
+
+@pytest.fixture(autouse=True)
+def isolate_intervals_athlete_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the developer's real Intervals.icu athlete id out of the suite.
+
+    `IntervalsClient` falls back to `INTERVALS_ICU_ATHLETE_ID` whenever the
+    caller passes no athlete, and the recorded cassettes replay athlete `0`.
+    Leaving the process value in place made every cassette test ask for a URL
+    that was never recorded, which looked like a stale cassette.
+    """
+    monkeypatch.setenv("INTERVALS_ICU_ATHLETE_ID", "")
 
 
 @pytest.fixture(autouse=True)

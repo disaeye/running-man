@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@shared/ui/Badge";
 import { Button } from "@shared/ui/button";
 import { formatRelativeTime } from "@shared/lib/format";
 import type { IntegrationStatus } from "@features/data/hooks/useIntegrations";
 import { useSyncRuns } from "@features/data/hooks/useSyncRuns";
+import {
+  cancelSyncJob,
+  isJobActive,
+  useSyncJob,
+} from "@features/data/hooks/useSyncJobs";
 
 interface SyncStatusOverviewProps {
   integrations: { intervals_icu: IntegrationStatus | null };
@@ -13,12 +18,33 @@ interface SyncStatusOverviewProps {
   syncingSource?: string | null;
 }
 
+const PHASE_LABELS: Record<string, string> = {
+  activities: "拉取活动记录",
+  streams: "解析时序流 (FIT)",
+  wellness: "同步健康日志",
+};
+
 export function SyncStatusOverview({
   integrations,
   onTriggerSync,
   syncingSource,
 }: SyncStatusOverviewProps) {
   const { data: runs } = useSyncRuns({ limit: 10 });
+  const { job } = useSyncJob("intervals_icu");
+  const [cancelling, setCancelling] = useState(false);
+
+  const activeJob = isJobActive(job) ? job : null;
+  const isSyncing = syncingSource === "intervals_icu" || activeJob !== null;
+
+  const handleCancel = async () => {
+    if (!activeJob) return;
+    setCancelling(true);
+    try {
+      await cancelSyncJob("intervals_icu", activeJob.id);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const stats = useMemo(() => {
     const connectedCount = Object.values(integrations).filter(
@@ -50,9 +76,9 @@ export function SyncStatusOverview({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Connected Sources Status */}
-      <div className="p-4 rounded-2xl border border-border-default bg-surface-card shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-card p-4">
         <div>
-          <span className="text-caption1 font-medium uppercase tracking-wider text-text-muted">
+          <span className="text-caption1 font-medium text-text-muted">
             数据源连接状态
           </span>
           <div className="mt-2 flex items-baseline gap-2">
@@ -79,18 +105,24 @@ export function SyncStatusOverview({
       </div>
 
       {/* Latest Sync Snapshot */}
-      <div className="p-4 rounded-2xl border border-border-default bg-surface-card shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-card p-4">
         <div>
-          <span className="text-caption1 font-medium uppercase tracking-wider text-text-muted">
-            最近一次同步
+          <span className="text-caption1 font-medium text-text-muted">
+            {activeJob ? "实时同步进度" : "最近一次同步"}
           </span>
           <div className="mt-2 flex items-center justify-between">
             <span className="text-headline font-bold text-text-primary truncate">
-              {stats.latestRun?.started_at
-                ? formatRelativeTime(stats.latestRun.started_at)
-                : "未执行"}
+              {activeJob
+                ? `${PHASE_LABELS[activeJob.phase] ?? activeJob.phase}`
+                : stats.latestRun?.started_at
+                  ? formatRelativeTime(stats.latestRun.started_at)
+                  : "未执行"}
             </span>
-            {stats.latestRun && (
+            {activeJob ? (
+              <Badge variant="info">
+                {activeJob.cancelRequested ? "取消中" : "执行中"}
+              </Badge>
+            ) : stats.latestRun ? (
               <Badge
                 variant={
                   stats.latestRun.status === "success"
@@ -106,70 +138,88 @@ export function SyncStatusOverview({
                     ? "同步中"
                     : "失败"}
               </Badge>
-            )}
+            ) : null}
           </div>
         </div>
         <div className="mt-3 text-caption1 text-text-muted truncate">
-          {stats.latestRun
-            ? `来源: ${stats.latestRun.source === "intervals_icu" ? "Intervals" : stats.latestRun.source} · 新增 +${stats.latestRun.activities_upserted} 条`
-            : "暂无同步流水"}
+          {activeJob
+            ? activeJob.windowsTotal > 0
+              ? `窗口 ${activeJob.windowsDone}/${activeJob.windowsTotal} · 新增 +${activeJob.activitiesUpserted} · 流 +${activeJob.streamsInserted}`
+              : `已见 ${activeJob.activitiesSeen} · 新增 +${activeJob.activitiesUpserted} · 流 +${activeJob.streamsInserted}`
+            : stats.latestRun
+              ? `来源: ${stats.latestRun.source === "intervals_icu" ? "Intervals" : stats.latestRun.source} · 新增 +${stats.latestRun.activities_upserted} 条`
+              : "暂无同步流水"}
         </div>
       </div>
 
       {/* Synchronized Volume stats */}
-      <div className="p-4 rounded-2xl border border-border-default bg-surface-card shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-card p-4">
         <div>
-          <span className="text-caption1 font-medium uppercase tracking-wider text-text-muted">
+          <span className="text-caption1 font-medium text-text-muted">
             近期入库与流数据
           </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-title1 font-bold text-accent-strong tabular-nums">
-              +{stats.totalUpserted}
+            <span className="text-title1 font-bold tabular-nums text-accent-strong">
+              {stats.totalUpserted}
             </span>
             <span className="text-caption1 text-text-muted">条活动更新</span>
           </div>
         </div>
         <div className="mt-3 text-caption1 text-text-muted">
-          已解析写入{" "}
-          <span className="font-semibold text-text-secondary tabular-nums">
+          已写入{" "}
+          <span className="font-semibold tabular-nums text-text-secondary">
             {stats.totalStreams}
           </span>{" "}
-          条高频秒级时序流
+          条秒级数据
         </div>
       </div>
 
       {/* Sync Health & Quick Action */}
-      <div className="p-4 rounded-2xl border border-border-default bg-surface-card shadow-xs flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-card p-4">
         <div>
-          <span className="text-caption1 font-medium uppercase tracking-wider text-text-muted">
-            同步稳定性与健康
+          <span className="text-caption1 font-medium text-text-muted">
+            同步稳定性
           </span>
           <div className="mt-2 flex items-center justify-between">
             <span className="text-headline font-bold text-text-primary">
-              {stats.failedRuns > 0 ? (
+              {runs.length === 0 ? (
+                <span className="text-text-muted">还没有同步记录</span>
+              ) : stats.failedRuns > 0 ? (
                 <span className="text-error">{stats.failedRuns} 次异常</span>
               ) : (
-                <span className="text-success">运行正常</span>
+                <span className="text-success">全部成功</span>
               )}
             </span>
-            <Badge variant={stats.failedRuns > 0 ? "warning" : "success"}>
-              {stats.successfulRuns}/{runs.length} 成功率
-            </Badge>
+            {runs.length > 0 && (
+              <Badge variant={stats.failedRuns > 0 ? "warning" : "success"}>
+                {stats.successfulRuns}/{runs.length} 成功
+              </Badge>
+            )}
           </div>
         </div>
         <div className="mt-3 flex items-center gap-2">
           {integrations.intervals_icu?.status === "connected" && onTriggerSync && (
-            <Button
-              size="xs"
-              variant="secondary"
-              onClick={() => onTriggerSync("intervals_icu")}
-              disabled={syncingSource === "intervals_icu"}
-              className="w-full text-caption2"
-            >
-              {syncingSource === "intervals_icu"
-                ? "同步中…"
-                : "立即全量/增量同步"}
-            </Button>
+            activeJob ? (
+              <Button
+                size="xs"
+                variant="destructive"
+                onClick={handleCancel}
+                disabled={cancelling || activeJob.cancelRequested}
+                className="w-full text-caption1"
+              >
+                {cancelling || activeJob.cancelRequested ? "正在取消…" : "取消当前任务"}
+              </Button>
+            ) : (
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={() => onTriggerSync("intervals_icu")}
+                disabled={isSyncing}
+                className="w-full text-caption1"
+              >
+                {isSyncing ? "同步中…" : "增量同步"}
+              </Button>
+            )
           )}
         </div>
       </div>

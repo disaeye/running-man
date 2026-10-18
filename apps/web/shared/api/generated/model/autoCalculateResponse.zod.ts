@@ -32,6 +32,7 @@ export const AutoCalculateResponse = zod.object({
   "algorithm_version": zod.string(),
   "confidence": zod.union([zod.enum(['high', 'medium', 'low']),zod.null()]),
   "critical_speed_ms": zod.union([zod.number(),zod.null()]),
+  "critical_speed_s_per_km": zod.union([zod.number(),zod.null()]),
   "data_sufficient": zod.boolean(),
   "effort_count": zod.number(),
   "input_window_days": zod.number(),

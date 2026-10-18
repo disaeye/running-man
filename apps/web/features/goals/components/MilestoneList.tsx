@@ -24,7 +24,7 @@ export function MilestoneList({
 
   return (
     <Card>
-      <h3 className="mb-4 text-subheadline font-semibold uppercase tracking-wider text-text-muted">
+      <h3 className="mb-4 text-subheadline font-semibold text-text-muted">
         里程碑
       </h3>
 
@@ -144,7 +144,7 @@ function MilestoneRow({
         <button
           type="button"
           onClick={() => onToggle(milestone.milestone_id)}
-          className="text-caption1 font-medium text-accent hover:underline shrink-0"
+          className="shrink-0 text-caption1 font-medium text-accent-strong hover:underline"
           aria-label="标记为已完成"
         >
           完成

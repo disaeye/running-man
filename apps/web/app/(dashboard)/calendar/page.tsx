@@ -83,11 +83,15 @@ function CalendarPageContent() {
     () => buildWeekSummary({ events, activityMap, weekStart }),
     [events, activityMap, weekStart],
   );
-  // Was hard-coded as "WEEK 35", so the header was wrong for most of the year.
-  const weekLabel = useMemo(() => {
+  // The month view used to carry the week number, because the label was
+  // computed from `weekStart` regardless of which view was on screen.
+  const periodLabel = useMemo(() => {
+    if (view === "month") {
+      return `${monthDate.getFullYear()} 年 ${monthDate.getMonth() + 1} 月`;
+    }
     const { week, year } = isoWeek(weekStart);
-    return `WEEK ${String(week).padStart(2, "0")} · ${year}`;
-  }, [weekStart]);
+    return `${year} 年 · 第 ${week} 周`;
+  }, [view, weekStart, monthDate]);
 
   const planRange = useMemo(
     () => qualityRange(view, weekStart, monthDate),
@@ -102,10 +106,10 @@ function CalendarPageContent() {
   return (
     <div className="page-stack" data-testid="calendar-page">
       <section className="flex flex-wrap items-end justify-between gap-6 border-b border-border-subtle pb-7" aria-labelledby="calendar-title">
-        <div><p className="mb-3 font-mono text-caption2 uppercase tracking-[0.24em] text-primary">PLANNING / {weekLabel}</p><h1 id="calendar-title" className="text-display-md text-text-primary">训练课表与周期计划</h1><p className="mt-3 max-w-xl text-subheadline text-text-secondary">把未来的训练写下来，才知道今天应该留下多少空间。</p></div>
-        <div className="flex flex-wrap items-center gap-2.5"><Tabs value={view} onValueChange={(v) => handleSetView(v as CalendarView)}><TabsList className="border border-border-default bg-surface-sunken/70 p-1">{([['week','周'],['month','月'],['list','日志'],['strength','力量']] as const).map(([value, label]) => <TabsTrigger key={value} value={value} className="min-h-9 rounded-md px-3 text-caption1">{label}</TabsTrigger>)}</TabsList></Tabs><Button onClick={() => setGenerateOpen(true)} size="sm" className="gap-1.5"><Sparkles className="size-3.5" /><span>生成计划</span></Button></div>
+        <div><p className="mb-2 text-caption1 text-text-muted">{periodLabel}</p><h1 id="calendar-title" className="text-display-md text-text-primary">训练课表与周期计划</h1><p className="mt-1.5 max-w-xl text-subheadline text-text-secondary">安排课表、对照实际完成情况，并检查未来四周的负荷走向。</p></div>
+        <div className="flex flex-wrap items-center gap-2.5"><Tabs value={view} onValueChange={(v) => handleSetView(v as CalendarView)}><TabsList className="border border-border-subtle bg-surface-sunken p-1">{([['week','周'],['month','月'],['list','日志']] as const).map(([value, label]) => <TabsTrigger key={value} value={value} className="min-h-9 rounded-lg px-3 text-caption1">{label}</TabsTrigger>)}</TabsList></Tabs><Button onClick={() => setGenerateOpen(true)} size="sm" className="gap-1.5"><Sparkles className="size-3.5" /><span>生成计划</span></Button></div>
       </section>
-      {view !== "list" ? <>{error ? <PlanErrorBanner message={error} onRetry={loadEvents} /> : <div className="space-y-6"><div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface-sunken/45 px-4 py-3"><div className="flex items-center gap-2 font-mono text-caption2 uppercase tracking-[0.14em] text-text-secondary"><CalendarIcon className="size-4 text-primary" />{view === "week" ? "Current week" : "Current month"}</div><WeekSummaryChip {...weekSummary} /></div>{loading ? <CalendarWeekSkeleton /> : <div className="grid gap-6 lg:grid-cols-12 lg:items-start"><div className="min-w-0 space-y-6 lg:col-span-8"><div className="block lg:hidden"><MobileAgenda events={events} activities={activityMap} weekStart={weekStart} onSelectDate={handleSelectDate} matches={planMatches} /></div><div className="hidden rounded-xl border border-border-subtle bg-surface-card/55 p-4 lg:block">{view === "month" ? <PlanMonthView events={events} monthDate={monthDate} onNavMonth={navMonth} onSelectDate={handleSelectDate} completedActivities={activityMap} /> : <PlanWeekView events={events} weekStart={weekStart} onNavWeek={navWeek} onSelectDate={handleSelectDate} completedActivities={activityMap} />}</div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><CalendarStrengthView /></div></div><aside className="space-y-5 lg:col-span-4"><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><PlanAdherenceCard /></div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><PlanForecast events={events} /></div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><PlanQuality from={planRange?.from} to={planRange?.to} /></div></aside></div>}</div>}</> : <div className="space-y-6">{activitiesError ? <EmptyState title="活动数据加载失败" description={activitiesError} action={<Button variant="secondary" onClick={loadEvents}>重新加载</Button>} /> : <><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-5"><CalendarListView /></div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-5"><CalendarStrengthView /></div></>}</div>}
+      {view !== "list" ? <>{error ? <PlanErrorBanner message={error} onRetry={loadEvents} /> : <div className="space-y-6"><div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface-sunken/45 px-4 py-3"><div className="flex items-center gap-2 text-caption1 text-text-secondary"><CalendarIcon className="size-4 text-accent-strong" />{view === "week" ? "本周" : "本月"}</div><WeekSummaryChip {...weekSummary} /></div>{loading ? <CalendarWeekSkeleton /> : <div className="grid gap-6 lg:grid-cols-12 lg:items-start"><div className="min-w-0 space-y-6 lg:col-span-8"><div className="block lg:hidden"><MobileAgenda events={events} activities={activityMap} weekStart={weekStart} onSelectDate={handleSelectDate} matches={planMatches} /></div><div className="hidden rounded-xl border border-border-subtle bg-surface-card/55 p-4 lg:block">{view === "month" ? <PlanMonthView events={events} monthDate={monthDate} onNavMonth={navMonth} onSelectDate={handleSelectDate} completedActivities={activityMap} /> : <PlanWeekView events={events} weekStart={weekStart} onNavWeek={navWeek} onSelectDate={handleSelectDate} completedActivities={activityMap} />}</div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><CalendarStrengthView /></div></div><aside className="space-y-5 lg:col-span-4"><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><PlanAdherenceCard /></div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><PlanForecast events={events} /></div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><PlanQuality from={planRange?.from} to={planRange?.to} /></div></aside></div>}</div>}</> : <div className="space-y-6">{activitiesError ? <EmptyState title="活动数据加载失败" description={activitiesError} action={<Button variant="secondary" onClick={loadEvents}>重新加载</Button>} /> : <><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-5"><CalendarListView /></div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-5"><CalendarStrengthView /></div></>}</div>}
       {isGridView && !loading && !error && <CalendarDaySheet selectedDate={selectedDate} activities={summaryActivities} editingEvent={editingEvent} onSave={handleBuilderSave} onActivitySaved={handleActivitySaved} onClose={() => setSelectedDate(null)} />}
       <PlanGenerateDialog open={generateOpen} onClose={() => setGenerateOpen(false)} onGenerated={loadEvents} trainingDays={profile?.weekly_training_days ?? 5} />
     </div>
@@ -121,10 +125,10 @@ function PlanErrorBanner({
   onRetry: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-center text-rose-600 dark:text-rose-400">
+    <div className="rounded-xl border border-error/30 bg-error/10 p-5 text-center text-error">
       <AlertTriangle className="mx-auto h-6 w-6" />
       <p className="mt-2 text-sm font-semibold">课表加载失败</p>
-      <p className="mt-1 text-xs text-rose-600/80 dark:text-rose-400/80">{message}</p>
+      <p className="mt-1 text-caption1 text-error/80">{message}</p>
       <Button variant="secondary" size="sm" onClick={onRetry} className="mt-4">
         重新尝试
       </Button>

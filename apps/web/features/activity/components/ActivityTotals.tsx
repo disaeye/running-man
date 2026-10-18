@@ -111,12 +111,12 @@ export function ActivityTotals({ activities }: ActivityTotalsProps) {
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="focus-ring flex min-h-[56px] w-full items-center justify-between gap-4 rounded-2xl border border-border-default bg-surface-card px-4 py-3 text-left transition-colors hover:bg-surface-overlay sm:px-5"
+        className="focus-ring flex min-h-14 w-full items-center justify-between gap-4 rounded-xl border border-border-subtle bg-surface-card px-4 py-3 text-left transition-colors hover:bg-surface-overlay sm:px-5"
         aria-expanded={expanded}
         data-testid="activity-totals-summary"
       >
         <div className="min-w-0">
-          <p className="text-caption1 font-medium uppercase tracking-wider text-text-muted">
+          <p className="text-caption1 font-medium text-text-muted">
             当前筛选汇总
           </p>
           <p className="mt-1 truncate text-subheadline text-text-secondary">
@@ -156,7 +156,7 @@ export function ActivityTotals({ activities }: ActivityTotalsProps) {
         >
           {summary.stats.map((stat) => (
             <Card key={stat.label} padding="sm" className="text-center">
-              <p className="text-caption2 font-medium uppercase tracking-wider text-text-muted">
+              <p className="text-caption2 font-medium text-text-muted">
                 {stat.label}
               </p>
               <p className="mt-0.5 font-mono text-subheadline font-bold tabular-nums text-text-primary">

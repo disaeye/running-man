@@ -27,12 +27,20 @@ class TestGradeCostMultiplierBounds:
         assert grade_cost_multiplier(0.0) == pytest.approx(1.0)
 
     def test_uphill_costs_more(self) -> None:
-        assert grade_cost_multiplier(0.10) > 1.3
-        assert grade_cost_multiplier(0.20) > grade_cost_multiplier(0.10)
+        # Minetti et al. (2002), normalized so flat = 1.0.
+        assert grade_cost_multiplier(0.05) == pytest.approx(1.301, abs=0.005)
+        assert grade_cost_multiplier(0.10) == pytest.approx(1.658, abs=0.005)
+        assert grade_cost_multiplier(0.15) == pytest.approx(2.060, abs=0.005)
+        assert grade_cost_multiplier(0.20) == pytest.approx(2.502, abs=0.005)
 
     def test_moderate_descent_matches_the_published_values(self) -> None:
         # Literature, normalized so flat = 1.0: about 0.61 at -10%.
-        assert grade_cost_multiplier(-0.10) == pytest.approx(0.59, abs=0.05)
+        assert grade_cost_multiplier(-0.10) == pytest.approx(0.598, abs=0.01)
+
+    def test_a_10_percent_climb_costs_two_thirds_more(self) -> None:
+        # The property the load chain depends on: a 5:00/km climb at +10% is
+        # worth about 3:01/km on the flat, not 3:34/km.
+        assert 300.0 / grade_cost_multiplier(0.10) == pytest.approx(181.0, abs=1.0)
 
     def test_steep_descent_is_pinned_not_near_zero(self) -> None:
         # The regression: -22% used to return 0.013.
@@ -70,8 +78,8 @@ class TestNormalizedGradedPaceWithStops:
         )
 
         assert ngp is not None
-        # 3 m/s is 333 s/km; standing still must not push it far above that.
-        assert ngp < 400
+        # 3 m/s is 333 s/km; standing still pushes NGP slower but boundedly.
+        assert ngp == pytest.approx(377.8, abs=1.0)
 
     def test_a_tiny_delta_does_not_dominate(self) -> None:
         # One 0.1 m step among normal running: 10,000 s/km if taken at face
@@ -87,7 +95,7 @@ class TestNormalizedGradedPaceWithStops:
         )
 
         assert ngp is not None
-        assert 333 <= ngp < 600, "one outlier should lift NGP, but not unboundedly"
+        assert ngp == pytest.approx(335.2, abs=1.0)
 
     def test_all_zero_distance_returns_none(self) -> None:
         distances, altitudes, times = self._series([0.0] * 100)
@@ -99,9 +107,11 @@ class TestNormalizedGradedPaceWithStops:
             is None
         )
 
-    def test_variable_pace_still_inflates_ngp_above_average(self) -> None:
+    def test_variable_pace_lifts_ngp_faster_than_average(self) -> None:
         # The 4th-power weighting is the metric's purpose: an interval session
-        # must read higher than its average pace, not be flattened away.
+        # must read harder than its arithmetic mean. Pace is s/km, so "harder"
+        # is a *smaller* number. Averaging in the pace domain inverts this and
+        # was why a 2:1 interval session scored IF 0.85 instead of 0.95.
         deltas = ([4.0] * 30 + [1.0] * 30) * 4
         distances, altitudes, times = self._series(deltas)
 
@@ -111,4 +121,15 @@ class TestNormalizedGradedPaceWithStops:
         average_pace = times[-1] / distances[-1] * 1000
 
         assert ngp is not None
-        assert ngp > average_pace
+        assert ngp < average_pace
+        assert ngp == pytest.approx(346.6, abs=1.0)
+
+    def test_constant_pace_returns_the_pace_itself(self) -> None:
+        deltas = [3.0] * 120
+        distances, altitudes, times = self._series(deltas)
+
+        ngp = normalized_graded_pace(
+            distances=distances, altitudes=altitudes, times=times
+        )
+
+        assert ngp == pytest.approx(1000.0 / 3.0, abs=0.5)

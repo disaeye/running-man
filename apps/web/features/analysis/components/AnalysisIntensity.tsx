@@ -58,11 +58,10 @@ function IntensitySummary({
   const text = useMemo(() => summarizeIntensityDistribution(data), [data]);
   const classification = useMemo(() => classifyIntensity(data), [data]);
   const shares = useMemo(() => buildZoneShares(data), [data]);
-  if (!text && !classification) return null;
   return (
     <Card padding="md" data-testid="analysis-intensity-summary-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-title3 font-semibold text-text-primary">强度结构</h3>
+        <h2 className="text-title3 font-semibold text-text-primary">强度结构</h2>
         {classification ? (
           <Badge
             variant={classificationBadgeVariant(classification.type)}
@@ -103,9 +102,9 @@ function IntensitySummary({
           ))}
         </ul>
       )}
-      {/* Contract/a11y copy — not the visual lead */}
-      <p className="sr-only" data-testid="analysis-intensity-summary">
-        {text}
+      {/* 强度结构的一句话结论，来自合同区间与实测分布；无数据时说明原因 */}
+      <p className="mt-3 text-caption1 leading-relaxed text-text-secondary" data-testid="analysis-intensity-summary">
+        {text ?? "暂无强度分布数据。补齐心率、配速或功率记录后会显示各区间占比。"}
       </p>
     </Card>
   );

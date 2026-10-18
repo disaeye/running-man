@@ -4,11 +4,15 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Protocol, cast
 from uuid import UUID
 
-from application.physiology.algorithm_contract import algorithm_contract
+from application.physiology.threshold_projection import (
+    record_threshold_step,
+    stamp_physiology_run,
+)
+from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
 from domain.generated.metrics import Metric
 from infrastructure.db.pool import get_pool
@@ -61,9 +65,21 @@ async def persist_physiology_facts(
     results: PhysiologyResults,
     input_payload: Mapping[str, object],
     window: ComputationWindow,
-) -> None:
+    effective_from: date,
+) -> dict[str, object]:
+    """Store the estimates and return the threshold values actually written.
+
+    ``effective_from`` is the athlete's calendar day, not the database host's:
+    threshold history is resolved per activity date, so a step stamped on the
+    wrong side of midnight applies to the wrong sessions.
+
+    The returned mapping is what remains after the manual-value guard, and the
+    caller uses it to widen coverage over earlier activities; an empty mapping
+    means the rows were left alone and nothing needs backfilling.
+    """
     contract = algorithm_contract(Algorithm.PHYSIOLOGY)
     candidates = _fact_candidates(results)
+    written: dict[str, object] = {}
     async with get_pool().connection() as conn:
         async with cast(_ConnectionLike, conn).transaction():
             cur = cast(_ConnectionLike, conn).cursor()
@@ -77,8 +93,20 @@ async def persist_physiology_facts(
             for candidate in candidates:
                 await _insert_fact(cur, athlete_id, run_id, contract.version, candidate, window.end)
             await _update_run(cur, run_id, len(candidates))
+            # Only a run that produced a fact counts as having computed anything.
+            # Stamping `physiology_updated_at` on an empty run makes
+            # `cached_physiology` report a fresh hit with every value null for the
+            # next seven days, so a later estimate would not be recomputed.
             if candidates:
-                await _project_athlete_cache(cur, athlete_id, contract.version, run_id, candidates)
+                written = await record_threshold_step(
+                    cur,
+                    athlete_id,
+                    contract.version,
+                    _threshold_values(candidates),
+                    effective_from,
+                )
+                await stamp_physiology_run(cur, athlete_id, contract.version, run_id)
+    return written
 
 
 async def _insert_run(
@@ -155,60 +183,19 @@ async def _update_run(cur: _CursorLike, run_id: UUID, rows_affected: int) -> Non
     )
 
 
-async def _project_athlete_cache(
-    cur: _CursorLike,
-    athlete_id: UUID,
-    version: str,
-    run_id: UUID,
+def _threshold_values(
     candidates: Sequence[_FactCandidate],
-) -> None:
-    """Record estimated thresholds as a dated step, and stamp the run.
-
-    The estimates go to ``athlete_thresholds`` rather than to columns on
-    ``athletes``: thresholds became time-versioned so a re-estimate cannot
-    retroactively rescore past sessions, and the single-valued columns were
-    removed with that change. Writing them here was left behind, which made
-    every auto-calculation fail with an undefined column.
-
-    Only keys with a value are written, so an estimate that could not produce
-    (say) a threshold pace does not overwrite one the athlete entered by hand.
-    """
+) -> dict[str, object]:
+    """The threshold columns an estimate can produce, extracted from the facts."""
     values: dict[str, object] = {}
-    for candidate in (
+    for column, value in (
         ("hr_max", _value_for(candidates, Metric.HR_MAX)),
         ("lthr", _value_for(candidates, Metric.LTHR)),
         ("threshold_pace", _value_for(candidates, Metric.THRESHOLD_PACE)),
     ):
-        column, value = candidate
         if value is not None:
             values[column] = value
-
-    if values:
-        columns = ", ".join(values)
-        placeholders = ", ".join(["%s"] * len(values))
-        updates = ", ".join(f"{column} = EXCLUDED.{column}" for column in values)
-        await cur.execute(
-            f"""
-            INSERT INTO athlete_thresholds (
-                athlete_id, effective_from, {columns}, source, algorithm_version
-            )
-            VALUES (%s, CURRENT_DATE, {placeholders}, 'estimated', %s)
-            ON CONFLICT (athlete_id, effective_from) DO UPDATE SET {updates},
-                source = 'estimated', algorithm_version = EXCLUDED.algorithm_version
-            """,
-            (athlete_id, *values.values(), version),
-        )
-
-    await cur.execute(
-        """
-        UPDATE athletes
-        SET physiology_updated_at = now(),
-            physiology_computation_run_id = %s,
-            physiology_algorithm_version = %s
-        WHERE id = %s
-        """,
-        (run_id, version, athlete_id),
-    )
+    return values
 
 
 def _fact_candidates(results: PhysiologyResults) -> list[_FactCandidate]:

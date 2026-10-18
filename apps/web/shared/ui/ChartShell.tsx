@@ -47,7 +47,7 @@ export function ChartShell({
       </div>
 
       {provenance && (
-        <p className="mt-3 text-caption2 text-text-muted">{provenance}</p>
+        <p className="mt-3 text-caption1 text-text-muted">{provenance}</p>
       )}
     </Card>
   );

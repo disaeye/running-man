@@ -1,10 +1,16 @@
-"""Estimate Critical Speed (threshold pace) from activity data.
+"""Critical Speed — the aerobic asymptote of the distance–time boundary.
 
-Uses the pace-duration model: fit a hyperbolic curve to best-effort
-distance-time data points to find Critical Speed.
+Fits ``distance = CS·t + W'`` to maximal efforts and returns CS and its pace.
 
-Critical Speed ≈ the pace sustainable for ~40-60 minutes,
-closely aligned with lactate threshold pace.
+CS is the **asymptote** of the two-parameter model: by construction it is slower
+than any sustained performance the athlete has actually produced, and slower
+than lactate-threshold pace. For an athlete with 5K 20:00, 10K 41:20 and a 1:31
+half, CS comes out near 4:28/km — slower than the half they just ran. It is a
+useful anchor for race-time prediction over long distances and a useful
+cross-check on threshold pace, and it is not threshold pace.
+
+Threshold pace (LT2) comes from Daniels' VDOT model in ``vdot.py``, driven by
+the best maximal effort.
 
 Pure-Python implementation.
 
@@ -51,8 +57,8 @@ class EffortPoint:
         return (self.duration_s / self.distance_m * 1000) if self.distance_m > 0 else 0.0
 
 
-def estimate_threshold_pace(efforts: Sequence[EffortPoint]) -> dict[str, object]:
-    """Estimate threshold pace from best-effort distance-time points.
+def estimate_critical_speed(efforts: Sequence[EffortPoint]) -> dict[str, object]:
+    """Fit Critical Speed from best-effort distance-time points.
 
     Uses the linear form of the critical power model:
         distance = CS * time + W'
@@ -62,7 +68,8 @@ def estimate_threshold_pace(efforts: Sequence[EffortPoint]) -> dict[str, object]
     (the 'inverse' model, which is more robust for short efforts).
 
     Returns:
-        dict with threshold_pace_s_per_km, confidence, data_sufficient, method
+        dict with critical_speed_ms, critical_speed_s_per_km, confidence,
+        data_sufficient, method
     """
     valid = [e for e in efforts if e.distance_m > 100 and e.duration_s > 30]
     if len(valid) < MIN_EFFORTS:
@@ -78,7 +85,7 @@ def estimate_threshold_pace(efforts: Sequence[EffortPoint]) -> dict[str, object]
     if cs <= 0 or cs > 10:  # Sanity: 10 m/s = 2:46/km, faster than elite 5K
         return _insufficient(len(valid))
 
-    threshold_pace_s_per_km = 1000 / cs
+    critical_speed_s_per_km = 1000 / cs
 
     # Confidence: check spread of effort durations
     durations = [e.duration_s for e in valid]
@@ -91,7 +98,7 @@ def estimate_threshold_pace(efforts: Sequence[EffortPoint]) -> dict[str, object]
         confidence = "medium"
 
     return {
-        "threshold_pace_s_per_km": round(threshold_pace_s_per_km),
+        "critical_speed_s_per_km": round(critical_speed_s_per_km),
         "critical_speed_ms": round(cs, 3),
         "confidence": confidence,
         "data_sufficient": True,
@@ -242,7 +249,7 @@ def _linear_regression_distance_time(points: list[EffortPoint]) -> float:
 
 def _insufficient(n: int) -> dict[str, object]:
     return {
-        "threshold_pace_s_per_km": None,
+        "critical_speed_s_per_km": None,
         "critical_speed_ms": None,
         "confidence": None,
         "data_sufficient": False,

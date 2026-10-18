@@ -31,8 +31,15 @@ async def _week_context(athlete_id: UUID, target_day: date) -> tuple[float, floa
     return await week_context(athlete_id, target_day)
 
 
-def _date_range(start: date | None, end: date | None) -> tuple[date, date]:
-    range_end = end or date.today()
+def _date_range(start: date | None, end: date | None, today: date) -> tuple[date, date]:
+    """Default the missing edge to `today` and back-fill a 55-day window.
+
+    `today` is passed in rather than read from the clock: it is the athlete's
+    training day, and the endpoints select activity rows whose day is bucketed
+    on that same zone. Reading the host's date here would silently shift the
+    whole window for anyone not on UTC.
+    """
+    range_end = end or today
     range_start = start or range_end - timedelta(days=55)
     return range_start, range_end
 
@@ -149,6 +156,11 @@ def _float_value(value: object) -> float:
 def _tss_value(row: dict[str, object]) -> float:
     tss = row.get("tss")
     return float(tss) if isinstance(tss, int | float) else 0.0
+
+
+def _ctl_value(row: dict[str, object]) -> float:
+    ctl = row.get("ctl")
+    return float(ctl) if isinstance(ctl, int | float) else 0.0
 
 
 def _int_value(value: object) -> int:

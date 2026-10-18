@@ -165,7 +165,7 @@ export function SettingsTrainingParams({ profile, onSaved }: Props) {
 
         {/* LTHR */}
         <div>
-          <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">乳酸阈值心率 LTHR (bpm)</span><Input type="number" min={80} max={240} value={lthr ?? ""} onChange={(e) => setLthr(e.target.value === "" ? null : Number(e.target.value))} placeholder="例如: 165" /></label>
+          <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">乳酸阈值心率 (bpm)</span><Input type="number" min={80} max={240} value={lthr ?? ""} onChange={(e) => setLthr(e.target.value === "" ? null : Number(e.target.value))} placeholder="例如: 165" /></label>
           <LthrAutoCalc data={autoCalc?.lthr} onApply={applyLthr} />
         </div>
 

@@ -16,13 +16,27 @@ from domain.workout.prescription import (
 
 HARD_WORKOUTS: Final[set[str]] = {LONG, TEMPO, INTERVALS}
 TSS_WEIGHTS: Final[dict[str, float]] = {LONG: 0.35, INTERVALS: 0.20, TEMPO: 0.20}
-TSS_PER_MINUTE: Final[dict[str, float]] = {
+# Average intensity factor of each session type. Load per minute follows from
+# it — TSS = hours x IF^2 x 100 — so the duration a TSS target implies is
+# derived rather than stored as a second, independently edited table.
+SESSION_IF: Final[dict[str, float]] = {
     REST: 0.0,
-    EASY: 0.75,
-    LONG: 0.85,
-    TEMPO: 1.20,
-    INTERVALS: 1.35,
-    RECOVERY: 0.55,
+    EASY: 0.68,
+    LONG: 0.72,
+    TEMPO: 0.88,
+    INTERVALS: 0.92,
+    RECOVERY: 0.60,
+}
+
+
+def tss_per_minute(workout_type: str) -> float:
+    """TSS one minute of ``workout_type`` is worth at its typical IF."""
+    intensity = SESSION_IF[workout_type]
+    return intensity * intensity * 100.0 / 60.0
+
+
+TSS_PER_MINUTE: Final[dict[str, float]] = {
+    workout_type: tss_per_minute(workout_type) for workout_type in SESSION_IF
 }
 MAX_WEEKDAY = 6
 

@@ -31,7 +31,7 @@ class RacePredictionPointResponse(AnalysisAnalyticsResponse):
 class RaceBasisCrossCheckResponse(AnalysisAnalyticsResponse):
     critical_speed_ms: float | None
     w_prime_m: float | None
-    threshold_pace_s_per_km: float | None
+    critical_speed_pace_s_per_km: float | None
     confidence: Literal["high", "medium", "low"] | None
     data_sufficient: bool
     method: Literal["critical_speed_model"] | None

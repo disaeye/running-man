@@ -21,7 +21,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import cast
 
-from domain.physiology.threshold_pace import EffortPoint, estimate_threshold_pace
+from domain.physiology.threshold_pace import EffortPoint, estimate_critical_speed
 
 RIEGEL_EXPONENT: float = 1.06
 
@@ -63,10 +63,10 @@ def predict_distances(recent_time_s: float, recent_distance_m: float) -> list[di
 def critical_speed_predict(efforts: Sequence[EffortPoint]) -> dict[str, object]:
     """Cross-check fit via the critical-speed model.
 
-    Reuses :func:`estimate_threshold_pace` for confidence / data-sufficiency,
+    Reuses :func:`estimate_critical_speed` for confidence / data-sufficiency,
     then extracts W' (the regression intercept) for time prediction.
     """
-    base = estimate_threshold_pace(efforts)
+    base = estimate_critical_speed(efforts)
     if not base["data_sufficient"]:
         return _no_cs(base["effort_count"])
     valid = sorted(
@@ -77,7 +77,7 @@ def critical_speed_predict(efforts: Sequence[EffortPoint]) -> dict[str, object]:
     return {
         "critical_speed_ms": round(cs, 3),
         "w_prime_m": round(w_prime, 1),
-        "threshold_pace_s_per_km": base["threshold_pace_s_per_km"],
+        "critical_speed_pace_s_per_km": base["critical_speed_s_per_km"],
         "confidence": base["confidence"],
         "data_sufficient": True,
         "method": "critical_speed_model",
@@ -191,7 +191,7 @@ def _no_cs(effort_count: object) -> dict[str, object]:
     return {
         "critical_speed_ms": None,
         "w_prime_m": None,
-        "threshold_pace_s_per_km": None,
+        "critical_speed_pace_s_per_km": None,
         "confidence": None,
         "data_sufficient": False,
         "method": None,

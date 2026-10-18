@@ -3,10 +3,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-HIGH_TSB_THRESHOLD = 20.0
-LOW_TSB_THRESHOLD = -20.0
 HIGH_ACWR_THRESHOLD = 1.5
-LOW_READINESS_THRESHOLD = 30
+LOW_TSB_THRESHOLD = -20.0
 MIN_READY_READINESS = 60
 SUFFICIENT_ADHERENCE_PCT = 80
 MAX_RECOMMENDATIONS = 5
@@ -45,20 +43,22 @@ def build_recommendations(
     training_paces: dict[str, dict[str, float]] | None = None,
     weekly_adherence: float | None = None,
 ) -> list[dict[str, object]]:
-    """Build ranked recommendations from readiness, load, ability, and adherence.
+    """Pace prescriptions and load advisories for a training day.
 
-    training_paces (from VDOT) turns a generic 'train today' into a
-    pace-prescribed session — the ability vector driving the prescription.
-    weekly_adherence modulates intensity: under-training weeks lean harder, over-
-    training weeks lean easier.
+    This engine does not decide what kind of session the athlete should do.
+    `domain.insights.recommendation.compute_recommendation` owns that decision —
+    it is the one the Today page reads — and this module used to carry its own
+    rest/recover rules that restated it with different thresholds. Two engines
+    answering one question is how a product ends up explaining today two ways.
+
+    What lives here is what nothing else provides: turning the ability vector
+    into concrete target paces, plus load advisories that are not a session
+    choice (ACWR growth, a missing plan for tomorrow).
     """
     recommendations = [
         rec
         for rec in [
-            _rule_recovery(readiness),
             _rule_high_acwr(acwr),
-            _rule_low_tsb(tsb),
-            _rule_high_tsb(tsb),
             _rule_plan_ahead(has_planned_workout_tomorrow),
             _rule_ability_prescription(readiness, tsb, acwr, training_paces, weekly_adherence),
         ]
@@ -66,32 +66,6 @@ def build_recommendations(
     ]
     recommendations.sort(key=lambda rec: _PRIORITY_RANK[rec.priority])
     return [rec.to_dict() for rec in recommendations[:MAX_RECOMMENDATIONS]]
-
-
-def _rule_high_tsb(tsb: float | None) -> Recommendation | None:
-    if tsb is None or tsb <= HIGH_TSB_THRESHOLD:
-        return None
-    return Recommendation(
-        type="rule_high_tsb",
-        title="状态新鲜，可安排关键训练",
-        body=f"当前 TSB {tsb:+.1f}，高于 +{HIGH_TSB_THRESHOLD:.0f}，身体负荷较轻。",
-        priority="medium",
-        actionable=True,
-        action_hint="安排一次节奏跑、间歇或较高质量训练",
-    )
-
-
-def _rule_low_tsb(tsb: float | None) -> Recommendation | None:
-    if tsb is None or tsb >= LOW_TSB_THRESHOLD:
-        return None
-    return Recommendation(
-        type="rule_low_tsb",
-        title="疲劳偏高，优先休息",
-        body=f"当前 TSB {tsb:+.1f}，低于 {LOW_TSB_THRESHOLD:.0f}，急性负荷偏高。",
-        priority="high",
-        actionable=True,
-        action_hint="今天休息或只做轻松恢复跑",
-    )
 
 
 def _rule_high_acwr(acwr: float | None) -> Recommendation | None:
@@ -117,19 +91,6 @@ def _rule_plan_ahead(has_planned_workout_tomorrow: bool) -> Recommendation | Non
         priority="low",
         actionable=True,
         action_hint="打开训练日历，为明天添加计划",
-    )
-
-
-def _rule_recovery(readiness: int | None) -> Recommendation | None:
-    if readiness is None or readiness >= LOW_READINESS_THRESHOLD:
-        return None
-    return Recommendation(
-        type="rule_recovery",
-        title="恢复评分偏低",
-        body=f"当前 readiness {readiness}，低于 {LOW_READINESS_THRESHOLD}，建议降低训练强度。",
-        priority="high",
-        actionable=True,
-        action_hint="选择休息、散步或低强度恢复训练",
     )
 
 
@@ -165,7 +126,7 @@ def _rule_ability_prescription(
         return Recommendation(
             type="rule_ability_interval",
             title="本周负荷落后于计划，安排一组间歇",
-            body=f"readiness {readiness} 且 TSB {tsb}，适合高质量训练。按间歇配速 "
+            body=f"{_state_sentence(readiness, tsb)}。按间歇配速 "
             f"{_fmt_pace(pace['min'])}–{_fmt_pace(pace['max'])} 进行。",
             priority="medium",
             actionable=True,
@@ -176,7 +137,7 @@ def _rule_ability_prescription(
         return Recommendation(
             type="rule_ability_threshold",
             title="今日适合阈值跑",
-            body=f"readiness {readiness}，TSB {tsb}。按阈值配速 "
+            body=f"{_state_sentence(readiness, tsb)}。按阈值配速 "
             f"{_fmt_pace(pace['min'])}–{_fmt_pace(pace['max'])} 完成 20–40 分钟连续跑。",
             priority="medium",
             actionable=True,
@@ -203,3 +164,17 @@ def _fmt_pace(s_per_km: float) -> str:
     minutes = math.floor(s_per_km / 60)
     seconds = round(s_per_km % 60)
     return f"{minutes}:{seconds:02d}"
+
+
+def _state_sentence(readiness: int | None, tsb: float | None) -> str:
+    """The numbers that exist, in the athlete's language.
+
+    Interpolating the raw variables put "readiness None，TSB None" into a
+    sentence whenever an input was absent.
+    """
+    parts: list[str] = []
+    if readiness is not None:
+        parts.append(f"恢复评分 {readiness}")
+    if tsb is not None:
+        parts.append(f"TSB {tsb:+.1f}")
+    return "，".join(parts) if parts else "当前状态适合训练"

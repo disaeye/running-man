@@ -8,6 +8,7 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel, ConfigDict
 
 from application.computation.queue_worker import start_recompute_worker
+from application.integrations.sync_jobs import retire_abandoned_jobs
 from infrastructure.db.pool import close_pool, close_sync_pool, open_pool
 from presentation.api import (
     activities,
@@ -65,6 +66,10 @@ def _operation_id(route: APIRoute) -> str:
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     await open_pool()
+    # No sync executor survives a restart, so any job still marked queued or
+    # running belongs to the previous process and has to be retired before this
+    # one starts serving; otherwise it would refuse every new trigger.
+    _ = await retire_abandoned_jobs()
     async with anyio.create_task_group() as task_group:
         await start_recompute_worker(task_group)
         try:

@@ -86,6 +86,7 @@ _CREATE_TABLES = (
         started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         finished_at TIMESTAMPTZ,
         status TEXT NOT NULL DEFAULT 'running',
+        job_id UUID,
         activities_seen INTEGER DEFAULT 0,
         activities_upserted INTEGER DEFAULT 0,
         activities_deduplicated INTEGER DEFAULT 0,

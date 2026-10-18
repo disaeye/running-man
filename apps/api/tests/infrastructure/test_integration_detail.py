@@ -1,159 +1,116 @@
-"""Tests for ``last_sync_detail`` JSONB persistence and exposure.
+"""``last_sync_detail`` round trip through the integration row.
 
-Verifies that after a successful sync the detail JSONB is:
-  1. Persisted via ``update_sync_status``
-  2. Visible in the ``GET /integrations/{source}`` public response
-     (``_public()`` strips only ``credentials``, so ``last_sync_detail``
-      passes through)
+A finished job mirrors its counters onto ``user_integrations`` so the source card
+and the staleness badge keep working from the existing response shape. The
+public filter strips only ``credentials``, so the detail passes through to the
+client.
 
-The DB-dependent ``compute_data_health`` is patched in GET tests, and
-``_sync`` is patched in the POST test, to avoid real network/DB calls.
+``compute_data_health`` is patched in the GET tests to keep them off the DB.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from application.integrations import sync_jobs as execution
+from application.integrations.sync_jobs import JobOutcome
 from domain.integrations.crypto import encrypt
 from infrastructure.auth.models import Athlete
-from infrastructure.repositories.activity import ActivitySyncStats
 from main import app
-from presentation.api.integration_sync_detail import IntegrationSyncResult, sync_detail
 from presentation.api.integrations import get_integration_repo, get_integrations_pool
 from presentation.auth.deps import get_current_athlete
 
 pytestmark = pytest.mark.no_db
 
 ATHLETE = Athlete(uuid4(), "detail-test@example.com", "hash")
+JOB_ID = uuid4()
+
+
+def _detail(**counts: int) -> dict[str, object]:
+    return {
+        "counts": {
+            "activities_upserted": counts.get("upserted", 0),
+            "activities_deduped": counts.get("deduplicated", 0),
+            "wellness_days": counts.get("wellness", 0),
+            "streams_inserted": counts.get("streams", 0),
+            "ghosts_deleted": counts.get("ghosts", 0),
+        },
+        "duration_ms": 1200,
+        "stages": [{"name": "sync", "status": counts.get("status", "success")}],
+        "errors": [],
+        "job_id": str(JOB_ID),
+    }
 
 
 @patch("presentation.api.integrations.compute_data_health", new_callable=AsyncMock)
-async def test_sync_detail_persisted_and_returned_by_get(
-    mock_health: AsyncMock,
+async def test_finished_job_detail_is_visible_through_get(
+    mock_health: AsyncMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """After POST sync, GET /integrations/{source} returns last_sync_detail."""
-    mock_health.return_value = {
-        "activities": {"data_as_of": datetime.now(timezone.utc)},
-    }
-
+    mock_health.return_value = {"activities": {"data_as_of": datetime.now(UTC)}}
     repo = _DetailTrackingRepo()
     _use_repo(repo)
-
-    final_detail = _build_detail(
-        ActivitySyncStats(upserted=3, deduplicated=1, total_processed=4),
-        wellness_count=2,
-        streams_inserted=8,
+    monkeypatch.setattr(execution, "UserIntegrationRepo", lambda: repo)
+    monkeypatch.setattr(
+        execution,
+        "execute_job",
+        lambda _job_id, _credentials: JobOutcome(
+            "success", None, _detail(upserted=3, deduplicated=1, wellness=2, streams=8)
+        ),
     )
 
-    async def _fake_job(
-        _source: str, athlete_id: UUID, _credentials: dict[str, object], _started_at: float
-    ) -> None:
-        # Real run_sync_job builds its own UserIntegrationRepo; simulate it
-        # persisting the final detail through the injected repo.
-        await repo.update_sync_status(athlete_id, _source, "success", None, final_detail)
+    await execution.run_sync_job(JOB_ID, ATHLETE.id, "intervals_icu", {"api_key": "k"})
 
-    # ----- POST /sync -----
     transport = ASGITransport(app=app)
-    with patch("presentation.api.integrations.run_sync_job", _fake_job):
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            sync_resp = await client.post("/api/v1/integrations/intervals_icu/sync")
-
-    assert sync_resp.status_code == 200
-    # The sync endpoint returns a summary, NOT last_sync_detail
-    assert "last_sync_detail" not in sync_resp.json()
-
-    # ----- GET /integrations/{source} -----
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        get_resp = await client.get("/api/v1/integrations/intervals_icu")
+        response = await client.get("/api/v1/integrations/intervals_icu")
 
-    assert get_resp.status_code == 200
-    body = get_resp.json()
-    assert "last_sync_detail" in body, (
-        "last_sync_detail must be in the GET response — "
-        "_public() strips only credentials"
-    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["last_sync_status"] == "success"
     detail = body["last_sync_detail"]
-    assert detail is not None
-    assert detail["counts"]["activities_upserted"] == 3
-    assert detail["counts"]["wellness_days"] == 2
-    assert detail["counts"]["streams_inserted"] == 8
+    assert detail["counts"] == {
+        "activities_upserted": 3,
+        "activities_deduped": 1,
+        "wellness_days": 2,
+        "streams_inserted": 8,
+        "ghosts_deleted": 0,
+    }
     assert isinstance(detail["duration_ms"], int)
-    assert detail["duration_ms"] >= 0
     assert detail["stages"] == [{"name": "sync", "status": "success"}]
     assert detail["errors"] == []
 
 
 @patch("presentation.api.integrations.compute_data_health", new_callable=AsyncMock)
-async def test_sync_detail_passed_through_public_filter(
+async def test_public_filter_passes_detail_and_strips_credentials(
     mock_health: AsyncMock,
 ) -> None:
-    """_public() lets last_sync_detail through (only credentials is stripped)."""
-    mock_health.return_value = {
-        "activities": {"data_as_of": datetime.now(timezone.utc)},
-    }
-
-    repo = _DetailTrackingRepo()
-    _use_repo(repo)
+    mock_health.return_value = {"activities": {"data_as_of": datetime.now(UTC)}}
+    _use_repo(_DetailTrackingRepo())
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        get_resp = await client.get("/api/v1/integrations")
+        response = await client.get("/api/v1/integrations")
 
-    assert get_resp.status_code == 200
-    body = get_resp.json()
+    assert response.status_code == 200
+    body = response.json()
     for entry in body:
         assert "last_sync_detail" in entry
-        # credentials must still be stripped
         assert "credentials" not in entry
 
-    # The integration with last_sync_status="success" has detail
-    intervals = next(e for e in body if e["source"] == "intervals_icu")
-    assert intervals["last_sync_detail"] is not None
+    intervals = next(entry for entry in body if entry["source"] == "intervals_icu")
     assert intervals["last_sync_detail"]["counts"]["activities_upserted"] == 3
-
-    # The integration with last_sync_status=None has null detail
-    strava = next(e for e in body if e["source"] == "strava")
-    assert strava["last_sync_detail"] is None
-
-
-@patch("presentation.api.integrations.compute_data_health", new_callable=AsyncMock)
-async def test_sync_detail_update_round_trip(
-    mock_health: AsyncMock,
-) -> None:
-    """update_sync_status with detail → get returns same detail structure."""
-    mock_health.return_value = {
-        "activities": {"data_as_of": datetime.now(timezone.utc)},
-    }
-
-    repo = _DetailTrackingRepo()
-    _use_repo(repo)
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/v1/integrations/intervals_icu")
-
-    assert resp.status_code == 200
-    detail = resp.json()["last_sync_detail"]
-
-    assert detail["counts"]["activities_upserted"] == 3
-    assert detail["counts"]["activities_deduped"] == 1
-    assert detail["counts"]["ghosts_deleted"] == 0
-    assert detail["counts"]["wellness_days"] == 2
-    assert detail["counts"]["streams_inserted"] == 8
-
-
-# ---------------------------------------------------------------------------
-# Fake repo that tracks last_sync_detail and returns it in get/list
-# ---------------------------------------------------------------------------
+    # A source that never synced reports a null detail rather than an empty one.
+    other = next(entry for entry in body if entry["source"] == "other_source")
+    assert other["last_sync_detail"] is None
 
 
 class _DetailTrackingRepo:
-    """Fake repo that stores sync status and returns it in get/list."""
+    """Fake repo that stores sync status and returns it from get/list."""
 
     def __init__(self) -> None:
         self._integrations: dict[str, dict[str, object]] = {
@@ -161,47 +118,31 @@ class _DetailTrackingRepo:
                 "intervals_icu",
                 connected=True,
                 last_sync_status="success",
-                last_sync_detail=_build_detail(
-                    ActivitySyncStats(upserted=3, deduplicated=1, total_processed=4),
-                    wellness_count=2,
-                    streams_inserted=8,
-                ),
+                last_sync_detail=_detail(upserted=3, deduplicated=1, wellness=2, streams=8),
             ),
-            "strava": _row("strava", connected=False),
+            "other_source": _row("other_source", connected=False),
         }
 
     async def list(self, _athlete_id: UUID) -> list[dict[str, object]]:
         return list(self._integrations.values())
 
-    async def get(
-        self, _athlete_id: UUID, source: str
-    ) -> dict[str, object] | None:
+    async def get(self, _athlete_id: UUID, source: str) -> dict[str, object] | None:
         return self._integrations.get(source)
-
-    async def upsert(
-        self, athlete_id: UUID, source: str, data: dict[str, object]
-    ) -> dict[str, object]:
-        row = self._integrations.setdefault(source, _row(source))
-        row.update(data)
-        return row
-
-    async def delete(self, athlete_id: UUID, source: str) -> bool:
-        return self._integrations.pop(source, None) is not None
 
     async def update_sync_status(
         self,
-        athlete_id: UUID,
+        _athlete_id: UUID,
         source: str,
         status: str,
         error: str | None,
         detail: dict[str, object] | None = None,
-    ) -> dict[str, object]:
+    ) -> dict[str, object] | None:
         row = self._integrations.get(source)
         if row is not None:
             row["last_sync_status"] = status
             row["last_sync_error"] = error
             row["last_sync_detail"] = detail
-        return row  # type: ignore[return-value]
+        return row
 
 
 def _row(
@@ -221,19 +162,6 @@ def _row(
         "last_sync_error": None,
         "last_sync_detail": last_sync_detail,
     }
-
-
-def _build_detail(
-    stats: ActivitySyncStats,
-    wellness_count: int = 0,
-    streams_inserted: int = 0,
-) -> dict[str, object]:
-    result = IntegrationSyncResult(
-        activity_stats=stats,
-        wellness_count=wellness_count,
-        streams_inserted=streams_inserted,
-    )
-    return sync_detail(result, 0.0, "success", None)
 
 
 def _use_repo(repo: _DetailTrackingRepo) -> None:

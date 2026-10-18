@@ -6,6 +6,9 @@ __pycache__/
 # Node
 node_modules/
 .next/
+.next-gate/
+.next-build*/
+.next-prev*/
 *.tsbuildinfo
 out/
 
@@ -50,3 +53,6 @@ apps/web/e2e/.auth/
 
 # Research scratch output (one-off probes, vendored tarballs, draft specs)
 research_output/
+
+# Local design mockups + one-off preview screenshots
+.scratch/

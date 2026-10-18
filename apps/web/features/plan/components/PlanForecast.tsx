@@ -9,7 +9,6 @@ import "@shared/lib/echarts-setup";
 import { useChartConfig } from "@shared/hooks/useChartConfig";
 import { useECharts } from "@shared/hooks/useECharts";
 import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
-import { TSB_ZONES } from "@features/pmc/components/pmcSemantics";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import {
   getPmcApiV1PmcGet,
@@ -243,7 +242,7 @@ export function PlanForecast({ events }: Props) {
         <div>
           <h3 className="text-subheadline font-semibold text-text-primary">28日训练负荷预测</h3>
           <p className="mt-1 hidden text-caption1 text-text-muted lg:block">
-            {TSB_ZONES.map((zone) => zone.shortLabel).join(" / ")}
+            按课表推算未来 28 天的负荷与 TSB 走势，背景色标出 TSB 所处区间。
           </p>
         </div>
         <Button variant="ghost" onClick={refreshForecast} aria-label="刷新预测">

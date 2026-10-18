@@ -22,11 +22,13 @@ import {
   type AnalysisPageTab,
 } from "@shared/config/canonical-routes";
 
+// Tab wording matches ANALYSIS_TAB_LABELS and the pillar card titles, so one
+// surface never calls the same thing by a different name.
 const TABS = [
-  { id: "overview", label: "综合概览", icon: LayoutDashboard },
-  { id: "load", label: "负荷与体能 (PMC)", icon: TrendingUp },
-  { id: "intensity", label: "强度结构分布", icon: Flame },
-  { id: "performance", label: "能力表现与预测", icon: Activity },
+  { id: "overview", label: "总览", icon: LayoutDashboard },
+  { id: "load", label: "负荷与体能", icon: TrendingUp },
+  { id: "intensity", label: "强度结构", icon: Flame },
+  { id: "performance", label: "表现能力", icon: Activity },
 ] as const;
 
 type AnalysisTab = (typeof TABS)[number]["id"];
@@ -79,18 +81,44 @@ function AnalysisPageContent() {
 
   return (
     <div className="page-stack" data-testid="analysis-page">
-      <section className="flex flex-wrap items-end justify-between gap-6 border-b border-border-subtle pb-7" aria-labelledby="analysis-title">
-        <div><p className="mb-2 font-mono text-caption2 uppercase tracking-[0.2em] text-text-muted">ATHLETE PERFORMANCE & METRICS</p><h1 id="analysis-title" className="text-display-md text-text-primary">训练分析</h1><p className="mt-2 max-w-xl text-subheadline text-text-secondary">追踪长期体能适应、疲劳平衡与各心率和配速区间分布。</p></div>
+      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-border-subtle pb-6">
+        <div className="min-w-0">
+          <h1 id="analysis-title" className="text-display-sm text-text-primary">训练分析</h1>
+          <p className="mt-1.5 max-w-xl text-subheadline text-text-secondary">
+            长期体能适应、疲劳平衡与心率区间分布。
+          </p>
+        </div>
         <AnalysisRangeControls dateRange={range} onDateRangeChange={setRange} />
-      </section>
+      </header>
       <Tabs value={tab} onValueChange={(value) => setTab(parseTabParam(value))} className="space-y-6">
-        <div className="overflow-x-auto pb-1"><TabsList className="border border-border-default bg-surface-sunken/70 p-1">{TABS.map(({ id, label, icon: Icon }) => <TabsTrigger key={id} value={id} className="min-h-9 gap-2 rounded-md px-3 text-caption1"><Icon className="size-3.5" /><span>{label}</span></TabsTrigger>)}</TabsList></div>
-        <TabsContent value="overview" className="space-y-6" data-testid="analysis-overview"><div className="glass-surface rounded-xl p-5 sm:p-7"><AnalysisOverview onSelectTab={setTab} /></div></TabsContent>
-        <TabsContent value="load" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-load-adaptation"><section aria-label="负荷适应诊断" className="space-y-6"><div className="glass-surface rounded-xl p-5 sm:p-7"><AnalysisLoad /></div><div className="glass-surface rounded-xl p-5 sm:p-7"><RecoveryCollapsible><AnalysisRecovery /></RecoveryCollapsible></div></section></TabsContent>
-        <TabsContent value="intensity" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-intensity"><div className="glass-surface rounded-xl p-5 sm:p-7"><AnalysisIntensity /></div></TabsContent>
-        <TabsContent value="performance" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-performance"><div className="glass-surface rounded-xl p-5 sm:p-7"><AnalysisAbility /></div></TabsContent>
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="border border-border-subtle bg-surface-sunken p-1">
+            {TABS.map(({ id, label, icon: Icon }) => (
+              <TabsTrigger key={id} value={id} className="min-h-9 gap-2 rounded-lg px-3 text-caption1">
+                <Icon className="size-3.5" aria-hidden="true" />
+                <span>{label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+        <TabsContent value="overview" className="space-y-6" data-testid="analysis-overview">
+          <AnalysisOverview onSelectTab={setTab} />
+        </TabsContent>
+        <TabsContent value="load" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-load-adaptation">
+          <section aria-label="负荷适应诊断" className="space-y-6">
+            <AnalysisLoad />
+            <RecoveryCollapsible>
+              <AnalysisRecovery />
+            </RecoveryCollapsible>
+          </section>
+        </TabsContent>
+        <TabsContent value="intensity" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-intensity">
+          <AnalysisIntensity />
+        </TabsContent>
+        <TabsContent value="performance" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-performance">
+          <AnalysisAbility />
+        </TabsContent>
       </Tabs>
     </div>
   );
-
 }

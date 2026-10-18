@@ -10,11 +10,16 @@ import {
   disconnectIntegrationApiV1IntegrationsSourceDisconnectDelete,
   syncIntegrationApiV1IntegrationsSourceSyncPost,
   updateSettingsApiV1IntegrationsSourceSettingsPut,
+  currentSyncJobApiV1IntegrationsSourceJobsCurrentGet,
 } from "@shared/api/generated/clients";
 import { useCallback } from "react";
 import { useSWRConfig } from "swr";
 import { narrowToLiteral } from "@shared/lib/dto-nullable";
 import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
+import { JOB_POLL_INTERVAL_MS, mapJob, syncJobKey } from "./useSyncJobs";
+
+/** Stop waiting after this long; the job itself is not cancelled. */
+const JOB_POLL_TIMEOUT_MS = 60 * 60 * 1000;
 
 export type IntegrationSource = "intervals_icu";
 export type SyncFrequency = "hourly" | "daily" | "manual";
@@ -118,37 +123,59 @@ function fetchIntegration(source: IntegrationSource) {
 
 const SOURCES: readonly IntegrationSource[] = ["intervals_icu"];
 
-async function pollSyncUntilSettled(
+/** Counters the sync toast reports once a job reaches a terminal state. */
+export interface SyncJobSummary {
+  status: "success" | "failed" | "cancelled";
+  upserted: number;
+  deduplicated: number;
+  total_processed: number;
+  streamsInserted: number;
+  wellnessDays: number;
+  error: string | null;
+}
+
+/**
+ * Follow a job until it settles, updating the cached job on every poll.
+ *
+ * Progress lives in the job row, so this only has to read it: the same numbers
+ * the data page shows come from the same place, and a job still running after a
+ * page reload is picked up again by ``useSyncJob``.
+ */
+async function pollJobUntilSettled(
   source: IntegrationSource,
+  jobId: string,
   mutate: ReturnType<typeof useSWRConfig>["mutate"],
-): Promise<Generated.IntegrationSyncResponse | null> {
-  const deadline = Date.now() + 15 * 60 * 1000;
+): Promise<SyncJobSummary> {
+  const deadline = Date.now() + JOB_POLL_TIMEOUT_MS;
   while (Date.now() < deadline) {
     await new Promise<void>((resolve) => {
-      setTimeout(resolve, 1500);
+      setTimeout(resolve, JOB_POLL_INTERVAL_MS);
     });
     const raw = await callOrvalValidated(
-      (f) => getIntegrationApiV1IntegrationsSourceGet(source, {}, f),
-      Generated.IntegrationResponse,
+      (f) => currentSyncJobApiV1IntegrationsSourceJobsCurrentGet(source, {}, f),
+      Generated.SyncJobResponse.nullable(),
     );
-    await mutate(integrationKey(source), mapToStatus(raw, source), { revalidate: false });
-    const status = raw.last_sync_status ?? null;
-    if (status === "success") {
-      const counts = (raw.last_sync_detail as { counts?: Record<string, number> } | null)?.counts;
+    if (raw !== null && raw.id === jobId) {
+      await mutate(syncJobKey(source), mapJob(raw), { revalidate: false });
+    }
+    const status = raw?.status ?? null;
+    if (status === "success" || status === "failed" || status === "cancelled") {
+      const upserted = raw?.activities_upserted ?? 0;
+      const deduplicated = raw?.activities_deduplicated ?? 0;
       return {
-        source,
-        status: "success",
-        upserted: counts?.activities_upserted ?? 0,
-        deduplicated: counts?.activities_deduped ?? 0,
-        total_processed:
-          (counts?.activities_upserted ?? 0) + (counts?.activities_deduped ?? 0),
+        status,
+        upserted,
+        deduplicated,
+        total_processed: upserted + deduplicated,
+        streamsInserted: raw?.streams_inserted ?? 0,
+        wellnessDays: raw?.wellness_days ?? 0,
+        error: raw?.error ?? null,
       };
     }
-    if (status === "failed") {
-      throw new Error(raw.last_sync_error ?? "同步失败");
-    }
   }
-  throw new Error("同步超时，请稍后刷新查看结果");
+  // The job keeps running server-side; the data page shows its live progress,
+  // so the caller only needs to stop waiting rather than report a failure.
+  throw new Error("同步仍在进行，可在数据页查看进度");
 }
 
 
@@ -185,9 +212,14 @@ export function useIntegrations() {
   );
 
   const disconnectIntegration = useCallback(
-    async (source: IntegrationSource) => {
+    async (source: IntegrationSource, clearData = false) => {
       await callOrval((f) =>
-        disconnectIntegrationApiV1IntegrationsSourceDisconnectDelete(source, {}, f),
+        disconnectIntegrationApiV1IntegrationsSourceDisconnectDelete(
+          source,
+          { clear_data: clearData },
+          {},
+          f,
+        ),
       );
       await invalidateDataCards(mutate, source);
     },
@@ -195,15 +227,15 @@ export function useIntegrations() {
   );
 
   const syncIntegration = useCallback(
-    async (source: IntegrationSource) => {
+    async (source: IntegrationSource): Promise<SyncJobSummary> => {
       const accepted = await callOrvalValidated(
         (f) => syncIntegrationApiV1IntegrationsSourceSyncPost(source, {}, f),
-        Generated.IntegrationSyncResponse,
+        Generated.SyncJobResponse,
       );
       await invalidateDataCards(mutate, source);
-      const finished = await pollSyncUntilSettled(source, mutate);
+      const finished = await pollJobUntilSettled(source, accepted.id, mutate);
       await invalidateDataCards(mutate, source);
-      return finished ?? accepted;
+      return finished;
     },
     [mutate],
   );

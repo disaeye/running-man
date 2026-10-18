@@ -14,6 +14,7 @@ import { ActivitiesContent } from "@features/activity/components/ActivitiesConte
 import { filterActivities } from "@features/activity/lib/filter-activities";
 import { ManualActivityForm } from "@features/activity/components/ManualActivityForm";
 import { RecomputeStatusCard } from "@features/data/components/RecomputeStatusCard";
+import { Card } from "@shared/ui/Card";
 
 /**
  * Browse-density training log:
@@ -46,9 +47,9 @@ export default function ActivitiesPage() {
   return (
     <div className="page-stack" data-testid="activities-page">
       <section className="flex flex-wrap items-end justify-between gap-6 border-b border-border-subtle pb-7" aria-labelledby="activities-title">
-        <div><p className="mb-3 font-mono text-caption2 uppercase tracking-[0.24em] text-primary">LOG / LAST 90 DAYS</p><h1 id="activities-title" className="text-display-md text-text-primary">训练活动记录</h1><p className="mt-3 max-w-xl text-subheadline text-text-secondary">所有训练都留下痕迹。按项目筛选，回到每一次努力发生的现场。</p></div><ViewToggle mode={viewMode} onChange={setViewMode} />
+        <div><h1 id="activities-title" className="text-display-md text-text-primary">训练活动记录</h1><p className="mt-1.5 max-w-xl text-subheadline text-text-secondary">按项目、强度和是否含 GPS 筛选，点开任意一条查看分段与区间分布。</p></div><ViewToggle mode={viewMode} onChange={setViewMode} />
       </section>
-      <details className="glass-surface rounded-xl p-4">
+      <details className="rounded-xl border border-border-subtle bg-surface-card p-4">
         <summary className="cursor-pointer text-subheadline font-semibold text-text-primary">
           手动记录实际训练
         </summary>
@@ -59,8 +60,8 @@ export default function ActivitiesPage() {
       <RecomputeStatusCard />
       <MobileFilterToggle open={mobileFiltersOpen} onToggle={() => setMobileFiltersOpen((o) => !o)} />
       <div id="activity-filters" className={mobileFiltersOpen ? "" : "hidden sm:block"}><ActivityFilters filters={activeFilters} onChange={setFilters} activities={data} /></div>
-      <div className="glass-surface rounded-xl p-4"><ActivityTotals activities={filtered} /></div>
-      <div className="glass-surface rounded-xl p-4 sm:p-6"><ActivitiesContent activities={filtered} loading={loading} error={error} viewMode={viewMode} onRetry={reload} /></div>
+      <Card padding="sm"><ActivityTotals activities={filtered} /></Card>
+      <Card padding="md"><ActivitiesContent activities={filtered} loading={loading} error={error} viewMode={viewMode} onRetry={reload} /></Card>
     </div>
   );
 }

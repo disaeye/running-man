@@ -38,14 +38,14 @@ export function DataHealthSummary() {
 
   return (
     <section>
-      <h2 className="mb-3 text-subheadline font-semibold uppercase tracking-wider text-text-muted">数据健康</h2>
+      <h2 className="mb-3 text-subheadline font-semibold text-text-muted">数据健康</h2>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
           label="数据集新鲜度"
           value={latestDate ? formatRelativeTime(latestDate) : "暂无"}
           unit="最新"
-          color="text-accent"
+          color="text-accent-strong"
           tooltip={`活动 ${activities.data_as_of ? formatDate(activities.data_as_of) : "暂无"} · 健康 ${wellness.data_as_of ? formatDate(wellness.data_as_of) : "暂无"} · 负荷 ${training_load.data_as_of ? formatDate(training_load.data_as_of) : "暂无"}`}
         />
 
@@ -82,7 +82,7 @@ export function DataHealthSummary() {
 function DataHealthSummarySkeleton() {
   return (
     <section>
-      <h2 className="mb-3 text-subheadline font-semibold uppercase tracking-wider text-text-muted">数据健康</h2>
+      <h2 className="mb-3 text-subheadline font-semibold text-text-muted">数据健康</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Skeleton variant="rectangular" className="h-[72px] rounded-lg" />
         <Skeleton variant="rectangular" className="h-[72px] rounded-lg" />

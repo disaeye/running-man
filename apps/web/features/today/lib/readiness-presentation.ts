@@ -12,6 +12,11 @@
  * say what is missing, instead of filling the gap with a default.
  */
 
+import {
+  READINESS_BANDS_BY_LEVEL,
+  type ReadinessLevel,
+} from "@shared/config/generated/readiness-bands";
+
 export interface ReadinessFactor {
   name: string;
   detail: string;
@@ -48,6 +53,13 @@ export interface Assessment {
   windowLabel: string;
   /** Human-readable names of the missing inputs, for the empty state. */
   missing: readonly string[];
+  /**
+   * The same inputs by their contract key (`tsb`, `hrv`, `sleep` …).
+   *
+   * Callers that need to suppress a derived number ask this rather than
+   * `missing`, which holds display labels and changes when the copy does.
+   */
+  missingKeys: readonly string[];
 }
 
 const MISSING_MARKER = "数据不足";
@@ -60,12 +72,15 @@ const FACTOR_LABEL: Record<string, string> = {
   atl_velocity: "疲劳变化",
 };
 
-const LEVEL_LABEL: Record<string, string> = {
-  high: "状态良好",
-  moderate: "状态稳定",
-  recovery: "需要恢复",
-  rest: "建议休息",
-};
+/**
+ * The band label for a readiness level, taken from
+ * `contracts/v1/readiness-bands.yaml` through the generated registry. The
+ * Today page and the Settings page therefore name a level identically.
+ */
+export function readinessLevelLabel(level: string): string {
+  const band = READINESS_BANDS_BY_LEVEL[level as ReadinessLevel];
+  return band?.label ?? level;
+}
 
 export const INTENSITY_LABEL: Record<string, string> = {
   high: "高强度",
@@ -80,6 +95,7 @@ const NOT_ASSESSED: Assessment = {
   levelLabel: "",
   windowLabel: "AWAITING DATA",
   missing: [],
+  missingKeys: [],
 };
 
 export function assessReadiness(readiness: ReadinessPayload | null): Assessment {
@@ -87,9 +103,10 @@ export function assessReadiness(readiness: ReadinessPayload | null): Assessment 
 
   const factors = readiness.factors ?? [];
   const measured = factors.filter((factor) => !factor.detail.includes(MISSING_MARKER));
-  const missing = factors
-    .filter((factor) => factor.detail.includes(MISSING_MARKER))
-    .map((factor) => FACTOR_LABEL[factor.name] ?? factor.name);
+  const missingFactors = factors.filter((factor) => factor.detail.includes(MISSING_MARKER));
+  const missing = missingFactors.map(
+    (factor) => FACTOR_LABEL[factor.name] ?? factor.name,
+  );
 
   // Prefer the server's explicit answer. Falling back to inspecting the factors
   // keeps this working against a response that predates the field, but that
@@ -100,13 +117,14 @@ export function assessReadiness(readiness: ReadinessPayload | null): Assessment 
   return {
     available,
     score: readiness.score,
-    levelLabel: LEVEL_LABEL[readiness.level] ?? readiness.level,
+    levelLabel: readinessLevelLabel(readiness.level),
     windowLabel: available
       ? readiness.level === "high"
         ? "GREEN WINDOW"
         : "ADAPTIVE WINDOW"
       : "AWAITING DATA",
     missing,
+    missingKeys: missingFactors.map((factor) => factor.name),
   };
 }
 

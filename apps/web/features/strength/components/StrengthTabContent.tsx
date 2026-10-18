@@ -15,6 +15,7 @@ import { StrengthWorkoutEditor } from "@features/strength/components/StrengthWor
 import { getSportConfig } from "@shared/config/sport-config";
 import type { ActivitySummary } from "@shared/types/activity";
 import type { WorkoutExercise } from "@shared/types/strength";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 
 const STRENGTH_SPORTS = new Set(["Workout", "WeightTraining"]);
 
@@ -58,11 +59,11 @@ function StrengthCard({ data }: { data: WorkoutData }) {
       ) : (
         <ul className="flex flex-col gap-1">
           {exercises.map((ex) => {
-            const name = ex.name_cn ?? ex.name_en ?? "—";
+            const name = ex.name_cn ?? ex.name_en ?? NO_VALUE;
             const first = ex.sets[0];
             const summary = first
               ? `${first.weight_kg ?? "?"}kg × ${first.reps} × ${ex.sets.length}组`
-              : "—";
+              : NO_VALUE;
             return (
               <li
                 key={ex.id}

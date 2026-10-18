@@ -5,7 +5,8 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, Query
 
 from application.data_health import compute_data_health
-from domain.insights.readiness import compute_readiness, compute_recommendation
+from domain.insights.readiness import compute_readiness
+from domain.insights.recommendation import compute_recommendation
 from domain.load.pmc import warmup_days
 from infrastructure.auth.models import Athlete
 from infrastructure.db.pool import get_pool
@@ -67,10 +68,31 @@ async def get_coach_context(
             _events_for_target_day(events, target_day),
             completed_tss,
             planned_tss,
-            len(pmc_loads[-WEEK_DAYS:]),
+            # Days with actual training, not days with a load row. The PMC series
+            # is emitted for every calendar day including rest days, so its row
+            # count is 7 for anyone with a week of history and the
+            # `insufficient_rest_days` risk fired for everybody.
+            _training_days(pmc_loads[-WEEK_DAYS:]),
+            _chronic_ctl(pmc_loads),
         ),
         "readiness": readiness,
     })
+
+
+def _training_days(loads: Sequence[dict[str, object]]) -> int:
+    return sum(1 for row in loads if _positive(row.get("tss")))
+
+
+def _chronic_ctl(loads: Sequence[dict[str, object]]) -> float | None:
+    for row in reversed(loads):
+        ctl = row.get("ctl")
+        if isinstance(ctl, int | float) and ctl > 0:
+            return float(ctl)
+    return None
+
+
+def _positive(value: object) -> bool:
+    return isinstance(value, int | float) and value > 0
 
 
 def _data_freshness(data_health: dict[str, object], target_day: date) -> dict[str, object]:

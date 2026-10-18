@@ -39,7 +39,7 @@ export function IntervalsConnectDialog({
               href="https://intervals.icu/settings"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent underline-offset-2 hover:underline"
+              className="text-accent-strong underline-offset-2 hover:underline"
             >
               Settings → Developer Settings
             </a>

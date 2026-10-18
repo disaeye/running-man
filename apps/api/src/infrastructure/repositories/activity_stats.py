@@ -4,6 +4,7 @@ ActivityRepo to respect the 250 LOC module cap."""
 from datetime import date
 from uuid import UUID
 
+from domain.time import local_day_sql
 from infrastructure.db.pool import ConnectionContext, get_pool
 
 
@@ -21,13 +22,17 @@ class ActivityStatsRepo:
     ) -> list[dict[str, object]]:
         """Per-sport aggregate: {sport, total_distance_m, total_duration_s,
         total_tss, activity_count}."""
+        tz_param = "SELECT timezone FROM athletes WHERE id = %s"
+        day = local_day_sql(tz_param)
         conditions = ["athlete_id = %s"]
         params: list[object] = [athlete_id]
         if start is not None:
-            conditions.append("start_time::date >= %s")
+            conditions.append(f"{day} >= %s")
+            params.append(athlete_id)
             params.append(start)
         if end is not None:
-            conditions.append("start_time::date <= %s")
+            conditions.append(f"{day} <= %s")
+            params.append(athlete_id)
             params.append(end)
         if sport is not None:
             conditions.append("sport = %s")

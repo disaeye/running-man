@@ -61,7 +61,6 @@ def test_basic_auth_header_refreshes_after_eight_hours(monkeypatch: pytest.Monke
     assert client.auth_header == first
 
 
-@pytest.mark.skip(reason="VCR cassette stale — athlete ID mismatch; re-record needed")
 @pytest.mark.asyncio
 async def test_replays_intervals_endpoints_from_t3_cassette() -> None:
     async with IntervalsClient(api_key="API_KEY_PLACEHOLDER", rate_limiter=NoopLimiter()) as client:

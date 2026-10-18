@@ -26,7 +26,7 @@ Both services run on this machine as systemd **user** units:
 
 ```bash
 systemctl --user status  running-man-api.service running-man-web.service
-systemctl --user restart running-man-web.service    # after `npm run build` in apps/web
+systemctl --user restart running-man-web.service    # only after scripts/deploy-web.sh
 journalctl --user -u running-man-api.service -f
 ```
 
@@ -37,7 +37,7 @@ Key facts:
 - **Production must use `next start`, never `next dev`.** `next dev` behind a CDN silently breaks React hydration (WebSocket HMR cannot be proxied) — see docs/operations.md.
 - **Kill Next.js by port, never by process name** (see below).
 - **Python version is managed by pyenv.** `.python-version` pins 3.12.15; build/sync from `apps/api` with `uv sync --frozen --extra dev --all-groups` against that interpreter.
-- **Test database is plain TCP** at `postgresql://wind_runner_test@127.0.0.1:5432/wind_runner_test`; export `TEST_DATABASE_URL` to override. There is no unix-socket indirection anywhere.
+- **Test database** is `wind_runner_test` on the same PostgreSQL instance. `TEST_DATABASE_URL` overrides it; otherwise `apps/api/testsupport.py` derives it from `DATABASE_URL` by replacing the database name, so no credential lives in version control. Plain TCP 5432, no unix-socket indirection.
 - **PostgreSQL runs in Docker** (`1Panel-postgresql-*`), published on host port 5432.
 - **Never install system packages, create databases/roles, change permissions or start long-running services without asking first.**
 
@@ -55,8 +55,11 @@ Personal running/fitness platform: activity import (Intervals.icu/Strava), train
 **Both services run on this host under systemd.** Rebuild and restart the frontend after any change under `apps/web`:
 
 ```bash
-cd apps/web && npm run build && systemctl --user restart running-man-web.service
+scripts/deploy-web.sh          # build into a private dir, swap, restart, verify assets
+scripts/deploy-web.sh --check  # verify the live service without rebuilding
 ```
+
+**Never run `npm run build` in `apps/web` against a running service.** `next start` reads its chunk manifest once at boot; overwriting `.next` under it leaves the process advertising chunk files the build just deleted. The page still returns 200 with correct server-rendered HTML, but every `/_next/static` request 500s and the browser renders it with no CSS. `deploy-web.sh` builds into `.next-build`, swaps it in only after the build completes, and then probes every asset the served HTML references. The gates build into `.next-gate` for the same reason.
 
 Backend changes only need `systemctl --user restart running-man-api.service`. Use `scripts/run_gates.py` before restarting — see "Common tasks" below.
 
@@ -122,7 +125,7 @@ apps/web/
     types/             # TypeScript type definitions
     config/            # sport-config, nav-config, terms
     hooks/             # useChartConfig, useECharts (infra hooks)
-    marketing/         # Landing page components
+    ai/                # AiPlaceholder
 ```
 
 **Import aliases** (`tsconfig.json`):
@@ -150,7 +153,7 @@ Backend (`apps/api/src/`) keeps its 4-layer architecture. External integrations 
 - **Today page**: Dashboard-merged status bar (readiness ring + PMC CTL/ATL/TSB/ACWR chips, see `apps/web/features/today/components/TodayHero.tsx` and `apps/web/features/pmc/components/PmcChipRow.tsx`)
 - **Data hooks**: all data hooks use SWR (`useSWR`). Mutation hooks (useIntegrations, useStrengthWorkout) use `apiFetch` for mutations + `mutate()` for cache invalidation. Global `revalidateOnFocus: false`.
 - **Auth**: cookie-based (HttpOnly, SameSite=lax), middleware at `apps/web/middleware.ts` checks `access_token`
-- **Design system (v8.5)**: 5cm Quiet Winter at `apps/web/DESIGN.md`. Tokens + cinematic shell in `apps/web/app/globals.css` (`.shell-atmosphere` / orbs / horizon / grain, sky-rim `.glass-surface`). Winter Sky Indigo `#5a6f9a`, overcast paper `#eef2f6`. **AppShell is the fixed PC/mobile layout framework** (`--shell-content-max`, `.shell-main`, `.page-stack`); pages do not re-declare max-width/safe-area/tab padding. Chart data colors unchanged. Raw-hex tokens outside `globals.css` are banned by `apps/web/scripts/hex-ban.test.ts`.
+- **Design system**: `apps/web/DESIGN.md` is normative and machine-checked. Tokens and the cinematic shell live in `apps/web/app/globals.css` (`.shell-atmosphere` / orbs / horizon / grain, chrome-only `.glass-surface`). Winter Sky Indigo `#5a6f9a` accent, dusk-paper canvas `#f4f6f8`, content column `64rem`. **AppShell is the fixed PC/mobile layout framework** (`--shell-content-max`, `.shell-main`, `.page-stack`); pages do not re-declare max-width/safe-area/tab padding. `scripts/check_design_tokens.py` fails the gate when DESIGN.md disagrees with the stylesheet; `scripts/check_web_tokens.py` fails it on panel glass, off-scale radii, raw palette colours and Chinese at `text-caption2`. `apps/web/scripts/hex-ban.test.ts` bans raw hex.
 - **Strength training**: exercise library (`exercise_library` table) is read-only; workout CRUD via `/api/strength/*` endpoints; physiology auto-calculation via `POST /api/athletes/me/auto-calculate`
 - **Physiology estimation**: `apps/api/src/domain/physiology/` contains pure-Python algorithms (tangent method KDE for HRmax, best-effort window for LTHR, critical speed model for threshold pace). No numpy/scipy dependency.
 
@@ -181,13 +184,13 @@ Never create duplicate `SPORT_LABEL` maps elsewhere. Always `import { getSportCo
 | `INTERVALS_ICU_ATHLETE_ID` | `apps/api/.env` | Intervals.icu athlete |
 | `API_URL` | `apps/web/.env` | Server-side rewrite target for `/api/*` (default `http://127.0.0.1:31001`) |
 | `NEXT_PUBLIC_API_URL` | `apps/web/.env` | Legacy fallback, used only when `API_URL` is unset |
-| `TEST_DATABASE_URL` | shell env | Test DB for pytest / `run_gates.py` (plain TCP 5432) |
+| `TEST_DATABASE_URL` | shell env (optional) | Overrides the derived `wind_runner_test` DSN for pytest / `run_gates.py` |
 
 ## Common tasks
 
 ```bash
-# Deploy: rebuild then restart (frontend must be `next start`, never `next dev`)
-cd apps/web && npm run build && systemctl --user restart running-man-web.service
+# Deploy: one step, build + swap + restart + asset verification
+scripts/deploy-web.sh
 
 systemctl --user status  running-man-api.service running-man-web.service
 systemctl --user restart running-man-api.service  # restart without rebuild

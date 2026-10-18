@@ -3,7 +3,13 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 from uuid import UUID
 
+from domain.time import local_day_sql
 from infrastructure.db.pool import ConnectionContext, get_pool
+
+# Day-keyed ranges resolve against the athlete's calendar day, never the
+# database session's. Without this an evening Asia/Shanghai run lands on the
+# previous day, because the session timezone is UTC.
+_ACTIVITY_DAY = local_day_sql(column="a.start_time")
 
 
 def _connect() -> ConnectionContext:
@@ -29,7 +35,7 @@ class AnalyticsRepo:
         self, athlete_id: UUID, start: date, end: date
     ) -> list[dict[str, object]]:
         return await self._rows(
-            self._activity_statement("a.start_time::date BETWEEN %s AND %s"),
+            self._activity_statement(f"{_ACTIVITY_DAY} BETWEEN %s AND %s"),
             (athlete_id, start, end),
         )
 

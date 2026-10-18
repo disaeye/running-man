@@ -52,8 +52,7 @@ function loadConflictDiagnosis(readiness: LocalReadiness, latestLoad: PmcPoint |
   const load = latestLoad ?? { atl: 0, tsb: 0 };
   return {
     title: "恢复-负荷冲突",
-    // Numbers only — UI shows title/badge; detail is for a11y/title/tests.
-    detail: `Readiness ${readiness.score} · ATL ${Math.round(load.atl)} · TSB ${Math.round(load.tsb)}`,
+    detail: `恢复评分 ${readiness.score} · 疲劳 ${Math.round(load.atl)} · 状态 ${Math.round(load.tsb)}`,
     badge: "负荷压制",
     variant: "error",
     tone: "text-recovery-poor",
@@ -63,7 +62,7 @@ function loadConflictDiagnosis(readiness: LocalReadiness, latestLoad: PmcPoint |
 function stableDiagnosis(readiness: LocalReadiness, sampleCount: number): Diagnosis {
   return {
     title: "恢复趋势稳定",
-    detail: `Readiness ${readiness.score} · ${sampleCount} 天样本`,
+    detail: `恢复评分 ${readiness.score} · ${sampleCount} 天样本`,
     badge: "稳定",
     variant: "success",
     tone: "text-recovery-good",

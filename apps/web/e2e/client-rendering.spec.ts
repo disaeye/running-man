@@ -59,7 +59,7 @@ test.describe("client-only rendering", () => {
     const isoDay = /\b[0-9]{2}-[0-9]{2}\b/;
     const dateInput = /value="20[0-9]{2}-[0-9]{2}-[0-9]{2}"/;
 
-    for (const path of [...PAGES, "/login", "/register", "/landing"]) {
+    for (const path of [...PAGES, "/login", "/register"]) {
       const response = await request.get(path);
       const html = await response.text();
 

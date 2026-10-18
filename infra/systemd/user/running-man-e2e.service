@@ -13,6 +13,9 @@ Environment=PATH=%h/.nvm/versions/node/v22.22.0/bin:/usr/bin:/bin
 # is unreproducible and every test passes. Matching production here is what makes
 # the client-rendering specs meaningful.
 Environment=TZ=UTC
+# Serves the directory scripts/run_gates.py builds into, so a gate run cannot
+# touch the production `.next` that running-man-web.service is serving.
+Environment=NEXT_DIST_DIR=.next-gate
 ExecStart=%h/.nvm/versions/node/v22.22.0/bin/npx next start -p 28801
 Restart=on-failure
 RestartSec=3
