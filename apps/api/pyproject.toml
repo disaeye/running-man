@@ -113,6 +113,11 @@ disable_error_code = ["index", "attr-defined", "arg-type", "operator", "no-any-r
 testpaths = ["tests"]
 pythonpath = [".", "src"]
 asyncio_mode = "auto"
+# The app's connection pool is opened once by a session-scoped fixture. A pool
+# is bound to the loop it was opened on, so tests on function-scoped loops could
+# not borrow a connection from it: the recompute queue and load tests only passed
+# when some earlier test happened to leave the pool closed. One loop for the run.
+asyncio_default_test_loop_scope = "session"
 addopts = ["--import-mode=importlib"]
 markers = [
     "no_db: test does not need PostgreSQL transaction fixture",

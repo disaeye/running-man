@@ -29,7 +29,7 @@ def seed_idempotency_inputs(database_url: str) -> None:
     configure_database(database_url)
     ensure_activity_fact_schema(ATHLETE_ID)
     with psycopg.connect(database_url) as conn:
-        _seed_metrics(conn)
+        seed_metric_definitions(conn)
         _seed_activity(conn)
 
 
@@ -71,7 +71,7 @@ def run_status_counts(database_url: str) -> dict[str, int]:
         return {_text(status): int(count) for status, count in cur.fetchall()}
 
 
-def _seed_metrics(conn: psycopg.Connection) -> None:
+def seed_metric_definitions(conn: psycopg.Connection) -> None:
     with conn.cursor() as cur:
         for row in domain_constraints.metric_rows():
             cur.execute(
