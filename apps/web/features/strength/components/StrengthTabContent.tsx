@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { apiFetch } from "@shared/lib/api";
 import { Card } from "@shared/ui/Card";
 import {
@@ -191,12 +190,6 @@ export function StrengthTabContent() {
         >
           + 新增训练
         </button>
-        <Link
-          href="/settings?section=strength"
-          className="focus-ring rounded px-1 text-subheadline font-medium text-accent-strong hover:underline"
-        >
-          动作库
-        </Link>
       </div>
 
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>

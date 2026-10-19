@@ -16,11 +16,11 @@ const DEFAULT_RANGE_DAYS = 90;
 const DEFAULT_RANGE = computeRange(DEFAULT_RANGE_DAYS);
 
 /**
- * Strength view of the /calendar hub.
- * Reached from `/calendar?view=strength` (W6.5 redirects
- * `/strength`, `/strength/analytics`, and `/settings?section=strength`
- * here). Composes the strength training log + analytics; inner pieces
- * live under `features/strength/` and are imported as-is.
+ * Strength panel of the /calendar hub.
+ *
+ * Rendered inside every calendar view, so strength logging sits next to the
+ * week it belongs to. The old `/calendar?view=strength` tab showed this same
+ * content, so that URL and `/strength` normalise to `?view=list`.
  */
 export function CalendarStrengthView() {
   return (

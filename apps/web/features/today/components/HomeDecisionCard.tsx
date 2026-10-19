@@ -56,7 +56,7 @@ export function HomeDecisionCard({
   const tsbZone = zoneFor("tsb", tsb);
 
   return (
-    <Card padding="lg">
+    <Card padding="lg" data-testid="home-decision">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-caption1 font-medium tracking-wide text-text-muted">
           今日训练安排

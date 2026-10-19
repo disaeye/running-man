@@ -172,6 +172,9 @@ def run_gate(gate: Gate) -> Result:
         note = _e2e.prepare_server()
         if note:
             print(f"  ! {note}", flush=True)
+        started_note = _e2e.ensure_server()
+        if started_note:
+            print(f"  ! {started_note}", flush=True)
         env.update(_e2e.e2e_env())
     env.update(gate.env)
     started = time.monotonic()
@@ -188,6 +191,9 @@ def run_gate(gate: Gate) -> Result:
         return Result(gate, "FAIL", time.monotonic() - started, f"timeout after {gate.timeout}s")
     except OSError as error:
         return Result(gate, "FAIL", time.monotonic() - started, str(error))
+    finally:
+        if gate.name.startswith("e2e"):
+            _e2e.stop_server()
     elapsed = time.monotonic() - started
     status = "PASS" if completed.returncode == 0 else "FAIL"
     tail = ""

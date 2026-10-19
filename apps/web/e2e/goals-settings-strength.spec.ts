@@ -4,7 +4,11 @@ test.describe("goals settings strength", () => {
   test.describe("goals lifecycle", () => {
     test("renders goals page with create button", async ({ page }) => {
       await page.goto("/goals");
-      await expect(page.getByRole("button", { name: /创建新目标/ })).toBeVisible();
+      // An empty account carries the only create action in its empty state, so
+      // the header button is hidden; both labels open the same form.
+      await expect(
+        page.getByRole("button", { name: /创建(新|第一个)目标/ }).first(),
+      ).toBeVisible({ timeout: 15000 });
     });
 
     test("shows goals page content", async ({ page }) => {
@@ -14,11 +18,14 @@ test.describe("goals settings strength", () => {
 
     test("create button opens form", async ({ page }) => {
       await page.goto("/goals");
-      const createBtn = page.getByRole("button", { name: /创建新目标/ });
-      if (await createBtn.isVisible()) {
-        await createBtn.click();
-        await expect(page.getByRole("dialog").or(page.getByText("目标类型"))).toBeVisible({ timeout: 5000 });
-      }
+      // No `if visible` guard: a conditional body passes vacuously when the
+      // button is missing, which is the failure this test exists to catch.
+      const createBtn = page.getByRole("button", { name: /创建(新|第一个)目标/ }).first();
+      await expect(createBtn).toBeVisible({ timeout: 15000 });
+      await createBtn.click();
+      await expect(page.getByRole("dialog", { name: "创建目标" })).toBeVisible({
+        timeout: 5000,
+      });
     });
   });
 
@@ -42,21 +49,22 @@ test.describe("goals settings strength", () => {
     });
   });
 
-  test.describe("strength workflow (re-homed to /calendar?view=strength)", () => {
-    test("strength view renders content via calendar deep link", async ({ page }) => {
-      await page.goto("/calendar?view=strength");
-      await expect(page).toHaveURL(/view=strength/);
-      await expect(page.locator('section').first()).toBeVisible({ timeout: 10000 });
+  test.describe("strength workflow (rendered inside the calendar log view)", () => {
+    test("strength content renders on the calendar page", async ({ page }) => {
+      await page.goto("/calendar?view=list");
+      await expect(page.getByRole("heading", { name: "训练日志" }).first()).toBeVisible({
+        timeout: 10000,
+      });
     });
 
     test("strength view shows analytics area", async ({ page }) => {
-      await page.goto("/calendar?view=strength");
+      await page.goto("/calendar?view=list");
       await expect(page.getByRole("heading", { name: "力量分析" }).first()).toBeVisible();
     });
 
-    test("legacy /strength redirects to calendar strength view", async ({ page }) => {
+    test("legacy /strength redirects to the calendar log view", async ({ page }) => {
       await page.goto("/strength");
-      await expect(page).toHaveURL(/calendar\?view=strength/);
+      await expect(page).toHaveURL(/calendar\?view=list/);
     });
   });
 });

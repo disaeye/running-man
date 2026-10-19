@@ -238,14 +238,61 @@ def _unit_exists() -> bool:
     return _service_start_wallclock() is not None
 
 
+_owned_server: subprocess.Popen[bytes] | None = None
+
+
+def ensure_server() -> str | None:
+    """Serve the gate build from this process when no unit is doing it.
+
+    The e2e unit is optional, and without it the gate used to skip — which meant
+    the only check that sees what the browser actually paints never ran. Starting
+    the server here keeps the gate self-contained and still leaves the production
+    `.next` untouched, because it serves `GATE_DIST_DIR`.
+    """
+    global _owned_server
+    if _url_responds(f"{E2E_BASE_URL}/"):
+        return None
+    env = dict(os.environ)
+    env["NEXT_DIST_DIR"] = GATE_DIST_DIR
+    # UTC, matching production: a page that renders a date during render only
+    # diverges from the client when the two clocks disagree.
+    env["TZ"] = "UTC"
+    env.update(e2e_env())
+    try:
+        _owned_server = subprocess.Popen(
+            ["npx", "next", "start", "-p", "28801"],
+            cwd=WEB_DIR,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError as error:
+        return f"could not start the gate server: {error}"
+    if not _wait_for_server(120):
+        stop_server()
+        return f"gate server did not answer on {E2E_BASE_URL}"
+    _warm_routes()
+    return "started a gate server on port 28801"
+
+
+def stop_server() -> None:
+    """Stop the server this process started, by port and never by process name."""
+    global _owned_server
+    if _owned_server is None:
+        return
+    # `fuser -n tcp` resolves the holder of that exact port; every Next.js
+    # process shares the same cmdline, so a name match would kill the others.
+    subprocess.run(["fuser", "-k", "28801/tcp"], capture_output=True, check=False)
+    try:
+        _owned_server.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        _owned_server.kill()
+    _owned_server = None
+
+
 def e2e_skip_reason(fast: bool) -> str | None:
     if fast:
         return "--fast"
-    if not _url_responds(f"{E2E_BASE_URL}/"):
-        return (
-            f"frontend not serving at {E2E_BASE_URL} "
-            f"(systemctl --user start {E2E_SERVICE})"
-        )
     if not any(Path(candidate).exists() for candidate in CHROME_CANDIDATES):
         return "no Chromium binary found (or set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH)"
     return None

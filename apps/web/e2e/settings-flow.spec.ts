@@ -30,9 +30,10 @@ test.describe("Settings Flow", () => {
     }
   });
 
-  test("legacy strength section deep link redirects to calendar strength view", async ({ page }) => {
+  test("legacy strength section deep link redirects to the calendar log view", async ({ page }) => {
+    // Middleware drops the settings query and lands on the log view directly.
     await page.goto("/settings?section=strength");
-    await expect(page).toHaveURL(/\/calendar.*view=strength/);
+    await expect(page).toHaveURL(/\/calendar\?view=list/);
   });
 
   test("legacy profile deep link lands on account", async ({ page }) => {

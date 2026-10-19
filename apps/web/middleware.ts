@@ -59,13 +59,14 @@ export function middleware(request: NextRequest) {
     return redirectToLogin(request);
   }
 
-  // Backward-compat: /settings?section=strength was re-homed to
-  // /calendar?view=strength in W6.5. Handle in middleware (not
-  // next.config.js) so the source query is dropped cleanly instead
-  // of being appended to the destination.
+  // Backward-compat: /settings?section=strength was re-homed to the calendar.
+  // Handle in middleware (not next.config.js) so the source query is dropped
+  // cleanly instead of being appended to the destination. It points straight at
+  // the log view: `?view=strength` is itself a 308 to `?view=list`, and a
+  // redirect to a redirect costs the browser a second round trip.
   if (pathname === "/settings" && request.nextUrl.searchParams.get("section") === "strength") {
     if (!accessToken) return redirectToLogin(request);
-    return NextResponse.redirect(new URL("/calendar?view=strength", request.url), 308);
+    return NextResponse.redirect(new URL("/calendar?view=list", request.url), 308);
   }
 
   // Signing in twice is a dead end: an athlete who already has a session and

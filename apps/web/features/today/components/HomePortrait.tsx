@@ -14,6 +14,7 @@ import { assessReadiness, isStaleData } from "@features/today/lib/readiness-pres
 import { useClientDateLabel, useClientGreeting } from "@shared/lib/client-date";
 import { HomeDecisionCard } from "./HomeDecisionCard";
 import { HomeBodySignals } from "./HomeBodySignals";
+import { PmcStatBlocks } from "@features/pmc/components/PmcStatBlocks";
 import { WeeklyHorizonMatrix } from "./WeeklyHorizonMatrix";
 import { HomeRecentTraining } from "./HomeRecentTraining";
 
@@ -137,6 +138,10 @@ export function HomePortrait() {
             tsb={tsb}
             d7Tss={d7Tss}
           />
+
+          <Card padding="md" data-testid="home-metrics" aria-label="训练负荷关键指标">
+            <PmcStatBlocks data={pmc.data} />
+          </Card>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <HomeBodySignals

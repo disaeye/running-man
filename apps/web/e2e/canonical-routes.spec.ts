@@ -37,8 +37,8 @@ const ALIAS_REDIRECTS: readonly AliasCase[] = [
   { source: "/trends", canonical: "/analysis?tab=load", note: "/trends maps to load adaptation" },
   { source: "/data", canonical: "/settings?section=data", note: "/data maps to settings data section" },
   { source: "/export", canonical: "/settings?section=data", note: "/export maps to settings data section" },
-  { source: "/strength", canonical: "/calendar?view=strength", note: "/strength maps to calendar strength view (re-homed in W6.5)" },
-  { source: "/strength/analytics", canonical: "/calendar?view=strength", note: "/strength/analytics maps to calendar strength view (re-homed in W6.5)" },
+  { source: "/strength", canonical: "/calendar?view=list", note: "/strength maps to the calendar log view, where strength content renders" },
+  { source: "/strength/analytics", canonical: "/calendar?view=list", note: "/strength/analytics maps to the calendar log view" },
   { source: "/activities", canonical: "/calendar?view=list", note: "/activities maps to calendar list view" },
   { source: "/plan", canonical: "/calendar", note: "/plan maps to calendar default view" },
 ];
