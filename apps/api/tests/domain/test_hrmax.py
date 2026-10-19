@@ -56,8 +56,13 @@ def test_hrmax_noisy_sessions_still_estimate_near_athlete_max() -> None:
 
     assert result["data_sufficient"] is True
     assert result["hr_max"] == pytest.approx(202, abs=5)
+    # The tangent line lands 12 bpm above the highest session on record, which is
+    # past the plausible headroom, so the estimate keeps low confidence.
     assert result["confidence"] == "low"
-    assert result["near_max_count"] == 0
+    # Seven sessions peaked within 3 bpm of the observed maximum (190). Counting
+    # against the estimate instead made this 0 for every athlete, because the
+    # extrapolation always sits above all the data.
+    assert result["near_max_count"] == 7
 
 
 def test_hrmax_insufficient_sessions_returns_graceful_empty_estimate() -> None:
@@ -122,3 +127,20 @@ def test_hrmax_clean_sub_tangent_ramp_returns_observed_max() -> None:
 
     assert result["method"] == "rolling_max"
     assert result["hr_max"] == pytest.approx(190, abs=2)
+
+
+def test_hrmax_confidence_reflects_repeated_peaks_not_a_constant() -> None:
+    """The field is a measurement: a tight cluster of peaks earns high confidence."""
+    result = estimate_hrmax([185.0] * 5 + [180.0] * 25)
+
+    assert result["hr_max"] == 185
+    assert result["near_max_count"] == 5
+    assert result["confidence"] == "high"
+
+
+def test_hrmax_low_confidence_when_the_extrapolation_runs_away() -> None:
+    """A single outlier peak leaves the tangent nothing to hold on to."""
+    result = estimate_hrmax([200.0, 160.0] + [170.0] * 28)
+
+    assert result["near_max_count"] == 1
+    assert result["confidence"] == "medium"

@@ -21,6 +21,19 @@ MIN_SESSIONS_FALLBACK = 5
 _KDE_BANDWIDTH_FACTOR = 2.5  # Silverman's rule-of-thumb approximation
 _GRID_RESOLUTION = 300
 
+# A session counts as "near max" when its peak is within this band of the
+# **observed** maximum. Counting against the estimate instead measured nothing:
+# the tangent line extrapolates past every observation by construction, so the
+# band sat above all the data and `near_max_count` was 0 for every athlete,
+# pinning `confidence` to "low" forever. That made the field a constant rather
+# than a measurement.
+NEAR_MAX_BAND_BPM = 3.0
+
+# How far above the observed maximum the extrapolation may land before it stops
+# being believable. Beyond this the tangent has run away and the estimate is
+# reported with low confidence whatever the session count says.
+MAX_PLAUSIBLE_HEADROOM_BPM = 6.0
+
 
 def estimate_hrmax(session_max_hrs: Sequence[float]) -> dict[str, object]:
     """Estimate HRmax from a list of per-session max HR values.
@@ -134,8 +147,13 @@ def _percentile(sorted_data: list[float], pct: float) -> float:
 
 
 def _build_result(hr_max: float, data: list[float], method: str) -> dict[str, object]:
-    near_max = sum(1 for h in data if h >= hr_max - 3)
-    confidence = "high" if near_max >= 3 else "medium" if near_max >= 1 else "low"
+    observed_max = data[-1]
+    near_max = sum(1 for h in data if h >= observed_max - NEAR_MAX_BAND_BPM)
+    headroom = hr_max - observed_max
+    if headroom > MAX_PLAUSIBLE_HEADROOM_BPM:
+        confidence = "low"
+    else:
+        confidence = "high" if near_max >= 3 else "medium" if near_max >= 1 else "low"
     return {
         "hr_max": round(hr_max),
         "method": method,

@@ -22,12 +22,37 @@ algorithms:
         expect: { grade_cost_multiplier: 0.598 }
         tolerance: 0.01
         inputs: { grade: -0.10 }
+      # NGP is the load input everything else is derived from, and its 4th power
+      # belongs in the speed domain. Applying it to pace flips the direction: an
+      # interval session would read slower than its own average instead of
+      # harder. Constant pace cannot tell the two apart, which is why both a
+      # steady and a variable case are pinned.
+      - name: ngp_steady_3_m_s
+        inputs: { steady_speed_m_s: 3.0, samples: 180 }
+        expect: { normalized_graded_pace: 333.4034, gap_avg: 333.3333 }
+        tolerance: 0.01
+      - name: ngp_two_to_one_intervals
+        # 120 s at 3.5 m/s then 60 s at 2.0 m/s, twice. Blocks are far longer
+        # than the 30-sample smoothing window, so the 4th-power weighting
+        # survives: NGP is faster than the 332.41 s/km average.
+        inputs:
+          pattern: [{ speed_m_s: 3.5, seconds: 120 }, { speed_m_s: 2.0, seconds: 60 }]
+          cycles: 2
+        expect: { normalized_graded_pace: 314.2166, gap_avg: 333.4882 }
+        tolerance: 0.05
   - key: pmc
     version: 1.0.0
     input_window_days: 1
     materialization: stored_fact
     history_policy: full_available_history
     outputs: [daily_tss, ctl, atl, tsb, acwr]
+    reference_cases:
+      - name: ctl_atl_tsb_after_28_days_of_100_tss
+        # 42-day and 7-day exponential decay from a zero seed. The numbers are
+        # the anchor for both time constants at once.
+        inputs: { daily_tss: 100, days: 28 }
+        expect: { ctl: 49.0707, atl: 98.665, tsb: -49.5943 }
+        tolerance: 0.001
   - key: physiology
     version: 1.1.0
     input_window_days: 365
@@ -51,6 +76,13 @@ algorithms:
         inputs: { vdot: 50 }
         expect: { threshold_pace_s_per_km: 256 }
         tolerance: 3
+      - name: hr_max_from_linear_session_ramp
+        # The tangent line extrapolates above the highest session; the estimate
+        # must land on 189 while near_max_count counts sessions near the
+        # observed maximum (180), not near the estimate.
+        inputs: { start_bpm: 160, end_bpm: 180, sessions: 30 }
+        expect: { hr_max: 189, near_max_count: 5 }
+        tolerance: 0
   - key: vdot
     version: 1.1.0
     input_window_days: 365
