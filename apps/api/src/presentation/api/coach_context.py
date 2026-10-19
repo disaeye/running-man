@@ -6,13 +6,14 @@ from fastapi import APIRouter, Depends, Query
 
 from application.data_health import compute_data_health
 from domain.insights.readiness import compute_readiness
-from domain.insights.recommendation import compute_recommendation
+from domain.insights.recommendation import TrainingContext, compute_recommendation
 from domain.load.pmc import warmup_days
 from infrastructure.auth.models import Athlete
 from infrastructure.db.pool import get_pool
 from infrastructure.repositories.calendar import CalendarRepo
 from infrastructure.repositories.pmc import PmcRepo
 from presentation.api.analytics_analysis_contracts import CoachContextResponse
+from presentation.api.coach_context_paces import latest_acwr, training_paces_for
 from presentation.api.insights_helpers import _readiness_inputs
 from presentation.auth.deps import get_current_athlete
 
@@ -51,7 +52,7 @@ async def get_coach_context(
     events = await calendar_repo.list(
         athlete.id,
         datetime.combine(target_day - timedelta(days=6), time.min),
-        datetime.combine(target_day, time.max),
+        datetime.combine(target_day + timedelta(days=1), time.max),
     )
     data_health = await compute_data_health(athlete.id, db_pool)
     readiness = compute_readiness(target_day, wellness, readiness_loads)
@@ -73,7 +74,14 @@ async def get_coach_context(
             # count is 7 for anyone with a week of history and the
             # `insufficient_rest_days` risk fired for everybody.
             _training_days(pmc_loads[-WEEK_DAYS:]),
-            _chronic_ctl(pmc_loads),
+            TrainingContext(
+                chronic_ctl=_chronic_ctl(pmc_loads),
+                training_paces=await training_paces_for(athlete.id),
+                acwr=latest_acwr(pmc_loads),
+                has_plan_tomorrow=bool(
+                    _events_for_target_day(events, target_day + timedelta(days=1))
+                ),
+            ),
         ),
         "readiness": readiness,
     })

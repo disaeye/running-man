@@ -15,6 +15,11 @@ export const CoachRecommendationResponse = zod.object({
   "predicted_tss": zod.union([zod.number(),zod.null()]),
   "sport_type": zod.union([zod.string(),zod.null()])
 }),zod.null()]),
+  "pace_targets": zod.union([zod.object({
+  "intensity": zod.string(),
+  "max_s_per_km": zod.number(),
+  "min_s_per_km": zod.number()
+}),zod.null()]),
   "reason": zod.string(),
   "risks": zod.array(zod.string()),
   "target_tss": zod.number(),

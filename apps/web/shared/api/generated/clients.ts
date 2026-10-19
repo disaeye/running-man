@@ -127,7 +127,6 @@ import type {
   PlanGenerateRequest,
   PmcPointResponse,
   PredictRequest,
-  RecommendationItemResponse,
   RecomputeRequest,
   RegisterRequest,
   RidePersonalRecordResponse,
@@ -5089,49 +5088,6 @@ export const postPredictApiV1RacePredictPost = async (predictRequest: PredictReq
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? RacePredictionResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as postPredictApiV1RacePredictPostResponse
-}
-
-
-
-export type getRecommendationsApiV1RecommendationsGetResponse200 = {
-  data: RecommendationItemResponse[]
-  status: 200
-}
-
-export type getRecommendationsApiV1RecommendationsGetResponseSuccess = (getRecommendationsApiV1RecommendationsGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type getRecommendationsApiV1RecommendationsGetResponse = (getRecommendationsApiV1RecommendationsGetResponseSuccess)
-
-export const getGetRecommendationsApiV1RecommendationsGetUrl = () => {
-
-
-
-
-  return `/api/v1/recommendations`
-}
-
-/**
- * @summary Get Recommendations
- */
-export const getRecommendationsApiV1RecommendationsGet = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<getRecommendationsApiV1RecommendationsGetResponse> => {
-
-  const res = await (fetchFn ?? fetch)(getGetRecommendationsApiV1RecommendationsGetUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: getRecommendationsApiV1RecommendationsGetResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as getRecommendationsApiV1RecommendationsGetResponse
 }
 
 

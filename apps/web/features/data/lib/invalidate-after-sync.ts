@@ -26,7 +26,6 @@ const DATA_DEPENDENT_PREFIXES = [
   "/insights/plan-quality",
   "/insights/intensity-distribution",
   "/insights/personal-records",
-  "/recommendations",
 ] as const;
 
 function isDataDependentKey(key: unknown): boolean {

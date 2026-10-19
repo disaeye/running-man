@@ -110,6 +110,21 @@ def vdot_to_vvo2max(vdot: float) -> float:
     return velocity if velocity is not None else 0.0
 
 
+def vdot_from_threshold_pace(threshold_pace_s_per_km: float) -> float | None:
+    """Invert :func:`vdot_to_threshold_pace`.
+
+    The forward direction asks for the pace at which the athlete uses
+    ``_T_PCT_HIGH`` of VDOT, solved through Daniels' oxygen cost curve. The
+    inverse therefore has to run the same curve: threshold velocity → oxygen
+    cost → VDOT. Dividing the velocity by the fraction instead skips the cost
+    intercept and lands ~12% low, which quietly moved every prescribed pace.
+    """
+    if threshold_pace_s_per_km <= 0:
+        return None
+    velocity_m_per_min = 60000.0 / threshold_pace_s_per_km
+    return _vo2_from_velocity(velocity_m_per_min) / _T_PCT_HIGH
+
+
 def race_performance_paces(distance_m: float, target_time_s: int) -> dict[str, dict[str, float]]:
     """Daniels training pace ranges for an explicitly defined race target."""
     vdot = vdot_from_performance(distance_m, target_time_s)

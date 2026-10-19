@@ -10,6 +10,18 @@ class InsightAnalyticsResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
+class PaceTargetsResponse(InsightAnalyticsResponse):
+    """The pace band for the session the recommendation chose.
+
+    Declared here rather than imported from the coach-context contracts so the
+    two modules stay independent; the shape is identical on both responses.
+    """
+
+    intensity: str
+    min_s_per_km: float
+    max_s_per_km: float
+
+
 class IntensityDistributionResponse(InsightAnalyticsResponse):
     bucket: date
     zone_seconds: tuple[int, int, int, int, int]
@@ -86,6 +98,7 @@ class TrainingRecommendationResponse(InsightAnalyticsResponse):
     duration_min: int
     target_tss: int
     intensity: str
+    pace_targets: PaceTargetsResponse | None = None
     reason: str
     risks: list[str]
     next_workout: NextWorkoutResponse | None
@@ -94,15 +107,6 @@ class TrainingRecommendationResponse(InsightAnalyticsResponse):
 class RecomputeResponse(InsightAnalyticsResponse):
     recompute_status: Literal["queued"]
     recompute_generation: int
-
-
-class RecommendationItemResponse(InsightAnalyticsResponse):
-    type: str
-    title: str
-    body: str
-    priority: Literal["high", "medium", "low"]
-    actionable: bool
-    action_hint: str | None
 
 
 class ZoneResponse(InsightAnalyticsResponse):

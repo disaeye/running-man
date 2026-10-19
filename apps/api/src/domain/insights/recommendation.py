@@ -7,6 +7,7 @@ imports only the readiness score, so the two are also consumed separately.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import cast
 
 from domain.generated.readiness_bands import READINESS_BANDS
@@ -16,20 +17,50 @@ Row = dict[str, object]
 Recommendation = dict[str, object]
 
 
+@dataclass(frozen=True, slots=True)
+class TrainingContext:
+    """Optional inputs the caller may or may not have.
+
+    Bundled rather than passed as four more parameters: a call site that has
+    only readiness and the plan should not have to spell out three Nones.
+    """
+
+    chronic_ctl: float | None = None
+    training_paces: dict[str, dict[str, float]] | None = None
+    acwr: float | None = None
+    has_plan_tomorrow: bool = True
+
+
 def compute_recommendation(
     readiness: Readiness,
     events: list[Row],
     week_completed_tss: float,
     week_planned_tss: float,
     recent_activity_days: int,
-    chronic_ctl: float | None = None,
+    context: TrainingContext | None = None,
 ) -> Recommendation:
+    """Today's session, its target load and, when the athlete has paces, its pace band.
+
+    This is the only engine that answers "what should I do today". A second one
+    (`application/recommendations`) produced a parallel set of advisories and a
+    pace prescription from the same inputs; the two disagreed whenever a
+    threshold moved. The pace prescription and the load advisories that were
+    worth keeping live here now.
+    """
+    inputs = context or TrainingContext()
     score = cast(int, readiness["score"])
     planned = _next_event(events)
-    risks = _risks(score, week_completed_tss, week_planned_tss, recent_activity_days)
+    risks = _risks(
+        score,
+        week_completed_tss,
+        week_planned_tss,
+        recent_activity_days,
+        inputs.acwr,
+        inputs.has_plan_tomorrow,
+    )
     action, workout_type, intensity = _workout_choice(score, planned)
     target_tss = _target_tss(
-        score, planned, week_completed_tss, week_planned_tss, chronic_ctl
+        score, planned, week_completed_tss, week_planned_tss, inputs.chronic_ctl
     )
     return {
         "action": action,
@@ -37,6 +68,7 @@ def compute_recommendation(
         "duration_min": _duration(score, target_tss),
         "target_tss": target_tss,
         "intensity": intensity,
+        "pace_targets": _pace_targets(action, intensity, planned, inputs.training_paces),
         "reason": _reason(score, planned, week_completed_tss, week_planned_tss),
         "risks": risks,
         "next_workout": _event_summary(planned),
@@ -96,6 +128,27 @@ _DAILY_SHARE: dict[str, float] = {
     "rest": 0.0,
 }
 
+# An ACWR above this is a load spike: injury risk rises faster than fitness.
+HIGH_ACWR_THRESHOLD: float = 1.5
+
+# The pace band to quote, keyed by what decided the session.
+_PACE_KEY_BY_INTENSITY: dict[str, str] = {
+    "high": "interval",
+    "moderate": "threshold",
+    "low": "easy",
+    "none": "easy",
+}
+_PACE_KEY_BY_TRAINING_TYPE: dict[str, str] = {
+    "interval": "interval",
+    "repetition": "repetition",
+    "threshold": "threshold",
+    "tempo": "threshold",
+    "marathon": "marathon",
+    "long": "easy",
+    "easy": "easy",
+    "recovery": "easy",
+}
+
 
 def _daily_share(level: str, chronic_ctl: float | None) -> int:
     """A day's load at ``level``, as a multiple of the daily chronic load.
@@ -107,7 +160,14 @@ def _daily_share(level: str, chronic_ctl: float | None) -> int:
     fallback = {"high": 80, "moderate": 55, "recovery": 30}
     return fallback.get(level, 0)
 
-def _risks(score: int, completed: float, planned: float, recent_days: int) -> list[str]:
+def _risks(
+    score: int,
+    completed: float,
+    planned: float,
+    recent_days: int,
+    acwr: float | None = None,
+    has_plan_tomorrow: bool = True,
+) -> list[str]:
     risks: list[str] = []
     if band_for_score(score)["level"] == "rest":
         risks.append("readiness_low")
@@ -115,7 +175,39 @@ def _risks(score: int, completed: float, planned: float, recent_days: int) -> li
         risks.append("weekly_tss_near_limit")
     if recent_days >= 6:
         risks.append("insufficient_rest_days")
+    if acwr is not None and acwr > HIGH_ACWR_THRESHOLD:
+        risks.append("acwr_high")
+    if not has_plan_tomorrow:
+        risks.append("no_plan_tomorrow")
     return risks
+
+
+def _pace_targets(
+    action: str,
+    intensity: str,
+    planned: Row | None,
+    paces: dict[str, dict[str, float]] | None,
+) -> dict[str, object] | None:
+    """The pace band for the session this engine just chose.
+
+    A pace range is only meaningful for a session that is run at a prescribed
+    effort. A rest day has none, and a planned workout carries its own type, so
+    readiness decides only when nothing is scheduled.
+    """
+    if not paces or action == "rest":
+        return None
+    planned_type = str(planned.get("training_type") or "").lower() if planned else ""
+    key = _PACE_KEY_BY_TRAINING_TYPE.get(planned_type)
+    if key is None:
+        key = _PACE_KEY_BY_INTENSITY.get(intensity)
+    band = paces.get(key) if key else None
+    if not band:
+        return None
+    return {
+        "intensity": key,
+        "min_s_per_km": band["min"],
+        "max_s_per_km": band["max"],
+    }
 
 def _reason(score: int, planned: Row | None, completed: float, planned_week: float) -> str:
     """Why this session was chosen, in the athlete's language.

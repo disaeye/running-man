@@ -31,7 +31,6 @@ from presentation.api import (
     plan,
     pmc,
     race,
-    recommendations,
     share,
     strength,
     strength_analytics,
@@ -111,7 +110,6 @@ app.include_router(sync_runs.router, prefix=f"{API_V1_PREFIX}/integrations")
 app.include_router(integrations.router, prefix=API_V1_PREFIX)
 app.include_router(metrics.router, prefix=API_V1_PREFIX)
 app.include_router(notifications_router, prefix=API_V1_PREFIX)
-app.include_router(recommendations.router, prefix=API_V1_PREFIX)
 app.include_router(workouts.router, prefix=API_V1_PREFIX)
 app.include_router(strength.router, prefix=API_V1_PREFIX)
 app.include_router(strength_analytics.router, prefix=API_V1_PREFIX)

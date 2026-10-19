@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Calendar, Clock, Flame, Zap } from "lucide-react";
+import { ArrowUpRight, Calendar, Clock, Flame, Gauge, Zap } from "lucide-react";
 import { Card } from "@shared/ui/Card";
 import { ZoneMeter } from "@shared/ui/ZoneMeter";
+import { formatPaceFromSeconds } from "@shared/lib/format";
 import { formatZoneRange, zoneFor } from "@shared/lib/metric-zone";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { Assessment } from "@features/today/lib/readiness-presentation";
@@ -53,6 +54,7 @@ export function HomeDecisionCard({
   const title = decisionTitle(decision, assessment);
   const reason = decisionReason(decision, assessment);
   const hasPrescription = targetDurationMin > 0 || targetTss > 0;
+  const paceTargets = decision?.pace_targets ?? null;
   const tsbZone = zoneFor("tsb", tsb);
 
   return (
@@ -108,6 +110,14 @@ export function HomeDecisionCard({
             value={intensity.label}
             tone={intensity.tone}
           />
+          {paceTargets && (
+            <Prescription
+              icon={<Gauge className="size-3.5" aria-hidden="true" />}
+              label="配速"
+              value={`${formatPaceFromSeconds(paceTargets.min_s_per_km)}–${formatPaceFromSeconds(paceTargets.max_s_per_km)}`}
+              unit="/km"
+            />
+          )}
         </div>
       )}
 

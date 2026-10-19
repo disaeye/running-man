@@ -137,12 +137,19 @@ class CoachNextWorkoutResponse(AnalysisAnalyticsResponse):
     predicted_tss: float | None
 
 
+class CoachPaceTargetsResponse(AnalysisAnalyticsResponse):
+    intensity: str
+    min_s_per_km: float
+    max_s_per_km: float
+
+
 class CoachRecommendationResponse(AnalysisAnalyticsResponse):
     action: str
     workout_type: str
     duration_min: int
     target_tss: int
     intensity: str
+    pace_targets: CoachPaceTargetsResponse | None
     reason: str
     risks: list[str]
     next_workout: CoachNextWorkoutResponse | None

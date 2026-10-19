@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from domain.insights.readiness import compute_readiness
-from domain.insights.recommendation import _reason, compute_recommendation
+from domain.insights.recommendation import TrainingContext, _reason, compute_recommendation
 
 
 def test_readiness_returns_score_and_factors() -> None:
@@ -52,6 +52,88 @@ def test_recommendation_uses_planned_workout() -> None:
     assert result["workout_type"] == "Run"
     assert result["target_tss"] == 70
     assert result["next_workout"] == {"name": "Tempo", "sport_type": "Run", "predicted_tss": 70.0}
+
+
+_PACES = {
+    "easy": {"min": 353, "max": 393},
+    "threshold": {"min": 270, "max": 283},
+    "interval": {"min": 247, "max": 254},
+}
+
+
+def _readiness(score: int, intensity: str) -> dict[str, object]:
+    return {
+        "score": score,
+        "level": "high",
+        "factors": [],
+        "recommendation": "ok",
+        "max_intensity": intensity,
+    }
+
+
+def test_recommendation_carries_a_pace_band_for_the_session_it_chose() -> None:
+    result = compute_recommendation(
+        _readiness(82, "high"), [], 0.0, 0.0, 1, TrainingContext(training_paces=_PACES)
+    )
+
+    assert result["intensity"] == "high"
+    assert result["pace_targets"] == {
+        "intensity": "interval",
+        "min_s_per_km": 247,
+        "max_s_per_km": 254,
+    }
+
+
+def test_planned_workout_type_decides_the_pace_band() -> None:
+    events = [{"name": "Tempo", "sport_type": "Run", "predicted_tss": 70.0, "training_type": "threshold"}]
+
+    result = compute_recommendation(
+        _readiness(82, "high"), events, 0.0, 100.0, 1, TrainingContext(training_paces=_PACES)
+    )
+
+    assert result["pace_targets"]["intensity"] == "threshold"
+
+
+def test_rest_day_has_no_pace_band() -> None:
+    rest = {"score": 20, "level": "rest", "factors": [], "recommendation": "rest", "max_intensity": "none"}
+
+    result = compute_recommendation(rest, [], 0.0, 0.0, 1, TrainingContext(training_paces=_PACES))
+
+    assert result["action"] == "rest"
+    assert result["pace_targets"] is None
+
+
+def test_without_threshold_paces_the_prescription_has_no_band() -> None:
+    result = compute_recommendation(_readiness(82, "high"), [], 0.0, 0.0, 1)
+
+    assert result["pace_targets"] is None
+
+
+def test_acwr_spike_and_missing_plan_are_named_as_risks() -> None:
+    result = compute_recommendation(
+        _readiness(82, "high"),
+        [],
+        0.0,
+        0.0,
+        1,
+        TrainingContext(acwr=1.8, has_plan_tomorrow=False),
+    )
+
+    assert "acwr_high" in result["risks"]
+    assert "no_plan_tomorrow" in result["risks"]
+
+
+def test_risks_are_absent_when_nothing_is_wrong() -> None:
+    result = compute_recommendation(
+        _readiness(82, "high"),
+        [],
+        0.0,
+        0.0,
+        1,
+        TrainingContext(acwr=1.1, has_plan_tomorrow=True),
+    )
+
+    assert result["risks"] == []
 
 
 def _wellness(day: date, sleep_secs: int, resting_hr: int) -> dict[str, object]:

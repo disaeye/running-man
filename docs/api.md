@@ -116,7 +116,11 @@ Cookie 会话制：登录成功后服务端下发 `access_token`（HttpOnly + Sa
 | POST | `/api/v1/insights/ftp/detect` | `days` | `FtpDetectionResponse \| null` |
 | POST | `/api/v1/insights/recompute` | — | `RecomputeRequest` → `RecomputeResponse` |
 | GET/PUT/DELETE | `/api/v1/insights/zones` | — | `ZonesResponse` / `ZoneOverrideUpdateResponse` / 204 |
-| GET | `/api/v1/recommendations` | — | `RecommendationItemResponse[]` |
+
+Today's session — action, target load, duration and pace band — comes from
+`GET /api/v1/insights/coach-context`. There is no separate recommendations
+endpoint: a second engine answering the same question disagreed with this one
+whenever a threshold moved.
 
 ### 5.5 指标序列 metrics
 

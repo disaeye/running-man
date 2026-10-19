@@ -2699,6 +2699,30 @@
         "title": "CoachNextWorkoutResponse",
         "type": "object"
       },
+      "CoachPaceTargetsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "intensity": {
+            "title": "Intensity",
+            "type": "string"
+          },
+          "max_s_per_km": {
+            "title": "Max S Per Km",
+            "type": "number"
+          },
+          "min_s_per_km": {
+            "title": "Min S Per Km",
+            "type": "number"
+          }
+        },
+        "required": [
+          "intensity",
+          "min_s_per_km",
+          "max_s_per_km"
+        ],
+        "title": "CoachPaceTargetsResponse",
+        "type": "object"
+      },
       "CoachPlanAdherenceResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2798,6 +2822,16 @@
               }
             ]
           },
+          "pace_targets": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoachPaceTargetsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "reason": {
             "title": "Reason",
             "type": "string"
@@ -2824,6 +2858,7 @@
           "duration_min",
           "target_tss",
           "intensity",
+          "pace_targets",
           "reason",
           "risks",
           "next_workout"
@@ -5606,6 +5641,31 @@
         "title": "NotificationScanResponse",
         "type": "object"
       },
+      "PaceTargetsResponse": {
+        "additionalProperties": false,
+        "description": "The pace band for the session the recommendation chose.\n\nDeclared here rather than imported from the coach-context contracts so the\ntwo modules stay independent; the shape is identical on both responses.",
+        "properties": {
+          "intensity": {
+            "title": "Intensity",
+            "type": "string"
+          },
+          "max_s_per_km": {
+            "title": "Max S Per Km",
+            "type": "number"
+          },
+          "min_s_per_km": {
+            "title": "Min S Per Km",
+            "type": "number"
+          }
+        },
+        "required": [
+          "intensity",
+          "min_s_per_km",
+          "max_s_per_km"
+        ],
+        "title": "PaceTargetsResponse",
+        "type": "object"
+      },
       "PhysiologyResponse": {
         "additionalProperties": false,
         "properties": {
@@ -6548,57 +6608,6 @@
           "source_readiness"
         ],
         "title": "ReadinessResponse",
-        "type": "object"
-      },
-      "RecommendationItemResponse": {
-        "additionalProperties": false,
-        "properties": {
-          "action_hint": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Action Hint"
-          },
-          "actionable": {
-            "title": "Actionable",
-            "type": "boolean"
-          },
-          "body": {
-            "title": "Body",
-            "type": "string"
-          },
-          "priority": {
-            "enum": [
-              "high",
-              "medium",
-              "low"
-            ],
-            "title": "Priority",
-            "type": "string"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          },
-          "type": {
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "title",
-          "body",
-          "priority",
-          "actionable",
-          "action_hint"
-        ],
-        "title": "RecommendationItemResponse",
         "type": "object"
       },
       "RecomputeJobStatusResponse": {
@@ -8558,6 +8567,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/NextWorkoutResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pace_targets": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaceTargetsResponse"
               },
               {
                 "type": "null"
@@ -14197,31 +14216,6 @@
         "summary": "Post Predict",
         "tags": [
           "race"
-        ]
-      }
-    },
-    "/api/v1/recommendations": {
-      "get": {
-        "operationId": "get_recommendations_api_v1_recommendations_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/RecommendationItemResponse"
-                  },
-                  "title": "Response Get Recommendations Api V1 Recommendations Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Recommendations",
-        "tags": [
-          "recommendations"
         ]
       }
     },

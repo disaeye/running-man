@@ -65,7 +65,12 @@ export function getWeekRange(): { from: string; to: string } {
 /** Convert m/s to min'sec" per-km pace (e.g. 3.2 m/s → "5'12\"") */
 export function formatPace(speedMs: number | null): string {
   if (speedMs == null || speedMs <= 0) return "--";
-  const secPerKm = 1000 / speedMs;
+  return formatPaceFromSeconds(1000 / speedMs);
+}
+
+/** Seconds per kilometre to min'sec" (e.g. 270 → "4'30\""). */
+export function formatPaceFromSeconds(secPerKm: number | null): string {
+  if (secPerKm == null || secPerKm <= 0) return "--";
   const min = Math.floor(secPerKm / 60);
   const sec = Math.round(secPerKm % 60);
   return `${min}'${sec.toString().padStart(2, "0")}"`;

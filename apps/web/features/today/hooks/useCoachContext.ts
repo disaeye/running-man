@@ -71,9 +71,16 @@ export interface CoachRecommendation {
   duration_min: number;
   target_tss: number;
   intensity: string;
+  pace_targets: CoachPaceTargets | null;
   reason: string;
   risks: string[];
   next_workout: CoachNextWorkout | null;
+}
+
+export interface CoachPaceTargets {
+  intensity: string;
+  min_s_per_km: number;
+  max_s_per_km: number;
 }
 
 export interface CoachNextWorkout {
