@@ -266,6 +266,7 @@
   --color-surface-base: var(--color-surface-base);
   --color-surface: var(--color-surface-card);
   --color-surface-card: var(--color-surface-card);
+  --color-surface-raised: var(--color-surface-raised);
   --color-surface-overlay: var(--color-surface-overlay);
   --color-surface-active: var(--color-surface-active);
   --color-surface-sunken: var(--color-surface-sunken);
@@ -287,6 +288,7 @@
   --color-ring: var(--color-ring);
   --color-primary-active: var(--color-primary-active);
   --color-primary-disabled: var(--color-primary-disabled);
+  --color-accent: var(--color-accent);
   --color-accent-strong: var(--color-accent-strong);
   --color-on-accent: var(--color-on-accent);
   --color-chart-accent: var(--color-chart-accent);

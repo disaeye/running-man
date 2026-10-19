@@ -9,7 +9,14 @@ from infrastructure.db.pool import ConnectionContext, get_pool
 # Day-keyed ranges resolve against the athlete's calendar day, never the
 # database session's. Without this an evening Asia/Shanghai run lands on the
 # previous day, because the session timezone is UTC.
-_ACTIVITY_DAY = local_day_sql(column="a.start_time")
+#
+# The zone comes from the athlete's own row inside the same statement, so the
+# filter and the day key cannot disagree, and every caller binds one placeholder
+# per use. A bare `%s` here left `activities_for_range` with four placeholders
+# and three parameters, which returned 500 on every request.
+_ACTIVITY_DAY = local_day_sql(
+    "SELECT timezone FROM athletes WHERE id = %s", column="a.start_time"
+)
 
 
 def _connect() -> ConnectionContext:
@@ -36,7 +43,7 @@ class AnalyticsRepo:
     ) -> list[dict[str, object]]:
         return await self._rows(
             self._activity_statement(f"{_ACTIVITY_DAY} BETWEEN %s AND %s"),
-            (athlete_id, start, end),
+            (athlete_id, athlete_id, start, end),
         )
 
     async def all_activities(self, athlete_id: UUID, sport: str | None) -> list[dict[str, object]]:

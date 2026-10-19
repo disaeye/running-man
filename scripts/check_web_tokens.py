@@ -11,6 +11,12 @@ together, and all three are mechanically detectable:
      second panel language.
   C. A raw Tailwind palette colour (`bg-emerald-500`, `text-sky-400`). Every
      colour in this app is a token so the dual theme and the data semantics hold.
+  D. A colour token declared in `:root` but never exposed through `@theme
+     inline`. Tailwind only emits a utility for a colour it knows about, so
+     `bg-accent` compiles to nothing and the element renders transparent while
+     the text stays white. Two tokens sat in that state — `accent` and
+     `surface-raised` — and every primary button was a white label on the page
+     background with no fill and no border.
 
 `text-caption2` is additionally checked for CJK content: at 11px Chinese glyphs
 smear, so that step is Latin-only.
@@ -136,6 +142,31 @@ def scan(path: Path) -> list[Finding]:
     return findings
 
 
+def theme_coverage() -> list[Finding]:
+    """Colour tokens the utilities cannot see because `@theme inline` omits them."""
+    stylesheet = WEB_DIR / "app" / "globals.css"
+    css = stylesheet.read_text(encoding="utf-8")
+    declared = _tokens_in_block(css, ":root {")
+    exposed = _tokens_in_block(css, "@theme inline {")
+    return [
+        Finding(
+            "theme-coverage",
+            "app/globals.css",
+            0,
+            f"--color-{name} is declared but missing from @theme inline, "
+            f"so bg-{name}/text-{name}/border-{name} compile to nothing",
+        )
+        for name in sorted(declared - exposed)
+    ]
+
+
+def _tokens_in_block(css: str, opener: str) -> set[str]:
+    if opener not in css:
+        return set()
+    body = css.split(opener, 1)[1].split("\n}", 1)[0]
+    return set(re.findall(r"^\s*--color-([a-z0-9-]+)\s*:", body, re.M))
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--json", action="store_true", help="machine-readable output")
@@ -145,6 +176,7 @@ def main(argv: list[str]) -> int:
     findings: list[Finding] = []
     for path in files:
         findings.extend(scan(path))
+    findings.extend(theme_coverage())
 
     if args.json:
         print(json.dumps({"findings": [asdict(f) for f in findings]}, ensure_ascii=False, indent=2))

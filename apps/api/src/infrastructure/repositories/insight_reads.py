@@ -29,7 +29,7 @@ class InsightReadRepo:
     async def planned_events(
         self, athlete_id: UUID, start: date, end: date
     ) -> list[dict[str, object]]:
-        query = """
+        query = f"""
         SELECT event_id, start_time, category, sport_type, name, predicted_tss, status, done,
                plan_goal_id, plan_source, training_type, workout_prescription, athlete_edited,
                linked_activity_id, completed_distance_m, completed_duration_s,
