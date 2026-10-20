@@ -42,6 +42,14 @@ export const TERMS_PHYSIOLOGY = {
       note: "VDOT / 阈值配速 的综合能力指标。"
     },
   },
+  HRV: {
+    label: METRIC_REGISTRY.hrv.display_name,
+    explanation: {
+      summary: "心率变异性 — 相邻心跳间隔的波动幅度，反映自主神经系统的恢复状态。",
+      reference: "个体基线差异大，看自己的 7 日均值而非绝对值",
+      note: "单日波动受睡眠、饮酒、时差影响，连续下降才值得关注。",
+    },
+  },
   RHR: {
     label: "静息心率 (RHR)",
     explanation: {

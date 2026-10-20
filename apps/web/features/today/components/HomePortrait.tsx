@@ -14,7 +14,6 @@ import { assessReadiness, isStaleData } from "@features/today/lib/readiness-pres
 import { useClientDateLabel, useClientGreeting } from "@shared/lib/client-date";
 import { HomeDecisionCard } from "./HomeDecisionCard";
 import { HomeBodySignals } from "./HomeBodySignals";
-import { PmcStatBlocks } from "@features/pmc/components/PmcStatBlocks";
 import { WeeklyHorizonMatrix } from "./WeeklyHorizonMatrix";
 import { HomeRecentTraining } from "./HomeRecentTraining";
 
@@ -77,8 +76,6 @@ export function HomePortrait() {
       ? pmc.data.slice(-RECENT_DAYS).reduce((total, point) => total + (point.tss ?? 0), 0)
       : null);
 
-  const latestWellness = wellness.data.at(-1);
-  const sleepAvg7d = coachQuery.data?.recovery_signals?.sleep_avg_7d;
   const caveats = coachQuery.data?.missing_data_caveats ?? [];
 
   // Nothing at all in the last 30 days: no sessions, no health records, and no
@@ -135,20 +132,13 @@ export function HomePortrait() {
             decision={decision}
             assessment={assessment}
             dataStale={dataStale}
+            ctl={latestPmc?.ctl ?? null}
             tsb={tsb}
             d7Tss={d7Tss}
           />
 
-          <Card padding="md" data-testid="home-metrics" aria-label="训练负荷关键指标">
-            <PmcStatBlocks data={pmc.data} />
-          </Card>
-
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <HomeBodySignals
-              latestWellness={latestWellness}
-              sleepAvg7d={sleepAvg7d}
-              caveats={caveats}
-            />
+            <HomeBodySignals wellness={wellness.data} caveats={caveats} />
             <Card padding="md" aria-labelledby="week-heading">
               <div className="flex items-baseline justify-between gap-2">
                 <h2 id="week-heading" className="text-caption1 font-medium tracking-wide text-text-muted">

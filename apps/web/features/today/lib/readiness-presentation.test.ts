@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   assessReadiness,
-  decisionReason,
   decisionTitle,
   isStaleData,
   type Assessment,
@@ -155,10 +154,10 @@ const ASSESSED: Assessment = {
 };
 
 describe("decisionTitle", () => {
-  it("prefers a planned workout name", () => {
+  it("names the state and the planned workout", () => {
     expect(
       decisionTitle({ reason: null, next_workout: { name: "节奏跑 5×1km" } }, ASSESSED),
-    ).toBe("节奏跑 5×1km");
+    ).toBe("状态稳定 · 按计划节奏跑 5×1km");
   });
 
   it("says there is no data instead of inventing a session", () => {
@@ -168,40 +167,13 @@ describe("decisionTitle", () => {
 
   it("reports no scheduled session when data exists but nothing is planned", () => {
     expect(decisionTitle({ reason: null, next_workout: null }, ASSESSED)).toBe(
-      "今天暂无具体课表",
+      "状态稳定 · 暂无具体课表",
     );
   });
-});
 
-describe("decisionReason", () => {
-  it("uses the API's reason when present", () => {
+  it("says rest when the engine chose rest", () => {
     expect(
-      decisionReason(
-        { reason: "readiness 50，无计划训练，周TSS 6", next_workout: null },
-        NOT_ASSESSED,
-      ),
-    ).toBe("readiness 50，无计划训练，周TSS 6");
-  });
-
-  it("names the missing inputs when nothing could be assessed", () => {
-    const reason = decisionReason(null, NOT_ASSESSED);
-
-    expect(reason).toContain("睡眠");
-    expect(reason).toContain("静息心率");
-    // Points at an action rather than leaving the athlete stuck.
-    expect(reason).toContain("连接数据源");
-  });
-
-  it("stays generic when no factor names are known", () => {
-    const reason = decisionReason(null, { ...NOT_ASSESSED, missing: [] });
-
-    expect(reason).toContain("恢复数据");
-  });
-
-  it("does not claim a missing dataset when data was assessed", () => {
-    const reason = decisionReason(null, ASSESSED);
-
-    expect(reason).toBe("当前没有为今天安排训练。");
-    expect(reason).not.toContain("缺少");
+      decisionTitle({ reason: null, next_workout: null, action: "rest" }, ASSESSED),
+    ).toBe("状态稳定 · 建议休息");
   });
 });

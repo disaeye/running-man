@@ -40,6 +40,8 @@ export interface ReadinessPayload {
 export interface RecommendationPayload {
   reason: string | null;
   next_workout: { name: string | null } | null;
+  /** `rest` when the readiness band rules out training today. */
+  action?: string | null;
   duration_min?: number | null;
   target_tss?: number | null;
   intensity?: string | null;
@@ -137,20 +139,9 @@ export function decisionTitle(
   decision: RecommendationPayload | null,
   assessment: Assessment,
 ): string {
-  if (decision?.next_workout?.name) return decision.next_workout.name;
   if (!assessment.available) return "还没有可分析的训练数据";
-  return "今天暂无具体课表";
-}
-
-export function decisionReason(
-  decision: RecommendationPayload | null,
-  assessment: Assessment,
-): string {
-  if (decision?.reason) return decision.reason;
-  if (!assessment.available) {
-    const what =
-      assessment.missing.length > 0 ? assessment.missing.join("、") : "恢复数据";
-    return `缺少${what}，无法给出训练建议。连接数据源或填写阈值后，这里会显示当天该做什么。`;
-  }
-  return "当前没有为今天安排训练。";
+  const state = assessment.levelLabel;
+  if (decision?.next_workout?.name) return `${state} · 按计划${decision.next_workout.name}`;
+  if (decision?.action === "rest") return `${state} · 建议休息`;
+  return `${state} · 暂无具体课表`;
 }

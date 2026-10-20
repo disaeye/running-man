@@ -4,10 +4,13 @@ import { test, expect, type Page } from "@playwright/test";
  * Locks in the home page's information order and first-screen priorities.
  *
  * The page used to open with a three-line display-xl headline — 203px tall, a
- * quarter of a 900px viewport — carrying no data. Below it the four load
- * metrics (CTL, ATL, TSB, ACWR) sat fourth in source order, and because the grid
- * only had placement rules at >=768px, narrow screens fell back to that order
- * and put the metrics below the fold.
+ * quarter of a 900px viewport — carrying no data. Below it the load metrics
+ * (CTL, ATL, TSB, ACWR) sat in their own card, fourth in source order, and
+ * because the grid only had placement rules at >=768px, narrow screens fell back
+ * to that order and put the metrics below the fold.
+ *
+ * The load numbers now live in the decision card's evidence strip, so there is
+ * one block that answers both questions and nothing sits between them.
  *
  * These assertions are about *priority*, not pixel values, so they survive
  * routine spacing changes but fail if a decorative block is allowed to push the
@@ -17,7 +20,7 @@ import { test, expect, type Page } from "@playwright/test";
  * to do with the priority it was meant to protect.
  */
 
-const BLOCKS = ["home-decision", "home-metrics", "home-recent"] as const;
+const BLOCKS = ["home-decision", "home-weekly-horizon", "home-recent"] as const;
 
 async function blockTops(page: Page) {
   return page.evaluate((ids) => {
@@ -36,7 +39,7 @@ test.describe("home page information flow", () => {
   // known height.
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("the decision and the load metrics are both on the first screen", async ({ page }) => {
+  test("the decision and the evidence behind it are both on the first screen", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(6000);
 
@@ -62,15 +65,25 @@ test.describe("home page information flow", () => {
     }
 
     const tops = await blockTops(page);
+    const decisionBottom = await page.evaluate(
+      () =>
+        Math.round(
+          document
+            .querySelector('[data-testid="home-decision"]')!
+            .getBoundingClientRect().bottom,
+        ),
+    );
 
     // The two things an athlete opens the app for: what to do today, and what
-    // state they are in. Both must be visible without scrolling at desktop size.
+    // state they are in. Both live in the decision card and must be readable
+    // without scrolling at desktop size.
     expect(tops["home-decision"], "decision card must be on the first screen").toBeLessThan(
       shellHeight,
     );
-    expect(tops["home-metrics"], "load metrics must be on the first screen").toBeLessThan(
-      shellHeight,
-    );
+    expect(
+      decisionBottom,
+      "the evidence strip under the decision must be on the first screen",
+    ).toBeLessThan(shellHeight);
   });
 
   test("narrow screens stack in priority order", async ({ page }) => {
