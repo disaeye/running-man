@@ -1,5 +1,6 @@
 from collections.abc import Awaitable, Callable
 from importlib import import_module
+from uuid import UUID
 
 from infrastructure.webhooks.repo import WebhookEffectRepo
 from presentation.webhooks.schemas import CalendarEvent, DeletedEvent, WebhookPayload
@@ -14,18 +15,31 @@ class WebhookHandler:
         self.repo: WebhookEffectRepo = repo or WebhookEffectRepo()
         self.sync_fn: SyncFn = sync_fn or _load_sync_fn()
 
-    async def handle(self, payload: WebhookPayload) -> None:
+    async def handle(self, payload: WebhookPayload, athlete_id: UUID | None = None) -> None:
+        """Apply one webhook.
+
+        `athlete_id` is this system's athlete, already resolved from the
+        upstream id the payload carries. Every table this handler writes keys on
+        that UUID, so passing the upstream id through wrote nothing or raised on
+        the type.
+        """
         if payload.type == "ACTIVITY_UPLOADED":
-            await self._activity_uploaded(payload)
+            await self._activity_uploaded(payload, athlete_id)
         elif payload.type == "ACTIVITY_ANALYZED":
             await self._activity_analyzed(payload)
         elif payload.type == "CALENDAR_UPDATED":
-            await self._calendar_updated(payload)
+            await self._calendar_updated(payload, athlete_id)
         elif payload.type == "SPORT_SETTINGS_UPDATED":
-            await self.repo.mark_settings_stale(payload.athlete_id)
+            await self.repo.mark_settings_stale(
+                str(athlete_id) if athlete_id is not None else None
+            )
 
-    async def _activity_uploaded(self, payload: WebhookPayload) -> None:
-        await self.sync_fn(payload.athlete_id, payload.activity_id)
+    async def _activity_uploaded(
+        self, payload: WebhookPayload, athlete_id: UUID | None
+    ) -> None:
+        if athlete_id is None:
+            return
+        await self.sync_fn(str(athlete_id), payload.activity_id)
 
     async def _activity_analyzed(self, payload: WebhookPayload) -> None:
         if payload.activity_id:
@@ -36,12 +50,14 @@ class WebhookHandler:
                 payload.icu_ctl,
             )
 
-    async def _calendar_updated(self, payload: WebhookPayload) -> None:
-        if not payload.athlete_id:
+    async def _calendar_updated(
+        self, payload: WebhookPayload, athlete_id: UUID | None
+    ) -> None:
+        if athlete_id is None:
             return
         for event in payload.events:
             if _matches_client(payload.oauth_client_id, event):
-                await self.repo.upsert_calendar_event(payload.athlete_id, event)
+                await self.repo.upsert_calendar_event(str(athlete_id), event)
         for deleted in payload.deleted_events:
             if _matches_client(payload.oauth_client_id, deleted):
                 await self.repo.delete_calendar_event(deleted)

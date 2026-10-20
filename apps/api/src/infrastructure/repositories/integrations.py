@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import json
+from collections.abc import Sequence
 from uuid import UUID
 
 from infrastructure.db.pool import ConnectionContext, get_pool
@@ -13,6 +16,20 @@ class UserIntegrationRepo:
         async with _connect() as conn, conn.cursor() as cur:
             _ = await cur.execute(
                 _SELECT_SQL + " WHERE athlete_id = %s ORDER BY source", (athlete_id,)
+            )
+            return [dict(row) for row in await cur.fetchall()]
+
+    async def list_connected(self, source: str) -> Sequence[dict[str, object]]:
+        """Every connected integration for one source, across all athletes.
+
+        Used to resolve an external athlete id (the upstream account id a
+        webhook carries) back to the row that belongs to it. The set is one row
+        per athlete that connected the source, so scanning it is cheap.
+        """
+        async with _connect() as conn, conn.cursor() as cur:
+            _ = await cur.execute(
+                _SELECT_SQL + " WHERE source = %s AND connected ORDER BY athlete_id",
+                (source,),
             )
             return [dict(row) for row in await cur.fetchall()]
 

@@ -190,7 +190,7 @@ async def test_handler_activity_uploaded_invokes_injected_sync() -> None:
         activity_id="act-7",
     )
 
-    await handler.handle(payload)
+    await handler.handle(payload, ATHLETE_UUID)
 
     assert invoked == [(ATHLETE_STR, "act-7")]
 
