@@ -20,6 +20,7 @@ from uuid import UUID
 import anyio
 from anyio.to_thread import run_sync as run_sync_in_worker_thread
 
+from application.computation.queue_worker import enqueue_activity_recompute
 from application.integrations.sync_job_phases import (
     SyncCancelledError,
     finish_job_detail,
@@ -148,4 +149,20 @@ async def _execute_job(job_id: UUID, credentials: dict[str, object]) -> JobOutco
             detail = finish_job_detail(conn, job_id, "failed", message, errors, started_at)
             return JobOutcome(status="failed", error=message, detail=detail)
         detail = finish_job_detail(conn, job_id, "success", None, errors, started_at)
-        return JobOutcome(status="success", error=None, detail=detail)
+        outcome = JobOutcome(status="success", error=None, detail=detail)
+    # Imported activities are inputs; the derived facts they feed do not exist
+    # until something recomputes them. Nothing did: a fresh import left the
+    # athlete with 20 activities and zero load facts until someone pressed the
+    # recompute button by hand.
+    await _enqueue_recompute(job)
+    return outcome
+
+
+async def _enqueue_recompute(job: dict[str, object]) -> None:
+    athlete_id = job.get("athlete_id")
+    if not isinstance(athlete_id, UUID):
+        return
+    try:
+        await enqueue_activity_recompute(athlete_id, "sync")
+    except Exception:
+        logger.exception("同步完成后排队重算失败 athlete=%s", athlete_id)

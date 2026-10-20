@@ -85,7 +85,9 @@ export function SyncStatusOverview({
             <span className="text-title1 font-bold text-text-primary">
               {stats.connectedCount}
             </span>
-            <span className="text-caption1 text-text-muted">/ 2 个已连接</span>
+            <span className="text-caption1 text-text-muted">
+              / {Object.keys(integrations).length} 个已连接
+            </span>
           </div>
         </div>
         <div className="mt-3 flex items-center gap-2">

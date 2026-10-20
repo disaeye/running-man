@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { IntegrationSource, IntegrationStatus } from "./useIntegrations";
+import { integrationQuery, type IntegrationSource, type IntegrationStatus } from "./useIntegrations";
 
 export type StalenessBucket = "fresh" | "stale" | "missing" | "unknown";
 
@@ -11,14 +11,22 @@ export interface SyncDetail extends IntegrationStatus {
 }
 
 /**
- * Reads the same SWR cache key as useIntegrations so cards stay in lockstep.
- * No separate fetcher — parent useIntegrations owns the network load.
+ * Reads the same SWR cache entry as useIntegrations, so a card and the overview
+ * cannot disagree about whether a source is connected.
+ *
+ * It must pass the fetcher, not just the key. SWR dedupes by key, so passing the
+ * same fetcher costs no extra request; omitting it makes the hook fall back to
+ * the global fetcher, which returns the raw API body. Whichever hook mounted
+ * first then decided what the cache held — and with the raw body in it, every
+ * `status === "connected"` check read `undefined` and the source rendered as
+ * 未连接 while the API said `connected: true`.
  */
 export function useSyncDetail(source: IntegrationSource) {
-  const { data, error, isLoading } = useSWR<IntegrationStatus>(
-    [`/integrations/${source}`, {}],
-    { shouldRetryOnError: false },
-  );
+  const query = integrationQuery(source);
+  const { data, error, isLoading } = useSWR<IntegrationStatus>(query.key, {
+    shouldRetryOnError: false,
+    fetcher: query.fetcher,
+  });
 
   const detail: SyncDetail | null = data
     ? {

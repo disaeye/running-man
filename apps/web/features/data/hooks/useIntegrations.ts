@@ -114,6 +114,22 @@ function integrationKey(source: IntegrationSource) {
   return [`/integrations/${source}`, {}] as const;
 }
 
+/**
+ * The cache key and fetcher for one integration.
+ *
+ * Exported so every reader of this key produces the same mapped value. A second
+ * `useSWR` on the same key without a fetcher falls back to the global one, which
+ * returns the raw API body: the cache then holds `{connected: true}` while every
+ * `status === "connected"` check reads `undefined`, and the source renders as
+ * 未连接 no matter how many times it is connected.
+ */
+export function integrationQuery(source: IntegrationSource) {
+  return {
+    key: integrationKey(source),
+    fetcher: () => fetchIntegration(source),
+  } as const;
+}
+
 function fetchIntegration(source: IntegrationSource) {
   return callOrvalValidated(
     (f) => getIntegrationApiV1IntegrationsSourceGet(source, {}, f),
@@ -182,9 +198,10 @@ async function pollJobUntilSettled(
 
 export function useIntegrations() {
   const { mutate } = useSWRConfig();
-  const intervalsIcu = useSWR<IntegrationStatus>(integrationKey("intervals_icu"), {
+  const query = integrationQuery("intervals_icu");
+  const intervalsIcu = useSWR<IntegrationStatus>(query.key, {
     shouldRetryOnError: false,
-    fetcher: () => fetchIntegration("intervals_icu"),
+    fetcher: query.fetcher,
   });
   const integrations: IntegrationsState = {
     intervals_icu: intervalsIcu.data ?? emptyStatus("intervals_icu"),

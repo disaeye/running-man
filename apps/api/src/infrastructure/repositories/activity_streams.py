@@ -14,6 +14,14 @@ def bulk_insert(
     activity_id: str,
     streams: list[dict[str, object]],
 ) -> int:
+    """Replace one activity's stream rows.
+
+    COPY rather than `executemany`: every INSERT statement fires the
+    statement-level trigger that recomputes the activity's stream flags, so one
+    statement per row means one aggregate scan and one summary rewrite per row.
+    A 5595-sample activity is ~22k rows, and the first real import spent an hour
+    in that loop. One COPY statement fires the trigger once.
+    """
     params = [_stream_params(athlete_id, activity_id, stream) for stream in streams]
     with conn.cursor() as cur:
         _ = cur.execute(
@@ -22,7 +30,9 @@ def bulk_insert(
         )
         if not params:
             return 0
-        cur.executemany(_INSERT_SQL, params)
+        with cur.copy(_COPY_SQL) as copy:
+            for row in params:
+                copy.write_row(row)
         return len(params)
 
 
@@ -111,8 +121,8 @@ def _number_at(values: Sequence[object] | None, index: int) -> float | None:
     return float(value) if isinstance(value, int | float) else None
 
 
-_INSERT_SQL = """
-INSERT INTO activity_streams
+_COPY_SQL = """
+COPY activity_streams
     (sample_time, activity_id, athlete_id, metric_type, value, lat, lon, alt)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+FROM STDIN
 """
