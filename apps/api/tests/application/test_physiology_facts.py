@@ -239,7 +239,7 @@ async def test_contract_window_routes_each_algorithm_to_owned_window(
     monkeypatch.setattr(service, "recompute_activity_load_facts", rebuild_load)
     monkeypatch.setattr(service, "recompute_pmc_facts", rebuild_pmc)
     monkeypatch.setattr(service, "estimate_hrmax", lambda _values: {"hr_max": 190})
-    monkeypatch.setattr(service, "estimate_lthr", lambda _a, _b: {"lthr": 176})
+    monkeypatch.setattr(service, "estimate_lthr", lambda _a, _b, _hr_max=None: {"lthr": 176})
     monkeypatch.setattr(
         service,
         "extract_efforts_from_activities",

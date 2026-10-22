@@ -9,6 +9,7 @@ import pytest
 from application.computation.runs import ComputationRunResult
 from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
+from domain.physiology.threshold_pace import EffortPoint
 from infrastructure.auth.models import Athlete
 from main import app
 from tests.api.physiology_endpoint_helpers import FakePool as _FakePool
@@ -139,7 +140,7 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
     )
     monkeypatch.setattr(
         "application.physiology.service.estimate_lthr",
-        lambda _best_20, _best_60: {
+        lambda _best_20, _best_60, _hr_max=None: {
             "lthr": 175,
             "method": "best_effort_window",
             "confidence": "medium",
@@ -163,6 +164,16 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
     monkeypatch.setattr(
         "application.physiology.service.vdot_from_efforts",
         lambda _efforts: 50.0,
+    )
+    # Three hard efforts: the threshold-pace estimate needs enough of them to
+    # describe the athlete rather than one afternoon.
+    monkeypatch.setattr(
+        "application.physiology.service.extract_efforts_from_activities",
+        lambda *_args, **_kwargs: [
+            EffortPoint(5000.0, 1200.0),
+            EffortPoint(10000.0, 2550.0),
+            EffortPoint(21097.0, 5700.0),
+        ],
     )
 
     async def persist(
@@ -210,9 +221,7 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
     monkeypatch.setattr(
         "application.physiology.service.recompute_activity_load_facts", rebuild_load
     )
-    monkeypatch.setattr(
-        "application.physiology.service.recompute_pmc_facts", rebuild_pmc
-    )
+    monkeypatch.setattr("application.physiology.service.recompute_pmc_facts", rebuild_pmc)
 
     response = await _post("/api/v1/athletes/me/auto-calculate")
 
@@ -225,6 +234,7 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
             "data_sufficient": True,
             "near_max_count": 1,
             "session_count": 1,
+            "required_sessions": 5,
             "input_window_days": 730,
             "algorithm_version": PHYSIOLOGY_VERSION,
         },
@@ -236,6 +246,7 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
             "near_threshold_count": 1,
             "source_20min": 175,
             "source_60min": None,
+            "required_efforts": 5,
             "input_window_days": 365,
             "algorithm_version": PHYSIOLOGY_VERSION,
         },
@@ -246,7 +257,8 @@ async def test_post_auto_calculate_persists_results_without_changing_response(
             "method": "daniels_vdot_threshold",
             "confidence": "low",
             "data_sufficient": True,
-            "effort_count": 4,
+            "effort_count": 3,
+            "required_efforts": 3,
             "input_window_days": 365,
             "algorithm_version": PHYSIOLOGY_VERSION,
         },
@@ -267,6 +279,3 @@ _STALE_RESPONSE = {
     "freshness": "stale",
     "source": "derived_metric_facts",
 }
-
-
-

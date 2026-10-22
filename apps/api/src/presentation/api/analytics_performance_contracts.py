@@ -53,6 +53,10 @@ class HrMaxEstimateResponse(PerformanceAnalyticsResponse):
     data_sufficient: bool
     near_max_count: int
     session_count: int
+    # How many sessions the estimator needs before it will answer. Sent so the
+    # UI can say "还差 N 次" from the algorithm's own rule instead of a number
+    # copied into a component.
+    required_sessions: int
     input_window_days: int
     algorithm_version: str
 
@@ -65,6 +69,7 @@ class LthrEstimateResponse(PerformanceAnalyticsResponse):
     near_threshold_count: int
     source_20min: int | None
     source_60min: int | None
+    required_efforts: int
     input_window_days: int
     algorithm_version: str
 
@@ -80,6 +85,7 @@ class ThresholdPaceEstimateResponse(PerformanceAnalyticsResponse):
     confidence: Literal["high", "medium", "low"] | None
     data_sufficient: bool
     effort_count: int
+    required_efforts: int
     input_window_days: int
     algorithm_version: str
 

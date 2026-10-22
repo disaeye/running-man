@@ -54,7 +54,7 @@ algorithms:
         expect: { ctl: 49.0707, atl: 98.665, tsb: -49.5943 }
         tolerance: 0.001
   - key: physiology
-    version: 1.1.0
+    version: 1.2.0
     input_window_days: 365
     materialization: stored_fact
     calculations:
@@ -64,12 +64,14 @@ algorithms:
     outputs: [hr_max, lthr, threshold_pace]
     reference_cases:
       - name: lthr_from_best_effort_windows
-        # LTHR = max(0.98 x best 20-minute, best 60-minute). Five qualifying
-        # 20-minute windows is the minimum for the estimate.
+        # LTHR = max(0.95 x best 20-minute, best 60-minute). The 20-minute
+        # window sits above threshold and is corrected down; the 60-minute
+        # window is a lower bound, because a rate held for an hour cannot be
+        # above threshold. Five qualifying 20-minute windows is the minimum.
         inputs:
           best_20min_hrs: [178, 179, 180, 180, 180]
           best_60min_hrs: [175]
-        expect: { lthr: 176 }
+        expect: { lthr: 175 }
         tolerance: 0
       - name: threshold_pace_from_vdot_50
         # LT2 threshold pace, 88% of VDOT in the oxygen domain.
@@ -77,11 +79,13 @@ algorithms:
         expect: { threshold_pace_s_per_km: 256 }
         tolerance: 3
       - name: hr_max_from_linear_session_ramp
-        # The tangent line extrapolates above the highest session; the estimate
-        # must land on 189 while near_max_count counts sessions near the
+        # The tangent line extrapolates above the highest session, but only
+        # within a plausible headroom: a ceiling more than 6 bpm above anything
+        # recorded is the fit running away, and the estimator then reports the
+        # observed maximum instead. near_max_count counts sessions near the
         # observed maximum (180), not near the estimate.
         inputs: { start_bpm: 160, end_bpm: 180, sessions: 30 }
-        expect: { hr_max: 189, near_max_count: 5 }
+        expect: { hr_max: 184, near_max_count: 5 }
         tolerance: 0
   - key: vdot
     version: 1.1.0

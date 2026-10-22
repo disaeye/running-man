@@ -8,6 +8,7 @@ import pytest
 
 from application.computation.runs import ComputationRunResult
 from application.physiology import service
+from domain.physiology.threshold_pace import EffortPoint
 from infrastructure.repositories.physiology import PhysiologyRepo
 
 ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000001")
@@ -85,11 +86,17 @@ async def test_calculate_physiology_uses_metric_specific_windows(
     monkeypatch.setattr(service, "recompute_activity_load_facts", rebuild_load)
     monkeypatch.setattr(service, "recompute_pmc_facts", rebuild_pmc)
     monkeypatch.setattr(service, "estimate_hrmax", lambda _values: {"hr_max": 190})
-    monkeypatch.setattr(service, "estimate_lthr", lambda _a, _b: {"lthr": 176})
+    monkeypatch.setattr(service, "estimate_lthr", lambda _a, _b, _hr_max=None: {"lthr": 176})
     monkeypatch.setattr(
         service,
         "extract_efforts_from_activities",
-        lambda *_args, **_kwargs: [],
+        # Three hard efforts: enough for the threshold-pace estimate to describe
+        # the athlete instead of a single afternoon.
+        lambda *_args, **_kwargs: [
+            EffortPoint(5000.0, 1200.0),
+            EffortPoint(10000.0, 2550.0),
+            EffortPoint(21097.0, 5700.0),
+        ],
     )
     monkeypatch.setattr(
         service,

@@ -18,7 +18,6 @@ from collections.abc import Sequence
 
 MIN_SESSIONS_TANGENT = 30
 MIN_SESSIONS_FALLBACK = 5
-_KDE_BANDWIDTH_FACTOR = 2.5  # Silverman's rule-of-thumb approximation
 _GRID_RESOLUTION = 300
 
 # A session counts as "near max" when its peak is within this band of the
@@ -29,9 +28,16 @@ _GRID_RESOLUTION = 300
 # than a measurement.
 NEAR_MAX_BAND_BPM = 3.0
 
-# How far above the observed maximum the extrapolation may land before it stops
-# being believable. Beyond this the tangent has run away and the estimate is
-# reported with low confidence whatever the session count says.
+# How far above the observed maximum an extrapolation may land and still be
+# reported as an estimate.
+#
+# Heart rate max is a ceiling: the highest session on record is a lower bound on
+# it, and the gap between the two is usually a few bpm, not tens. The tangent
+# method bases its answer on the shape of the distribution, so with sparse or
+# noisy data it can extrapolate far past anything the athlete ever recorded. A
+# value more than this far above the observed max is not a better estimate of
+# the athlete's ceiling; it is the fit running away. The estimator then reports
+# the observed maximum instead of a number no measurement supports.
 MAX_PLAUSIBLE_HEADROOM_BPM = 6.0
 
 
@@ -102,14 +108,24 @@ def _tangent_method(data: list[float]) -> float | None:
     y0 = density[steepest_idx]
     hr_max_est = x0 - y0 / slope
 
-    if hr_max_est < data[-1] or hr_max_est > data[-1] + 25:
-        return data[-1]
+    # Refuse to report a ceiling the data does not support. Returning None lets
+    # the caller fall back to the observed maximum, which is a lower bound
+    # rather than an extrapolation.
+    if hr_max_est < data[-1] or hr_max_est > data[-1] + MAX_PLAUSIBLE_HEADROOM_BPM:
+        return None
 
     return hr_max_est
 
 
 def _bandwidth(data: list[float]) -> float:
-    """Silverman's rule-of-thumb bandwidth."""
+    """Silverman's rule-of-thumb bandwidth.
+
+    Published as ``0.9 * min(σ, IQR/1.34) * n^(-1/5)``. An earlier version
+    multiplied it by 2.5, which over-smoothed the density until the peak had no
+    distinguishable flank: the "steepest descent" then sat on the shoulder of a
+    blurred bump and the tangent line landed well past the data. The rule is a
+    rule, not a starting point.
+    """
     n = len(data)
     mean = sum(data) / n
     variance = sum((x - mean) ** 2 for x in data) / n
@@ -118,7 +134,7 @@ def _bandwidth(data: list[float]) -> float:
         return 1.0
     iqr = _percentile(data, 75) - _percentile(data, 25)
     scale = min(std, iqr / 1.34) if iqr > 0 else std
-    return 0.9 * scale * n ** (-1 / 5) * _KDE_BANDWIDTH_FACTOR
+    return 0.9 * scale * n ** (-1 / 5)
 
 
 def _kde(x: float, data: list[float], bandwidth: float) -> float:
@@ -149,11 +165,7 @@ def _percentile(sorted_data: list[float], pct: float) -> float:
 def _build_result(hr_max: float, data: list[float], method: str) -> dict[str, object]:
     observed_max = data[-1]
     near_max = sum(1 for h in data if h >= observed_max - NEAR_MAX_BAND_BPM)
-    headroom = hr_max - observed_max
-    if headroom > MAX_PLAUSIBLE_HEADROOM_BPM:
-        confidence = "low"
-    else:
-        confidence = "high" if near_max >= 3 else "medium" if near_max >= 1 else "low"
+    confidence = "high" if near_max >= 3 else "medium" if near_max >= 1 else "low"
     return {
         "hr_max": round(hr_max),
         "method": method,

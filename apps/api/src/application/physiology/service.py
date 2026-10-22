@@ -104,7 +104,7 @@ async def calculate_physiology(
         value for item in hr_streams if (value := _number(item.get("best_60min_hr"))) is not None
     ]
     hr_result = estimate_hrmax(session_max_hrs)
-    lthr_result = estimate_lthr(best_20, best_60)
+    lthr_result = estimate_lthr(best_20, best_60, _integer(hr_result.get("hr_max")))
     # Pass the HR references into the effort filter: without them it can only
     # judge a run "hard" by comparing it to the athlete's other runs, which
     # fails when *every* run is easy — the least slow one would be treated as a
@@ -118,7 +118,9 @@ async def calculate_physiology(
     critical_speed_result = estimate_critical_speed(efforts)
     effort_tuples = [(effort.distance_m, effort.duration_s) for effort in efforts]
     vdot_value = vdot_from_efforts(effort_tuples)
-    threshold_pace_result = _threshold_pace_from(vdot_value, critical_speed_result)
+    threshold_pace_result = _threshold_pace_from(
+        vdot_value, critical_speed_result, len(effort_tuples)
+    )
     vdot_result = (
         {
             "vdot": vdot_value,
@@ -210,7 +212,7 @@ def _window(now: datetime, days: int) -> ComputationWindow:
 
 
 def _threshold_pace_from(
-    vdot: float | None, critical_speed: Mapping[str, object]
+    vdot: float | None, critical_speed: Mapping[str, object], effort_count: int
 ) -> dict[str, object]:
     """Threshold pace (LT2) from the athlete's best maximal effort.
 
@@ -222,14 +224,21 @@ def _threshold_pace_from(
 
     Threshold therefore comes from Daniels' VDOT model, which is defined on race
     performances, and CS is carried alongside as a cross-check.
+
+    VDOT answers "how fast could this athlete race", so it needs enough hard
+    efforts to describe the athlete rather than one afternoon: a single run's
+    VDOT is a performance estimate, not a threshold. Below
+    :data:`MIN_VDOT_EFFORTS` the pace is withheld with the count that is missing,
+    which the UI turns into "还差几次". The athlete's last valid threshold stays
+    in force meanwhile — refusing an estimate is not the same as deleting one.
     """
     cross_check = {
         "critical_speed_s_per_km": critical_speed.get("critical_speed_s_per_km"),
         "critical_speed_ms": critical_speed.get("critical_speed_ms"),
-        "effort_count": critical_speed.get("effort_count", 0),
+        "effort_count": effort_count,
     }
     pace = vdot_to_threshold_pace(vdot) if vdot is not None else 0.0
-    if pace > 0:
+    if pace > 0 and effort_count >= MIN_VDOT_EFFORTS:
         return {
             "threshold_pace_s_per_km": round(pace),
             "confidence": critical_speed.get("confidence"),

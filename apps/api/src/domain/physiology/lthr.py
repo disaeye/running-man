@@ -11,6 +11,20 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 MIN_HARD_EFFORTS = 5  # Minimum qualifying activities
+
+# A 20-minute maximal window averages about 5% above the threshold it is used to
+# estimate: the effort is short enough that heart rate is still climbing through
+# the lactate steady state it describes. Friel's field protocol takes the last
+# 20 minutes of a 30-minute time trial — a window that is already at threshold —
+# so applying no correction to a bare 20-minute maximum reads the peak of a hard
+# effort as the threshold itself and lands several bpm high. Every zone built on
+# LTHR then sits too high.
+WINDOW_20MIN_TO_LTHR = 0.95
+
+# Threshold is a sustainable intensity, maximal heart rate is a ceiling, so an
+# estimate at or above HRmax is impossible rather than merely suspicious.
+MIN_GAP_BELOW_HRMAX = 2
+
 _WINDOW_20MIN = 1200  # seconds
 _WINDOW_60MIN = 3600  # seconds
 
@@ -18,15 +32,29 @@ _WINDOW_60MIN = 3600  # seconds
 def estimate_lthr(
     best_20min_hrs: Sequence[float],
     best_60min_hrs: Sequence[float],
+    hr_max: int | None = None,
 ) -> dict[str, object]:
     """Estimate LTHR from best sustained HR windows across activities.
 
-    Uses the Intervals.icu approach:
-      LTHR = max(best_20min_hr * 0.98, best_60min_hr)
+    Two windows answer slightly different questions:
+
+    * the best 20-minute average is a hard effort whose peak sits ~5% above
+      threshold, so it is corrected by :data:`WINDOW_20MIN_TO_LTHR`;
+    * the best 60-minute average is a *lower bound* — if the athlete sustained
+      that heart rate for an hour, threshold cannot be below it.
+
+    The estimate is the corrected 20-minute value, raised to the 60-minute lower
+    bound when that bound is higher. Taking the maximum of an estimate and a
+    demonstrated lower bound is not the same as taking the maximum of two
+    estimates: the earlier version applied both corrections as if they estimated
+    the same quantity, with a 0.98 factor that put LTHR above what any sustained
+    run showed.
 
     Args:
         best_20min_hrs: Highest 20-min average HR per activity
         best_60min_hrs: Highest 60-min average HR per activity
+        hr_max: The athlete's maximal heart rate, when known, so an impossible
+            threshold can be refused instead of published.
     Returns:
         dict with lthr, confidence, data_sufficient, method
     """
@@ -45,13 +73,19 @@ def estimate_lthr(
     best_20 = valid_20[-1]
     best_60 = valid_60[-1] if valid_60 else 0.0
 
-    from_20 = best_20 * 0.98
-    from_60 = best_60
+    from_20 = best_20 * WINDOW_20MIN_TO_LTHR
+    lthr = max(from_20, best_60) if best_60 > 0 else from_20
 
-    lthr = max(from_20, from_60) if from_60 > 0 else from_20
+    clamped = False
+    if hr_max is not None and hr_max > MIN_GAP_BELOW_HRMAX and lthr >= hr_max:
+        lthr = hr_max - MIN_GAP_BELOW_HRMAX
+        clamped = True
 
     near_count = sum(1 for h in valid_20 if h >= lthr - 3)
-    confidence = "high" if near_count >= 3 else "medium" if near_count >= 1 else "low"
+    if clamped:
+        confidence = "low"
+    else:
+        confidence = "high" if near_count >= 3 else "medium" if near_count >= 1 else "low"
 
     return {
         "lthr": round(lthr),
@@ -60,7 +94,7 @@ def estimate_lthr(
         "data_sufficient": True,
         "near_threshold_count": near_count,
         "source_20min": round(from_20),
-        "source_60min": round(from_60) if from_60 > 0 else None,
+        "source_60min": round(best_60) if best_60 > 0 else None,
     }
 
 

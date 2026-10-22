@@ -5,10 +5,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from application.physiology.physiology_windows import physiology_window_days
-from application.physiology.service import cached_physiology, calculate_physiology
+from application.physiology.service import (
+    MIN_VDOT_EFFORTS,
+    cached_physiology,
+    calculate_physiology,
+)
 from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
 from domain.generated.metrics import Metric
+from domain.physiology.hrmax import MIN_SESSIONS_FALLBACK
+from domain.physiology.lthr import MIN_HARD_EFFORTS
 from infrastructure.auth.models import Athlete
 from presentation.api.analytics_performance_contracts import (
     AutoCalculateResponse,
@@ -20,6 +26,8 @@ from presentation.api.analytics_performance_contracts import (
 from presentation.auth.deps import get_current_athlete
 
 router = APIRouter(prefix="/athletes", tags=["athletes"])
+
+
 @router.get("/me/physiology", response_model=PhysiologyResponse)
 async def physiology(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
@@ -49,6 +57,7 @@ async def auto_calculate(
         hr_max=HrMaxEstimateResponse.model_validate(
             {
                 **result.hr_max,
+                "required_sessions": MIN_SESSIONS_FALLBACK,
                 "input_window_days": physiology_window_days(Metric.HR_MAX),
                 "algorithm_version": algorithm_contract(Algorithm.PHYSIOLOGY).version,
             }
@@ -56,6 +65,7 @@ async def auto_calculate(
         lthr=LthrEstimateResponse.model_validate(
             {
                 **result.lthr,
+                "required_efforts": MIN_HARD_EFFORTS,
                 "input_window_days": physiology_window_days(Metric.LTHR),
                 "algorithm_version": algorithm_contract(Algorithm.PHYSIOLOGY).version,
             }
@@ -63,6 +73,7 @@ async def auto_calculate(
         threshold_pace=ThresholdPaceEstimateResponse.model_validate(
             {
                 **result.threshold_pace,
+                "required_efforts": MIN_VDOT_EFFORTS,
                 "input_window_days": physiology_window_days(Metric.THRESHOLD_PACE),
                 "algorithm_version": algorithm_contract(Algorithm.PHYSIOLOGY).version,
             }
