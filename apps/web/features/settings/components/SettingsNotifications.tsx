@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card } from "@shared/ui/Card";
 import { Button } from "@shared/ui/button";
-import { apiFetch } from "@shared/lib/api";
+import { Checkbox } from "@shared/ui/Checkbox";
+import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import type { UserProfile, NotificationPrefs } from "@shared/lib/auth";
 
 const DEFAULT_PREFS: NotificationPrefs = {
@@ -32,12 +33,7 @@ function ToggleItem({
         <p className="text-subheadline font-medium text-text-primary">{label}</p>
         <p className="text-caption1 text-text-muted">{description}</p>
       </div>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="size-5 cursor-pointer rounded border-border-default text-accent-strong focus:ring-accent accent-accent"
-      />
+      <Checkbox checked={checked} onChange={onChange} />
     </label>
   );
 }
@@ -110,7 +106,7 @@ export function SettingsNotifications({ profile, onSaved }: SettingsNotification
       onSaved();
       setTimeout(() => setSaved(false), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "保存通知配置失败");
+      setError(apiErrorMessage(err, "保存通知配置失败"));
     } finally {
       setSaving(false);
     }
@@ -119,7 +115,7 @@ export function SettingsNotifications({ profile, onSaved }: SettingsNotification
   return (
     <Card padding="md" className="space-y-6">
       <div>
-        <h2 className="text-headline font-semibold text-text-primary">通知与预警偏好</h2>
+        <h2 className="text-caption1 font-semibold text-text-secondary">通知与预警偏好</h2>
         <p className="mt-0.5 text-caption1 text-text-muted">
           定制系统关键事件提醒，配置会实时同步并在所有终端生效
         </p>

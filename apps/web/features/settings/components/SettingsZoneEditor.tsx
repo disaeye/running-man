@@ -55,7 +55,6 @@ interface Zone {
 }
 
 interface Props {
-  title: string;
   zones: Zone[];
   unit: string;
   drafts: DraftRow[];
@@ -64,7 +63,7 @@ interface Props {
   onChange: (next: DraftRow[]) => void;
 }
 
-export function ZoneEditor({ title, zones, unit, drafts, errors, editable, onChange }: Props) {
+export function ZoneEditor({ zones, unit, drafts, errors, editable, onChange }: Props) {
   const update = (zone: number, field: "min_pct" | "max_pct", value: string) => {
     const next = drafts.map((d) => (d.zone === zone ? { ...d, [field]: value } : d));
     onChange(next);
@@ -72,13 +71,12 @@ export function ZoneEditor({ title, zones, unit, drafts, errors, editable, onCha
 
   return (
     <div>
-      <div className="mb-2 flex items-center gap-2">
-        <h3 className="text-subheadline font-semibold text-text-secondary">{title}</h3>
-        {editable && <span className="text-caption1 text-text-muted">输入百分比 (%)</span>}
-      </div>
-      <table className="w-full text-xs border-collapse">
+      {editable && (
+        <p className="mb-2 text-caption1 text-text-muted">输入百分比 (%)</p>
+      )}
+      <table className="hidden w-full border-collapse text-caption1 sm:table">
         <thead>
-          <tr className="border-b border-border/50 text-muted-foreground">
+          <tr className="border-b border-border-subtle text-text-muted">
             <th className="pb-2 text-left font-medium">区间</th>
             <th className="pb-2 text-center font-medium">范围 ({unit})</th>
             <th className="pb-2 text-right font-medium">最小占比</th>
@@ -91,16 +89,16 @@ export function ZoneEditor({ title, zones, unit, drafts, errors, editable, onCha
             if (!d) return null;
             const isLast = d.max_pct === "";
             const error = errors.get(z.zone);
-            const inputCls = `w-16 rounded-md border bg-surface-sunken px-2 py-1 text-right text-xs font-mono tabular-nums text-text-primary focus:border-accent focus:outline-none ${error ? "border-error" : "border-border-subtle"}`;
+            const inputCls = `w-16 rounded-md border bg-surface-sunken px-2 py-1 text-right text-caption1 font-mono tabular-nums text-text-primary focus:border-accent focus:outline-none ${error ? "border-error" : "border-border-subtle"}`;
             return (
-              <tr key={z.zone} className="border-b border-border/30">
+              <tr key={z.zone} className="border-b border-border-subtle last:border-0">
                 <td className="py-2.5 whitespace-nowrap">
                   <span
                     className={`mr-2 inline-block h-2 w-2 rounded-full align-middle ${zoneBgClass(z.zone)}`}
                   />
-                  <span className="text-foreground font-medium">{z.name}</span>
+                  <span className="text-text-primary font-medium">{z.name}</span>
                 </td>
-                <td className="py-2.5 text-center text-foreground font-mono font-semibold tabular-nums whitespace-nowrap px-2">
+                <td className="py-2.5 text-center text-text-primary font-mono font-semibold tabular-nums whitespace-nowrap px-2">
                   {z.min_value} — {z.max_value ?? "∞"}
                 </td>
                 <td className="py-2.5 text-right">
@@ -146,17 +144,23 @@ export function ZoneEditor({ title, zones, unit, drafts, errors, editable, onCha
                 </span>
               </div>
               {editable && (
-                <div className="mt-2 flex gap-2">
-                  <input type="number" step="0.1" value={d.min_pct}
-                    onChange={(e) => update(z.zone, "min_pct", e.target.value)}
-                    className={`w-full rounded border bg-surface px-2 py-1 text-caption1 ${error ? "border-error" : "border-border-subtle"}`} />
-                  <input type="number" step="0.1" placeholder="∞"
-                    value={d.max_pct === "" ? "" : d.max_pct}
-                    onChange={(e) => update(z.zone, "max_pct", e.target.value)}
-                    className={`w-full rounded border bg-surface px-2 py-1 text-caption1 ${error ? "border-error" : "border-border-subtle"}`} />
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <label className="flex flex-col gap-1 text-caption1 text-text-muted">
+                    最小占比 (%)
+                    <input type="number" inputMode="decimal" step="0.1" value={d.min_pct}
+                      onChange={(e) => update(z.zone, "min_pct", e.target.value)}
+                      className={`min-h-11 w-full rounded-md border bg-surface-sunken px-2 text-caption1 tabular-nums text-text-primary ${error ? "border-error" : "border-border-subtle"}`} />
+                  </label>
+                  <label className="flex flex-col gap-1 text-caption1 text-text-muted">
+                    最大占比 (%)
+                    <input type="number" inputMode="decimal" step="0.1" placeholder="∞"
+                      value={d.max_pct === "" ? "" : d.max_pct}
+                      onChange={(e) => update(z.zone, "max_pct", e.target.value)}
+                      className={`min-h-11 w-full rounded-md border bg-surface-sunken px-2 text-caption1 tabular-nums text-text-primary placeholder:text-text-muted ${error ? "border-error" : "border-border-subtle"}`} />
+                  </label>
                 </div>
               )}
-              {error && <p className="mt-1 text-caption2 text-error">{error}</p>}
+              {error && <p className="mt-1 text-caption1 text-error">{error}</p>}
             </div>
           );
         })}
@@ -166,7 +170,7 @@ export function ZoneEditor({ title, zones, unit, drafts, errors, editable, onCha
         {drafts.map((d) => {
           const error = errors.get(d.zone);
           return error ? (
-            <span key={d.zone} className="text-caption2 text-error">{d.name}: {error}</span>
+            <span key={d.zone} className="text-caption1 text-error">{d.name}: {error}</span>
           ) : null;
         })}
       </div>

@@ -35,7 +35,7 @@ export function PlanGenerationSettings({
           aria-label="每周休息日"
           value={restDays}
           onChange={(event) => onRestDaysChange(Number(event.target.value))}
-          className="min-h-10 rounded-lg border border-border-default bg-surface-card px-3 text-subheadline text-text-primary"
+          className="min-h-11 rounded-lg border border-border-default bg-surface-card px-3 text-subheadline text-text-primary"
         >
           {[0, 1, 2, 3, 4, 5, 6].map((count) => (
             <option key={count} value={count}>{count} 天</option>
@@ -49,7 +49,7 @@ export function PlanGenerationSettings({
             type="button"
             aria-pressed={preferredDaysOff.includes(day.value)}
             onClick={() => onToggleDayOff(day.value)}
-            className={`min-h-10 rounded-full border px-3 text-caption1 transition-colors ${
+            className={`min-h-11 rounded-full border px-3 text-caption1 transition-colors ${
               preferredDaysOff.includes(day.value)
                 ? "border-accent bg-accent/15 text-accent-strong"
                 : "border-border-default bg-surface-card text-text-secondary"

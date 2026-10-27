@@ -9,6 +9,7 @@ import {
 import { WorkoutBuilderV2 } from "@features/calendar/components/WorkoutBuilderV2";
 import { DayActivitySummary } from "@features/calendar/components/DayActivitySummary";
 import { PlanPacePrescription } from "@features/calendar/components/PlanPacePrescription";
+import { DayPlanActual } from "@features/calendar/components/DayPlanActual";
 import { ManualActivityForm } from "@features/activity/components/ManualActivityForm";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 import type { ActivitySummary } from "@shared/types/activity";
@@ -83,6 +84,8 @@ export function CalendarDaySheet({
                 </section>
               )}
               {editingEvent && <PlanPacePrescription event={editingEvent} />}
+
+              <DayPlanActual event={editingEvent} activities={activities} />
 
               <section className="flex flex-col gap-3" aria-label="记录实际训练">
                 <h3 className="text-caption1 font-semibold text-text-muted">

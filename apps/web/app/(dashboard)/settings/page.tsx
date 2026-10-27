@@ -4,16 +4,19 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { useZoneOverrides, type ZoneOverride } from "@features/settings/hooks/useZoneOverrides";
-import { AthleteProfileSummary } from "@features/settings/components/AthleteProfileSummary";
+import { AthleteIdentityCard } from "@features/settings/components/AthleteIdentityCard";
+import { PhysiologyCards } from "@features/settings/components/PhysiologyCards";
 import { SettingsTrainingParams } from "@features/settings/components/SettingsTrainingParams";
 import { SettingsZones } from "@features/settings/components/SettingsZones";
-import { SettingsPhysiology } from "@features/settings/components/SettingsPhysiology";
 import { SettingsDataSection } from "@features/settings/components/SettingsDataSection";
+import { RaceResultsSection } from "@features/settings/components/RaceResultsSection";
+import { LoadRiskCard } from "@features/settings/components/LoadRiskCard";
+import { PersonalRecordsGrid } from "@features/settings/components/PersonalRecordsGrid";
+import { GearSection } from "@features/settings/components/GearSection";
 import { SettingsProfile } from "@features/settings/components/SettingsProfile";
 import { SettingsPreferences } from "@features/settings/components/SettingsPreferences";
 import { SettingsNotifications } from "@features/settings/components/SettingsNotifications";
 import { SettingsSignOut } from "@features/settings/components/SettingsSignOut";
-import { Activity, RefreshCw, UserCheck } from "lucide-react";
 import { Card } from "@shared/ui/Card";
 import {
   resolveSettingsSection,
@@ -24,7 +27,7 @@ import {
 export type AthleteProfileTabId = SettingsSectionId;
 
 /**
- * The page's three panels, keyed by the **canonical** section id.
+ * The page's three sections, keyed by the **canonical** section id.
  *
  * These ids come from `shared/config/canonical-routes.ts` (`data | training |
  * account`) and are what `?section=` carries, what `next.config.js` redirects
@@ -34,9 +37,9 @@ export type AthleteProfileTabId = SettingsSectionId;
  * through to the first tab and a refresh lost the selection.
  */
 const PROFILE_TABS = [
-  { id: "training", label: "生理与区间", icon: Activity, desc: "LTHR · 配速5区 · 生理参数" },
-  { id: "data",     label: "数据源与同步", icon: RefreshCw, desc: "Intervals.icu · 导入导出" },
-  { id: "account",  label: "账户与偏好", icon: UserCheck, desc: "个人资料 · 界面 · 通知" },
+  { id: "training", label: "生理与区间" },
+  { id: "data", label: "数据源与同步" },
+  { id: "account", label: "账户与偏好" },
 ] as const;
 
 function SettingsPageContent() {
@@ -55,7 +58,15 @@ function SettingsPageContent() {
   // 4'20"/km) made an unreachable API look like a configured athlete and let a
   // save persist those numbers as real thresholds. Until the profile loads,
   // the tabs that need it are replaced by an explanatory state.
-  const { zones, loading: zonesLoading, saving: zonesSaving, saveOverrides, resetZones, selectScheme } = useZoneOverrides();
+  const { zones, loading: zonesLoading, saving: zonesSaving, saveOverrides, resetZones, selectScheme, reload: reloadZones } = useZoneOverrides();
+
+  // Saving a threshold changes the zones derived from it. Both queries have to
+  // refetch, otherwise the panel keeps showing boundaries from the old LTHR
+  // while the form above says the new one was saved.
+  const handleProfileSaved = () => {
+    reloadProfile();
+    reloadZones();
+  };
 
   const handleTabChange = (tabId: AthleteProfileTabId) => {
     setActiveTab(tabId);
@@ -79,14 +90,14 @@ function SettingsPageContent() {
 
   return (
     <div className="page-stack" data-testid="athlete-profile-page">
-      <section className="flex flex-wrap items-end justify-between gap-6 border-b border-border-subtle pb-7" aria-labelledby="profile-title">
-        <div><h1 id="profile-title" className="text-display-md text-text-primary">运动员档案</h1><p className="mt-1.5 max-w-xl text-subheadline text-text-secondary">阈值决定心率与配速区间，也决定负荷与建议是否成立。</p></div>
-        <div className="hidden rounded-lg border border-border-subtle bg-surface-sunken px-4 py-3 sm:block"><p className="text-caption1 text-text-muted">档案状态</p><p className={`mt-1 text-subheadline ${profile ? "text-accent-strong" : "text-warning"}`}>{profileLoading ? "读取中" : profile ? "档案已加载" : "未加载"}</p></div>
-      </section>
-      <Card padding="md"><AthleteProfileSummary profile={profile} loading={profileLoading} /></Card>
-      <div className="flex flex-wrap gap-2 border-b border-border-subtle pb-3">
+      <AthleteIdentityCard profile={profile} loading={profileLoading} />
+      <PhysiologyCards profile={profile} />
+      <div
+        className="grid grid-cols-3 gap-1 rounded-2xl bg-surface-overlay p-1 sm:inline-flex sm:flex-wrap"
+        role="group"
+        aria-label="档案分区"
+      >
         {PROFILE_TABS.map((tab) => {
-          const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
@@ -94,11 +105,12 @@ function SettingsPageContent() {
               type="button"
               data-testid={`settings-section-${tab.id}`}
               onClick={() => handleTabChange(tab.id as AthleteProfileTabId)}
-              className={`focus-ring flex min-h-11 items-center gap-2 rounded-lg px-4 py-2.5 text-caption1 font-semibold transition-colors ${isActive ? "bg-primary text-on-primary" : "border border-border-default bg-surface-card text-text-secondary hover:bg-surface-overlay hover:text-text-primary"}`}
+              className={`focus-ring flex min-h-11 min-w-0 items-center justify-center rounded-lg px-2 text-caption1 font-medium transition-colors sm:px-4 ${isActive ? "bg-surface-card text-text-primary shadow-[var(--shadow-sm)]" : "text-text-secondary hover:text-text-primary"}`}
               aria-pressed={isActive}
             >
-              <Icon className="size-4" />
-              <span data-testid={`settings-section-label-${tab.id}`}>{tab.label}</span>
+              <span className="truncate" data-testid={`settings-section-label-${tab.id}`}>
+                {tab.label}
+              </span>
             </button>
           );
         })}
@@ -135,7 +147,7 @@ function SettingsPageContent() {
               <div className="lg:col-span-5">
                 <SettingsTrainingParams
                   profile={profile}
-                  onSaved={reloadProfile}
+                  onSaved={handleProfileSaved}
                 />
               </div>
               <div className="lg:col-span-7">
@@ -162,12 +174,11 @@ function SettingsPageContent() {
                 />
               </div>
             </div>
-            <SettingsPhysiology profile={profile} onSaved={reloadProfile} />
           </div>
         )}
         {activeTab === "data" && <SettingsDataSection />}
         {activeTab === "account" && (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
             <SettingsProfile profile={profile} onSaved={reloadProfile} />
             <SettingsPreferences profile={profile} onSaved={reloadProfile} />
             <SettingsNotifications profile={profile} onSaved={reloadProfile} />
@@ -175,6 +186,17 @@ function SettingsPageContent() {
           </div>
         )}
       </div>
+      )}
+      {/* 下面四块都只读接口数据、不读运动员档案：档案读取失败时上面显示
+          错误卡，这里照常可用。顺序是：录入成绩 → 负荷风险 → 个人最好
+          成绩 → 跑鞋。 */}
+      {activeTab === "training" && (
+        <>
+          <RaceResultsSection />
+          <LoadRiskCard />
+          <PersonalRecordsGrid />
+          <GearSection />
+        </>
       )}
     </div>
   );

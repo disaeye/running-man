@@ -1,6 +1,5 @@
 "use client";
 
-import { Card } from "@shared/ui/Card";
 import { Badge } from "@shared/ui/Badge";
 import { ScoreRing } from "@shared/ui/ScoreRing";
 import { usePlanQuality } from "@features/plan/hooks/usePlanQuality";
@@ -42,76 +41,65 @@ export function PlanQuality({ from, to }: PlanQualityProps) {
 
   if (loading) {
     return (
-      <Card padding="md" data-testid="plan-quality-loading">
-        <div className="flex h-40 items-center justify-center text-subheadline text-text-muted">正在评估训练计划…</div>
-      </Card>
+      <p className="text-caption1 text-text-muted" data-testid="plan-quality-loading">
+        正在评估训练计划…
+      </p>
     );
   }
 
   if (error || !data) {
     return (
-      <Card padding="md" data-testid="plan-quality-empty">
-        <div className="flex h-40 flex-col items-center justify-center gap-2 text-center">
-          <span className="text-subheadline font-medium text-text-secondary">训练计划评分</span>
-          <span className="text-caption1 text-text-muted">
-            {error ? "评分服务暂不可用" : "暂无评分数据，请先制定训练计划"}
-          </span>
-        </div>
-      </Card>
+      <p className="text-caption1 text-text-muted" data-testid="plan-quality-empty">
+        {error ? "评分服务暂不可用" : "暂无评分数据，请先制定训练计划"}
+      </p>
     );
   }
 
   const { ringColor, badgeVariant, label } = gradeStyling(data.grade);
 
   return (
-    <Card padding="md" data-testid="plan-quality-card">
-      <div className="flex items-start gap-4">
-        <ScoreRing value={data.score} max={100} size={72} color={ringColor} ariaLabel={`计划评分 ${data.score}`}>
-          <span className="font-mono text-title3 font-bold tabular-nums" style={{ color: ringColor }}>
-            {Math.round(data.score)}
-          </span>
-        </ScoreRing>
+    <div className="flex items-start gap-4" data-testid="plan-quality-card">
+      <ScoreRing value={data.score} max={100} size={72} color={ringColor} ariaLabel={`计划评分 ${data.score}`}>
+        <span className="font-mono text-title3 font-bold tabular-nums" style={{ color: ringColor }}>
+          {Math.round(data.score)}
+        </span>
+      </ScoreRing>
 
-        <div className="flex flex-1 flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-subheadline font-semibold text-text-primary">计划评分：{label}</h3>
-            {data.grade && <Badge variant={badgeVariant}>{data.grade}</Badge>}
-          </div>
-
-          <p className="text-caption1 text-text-secondary">{data.message}</p>
-
-          <div className="grid grid-cols-2 gap-2 rounded-lg border border-border-subtle bg-surface-sunken p-3 text-center max-sm:grid-cols-1">
-            <div>
-              <p className="text-caption1 text-text-muted">本周 TSS</p>
-              <p className="text-subheadline font-bold tabular-nums text-text-primary">
-                {Math.round(data.weekly_tss)}
-                <span className="text-caption1 text-text-muted">/{Math.round(data.target_tss)}</span>
-              </p>
-            </div>
-            <div>
-              <p className="text-caption1 text-text-muted">关键训练</p>
-              <p className="text-subheadline font-bold tabular-nums text-text-primary">
-                {data.key_sessions_completed}/{data.key_sessions_total}
-              </p>
-            </div>
-
-          </div>
-
-          {data.concerns.length > 0 && (
-            <div className="mt-1 flex flex-col gap-1">
-              <span className="text-caption1 font-medium text-text-muted">关注点</span>
-              <ul className="flex flex-col gap-1">
-                {data.concerns.slice(0, 3).map((c, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-caption1 text-text-secondary">
-                    <span className="mt-1 inline-flex size-1 shrink-0 rounded-full bg-warning" aria-hidden />
-                    <span>{c}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-subheadline font-semibold text-text-primary">{label}</span>
+          {data.grade && <Badge variant={badgeVariant}>{data.grade}</Badge>}
         </div>
+
+        <p className="text-caption1 leading-snug text-text-secondary">{data.message}</p>
+
+        <dl className="flex gap-6">
+          <div>
+            <dt className="text-caption1 text-text-muted">本周 TSS</dt>
+            <dd className="font-mono text-subheadline font-semibold tabular-nums text-text-primary">
+              {Math.round(data.weekly_tss)}
+              <span className="text-caption1 font-normal text-text-muted">/{Math.round(data.target_tss)}</span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-caption1 text-text-muted">关键训练</dt>
+            <dd className="font-mono text-subheadline font-semibold tabular-nums text-text-primary">
+              {data.key_sessions_completed}/{data.key_sessions_total}
+            </dd>
+          </div>
+        </dl>
+
+        {data.concerns.length > 0 && (
+          <ul className="flex flex-col gap-1">
+            {data.concerns.slice(0, 3).map((c, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-caption1 text-text-secondary">
+                <span className="mt-1 inline-flex size-1 shrink-0 rounded-full bg-warning" aria-hidden />
+                <span>{c}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-    </Card>
+    </div>
   );
 }

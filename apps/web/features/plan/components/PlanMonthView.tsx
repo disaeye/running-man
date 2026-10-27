@@ -2,15 +2,15 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@shared/ui/Card";
+import { CardHeader } from "@shared/ui/CardHeader";
 import { Button } from "@shared/ui/button";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 import type { ActivitySummary } from "@shared/types/activity";
-import { toISODate, formatDistance } from "@shared/lib/format";
-import { getSportConfig } from "@shared/config/sport-config";
-import { tssBg } from "@features/plan/lib/tss-bg";
+import { toISODate } from "@shared/lib/format";
+import { LOAD_TIER_CLASS, LOAD_TIER_LABEL, LOAD_TIERS } from "@features/plan/lib/load-tier";
+import { buildMonthWeeks } from "@features/plan/lib/month-grid";
+import { MonthDayCell } from "@features/plan/components/MonthDayCell";
 import { activityLocalDay, athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
-
-export { tssBg } from "@features/plan/lib/tss-bg";
 
 interface PlanMonthViewProps {
   events: CalendarEventDTO[];
@@ -26,35 +26,22 @@ const MONTH_NAMES = [
   "七月", "八月", "九月", "十月", "十一月", "十二月",
 ];
 
-function getMonthlyTss(eventsByDate: Map<string, CalendarEventDTO[]>, iso: string): number {
-  return (eventsByDate.get(iso) ?? []).reduce(
-    (sum, ev) => sum + (ev.predicted_tss ?? 0),
-    0,
+const sumTss = (events: CalendarEventDTO[] | undefined): number =>
+  (events ?? []).reduce((sum, ev) => sum + (ev.predicted_tss ?? 0), 0);
+
+/** 三档图例：色块与格子里的负荷条共用同一份 token 类名。 */
+function LoadLegend() {
+  return (
+    <span className="inline-flex items-center gap-2" aria-label="负荷密度图例">
+      <span className="text-caption1 text-text-muted">TSS</span>
+      {LOAD_TIERS.map((tier) => (
+        <span key={tier} className="inline-flex items-center gap-1">
+          <span className={`h-2.5 w-4 rounded-sm ${LOAD_TIER_CLASS[tier]}`} aria-hidden />
+          <span className="text-caption1 text-text-muted">{LOAD_TIER_LABEL[tier]}</span>
+        </span>
+      ))}
+    </span>
   );
-}
-
-interface MonthLegendEntry {
-  readonly label: string;
-  readonly bgClass: string;
-}
-
-const TSS_LEGEND: readonly MonthLegendEntry[] = [
-  { label: "低", bgClass: "bg-accent/10" },
-  { label: "中", bgClass: "bg-accent/40" },
-  { label: "高", bgClass: "bg-accent/80" },
-];
-
-function buildWeeks(year: number, month: number): (Date | null)[][] {
-  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const weeks: (Date | null)[][] = [Array<Date | null>(firstDow).fill(null)];
-  for (let d = 1; d <= daysInMonth; d++) {
-    if (weeks[weeks.length - 1]!.length === 7) { weeks.push([]); }
-    weeks[weeks.length - 1]!.push(new Date(year, month, d));
-  }
-  const last = weeks[weeks.length - 1]!;
-  while (last.length < 7) last.push(null);
-  return weeks;
 }
 
 export function PlanMonthView({
@@ -67,7 +54,7 @@ export function PlanMonthView({
   const timezone = useAthleteTimezone();
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
-  const weeks = buildWeeks(year, month);
+  const weeks = buildMonthWeeks(year, month);
   const today = athleteToday(timezone);
 
   const eventsByDate = new Map<string, CalendarEventDTO[]>();
@@ -79,123 +66,59 @@ export function PlanMonthView({
 
   return (
     <Card padding="sm">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-default px-3 py-2">
-        <Button variant="ghost" onClick={() => onNavMonth(-1)} aria-label="上个月">
-          <ChevronLeft className="size-4" aria-hidden />
-          <span className="hidden sm:inline">上月</span>
-        </Button>
-        <span className="text-subheadline font-semibold tabular-nums text-text-primary">{MONTH_NAMES[month]} {year}</span>
-        <div className="flex flex-wrap items-center gap-1.5 text-caption2 text-text-muted" aria-label="TSS 密度图例">
-          <span>TSS</span>
-          {TSS_LEGEND.map((item) => (
-            <span key={item.label} className="inline-flex items-center gap-1">
-              <span className={`h-2.5 w-4 rounded-sm ${item.bgClass}`} aria-hidden />
-              {item.label}
-            </span>
-          ))}
-          <span className="ms-1 inline-flex items-center gap-1">
-            <span className="inline-flex h-2 w-2 rounded-full bg-success" aria-hidden />
-            已按计划完成
-          </span>
-        </div>
-        <Button variant="ghost" onClick={() => onNavMonth(1)} aria-label="下个月">
-          <span className="hidden sm:inline">下月</span>
-          <ChevronRight className="size-4" aria-hidden />
-        </Button>
-      </div>
+      <CardHeader
+        title={`${MONTH_NAMES[month]} ${year}`}
+        trailing={
+          <>
+            <LoadLegend />
+            <Button variant="ghost" onClick={() => onNavMonth(-1)} aria-label="上个月">
+              <ChevronLeft className="size-4" aria-hidden />
+            </Button>
+            <Button variant="ghost" onClick={() => onNavMonth(1)} aria-label="下个月">
+              <ChevronRight className="size-4" aria-hidden />
+            </Button>
+          </>
+        }
+      />
 
-      <div className="overflow-x-auto">
-        <div className="grid min-w-[480px] grid-cols-7 gap-1 p-3" data-testid="plan-month-grid">
+      <div className="grid grid-cols-7 gap-1" data-testid="plan-month-grid">
         {DAY_HEADER.map((d) => (
           <div key={d} className="py-1 text-center text-caption1 font-medium text-text-muted">
             {d}
           </div>
         ))}
-        {weeks.flat().map((day, i) => {
-          if (!day) return <div key={`e${i}`} className="rounded-lg bg-surface-base/50" />;
-          const iso = toISODate(day);
-          const plannedTss = getMonthlyTss(eventsByDate, iso);
-          const dayEvts = eventsByDate.get(iso) ?? [];
-          const allDone = dayEvts.length > 0 && dayEvts.every((e) => e.done);
-          const dayActivities = completedActivities?.get(iso) ?? [];
-          const activityTss = dayActivities.reduce((s, a) => s + (a.tss ?? 0), 0);
-          const hasActual = dayActivities.length > 0;
-          const primaryActivity = dayActivities[0];
-          const hasPlanned = dayEvts.length > 0;
-          const isFuture = iso > today;
-          const complianceDot = allDone || (hasPlanned && hasActual);
-          const bg = tssBg(Math.max(plannedTss, activityTss), isFuture && hasPlanned && !hasActual);
-          return (
-            <button
-              key={iso}
-              type="button"
-              onClick={() => onSelectDate(iso)}
-              aria-label={
-                `${day.getDate()}日${
-                  hasPlanned ? ` 计划 ${Math.round(plannedTss)} TSS` : ""
-                }${
-                  activityTss != null ? ` 实际 ${Math.round(activityTss)} TSS` : ""
-                }${
-                  complianceDot ? " 已按计划完成" : ""
-                }`
-              }
-              className={`focus-ring relative flex flex-col gap-0.5 rounded-lg border bg-surface-card p-1.5 text-left transition-colors hover:bg-surface-overlay ${bg} ${
-                iso === today ? "border-accent" : hasPlanned ? "border-accent/40" : "border-border-default"
-              }`}
-              data-testid={`plan-month-day-${iso}`}
-              data-compliance={complianceDot ? "done" : undefined}
-            >
-              <div className="flex items-center justify-between">
-                <span className={`text-caption1 tabular-nums ${iso === today ? "font-bold text-accent-strong" : "text-text-secondary"}`}>
-                  {day.getDate()}
+        {weeks.flat().map(({ date, inMonth }) => {
+          const iso = toISODate(date);
+          if (!inMonth) {
+            // 非本月的日子只做填充，压一档灰，不承接点击。
+            return (
+              <div key={`pad-${iso}`} aria-hidden className="min-h-16 rounded-lg p-1">
+                <span className="font-mono text-caption1 tabular-nums text-text-muted/70">
+                  {date.getDate()}
                 </span>
-                {complianceDot && (
-                  <span
-                    className="inline-flex h-2 w-2 rounded-full bg-success ring-2 ring-surface-card"
-                    aria-hidden
-                  />
-                )}
               </div>
-
-              {activityTss > 0 && plannedTss > 0 ? (
-                <div className="flex items-center gap-1.5 text-caption2 font-mono">
-                  <span className="inline-flex items-center gap-0.5 text-accent-strong">
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
-                    {Math.round(plannedTss)}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-success">
-                    <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
-                    {Math.round(activityTss)}
-                  </span>
-                </div>
-              ) : activityTss > 0 ? (
-                <span className="font-mono text-caption2 tabular-nums text-success">{Math.round(activityTss)} TSS</span>
-              ) : plannedTss > 0 ? (
-                <span className="font-mono text-caption2 tabular-nums text-accent-strong">{Math.round(plannedTss)} TSS</span>
-              ) : null}
-
-              {primaryActivity && (
-                <div className="flex flex-col gap-px">
-                  <span className="truncate text-caption2 font-semibold text-text-primary">
-                    {getSportConfig(primaryActivity.sport).label}
-                    {dayActivities.length > 1 ? ` ·${dayActivities.length}` : ""}
-                  </span>
-                  <span className="truncate font-mono tabular-nums text-caption2 text-text-secondary">
-                    {formatDistance(primaryActivity.distance_m)}
-                  </span>
-                </div>
-              )}
-
-              {dayEvts.some((event) => event.training_type === "race") && (
-                <span className="truncate text-caption1 font-semibold text-accent-strong">比赛日</span>
-              )}
-              {!hasPlanned && !hasActual && (
-                <span className="text-caption1 text-text-secondary">未安排</span>
-              )}
-            </button>
+            );
+          }
+          const dayEvents = eventsByDate.get(iso) ?? [];
+          const dayActivities = completedActivities?.get(iso) ?? [];
+          const plannedTss = sumTss(dayEvents);
+          const actualTss = dayActivities.reduce((sum, a) => sum + (a.tss ?? 0), 0);
+          const isCompleted = dayActivities.length > 0 || (dayEvents.length > 0 && dayEvents.every((e) => e.done));
+          return (
+            <MonthDayCell
+              key={iso}
+              day={date.getDate()}
+              iso={iso}
+              isToday={iso === today}
+              isRace={dayEvents.some((event) => event.training_type === "race")}
+              isCompleted={isCompleted}
+              hasPlanned={dayEvents.length > 0}
+              // 计划与实际都算当天的负荷，取大的那个：负荷条和数字同源。
+              load={Math.max(plannedTss, actualTss)}
+              onSelect={onSelectDate}
+            />
           );
         })}
-        </div>
       </div>
     </Card>
   );

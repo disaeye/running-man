@@ -7,6 +7,7 @@ import {
   calendarViewUrl,
 } from "@shared/config/canonical-routes";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
+import { apiErrorMessage } from "@shared/lib/api";
 import { listEventsApiV1CalendarGet } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
 import { z } from "zod";
@@ -128,7 +129,7 @@ export function useCalendarPage(): UseCalendarPageReturn {
           : undefined,
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "训练计划加载失败");
+      setError(apiErrorMessage(caught, "训练计划加载失败"));
     } finally {
       setLoading(false);
     }

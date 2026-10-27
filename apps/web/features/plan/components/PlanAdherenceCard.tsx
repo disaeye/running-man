@@ -1,7 +1,5 @@
 "use client";
 
-import { Card } from "@shared/ui/Card";
-import { SectionHeader } from "@shared/ui/SectionHeader";
 import { useCoachContext } from "@features/today/hooks/useCoachContext";
 
 /**
@@ -13,17 +11,17 @@ export function PlanAdherenceCard() {
 
   if (loading) {
     return (
-      <Card padding="md" data-testid="plan-adherence-card">
-        <SectionHeader title="近 7 日执行" subtitle="执行率加载中…" />
-      </Card>
+      <p className="text-caption1 text-text-muted" data-testid="plan-adherence-card">
+        执行率加载中…
+      </p>
     );
   }
 
   if (error || !data) {
     return (
-      <Card padding="md" data-testid="plan-adherence-card">
-        <SectionHeader title="近 7 日执行" subtitle="暂无法加载计划执行数据" />
-      </Card>
+      <p className="text-caption1 text-text-muted" data-testid="plan-adherence-card">
+        暂无法加载计划执行数据
+      </p>
     );
   }
 
@@ -42,25 +40,21 @@ export function PlanAdherenceCard() {
           : "bg-error/10 text-error";
 
   return (
-    <Card padding="md" data-testid="plan-adherence-card">
-      <SectionHeader
-        title="近 7 日执行"
-        action={
-          <span className={`rounded-full px-2.5 py-1 text-caption1 font-medium ${chip}`}>
-            {status}
-          </span>
-        }
-      />
-      <p className="mt-3 font-mono text-display-sm font-semibold tabular-nums text-text-primary">
-        {hasPlan ? `${pct}%` : "--"}
-      </p>
+    <div data-testid="plan-adherence-card">
+      <div className="flex items-baseline gap-2">
+        <span className="font-mono text-display-sm font-semibold tabular-nums text-text-primary">
+          {hasPlan ? `${pct}%` : "--"}
+        </span>
+        <span className={`rounded-full px-2 py-0.5 text-caption1 font-medium ${chip}`}>
+          {status}
+        </span>
+      </div>
       <p className="mt-1 text-footnote text-text-secondary">
-        完成 {Math.round(a.completed_tss_7d)} / 计划 {Math.round(a.planned_tss_7d)}{" "}
-        TSS
+        完成 {Math.round(a.completed_tss_7d)} / 计划 {Math.round(a.planned_tss_7d)} TSS
       </p>
       {hasPlan && (
         <div
-          className="mt-4 h-2 overflow-hidden rounded-full bg-surface-sunken"
+          className="mt-3 h-2 overflow-hidden rounded-full bg-surface-sunken"
           role="progressbar"
           aria-valuenow={Math.min(pct, 150)}
           aria-valuemin={0}
@@ -72,6 +66,6 @@ export function PlanAdherenceCard() {
           />
         </div>
       )}
-    </Card>
+    </div>
   );
 }

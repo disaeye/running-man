@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import useSWR from "swr";
 import { callOrval, callOrvalValidated } from "@shared/api/orval-adapter";
+import { apiErrorMessage } from "@shared/lib/api";
 import {
   getZonesApiV1InsightsZonesGet,
   putZonesApiV1InsightsZonesPut,
@@ -143,7 +144,7 @@ export function useZoneOverrides(): UseZoneOverridesResult {
         await mutate();
         return true;
       } catch (err: unknown) {
-        setMutationError(err instanceof Error ? err.message : "保存失败");
+        setMutationError(apiErrorMessage(err, "保存失败"));
         return false;
       } finally {
         setSaving(false);
@@ -160,7 +161,7 @@ export function useZoneOverrides(): UseZoneOverridesResult {
       await mutate();
       return true;
     } catch (err: unknown) {
-      setMutationError(err instanceof Error ? err.message : "恢复失败");
+      setMutationError(apiErrorMessage(err, "恢复失败"));
       return false;
     } finally {
       setSaving(false);
@@ -180,7 +181,7 @@ export function useZoneOverrides(): UseZoneOverridesResult {
       } catch (err: unknown) {
         // The API rejects a scheme whose thresholds are missing and names the
         // field in the message; surface that rather than a generic failure.
-        setMutationError(err instanceof Error ? err.message : "切换方案失败");
+        setMutationError(apiErrorMessage(err, "切换方案失败"));
         return false;
       } finally {
         setSaving(false);

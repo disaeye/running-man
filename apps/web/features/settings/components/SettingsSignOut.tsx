@@ -30,7 +30,7 @@ export function SettingsSignOut() {
 
   return (
     <Card padding="sm">
-      <h3 className="text-headline font-semibold text-text-primary">会话</h3>
+      <h3 className="text-caption1 font-semibold text-text-secondary">会话</h3>
       <p className="mt-1 text-caption1 text-text-muted">
         退出后需要重新登录才能访问训练数据。
       </p>

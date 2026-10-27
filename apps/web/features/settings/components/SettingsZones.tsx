@@ -6,6 +6,7 @@ import { Skeleton } from "@shared/ui/Skeleton";
 import { Button } from "@shared/ui/button";
 import { Badge } from "@shared/ui/Badge";
 import type { HrScheme, ZoneOverride } from "@features/settings/hooks/useZoneOverrides";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 import { ZoneEditor, validateZones, pct, type DraftRow } from "./SettingsZoneEditor";
 import { HrSchemePicker } from "./HrSchemePicker";
 import type { ZoneSchemeOption } from "./HrSchemePicker";
@@ -127,7 +128,7 @@ export function SettingsZones({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-headline font-semibold text-text-primary">心率分区方案</h2>
+            <h2 className="text-caption1 font-semibold text-text-secondary">心率分区方案</h2>
             {hasOverrides && <Badge variant="info">已自定义边界</Badge>}
           </div>
           <p className="mt-1 text-caption1 text-text-muted">
@@ -166,43 +167,16 @@ export function SettingsZones({
         </p>
       )}
 
-      {hrZones.length > 0 && (
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">心率 5 区标尺</span>
-          </div>
-          <div className="grid grid-cols-5 gap-1.5 overflow-hidden rounded-xl border border-border/40 bg-muted/20 p-1.5">
-            {hrZones.map((z, idx) => {
-              const colors = [1, 2, 3, 4, 5].map(
-                (zone) => `bg-zone-${zone}/15 text-zone-${zone} border-zone-${zone}/30`,
-              );
-              return (
-                <div
-                  key={z.zone}
-                  className={`flex flex-col items-center justify-center rounded-lg border p-2 text-center transition-all ${colors[idx] || colors[0]}`}
-                >
-                  <span className="font-mono text-xs font-bold">Z{z.zone}</span>
-                  <span className="max-w-full truncate text-caption2 font-medium opacity-80">{z.name}</span>
-                  <span className="mt-1 font-mono text-caption1 font-bold tabular-nums">
-                    {z.min_value} {z.max_value ? `- ${z.max_value}` : "+"}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-6">
+      <div className="mt-4">
         {hrZones.length > 0 && (
-          <ZoneEditor title="心率区间自定义" zones={hrZones} unit="bpm"
+          <ZoneEditor zones={hrZones} unit={HEART_RATE_UNIT}
             drafts={hrDraft} errors={hrErrors} editable={editing} onChange={setHrDraft} />
         )}
       </div>
 
       {paceZones && paceZones.length > 0 ? (
         <div className="mt-6" data-testid="settings-pace-zones">
-          <h3 className="text-subheadline font-semibold text-text-primary">
+          <h3 className="text-caption1 font-semibold text-text-secondary">
             配速区间（由阈值配速自动生成）
           </h3>
           {thresholdPace != null && (
@@ -211,12 +185,9 @@ export function SettingsZones({
               {String(Math.round(thresholdPace % 60)).padStart(2, "0")}&quot; /km
             </p>
           )}
-          <ul className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-5">
+          <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border-subtle pt-3 sm:grid-cols-5">
             {paceZones.map((z) => (
-              <li
-                key={z.zone}
-                className="rounded-md border border-border-subtle bg-surface-overlay/50 px-2 py-1.5 text-caption1"
-              >
+              <li key={z.zone} className="text-caption1">
                 <span className="font-medium text-text-primary">Z{z.zone} {z.name}</span>
                 <span className="mt-0.5 block font-mono tabular-nums text-text-secondary">
                   {formatPaceRange(z.min_value, z.max_value)}

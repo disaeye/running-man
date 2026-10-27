@@ -3,13 +3,13 @@
 import { useRef, useState, useCallback, useMemo } from "react";
 import useSWR from "swr";
 import { RotateCw } from "lucide-react";
-import { Card } from "@shared/ui/Card";
 import { Button } from "@shared/ui/button";
 import "@shared/lib/echarts-setup";
 import { useChartConfig } from "@shared/hooks/useChartConfig";
 import { useECharts } from "@shared/hooks/useECharts";
 import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
+import { apiErrorMessage } from "@shared/lib/api";
 import {
   getPmcApiV1PmcGet,
   predictWorkoutApiV1WorkoutsPredictPost,
@@ -190,7 +190,7 @@ export function PlanForecast({ events }: Props) {
 
   const forecast = useMemo<RenderForecastState>(() => {
     if (request.kind === "static") return request.state;
-    if (pmcError) return { kind: "error", message: pmcError instanceof Error ? pmcError.message : "预测失败" };
+    if (pmcError) return { kind: "error", message: apiErrorMessage(pmcError, "预测失败") };
     if (pmcLoading) return { kind: "loading" };
 
     const historical = historicalLoad(pmcPoints ?? []);
@@ -202,7 +202,8 @@ export function PlanForecast({ events }: Props) {
         points: [], historical, planned: request.planned,
       };
     }
-    if (predictError) return { kind: "error", message: predictError instanceof Error ? predictError.message : "预测失败" };
+    if (predictError)
+      return { kind: "error", message: apiErrorMessage(predictError, "预测失败") };
     if (predictLoading || !predicted) return { kind: "loading" };
     return completeForecastState(request, predicted, historical);
   }, [request, pmcPoints, pmcError, pmcLoading, predicted, predictError, predictLoading]);
@@ -237,21 +238,16 @@ export function PlanForecast({ events }: Props) {
   };
 
   return (
-    <Card padding="sm">
-      <div className="flex items-center justify-between border-b border-border-default px-3 py-2">
-        <div>
-          <h3 className="text-subheadline font-semibold text-text-primary">28日训练负荷预测</h3>
-          <p className="mt-1 hidden text-caption1 text-text-muted lg:block">
-            按课表推算未来 28 天的负荷与 TSB 走势，背景色标出 TSB 所处区间。
-          </p>
-        </div>
+    <div>
+      <div className="flex items-center justify-end px-2 py-1.5">
         <Button variant="ghost" onClick={refreshForecast} aria-label="刷新预测">
           <RotateCw className="size-4" aria-hidden />
         </Button>
       </div>
 
       {/* Mobile progressive disclosure: simplified summary card. */}
-      <div className="px-3 pb-3 lg:hidden">
+      {/* 外层 Card 已经给了 p-5，这里再加横向内缩会让正文比 CardHeader 的标题深 12px。 */}
+      <div className="pb-3 lg:hidden">
         <PlanForecastSummary
           events={events}
           points={chartPoints}
@@ -273,6 +269,6 @@ export function PlanForecast({ events }: Props) {
           <span>风险 / 新鲜区间</span>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

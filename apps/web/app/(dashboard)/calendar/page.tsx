@@ -1,17 +1,22 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
-import { AlertTriangle, Calendar as CalendarIcon, Sparkles } from "lucide-react";
+import { Suspense, useMemo, useState } from "react";
 import { Button } from "@shared/ui/button";
+import { Card } from "@shared/ui/Card";
+import { CardHeader } from "@shared/ui/CardHeader";
 import { EmptyState } from "@shared/ui/EmptyState";
-import { Tabs, TabsList, TabsTrigger } from "@shared/ui/tabs";
+import { MetricStrip } from "@shared/ui/MetricStrip";
+import { PageHeader } from "@shared/ui/PageHeader";
+import { Section } from "@shared/ui/Section";
+import { EmptyWeek, PlanErrorBanner } from "@features/calendar/components/CalendarStates";
 import { PlanGenerateDialog } from "@features/plan/components/PlanGenerateDialog";
 import { CalendarDaySheet } from "@features/calendar/components/CalendarDaySheet";
 import { CalendarWeekSkeleton } from "@features/calendar/components/CalendarWeekSkeleton";
-import { WeekSummaryChip } from "@features/calendar/components/WeekSummaryChip";
 import { CalendarListView } from "@features/calendar/components/CalendarListView";
 import { CalendarStrengthView } from "@features/calendar/components/CalendarStrengthView";
-import { MobileAgenda } from "@features/calendar/components/MobileAgenda";
+import { MobileSchedule } from "@features/calendar/components/MobileSchedule";
+import { CalendarInsights } from "@features/calendar/components/CalendarInsights";
+import { CalendarHeaderActions } from "@features/calendar/components/CalendarHeaderActions";
 import { PlanAdherenceCard } from "@features/plan/components/PlanAdherenceCard";
 import { PlanForecast } from "@features/plan/components/PlanForecast";
 import { PlanQuality } from "@features/plan/components/PlanQuality";
@@ -21,28 +26,9 @@ import { useCalendarPage } from "@features/calendar/hooks/useCalendarPage";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { usePlanMatch } from "@features/calendar/hooks/usePlanMatch";
 import { buildWeekSummary, isoWeek } from "@features/calendar/lib/build-week-summary";
-import { type CalendarView } from "./calendar-view";
-import { toISODate } from "@shared/lib/format";
-
-function qualityRange(
-  view: CalendarView,
-  weekStart: Date,
-  monthDate: Date,
-): { from: string; to: string } | undefined {
-  if (view === "week") {
-    const from = new Date(weekStart);
-    from.setDate(from.getDate() - 1);
-    const to = new Date(weekStart);
-    to.setDate(to.getDate() + 7);
-    return { from: toISODate(from), to: toISODate(to) };
-  }
-  if (view === "month") {
-    const y = monthDate.getFullYear();
-    const m = monthDate.getMonth();
-    return { from: toISODate(new Date(y, m, 0)), to: toISODate(new Date(y, m + 1, 1)) };
-  }
-  return undefined;
-}
+import { qualityRange } from "@features/calendar/lib/calendar-page-view";
+import { weekSummaryMetrics } from "@features/calendar/lib/week-summary-metrics";
+import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
 
 export default function CalendarPage() {
   return (
@@ -83,8 +69,11 @@ function CalendarPageContent() {
     () => buildWeekSummary({ events, activityMap, weekStart }),
     [events, activityMap, weekStart],
   );
-  // The month view used to carry the week number, because the label was
-  // computed from `weekStart` regardless of which view was on screen.
+
+  // 周摘要三格：课次、实际负荷、完成率。纯格式化，不缓存；数组每帧重建，
+  // 三格的成本比一次 useMemo 的比较还低。
+  const weekSummaryItems = weekSummaryMetrics(weekSummary);
+
   const periodLabel = useMemo(() => {
     if (view === "month") {
       return `${monthDate.getFullYear()} 年 ${monthDate.getMonth() + 1} 月`;
@@ -103,35 +92,177 @@ function CalendarPageContent() {
     events,
   );
 
+  const timezone = useAthleteTimezone();
+  const today = athleteToday(timezone);
+  const [openIso, setOpenIso] = useState<string | null>(today);
+
+  // A month is rendered as its days in reading order; a phone cannot show a
+  // seven-column table and a table is how the month grid would have to be drawn.
+  const visibleDays = useMemo(() => {
+    if (view === "month") {
+      const year = monthDate.getFullYear();
+      const month = monthDate.getMonth();
+      const last = new Date(year, month + 1, 0).getDate();
+      return Array.from({ length: last }, (_, index) => new Date(year, month, index + 1));
+    }
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(weekStart);
+      date.setDate(date.getDate() + index);
+      return date;
+    });
+  }, [view, weekStart, monthDate]);
+
+  const selectDay = (iso: string) => {
+    setOpenIso(iso);
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(`[data-testid="day-row-${iso}"]`)
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  };
+
+  const isEmptyWeek = !loading && !error && events.length === 0;
+
   return (
     <div className="page-stack" data-testid="calendar-page">
-      <section className="flex flex-wrap items-end justify-between gap-6 border-b border-border-subtle pb-7" aria-labelledby="calendar-title">
-        <div><p className="mb-2 text-caption1 text-text-muted">{periodLabel}</p><h1 id="calendar-title" className="text-display-md text-text-primary">训练课表与周期计划</h1><p className="mt-1.5 max-w-xl text-subheadline text-text-secondary">安排课表、对照实际完成情况，并检查未来四周的负荷走向。</p></div>
-        <div className="flex flex-wrap items-center gap-2.5"><Tabs value={view} onValueChange={(v) => handleSetView(v as CalendarView)}><TabsList className="border border-border-subtle bg-surface-sunken p-1">{([['week','周'],['month','月'],['list','日志']] as const).map(([value, label]) => <TabsTrigger key={value} value={value} className="min-h-9 rounded-lg px-3 text-caption1">{label}</TabsTrigger>)}</TabsList></Tabs><Button onClick={() => setGenerateOpen(true)} size="sm" className="gap-1.5"><Sparkles className="size-3.5" /><span>生成计划</span></Button></div>
-      </section>
-      {view !== "list" ? <>{error ? <PlanErrorBanner message={error} onRetry={loadEvents} /> : <div className="space-y-6"><div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface-sunken/45 px-4 py-3"><div className="flex items-center gap-2 text-caption1 text-text-secondary"><CalendarIcon className="size-4 text-accent-strong" />{view === "week" ? "本周" : "本月"}</div><WeekSummaryChip {...weekSummary} /></div>{loading ? <CalendarWeekSkeleton /> : <div className="grid gap-6 lg:grid-cols-12 lg:items-start"><div className="min-w-0 space-y-6 lg:col-span-8"><div className="block lg:hidden"><MobileAgenda events={events} activities={activityMap} weekStart={weekStart} onSelectDate={handleSelectDate} matches={planMatches} /></div><div className="hidden rounded-xl border border-border-subtle bg-surface-card/55 p-4 lg:block">{view === "month" ? <PlanMonthView events={events} monthDate={monthDate} onNavMonth={navMonth} onSelectDate={handleSelectDate} completedActivities={activityMap} /> : <PlanWeekView events={events} weekStart={weekStart} onNavWeek={navWeek} onSelectDate={handleSelectDate} completedActivities={activityMap} />}</div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><CalendarStrengthView /></div></div><aside className="space-y-5 lg:col-span-4"><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><PlanAdherenceCard /></div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><PlanForecast events={events} /></div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-4"><PlanQuality from={planRange?.from} to={planRange?.to} /></div></aside></div>}</div>}</> : <div className="space-y-6">{activitiesError ? <EmptyState title="活动数据加载失败" description={activitiesError} action={<Button variant="secondary" onClick={loadEvents}>重新加载</Button>} /> : <><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-5"><CalendarListView /></div><div className="rounded-xl border border-border-subtle bg-surface-card/55 p-5"><CalendarStrengthView /></div></>}</div>}
-      {isGridView && !loading && !error && <CalendarDaySheet selectedDate={selectedDate} activities={summaryActivities} editingEvent={editingEvent} onSave={handleBuilderSave} onActivitySaved={handleActivitySaved} onClose={() => setSelectedDate(null)} />}
-      <PlanGenerateDialog open={generateOpen} onClose={() => setGenerateOpen(false)} onGenerated={loadEvents} trainingDays={profile?.weekly_training_days ?? 5} />
-    </div>
-  );
-}
+      <PageHeader
+        meta={periodLabel}
+        title={<span id="calendar-title">训练日历</span>}
+        action={
+          <CalendarHeaderActions
+            view={view}
+            onChange={handleSetView}
+            onGenerate={() => setGenerateOpen(true)}
+          />
+        }
+      />
 
+      {view === "list" ? (
+        <div className="space-y-6">
+          {activitiesError ? (
+            <EmptyState
+              title="活动数据加载失败"
+              description={activitiesError}
+              action={
+                <Button variant="secondary" onClick={loadEvents}>
+                  重新加载
+                </Button>
+              }
+            />
+          ) : (
+            <>
+              <Section title="训练列表">
+                <div className="p-5">
+                  <CalendarListView />
+                </div>
+              </Section>
+              <Section title="训练日志">
+                <div className="p-5">
+                  <CalendarStrengthView />
+                </div>
+              </Section>
+            </>
+          )}
+        </div>
+      ) : error ? (
+        <PlanErrorBanner message={error} onRetry={loadEvents} />
+      ) : (
+        <div className="space-y-6">
+          <MetricStrip testId="week-summary" items={weekSummaryItems} />
 
-function PlanErrorBanner({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="rounded-xl border border-error/30 bg-error/10 p-5 text-center text-error">
-      <AlertTriangle className="mx-auto h-6 w-6" />
-      <p className="mt-2 text-sm font-semibold">课表加载失败</p>
-      <p className="mt-1 text-caption1 text-error/80">{message}</p>
-      <Button variant="secondary" size="sm" onClick={onRetry} className="mt-4">
-        重新尝试
-      </Button>
+          <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
+            <div className="min-w-0 space-y-6 lg:col-span-8">
+              <div className="space-y-6 lg:hidden">
+                {isEmptyWeek && <EmptyWeek onGenerate={() => setGenerateOpen(true)} />}
+                {loading ? (
+                  <CalendarWeekSkeleton />
+                ) : (
+                  <MobileSchedule
+                    days={visibleDays}
+                    events={events}
+                    activities={activityMap}
+                    matches={planMatches}
+                    today={today}
+                    timezone={timezone}
+                    monthView={view === "month"}
+                    openIso={openIso}
+                    onSelectDay={selectDay}
+                    onToggleDay={(iso) =>
+                      setOpenIso((current) => (current === iso ? null : iso))
+                    }
+                    onRecord={handleSelectDate}
+                  />
+                )}
+              </div>
+
+              <div className="hidden lg:block">
+                {loading ? (
+                  <CalendarWeekSkeleton />
+                ) : (
+                  <Card padding="sm">
+                    {view === "month" ? (
+                      <PlanMonthView
+                        events={events}
+                        monthDate={monthDate}
+                        onNavMonth={navMonth}
+                        onSelectDate={handleSelectDate}
+                        completedActivities={activityMap}
+                      />
+                    ) : (
+                      <PlanWeekView
+                        events={events}
+                        weekStart={weekStart}
+                        onNavWeek={navWeek}
+                        onSelectDate={handleSelectDate}
+                        completedActivities={activityMap}
+                      />
+                    )}
+                  </Card>
+                )}
+              </div>
+              <Section title="训练日志">
+                <div className="p-5">
+                  <CalendarStrengthView />
+                </div>
+              </Section>
+            </div>
+
+            <aside className="space-y-6 lg:col-span-4">
+              <CalendarInsights>
+                <Card padding="md">
+                  <CardHeader title="近 7 日执行" />
+                  <PlanAdherenceCard />
+                </Card>
+                <Card padding="md">
+                  <CardHeader title="28 日负荷预测" />
+                  <PlanForecast events={events} />
+                </Card>
+                <Card padding="md">
+                  <CardHeader title="计划评分" />
+                  <PlanQuality from={planRange?.from} to={planRange?.to} />
+                </Card>
+              </CalendarInsights>
+            </aside>
+          </div>
+        </div>
+      )}
+
+      {isGridView && !loading && !error && (
+        <CalendarDaySheet
+          selectedDate={selectedDate}
+          activities={summaryActivities}
+          editingEvent={editingEvent}
+          onSave={handleBuilderSave}
+          onActivitySaved={handleActivitySaved}
+          onClose={() => setSelectedDate(null)}
+        />
+      )}
+      <PlanGenerateDialog
+        open={generateOpen}
+        onClose={() => setGenerateOpen(false)}
+        onGenerated={loadEvents}
+        trainingDays={profile?.weekly_training_days ?? 5}
+      />
     </div>
   );
 }

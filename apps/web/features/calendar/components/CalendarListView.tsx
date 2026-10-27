@@ -223,7 +223,7 @@ export function CalendarListView() {
                       const activity = group.activities[0];
                       setSelectedDate(activity ? activityLocalDay(activity.start_time, timezone) : null);
                     }}
-                    className="focus-ring inline-flex min-h-[44px] items-center rounded-md px-2 text-caption1 text-text-muted transition-colors hover:border-accent/40 hover:text-accent-strong"
+                    className="focus-ring inline-flex min-h-[44px] min-w-11 items-center justify-center rounded-md px-2 text-caption1 text-text-muted transition-colors hover:border-accent/40 hover:text-accent-strong"
                     aria-label={`查看 ${group.weekRange} 详情`}
                   >
                     详情

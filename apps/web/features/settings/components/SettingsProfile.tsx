@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@shared/ui/select";
 import { Button } from "@shared/ui/button";
-import { apiFetch } from "@shared/lib/api";
+import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import { timezoneOptions } from "@shared/config/timezones";
 import type { UserProfile } from "@shared/lib/auth";
 
@@ -51,7 +51,7 @@ export function SettingsProfile({ profile, onSaved }: Props) {
       onSaved();
       setTimeout(() => setSaved(false), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "保存失败，请稍后重试");
+      setError(apiErrorMessage(err, "保存失败，请稍后重试"));
     } finally {
       setSaving(false);
     }
@@ -60,7 +60,7 @@ export function SettingsProfile({ profile, onSaved }: Props) {
   return (
     <Card padding="md" className="space-y-6">
       <div>
-        <h2 className="text-headline font-semibold text-text-primary">基本信息</h2>
+        <h2 className="text-caption1 font-semibold text-text-secondary">基本信息</h2>
         <p className="mt-0.5 text-caption1 text-text-muted">管理您的运动员称呼、系统时区及度量单位偏好</p>
       </div>
 

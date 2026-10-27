@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card } from "@shared/ui/Card";
 import { Input } from "@shared/ui/input";
+import { Checkbox } from "@shared/ui/Checkbox";
 import {
   Select,
   SelectContent,
@@ -11,7 +12,7 @@ import {
   SelectValue,
 } from "@shared/ui/select";
 import { Button } from "@shared/ui/button";
-import { apiFetch } from "@shared/lib/api";
+import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import { ThemeToggle } from "@shared/ui/ThemeToggle";
 import type { UserProfile } from "@shared/lib/auth";
 import { getSportConfig } from "@shared/config/sport-config";
@@ -77,7 +78,7 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
       onSaved();
       setTimeout(() => setSaved(false), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "保存偏好设置失败");
+      setError(apiErrorMessage(err, "保存偏好设置失败"));
     } finally {
       setSaving(false);
     }
@@ -86,7 +87,7 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
   return (
     <Card padding="md" className="space-y-6">
       <div>
-        <h2 className="text-headline font-semibold text-text-primary">训练习惯与偏好</h2>
+        <h2 className="text-caption1 font-semibold text-text-secondary">训练习惯与偏好</h2>
         <p className="mt-0.5 text-caption1 text-text-muted">设置日常运动规划的基准偏好与负荷分配限制</p>
       </div>
       <div className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-surface-sunken/40 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -191,18 +192,15 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
               <span className="text-subheadline font-medium text-text-primary">允许连续高强度训练</span>
               <span className="text-caption1 text-text-muted">开启后不会在连续两天安排无氧或阈值课目时触发强提醒</span>
             </div>
-            <input
-              type="checkbox"
+            <Checkbox
               checked={prefs.allowConsecutiveHighIntensity}
-              onChange={(e) => {
-                const val = e.target.checked;
+              onChange={(checked) => {
                 setPrefs((prev) => {
-                  const next = { ...prev, allowConsecutiveHighIntensity: val };
+                  const next = { ...prev, allowConsecutiveHighIntensity: checked };
                   savePrefs(next);
                   return next;
                 });
               }}
-              className="size-5 rounded border-border-default text-accent-strong focus:ring-accent accent-accent"
             />
           </label>
         </div>
