@@ -1,0 +1,45 @@
+# 成绩等级门槛表。
+#
+# 数字待填：官方文件还没拿到，先把机制落地。status 保持 pending_source；
+# 填表时把 status 改成 published，并按下面的形状补 entries。
+#
+# caa（中国田径协会路跑赛事大众选手等级评定实施办法（2024），只认 A1 类认证赛事）
+# 每条 entry 的形状：
+#   {event, sex, min_age, tier, max_time_s}
+#   event      5k / 10k / half / marathon
+#   sex        male / female
+#   min_age    所属年龄组的 min_age，取值必须出现在 caa.age_groups 里
+#   tier       elite / tier1 / tier2
+#   max_time_s 达标上限：实际用时严格小于它才算达标
+#
+# wma（World Masters Athletics 2023 年龄分级表）
+# 每条 entry 的形状：
+#   {event, sex, age, factor}
+#   age        30..110 的整岁
+#   factor     年龄系数，(0, 1] 之间；年龄分级百分比 = 公开标准 / (实际成绩 × factor) × 100
+
+source:
+  caa: 《中国田径协会路跑赛事大众选手等级评定实施办法（2024）》
+  wma: World Masters Athletics 2023 年龄分级表
+
+status: pending_source
+
+caa:
+  age_groups:
+    - {min_age: 0, max_age: 34}
+    - {min_age: 35, max_age: 39}
+    - {min_age: 40, max_age: 44}
+    - {min_age: 45, max_age: 49}
+    - {min_age: 50, max_age: 54}
+    - {min_age: 55, max_age: 59}
+    - {min_age: 60, max_age: 64}
+    - {min_age: 65, max_age: null}
+  tiers: [elite, tier1, tier2]
+  events: [5k, 10k, half, marathon]
+  entries: []
+
+wma:
+  events: [5k, 10k, half, marathon]
+  ages: [30, 110]
+  sexes: [male, female]
+  entries: []
