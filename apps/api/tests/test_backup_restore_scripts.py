@@ -14,6 +14,23 @@ pytestmark = pytest.mark.no_db
 
 ROOT = Path(__file__).resolve().parents[3]
 
+# Generous ceilings: the happy path is milliseconds, but the gate runs the whole
+# suite while other jobs compete for CPU, so the deadlines must survive load.
+READY_TIMEOUT_SECONDS = 30
+EXIT_TIMEOUT_SECONDS = 30
+
+# The gate runs this suite detached, and a background job in a non-interactive
+# shell has SIGINT set to ignored. That disposition is inherited across exec,
+# and POSIX forbids a non-interactive shell from trapping or resetting a
+# signal that was already ignored on entry, so backup.sh would never receive
+# the interrupt at all. This wrapper restores the default disposition in a
+# fresh process: the restriction is a shell rule, and a program may reset it.
+RESTORE_SIGINT = (
+    "import os, signal, sys; "
+    "signal.signal(signal.SIGINT, signal.SIG_DFL); "
+    "os.execvp(sys.argv[1], sys.argv[1:])"
+)
+
 
 def test_encrypted_backup_uploads_ciphertext_manifest_and_verifies_remote(tmp_path: Path) -> None:
     env = fixture_env(tmp_path)
@@ -63,7 +80,7 @@ def test_sigint_cleanup_leaves_no_plaintext_or_remote_mutation(tmp_path: Path) -
     env = fixture_env(tmp_path)
     env["PG_DUMP_BLOCK"] = "1"
     proc = subprocess.Popen(
-        ["bash", "scripts/backup.sh", "--encrypted-offsite"],
+        [sys.executable, "-c", RESTORE_SIGINT, "bash", "scripts/backup.sh", "--encrypted-offsite"],
         cwd=ROOT,
         env=env,
         stdout=subprocess.PIPE,
@@ -72,15 +89,32 @@ def test_sigint_cleanup_leaves_no_plaintext_or_remote_mutation(tmp_path: Path) -
         text=True,
     )
     ready = tmp_path / "pg_dump.ready"
-    deadline = time.monotonic() + 5
-    while not ready.exists() and time.monotonic() < deadline:
+    ready_deadline = time.monotonic() + READY_TIMEOUT_SECONDS
+    while not ready.exists() and time.monotonic() < ready_deadline:
         time.sleep(0.05)
-    assert ready.exists()
+    assert ready.exists(), f"fake pg_dump did not signal readiness within {READY_TIMEOUT_SECONDS}s"
     os.killpg(proc.pid, signal.SIGINT)
-    stdout, stderr = proc.communicate(timeout=5)
+    try:
+        stdout, stderr = proc.communicate(timeout=EXIT_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+        stdout, stderr = proc.communicate()
+        pytest.fail(
+            f"backup script did not exit within {EXIT_TIMEOUT_SECONDS}s after SIGINT\n"
+            f"stdout:\n{stdout}\n"
+            f"stderr:\n{stderr}"
+        )
     assert proc.returncode in {130, -signal.SIGINT}, stdout + stderr
     assert not list((tmp_path / "tmp").glob("running-man-backup.*"))
-    assert not list((tmp_path / "remote").iterdir())
+    remote_dir = tmp_path / "remote"
+    assert remote_dir.is_dir(), f"remote directory missing: {remote_dir}"
+    assert not list(remote_dir.iterdir()), (
+        "remote directory should stay empty after SIGINT, found: "
+        f"{sorted(p.name for p in remote_dir.iterdir())}"
+    )
 
 
 def test_restore_downloads_verifies_decrypts_and_runs_lifecycle_verifier(tmp_path: Path) -> None:
@@ -103,7 +137,12 @@ def test_restore_downloads_verifies_decrypts_and_runs_lifecycle_verifier(tmp_pat
         encoding="utf-8",
     )
     result = subprocess.run(
-        ["bash", "scripts/restore.sh", "--encrypted-offsite", "fixture:backup.sql.age.manifest.json"],
+        [
+            "bash",
+            "scripts/restore.sh",
+            "--encrypted-offsite",
+            "fixture:backup.sql.age.manifest.json",
+        ],
         cwd=ROOT,
         env=env,
         check=False,
@@ -128,7 +167,11 @@ def fixture_env(tmp_path: Path) -> dict[str, str]:
     rclone_config = tmp_path / "rclone.conf"
     recipients = tmp_path / "recipients.txt"
     identity = tmp_path / "identity.txt"
-    for file_path, content in ((rclone_config, "config"), (recipients, "age1test"), (identity, "AGE-SECRET-KEY-test")):
+    for file_path, content in (
+        (rclone_config, "config"),
+        (recipients, "age1test"),
+        (identity, "AGE-SECRET-KEY-test"),
+    ):
         file_path.write_text(content, encoding="utf-8")
         file_path.chmod(0o600)
     env = os.environ.copy()
@@ -156,7 +199,7 @@ def write_fake_commands(bin_dir: Path, state: Path) -> None:
 if [[ "${{PG_DUMP_BLOCK:-}}" == "1" ]]; then
   printf plain
   touch "{state}/pg_dump.ready"
-  sleep 30
+  sleep 120
 else
   printf 'plain dump\\n'
 fi
@@ -214,7 +257,11 @@ def sha256(path: Path) -> str:
 
 def head_revision() -> str:
     result = subprocess.run(
-        [sys.executable, "-c", "import sys; sys.path.insert(0, 'scripts'); from fresh_schema_catalog import HEAD_REVISION; print(HEAD_REVISION)"],
+        [
+            sys.executable,
+            "-c",
+            "import sys; sys.path.insert(0, 'scripts'); from fresh_schema_catalog import HEAD_REVISION; print(HEAD_REVISION)",
+        ],
         cwd=ROOT,
         check=True,
         capture_output=True,

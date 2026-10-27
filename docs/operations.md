@@ -48,10 +48,18 @@ mode `0600`. `backup.sh --encrypted-offsite` creates a private `mktemp`
 directory, writes the plaintext dump only there, encrypts it with age, deletes
 the plaintext before upload, uploads only ciphertext plus manifest, verifies the
 remote ciphertext size and SHA-256 with rclone, and removes temp files on
-success, failure, or SIGINT. The manifest contains only ciphertext remote path,
+success, failure, or an interrupt. The manifest contains only ciphertext remote path,
 ciphertext SHA-256, ciphertext size, schema revision, timestamp, and format; it
 must never contain database URLs, credentials, age identities, or plaintext dump
 paths.
+
+Interrupting a background run needs SIGTERM. A background job in a non-interactive
+shell has SIGINT set to ignored, and that disposition is inherited across `exec`.
+POSIX forbids a non-interactive shell from trapping a signal that was already
+ignored on entry, so a backgrounded `backup.sh` cannot act on SIGINT: it keeps
+running until the dump finishes, and the plaintext dump stays on disk for that
+whole time. SIGTERM is not ignored, so `systemctl stop` and `kill` interrupt a
+backgrounded run correctly and the cleanup runs.
 
 ## Test database
 
