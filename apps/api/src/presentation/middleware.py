@@ -1,15 +1,21 @@
+import logging
 from collections.abc import AsyncIterable, Awaitable, Callable
 from time import monotonic
 from typing import Final, Protocol, TypeAlias, cast
+from uuid import uuid4
 
 from starlette.datastructures import MutableHeaders
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import JSONResponse, Response, StreamingResponse
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from typing_extensions import override
 
 from domain.auth.tokens import JWTError, decode_token
 from infrastructure.auth.settings import settings
+from presentation.errors import INTERNAL_ERROR_MESSAGE, unified_body
+
+logger = logging.getLogger(__name__)
 
 API_VERSION: Final = "1"
 _CACHE_TTL_SECONDS: Final = 5.0
@@ -36,6 +42,67 @@ class ApiVersionHeaderMiddleware(BaseHTTPMiddleware):
         headers = MutableHeaders(raw=response.raw_headers)
         headers["X-API-Version"] = API_VERSION
         return response
+
+
+class ErrorHandlingMiddleware:
+    """Outermost HTTP layer: request id, version header, and the last-resort 500.
+
+    Starlette installs a handler registered for bare ``Exception`` in
+    ``ServerErrorMiddleware``, which sits outside every user middleware, so its
+    response would leave without ``X-API-Version`` and the web client would
+    report a missing header instead of the failure. This middleware catches the
+    same exceptions *inside* the middleware stack, answers with the shared
+    envelope, and stamps both headers itself.
+
+    The request id is generated here because this is the only layer that sees
+    every request, including the ones that die before a handler runs. It goes on
+    the response and into the error body, so the line to search in the log is
+    known to whoever reports the failure.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        state = scope.setdefault("state", {})
+        request_id = uuid4().hex[:12]
+        state["request_id"] = request_id
+        headers_started = False
+
+        async def send_with_ids(message: Message) -> None:
+            nonlocal headers_started
+            if message["type"] == "http.response.start":
+                headers_started = True
+                headers = MutableHeaders(scope=message)
+                headers.setdefault("X-API-Version", API_VERSION)
+                headers["X-Request-Id"] = request_id
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_with_ids)
+        except Exception as error:
+            logger.exception(
+                "unhandled error request_id=%s method=%s path=%s error=%s",
+                request_id,
+                scope.get("method"),
+                scope.get("path"),
+                type(error).__name__,
+            )
+            if headers_started:
+                # The response already began; a new body cannot be spliced onto it.
+                raise
+            response = JSONResponse(
+                status_code=500,
+                content=unified_body(
+                    "INTERNAL_ERROR", INTERNAL_ERROR_MESSAGE, request_id=request_id
+                ),
+                headers={"X-API-Version": API_VERSION, "X-Request-Id": request_id},
+            )
+            await response(scope, receive, send)
 
 
 class GetResponseCacheMiddleware(BaseHTTPMiddleware):

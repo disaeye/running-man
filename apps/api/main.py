@@ -15,6 +15,7 @@ from presentation.api import (
     activity_analysis,
     activity_flags,
     activity_stats,
+    athlete_grade,
     athletes,
     auto_calculate,
     calendar,
@@ -31,6 +32,7 @@ from presentation.api import (
     plan,
     pmc,
     race,
+    race_results,
     share,
     strength,
     strength_analytics,
@@ -43,7 +45,7 @@ from presentation.api.notifications import router as notifications_router
 from presentation.api.zones import router as zones_router
 from presentation.auth.routes import router as auth_router
 from presentation.errors import register_error_handlers
-from presentation.middleware import ApiVersionHeaderMiddleware
+from presentation.middleware import ApiVersionHeaderMiddleware, ErrorHandlingMiddleware
 from presentation.webhooks.routes import router as webhooks_router
 
 API_V1_PREFIX: Final = "/api/v1"
@@ -86,7 +88,11 @@ app = FastAPI(
     generate_unique_id_function=_operation_id,
 )
 register_error_handlers(app)
+# The error layer is added last, which makes it the outermost user middleware: it
+# sees every exception the inner stack raises, including one thrown by another
+# middleware, and answers with the shared envelope plus the version header.
 app.add_middleware(ApiVersionHeaderMiddleware)
+app.add_middleware(ErrorHandlingMiddleware)
 app.include_router(auth_router, prefix=API_V1_PREFIX)
 app.include_router(webhooks_router, prefix=WEBHOOKS_V1_PREFIX)
 app.include_router(athletes.router, prefix=API_V1_PREFIX)
@@ -117,6 +123,8 @@ app.include_router(wellness.router, prefix=API_V1_PREFIX)
 app.include_router(weight.router, prefix=API_V1_PREFIX)
 app.include_router(export.router, prefix=API_V1_PREFIX)
 app.include_router(gear.router, prefix=API_V1_PREFIX)
+app.include_router(race_results.router, prefix=API_V1_PREFIX)
+app.include_router(athlete_grade.router, prefix=API_V1_PREFIX)
 app.include_router(auto_calculate.router, prefix=API_V1_PREFIX)
 
 

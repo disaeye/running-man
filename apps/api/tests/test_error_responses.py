@@ -148,10 +148,11 @@ class TestUnifiedShape:
 
         assert response.status_code == 404
         assert response.headers["X-API-Version"] == "1"
-        assert response.json() == {
-            "error": {"code": "NOT_FOUND", "message": "Not Found"},
-            "detail": "Not Found",
-        }
+        body = response.json()
+        assert body["error"]["code"] == "NOT_FOUND"
+        assert body["error"]["message"] == body["detail"] == "Not Found"
+        # Every error names the request, so a report can be traced in the log.
+        assert body["error"]["request_id"] == response.headers["X-Request-Id"]
 
 
 async def _get_json(app: FastAPI, path: str, expected_status: int) -> dict:
