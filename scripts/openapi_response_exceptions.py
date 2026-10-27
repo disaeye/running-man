@@ -12,6 +12,7 @@ APPROVED_EMPTY_SUCCESS_RESPONSES: Final = frozenset(
         ("/api/v1/goals/{goal_id}", "delete", "204"),
         ("/api/v1/insights/zones", "delete", "204"),
         ("/api/v1/integrations/{source}/disconnect", "delete", "204"),
+        ("/api/v1/race-results/{result_id}", "delete", "204"),
         ("/api/v1/strength/workout-exercises/{workout_exercise_id}/sets/{set_id}", "delete", "204"),
         ("/api/v1/strength/workouts/{activity_id}", "delete", "204"),
         ("/api/v1/workouts/templates/{template_id}", "delete", "204"),

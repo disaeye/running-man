@@ -1290,6 +1290,52 @@
         "title": "ActivityWeather",
         "type": "object"
       },
+      "AthleteGradeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "age_graded_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Graded Pct"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GradeResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "configured"
+        ],
+        "title": "AthleteGradeResponse",
+        "type": "object"
+      },
       "AthleteMe": {
         "properties": {
           "dob": {
@@ -1544,6 +1590,10 @@
           "sex": {
             "anyOf": [
               {
+                "enum": [
+                  "male",
+                  "female"
+                ],
                 "type": "string"
               },
               {
@@ -1620,6 +1670,18 @@
       "AutoCalculateResponse": {
         "additionalProperties": false,
         "properties": {
+          "computed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
           "hr_max": {
             "$ref": "#/components/schemas/HrMaxEstimateResponse"
           },
@@ -1633,7 +1695,8 @@
         "required": [
           "hr_max",
           "lthr",
-          "threshold_pace"
+          "threshold_pace",
+          "computed_at"
         ],
         "title": "AutoCalculateResponse",
         "type": "object"
@@ -3962,6 +4025,51 @@
         "title": "GoalUpdate",
         "type": "object"
       },
+      "GradeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "a1_certified": {
+            "title": "A1 Certified",
+            "type": "boolean"
+          },
+          "age_group": {
+            "title": "Age Group",
+            "type": "integer"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "event_name": {
+            "title": "Event Name",
+            "type": "string"
+          },
+          "race_date": {
+            "format": "date",
+            "title": "Race Date",
+            "type": "string"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          },
+          "time_s": {
+            "title": "Time S",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tier",
+          "event",
+          "age_group",
+          "time_s",
+          "race_date",
+          "event_name",
+          "a1_certified"
+        ],
+        "title": "GradeResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4063,6 +4171,10 @@
             "title": "Near Max Count",
             "type": "integer"
           },
+          "required_sessions": {
+            "title": "Required Sessions",
+            "type": "integer"
+          },
           "session_count": {
             "title": "Session Count",
             "type": "integer"
@@ -4075,6 +4187,7 @@
           "data_sufficient",
           "near_max_count",
           "session_count",
+          "required_sessions",
           "input_window_days",
           "algorithm_version"
         ],
@@ -4755,6 +4868,10 @@
             "title": "Near Threshold Count",
             "type": "integer"
           },
+          "required_efforts": {
+            "title": "Required Efforts",
+            "type": "integer"
+          },
           "source_20min": {
             "anyOf": [
               {
@@ -4786,6 +4903,7 @@
           "near_threshold_count",
           "source_20min",
           "source_60min",
+          "required_efforts",
           "input_window_days",
           "algorithm_version"
         ],
@@ -5692,6 +5810,18 @@
             ],
             "title": "Computation Run Id"
           },
+          "computed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
           "confidence": {
             "enum": [
               "cached",
@@ -5760,7 +5890,8 @@
           "algorithm_version",
           "computation_run_id",
           "freshness",
-          "source"
+          "source",
+          "computed_at"
         ],
         "title": "PhysiologyResponse",
         "type": "object"
@@ -6557,6 +6688,129 @@
           "data_sufficient"
         ],
         "title": "RacePredictionResponse",
+        "type": "object"
+      },
+      "RaceResultCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "a1_certified": {
+            "default": false,
+            "title": "A1 Certified",
+            "type": "boolean"
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id"
+          },
+          "distance_category": {
+            "enum": [
+              "5k",
+              "10k",
+              "half",
+              "marathon"
+            ],
+            "title": "Distance Category",
+            "type": "string"
+          },
+          "event_name": {
+            "minLength": 1,
+            "title": "Event Name",
+            "type": "string"
+          },
+          "race_date": {
+            "format": "date",
+            "title": "Race Date",
+            "type": "string"
+          },
+          "time_s": {
+            "exclusiveMinimum": 0.0,
+            "title": "Time S",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_name",
+          "distance_category",
+          "time_s",
+          "race_date"
+        ],
+        "title": "RaceResultCreate",
+        "type": "object"
+      },
+      "RaceResultResponse": {
+        "properties": {
+          "a1_certified": {
+            "title": "A1 Certified",
+            "type": "boolean"
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id"
+          },
+          "athlete_id": {
+            "format": "uuid",
+            "title": "Athlete Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "distance_category": {
+            "enum": [
+              "5k",
+              "10k",
+              "half",
+              "marathon"
+            ],
+            "title": "Distance Category",
+            "type": "string"
+          },
+          "event_name": {
+            "title": "Event Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "race_date": {
+            "format": "date",
+            "title": "Race Date",
+            "type": "string"
+          },
+          "time_s": {
+            "title": "Time S",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "athlete_id",
+          "event_name",
+          "distance_category",
+          "time_s",
+          "race_date",
+          "a1_certified",
+          "created_at"
+        ],
+        "title": "RaceResultResponse",
         "type": "object"
       },
       "ReadinessFactorResponse": {
@@ -8398,6 +8652,10 @@
             ],
             "title": "Method"
           },
+          "required_efforts": {
+            "title": "Required Efforts",
+            "type": "integer"
+          },
           "threshold_pace_s_per_km": {
             "anyOf": [
               {
@@ -8418,6 +8676,7 @@
           "confidence",
           "data_sufficient",
           "effort_count",
+          "required_efforts",
           "input_window_days",
           "algorithm_version"
         ],
@@ -12421,6 +12680,27 @@
         ]
       }
     },
+    "/api/v1/insights/athlete-grade": {
+      "get": {
+        "operationId": "athlete_grade_api_v1_insights_athlete-grade_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AthleteGradeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Athlete Grade",
+        "tags": [
+          "insights"
+        ]
+      }
+    },
     "/api/v1/insights/coach-context": {
       "get": {
         "operationId": "get_coach_context_api_v1_insights_coach-context_get",
@@ -14154,6 +14434,106 @@
         "summary": "Get Pmc",
         "tags": [
           "pmc"
+        ]
+      }
+    },
+    "/api/v1/race-results": {
+      "get": {
+        "operationId": "list_race_results_api_v1_race-results_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RaceResultResponse"
+                  },
+                  "title": "Response List Race Results Api V1 Race-Results Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Race Results",
+        "tags": [
+          "race-results"
+        ]
+      },
+      "post": {
+        "operationId": "create_race_result_api_v1_race-results_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RaceResultCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaceResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Race Result",
+        "tags": [
+          "race-results"
+        ]
+      }
+    },
+    "/api/v1/race-results/{result_id}": {
+      "delete": {
+        "operationId": "delete_race_result_api_v1_race-results_result_id_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "result_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Result Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Race Result",
+        "tags": [
+          "race-results"
         ]
       }
     },
