@@ -128,21 +128,33 @@ test.describe("app shell", () => {
       }
     });
 
-    test("computed bottom padding accounts for nav height", async ({
+    test("scroll region ends exactly where the nav starts", async ({
       page,
     }) => {
       await page.goto("/");
-      const mainEl = page.locator('[data-shell-region="main"]');
       const navEl = page.locator('[data-layout-token="mobile-nav"]');
+
+      // The scroll region is sized to `100dvh - var(--mobile-nav-height)`, so its
+      // bottom edge is the nav's top edge: content cannot hide behind the bar and
+      // there is no dead band to scroll through. The bar publishes its own height
+      // once, so the measurement polls until the two edges agree.
+      await expect
+        .poll(async () =>
+          page.evaluate(() => {
+            const main = document.querySelector('[data-shell-region="main"]');
+            const nav = document.querySelector('[data-layout-token="mobile-nav"]');
+            if (!main || !nav) return Number.POSITIVE_INFINITY;
+            return Math.abs(
+              main.getBoundingClientRect().bottom - nav.getBoundingClientRect().top,
+            );
+          }),
+        { message: "scroll region bottom should meet the nav top" })
+        .toBeLessThanOrEqual(1);
 
       const navHeight = await navEl.evaluate(
         (el) => el.getBoundingClientRect().height,
       );
-      const paddingBottom = await mainEl.evaluate((el) => {
-        return parseFloat(getComputedStyle(el).paddingBottom);
-      });
-
-      expect(paddingBottom).toBeGreaterThanOrEqual(navHeight);
+      expect(navHeight).toBeGreaterThan(0);
     });
 
     test("alias active state: /activities maps to calendar tab", async ({

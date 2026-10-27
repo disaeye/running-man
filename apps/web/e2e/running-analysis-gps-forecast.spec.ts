@@ -227,7 +227,12 @@ test.describe("Todo 15 deterministic GPS, forecast, and analysis QA", () => {
     await page.goto("/analysis?tab=performance");
     const cyclingFtp = page.getByTestId("primary-cycling-ftp-card");
     await expect(cyclingFtp).toContainText("FTP");
-    await expect(cyclingFtp).toContainText("不再支持");
+    await expect(cyclingFtp).toContainText("--");
+    // The reason a metric is absent lives in the notes under the grid, so the
+    // cards keep one rhythm and the sentence still appears on the page.
+    const notes = page.getByTestId("analysis-ability-notes");
+    await expect(notes).toContainText("FTP");
+    await expect(notes).toContainText("不再支持");
     await screenshot(page, "analysis-cycling-ftp-semantics-1280");
     assertClean();
   });

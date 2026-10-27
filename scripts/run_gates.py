@@ -52,6 +52,11 @@ class Gate:
     skip_reason: str | None = None
     failure_hint: str = ""
     env: dict[str, str] = field(default_factory=dict)
+    # Drives a browser against the gate build on :28801, so `run_gate` has to
+    # prepare and start the gate server around it. Declared rather than sniffed
+    # from the name: the gate that needs it must not silently drop the server
+    # preparation.
+    needs_gate_server: bool = False
 
 
 @dataclass(slots=True)
@@ -107,6 +112,7 @@ def contract_gates() -> list[Gate]:
     hint = "generated files differ from the index — if you just ran generate_data_contract.py or edited generators, commit the output"
     return [
         Gate("contract", "validate v1 contract", [python, "scripts/validate_data_contract.py", "contracts/v1", "--json"], REPO_ROOT),
+        Gate("contract", "grading contract (CAA / WMA)", [python, "scripts/check_grading_contract.py", "--json"], REPO_ROOT),
         Gate("contract", "generate semantic registries", [python, "scripts/generate_data_contract.py", "contracts/v1", "--json"], REPO_ROOT),
         Gate("contract", "check generated registry drift", [python, "scripts/check_generated_data_contract.py", "--json"], REPO_ROOT),
         Gate("contract", "metric semantics (web)", [python, "scripts/check_metric_semantics.py"], REPO_ROOT),
@@ -156,6 +162,7 @@ def e2e_gate(fast: bool) -> Gate:
         definition.cwd,
         definition.timeout,
         skip_reason=definition.skip_reason,
+        needs_gate_server=True,
     )
 
 
@@ -163,7 +170,7 @@ def run_gate(gate: Gate) -> Result:
     if gate.skip_reason is not None:
         return Result(gate, "SKIP", 0.0, gate.skip_reason)
     env = dict(os.environ)
-    if gate.name.startswith("e2e"):
+    if gate.needs_gate_server:
         # Restart here, not when the gate list is built: `next build` runs
         # earlier in this same process and rewrites the gate dist directory, so
         # any restart that happened before it would leave the server on the
@@ -192,7 +199,7 @@ def run_gate(gate: Gate) -> Result:
     except OSError as error:
         return Result(gate, "FAIL", time.monotonic() - started, str(error))
     finally:
-        if gate.name.startswith("e2e"):
+        if gate.needs_gate_server:
             _e2e.stop_server()
     elapsed = time.monotonic() - started
     status = "PASS" if completed.returncode == 0 else "FAIL"

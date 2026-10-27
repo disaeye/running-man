@@ -59,7 +59,14 @@ test.describe("goals settings strength", () => {
 
     test("strength view shows analytics area", async ({ page }) => {
       await page.goto("/calendar?view=list");
-      await expect(page.getByRole("heading", { name: "力量分析" }).first()).toBeVisible();
+      const toggle = page.getByTestId("strength-analytics-toggle");
+      await expect(toggle).toBeVisible({ timeout: 10000 });
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+      await expect(
+        page.getByRole("heading", { name: "肌群容量" }).or(page.getByText("暂无力量训练数据")),
+      ).toBeVisible();
     });
 
     test("legacy /strength redirects to the calendar log view", async ({ page }) => {

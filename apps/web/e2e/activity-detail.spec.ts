@@ -75,7 +75,7 @@ test.describe("activity workflow", () => {
     // The log view's tab is 日志; the sidebar/tab-bar entry is 日历.
     await expect(page.getByText("日志", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "全部" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "力" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "力量训练", exact: true })).toBeVisible();
 
     // Wait for loading to finish (activities data or empty state)
     await expect(page.getByText("加载中...")).not.toBeVisible({

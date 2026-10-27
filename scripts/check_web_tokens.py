@@ -6,9 +6,10 @@ together, and all three are mechanically detectable:
   A. `glass-surface` on a panel. Glass is chrome — sidebar, header, tab bar.
      A page of six blurred panels hides the dusk atmosphere and costs a
      compositing layer per card on every scroll.
-  B. A panel surface with the wrong radius. `Card` is the panel primitive and
-     it uses `rounded-xl`; a hand-rolled `rounded-2xl bg-surface-card` is a
-     second panel language.
+  B. A panel surface with the wrong radius. The panel radius is 16px
+     (`rounded-2xl`); `rounded-xl` is the legacy 12px panel radius from before
+     the canvas moved to sunken, and `rounded-3xl` (24px) belongs to dialogs and
+     sheets. A panel surface carrying either is a second panel language.
   C. A raw Tailwind palette colour (`bg-emerald-500`, `text-sky-400`). Every
      colour in this app is a token so the dual theme and the data semantics hold.
   D. A colour token declared in `:root` but never exposed through `@theme
@@ -53,7 +54,9 @@ FILL_AS_TEXT: Final = re.compile(r"(?<![\w-])text-(?:accent|primary)(?![\w-])")
 
 GLASS: Final = re.compile(r"\bglass-surface(-strong)?\b")
 PANEL_SURFACE: Final = re.compile(r"\b(?:bg-surface-card|bg-card)\b")
-PANEL_RADIUS: Final = re.compile(r"\brounded-(?:2xl|3xl)\b")
+# 面板只许 16px：`rounded-xl`（12px）是画布换成 sunken 之前的遗留面板圆角，
+# `rounded-3xl`（24px）只属于对话框与抽屉。面板表面带上这两个就是第二套面板语言。
+LEGACY_PANEL_RADIUS: Final = re.compile(r"\brounded-(?:xl|3xl)\b")
 
 PALETTE: Final = re.compile(
     r"\b(?:bg|text|border|ring|from|to|via)-"
@@ -98,13 +101,14 @@ def scan(path: Path) -> list[Finding]:
             findings.append(
                 Finding("panel-glass", relative, number, "glass is chrome-only; panels use bg-surface-card")
             )
-        if PANEL_SURFACE.search(text) and PANEL_RADIUS.search(text):
+        if PANEL_SURFACE.search(text) and LEGACY_PANEL_RADIUS.search(text):
             findings.append(
                 Finding(
                     "panel-radius",
                     relative,
                     number,
-                    "panel surfaces use rounded-xl (Card); rounded-2xl/3xl is for overlays",
+                    "panel surfaces are rounded-2xl (16px); rounded-xl is the legacy "
+                    "panel radius and rounded-3xl (24px) belongs to dialogs and sheets",
                 )
             )
         if FILL_AS_TEXT.search(text) and not relative.startswith(FILL_AS_TEXT_EXEMPT_PREFIX):

@@ -75,11 +75,15 @@ test.describe("training workflow", () => {
   test.describe("mobile progressive forecast", () => {
     test.use({ viewport: MOBILE });
 
-    test("uses the summary card on mobile (no 7-axis chart)", async ({ page }) => {
+    test("forecast opens on demand from the plan-analysis row", async ({ page }) => {
       await page.goto("/calendar");
+      const toggle = page.getByTestId("calendar-insights-toggle");
+      await expect(toggle).toBeVisible({ timeout: 10000 });
       const summary = page
         .locator('[data-testid^="plan-forecast-summary"]')
         .first();
+      await expect(summary).toBeHidden();
+      await toggle.click();
       await expect(summary).toBeVisible();
       const desktopChart = page.getByTestId("plan-forecast-chart");
       // The chart container is `lg:block` and invisible at 390px viewport.

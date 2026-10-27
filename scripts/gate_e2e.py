@@ -12,9 +12,9 @@ made it fail while it passed when run alone — the failure had nothing to do wi
 the change under test. The gate therefore restarts the frontend itself, so it
 runs against the build it just produced.
 
-**Browser workers must be serial.** The suite drives a single frontend; with
-several workers the calendar's month grid intermittently lost the race to load
-its chunk.
+**Browser workers run in pairs.** Two workers completed the whole suite twice on
+this host with no failures (212 passed, ~8 minutes per run), so the suite runs
+with two workers.
 """
 
 from __future__ import annotations
@@ -76,21 +76,22 @@ def e2e_gate(fast: bool) -> E2eGate:
             "test",
             "--project=chromium",
             "--reporter=line",
-            # Serial, with retries. The suite drives a real browser against a
-            # real server on a shared machine: the failures seen here were
-            # timing flakes (a route compile or a fetch landing late), each of
-            # which passed on a re-run, never a behavioural regression. Two
-            # retries rather than one because the pressure is cumulative — a
+            # Two workers, with retries. The failures this gate has to absorb
+            # are timing flakes (a route compile or a fetch landing late),
+            # each of which passed on a re-run, never a behavioural regression.
+            # Two retries rather than one because the pressure is cumulative — a
             # single flake late in the run can consume the only retry, and at
             # ~2.5 minutes per attempt the cost of a third is small next to
             # reporting infrastructure noise as a broken build. Retried passes
             # are reported as "flaky", so a suite that needs this consistently
             # is still visible.
-            "--workers=1",
+            "--workers=2",
             "--retries=2",
         ],
         cwd=WEB_DIR,
-        timeout=900,
+        # The suite takes ~8 minutes with two workers; 900s left too little
+        # headroom for a slow run, so the budget is 1200s.
+        timeout=1200,
         skip_reason=skip,
         failure_hint=(
             "start the frontend first: systemctl --user start " + E2E_SERVICE
