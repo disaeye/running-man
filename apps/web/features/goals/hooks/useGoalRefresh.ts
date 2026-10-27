@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
+import { apiErrorMessage } from "@shared/lib/api";
 import {
   refreshGoalApiV1GoalsGoalIdRefreshPost,
   refreshAllGoalsApiV1GoalsRefreshAllPost,
@@ -63,7 +64,7 @@ export function useGoalRefresh(): UseGoalRefreshResult {
       );
       return mapGoal(updated);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "刷新进度失败";
+      const msg = apiErrorMessage(err, "刷新进度失败");
       setError(msg);
       throw err;
     } finally {
@@ -81,7 +82,7 @@ export function useGoalRefresh(): UseGoalRefreshResult {
       );
       return updated.map(mapGoal);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "批量刷新失败";
+      const msg = apiErrorMessage(err, "批量刷新失败");
       setError(msg);
       throw err;
     } finally {

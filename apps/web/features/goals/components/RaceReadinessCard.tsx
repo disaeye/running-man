@@ -1,19 +1,25 @@
 "use client";
 
 import { type ComponentType, useEffect, useState } from "react";
-import { Activity, Check, Flower2, Leaf, Mountain, Sprout, Wrench } from "lucide-react";
+import { Activity, Flower2, Leaf, Mountain, Sprout, Wrench } from "lucide-react";
 import { Card } from "@shared/ui/Card";
+import { CardHeader } from "@shared/ui/CardHeader";
+import { MetricStrip } from "@shared/ui/MetricStrip";
 import { Badge } from "@shared/ui/Badge";
-import { apiErrorMessage, apiFetch } from "@shared/lib/api";
+import { callOrvalValidated } from "@shared/api/orval-adapter";
+import { getReadinessApiV1InsightsReadinessGet } from "@shared/api/generated/clients";
+import * as Generated from "@shared/api/generated/model";
+import { apiErrorMessage } from "@shared/lib/api";
 import type { Goal } from "@shared/types/goals";
-import { PHASE_ORDER, PHASE_LABELS, estimateCurrentPhase, daysRemaining } from "./goal-utils";
+import { estimateCurrentPhase, daysRemaining } from "./goal-utils";
 
-/** Readiness projection from /api/insights/readiness */
-interface RaceProjection {
-  score: number;
-  level: string;
-  recommendation: string;
-}
+/**
+ * `/insights/readiness` 的回应类型直接取生成的契约，不手写：分数、等级和
+ * 建议文字在 `local_readiness` 里，`data_sufficient` 标出这份读数是否算真实
+ * 评估。这份回应只在 `shouldLoadProjection` 成立（active 目标且有 90 天内的
+ * `target_date`）时取，此时 `date` 取 `target_date`。
+ */
+type ReadinessResponse = Generated.ReadinessResponseOutput;
 
 interface RaceReadinessCardProps {
   goal: Goal;
@@ -30,13 +36,16 @@ const PHASE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
 };
 
 /**
- * Race Readiness Card — shown when a goal has a target_date within 90 days.
- * Displays: countdown badge, predicted finish, taper advice, phase timeline.
- * Fetches TSB/readiness projection for the race date from the insights API.
+ * 比赛准备度：比赛窗口（90 天内、进行中）才渲染。
+ *
+ * 两格读数（倒计时、预计完赛）+ 一句就绪建议 + 一行减量建议。
+ * 就绪状态的徽章去卡头右侧，因为它是「这张卡当前处于什么状态」；身体里不再
+ * 摆第三格 TSB——接口不提供数值型 TSB，拿展示句反推就是拿字符串猜数，
+ * 而一个没有数据源的格子不该占版面。
  */
 export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
   const days = daysRemaining(goal.target_date);
-  const [projection, setProjection] = useState<RaceProjection | null>(null);
+  const [projection, setProjection] = useState<ReadinessResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const shouldLoadProjection = Boolean(
@@ -45,15 +54,17 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
 
   useEffect(() => {
     if (!shouldLoadProjection || !goal.target_date) return;
+    const targetDate = goal.target_date;
 
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
 
-    apiFetch<RaceProjection>("/insights/readiness", {
-      params: { date: goal.target_date },
-    })
+    callOrvalValidated(
+      (fetchFn) => getReadinessApiV1InsightsReadinessGet({ date: targetDate }, {}, fetchFn),
+      Generated.ReadinessResponse,
+    )
       .then((data) => {
         if (!cancelled) setProjection(data);
       })
@@ -73,123 +84,57 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
   }
 
   const currentPhase = estimateCurrentPhase(goal);
-  const currentIndex = PHASE_ORDER.indexOf(currentPhase as typeof PHASE_ORDER[number]);
   const predictedFinish = formatPredictedFinish(goal);
   const taperAdvice = getTaperAdvice(currentPhase, days);
+  const readiness = projection?.local_readiness ?? null;
+  // 样本不够时不把分数、徽章当结论：接口的 `data_sufficient` 就是回答这个问题的字段。
+  const measured = readiness !== null && readiness.data_sufficient;
 
   return (
-    <Card className="relative overflow-hidden">
-      {/* Ambient gradient accent — washi paper warmth */}
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-ctl via-atl-magenta to-tsb-gold" />
-
-      {/* Header: title + countdown badge */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-subheadline font-semibold text-text-muted">
-          比赛准备度
-        </h3>
-        <div className="flex items-center gap-1.5 rounded-full bg-surface-overlay px-3 py-1">
-          <span className="text-caption1 text-text-muted">距比赛</span>
-          <span className="font-mono tabular-nums text-callout font-bold text-text-primary">{days}</span>
-          <span className="text-caption1 text-text-muted">天</span>
-        </div>
-      </div>
-
-      {/* Predicted finish time — large monospace */}
-      <div className="mt-4 flex flex-col items-center gap-1 rounded-lg bg-surface-overlay py-5">
-        <span className="text-caption1 font-medium text-text-muted">预计完赛时间</span>
-        {loading ? (
-          <div className="h-8 w-32 animate-pulse rounded bg-surface-active" />
-        ) : (
-          <span className="font-mono tabular-nums text-largeTitle font-bold tracking-tight text-text-primary">
-            {predictedFinish}
-          </span>
-        )}
-        {goal.unit && (
-          <span className="text-caption1 text-text-secondary">{goal.unit}</span>
-        )}
-      </div>
-
-      {/* Readiness projection */}
-      <div className="mt-4">
-        <div className="flex items-center justify-between">
-          <span className="text-caption1 font-medium text-text-secondary">TSB 预测</span>
-          {projection && (
-            <Badge variant={readinessVariant(projection.level)}>
-              {readinessLabel(projection.level)}
+    <Card padding="md">
+      <CardHeader
+        title="比赛准备度"
+        trailing={
+          measured ? (
+            <Badge variant={readinessVariant(readiness.level)}>
+              {readinessLabel(readiness.level)}
             </Badge>
-          )}
-        </div>
-        {projection && (
-          <div className="mt-2 rounded-md bg-insight-bg px-3 py-2 text-caption1 leading-relaxed text-text-secondary">
-            {projection.recommendation || "按当前状态调整训练强度。"}
-          </div>
-        )}
-        {error && !loading && (
-          <p className="mt-2 text-caption1 text-error">{error}</p>
-        )}
-      </div>
+          ) : null
+        }
+      />
 
-      {/* Taper recommendation */}
-      <div className="mt-4 flex items-start gap-2 rounded-md border border-border-subtle bg-surface-raised px-3 py-2.5">
-        <span className="text-headline leading-none">{(() => { const Icon = PHASE_ICONS[currentPhase] ?? Activity; return <Icon className="h-4 w-4" />; })()}</span>        <div>
-          <p className="text-caption1 font-medium text-text-primary">减量期建议</p>
-          <p className="mt-0.5 text-caption1 leading-relaxed text-text-secondary">
-            {taperAdvice}
-          </p>
-        </div>
-      </div>
+      <MetricStrip
+        columns={2}
+        items={[
+          { label: "距比赛", value: String(days), unit: "天" },
+          { label: "预计完赛", value: predictedFinish, unit: goal.unit ?? undefined },
+        ]}
+      />
 
-      {/* Phase timeline — race preparation */}
-      <div className="mt-5">
-        <div className="relative flex items-center gap-0">
-          {PHASE_ORDER.map((phase, i) => {
-            const isCurrent = phase === currentPhase;
-            const isPast = i < currentIndex;
-            const isLast = i === PHASE_ORDER.length - 1;
+      {error && !loading ? (
+        <p className="mt-3 text-caption1 text-error">{error}</p>
+      ) : loading ? (
+        <div className="mt-4 h-4 w-2/3 animate-pulse rounded bg-surface-active" aria-hidden="true" />
+      ) : readiness !== null ? (
+        <p className="mt-3 text-caption1 leading-relaxed text-text-secondary">
+          {readiness.recommendation || "按当前状态调整训练强度。"}
+        </p>
+      ) : null}
 
-            return (
-              <div key={phase} className="flex flex-1 flex-col items-center">
-                <div className="relative flex w-full items-center">
-                  {i > 0 && (
-                    <div className={`h-0.5 flex-1 ${isPast ? "bg-ctl" : "bg-border-subtle"}`} />
-                  )}
-                  <div
-                    className={`
-                      relative z-10 flex h-7 w-7 shrink-0 items-center justify-center
-                      rounded-full text-caption2 font-bold transition-all duration-300
-                      ${isCurrent
-                        ? "bg-accent text-accent-foreground shadow-[0_0_10px_var(--color-ctl)]"
-                        : isPast
-                          ? "bg-ctl/30 text-text-primary"
-                          : "bg-surface-overlay text-text-muted border border-border-subtle"
-                      }
-                    `.trim()}
-                  >
-                    {isPast ? <Check className="h-4 w-4 text-success" /> : (() => { const Icon = PHASE_ICONS[phase]; return Icon ? <Icon className="h-3 w-3" /> : <span>•</span>; })()}
-                  </div>
-                  {isLast
-                    ? <div className="h-0.5 flex-1" />
-                    : <div className="h-0.5 flex-1 bg-border-subtle" />
-                  }
-                </div>
-                <span
-                  className={`mt-1.5 text-center text-caption2 leading-tight ${
-                    isCurrent
-                      ? "font-semibold text-text-primary"
-                      : isPast
-                        ? "text-text-secondary"
-                        : "text-text-muted"
-                  }`}
-                >
-                  {PHASE_LABELS[phase] ?? phase}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <p className="mt-2 flex items-start gap-1.5 text-caption1 text-text-muted">
+        <span aria-hidden="true" className="mt-0.5 shrink-0">
+          <PhaseIcon phase={currentPhase} />
+        </span>
+        <span>减量期建议 · {taperAdvice}</span>
+      </p>
     </Card>
   );
+}
+
+/** 当前阶段图标；阶段名不在这五档里时退回通用活动图标。 */
+function PhaseIcon({ phase }: { readonly phase: string }) {
+  const Icon = PHASE_ICONS[phase] ?? Activity;
+  return <Icon className="size-3.5" />;
 }
 
 /** Estimate finish time from current progress and target value */

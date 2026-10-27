@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { Card } from "@shared/ui/Card";
+import { CardHeader } from "@shared/ui/CardHeader";
 import { PHASE_ORDER, PHASE_LABELS, estimateCurrentPhase } from "./goal-utils";
 import type { Goal } from "@shared/types/goals";
 
@@ -9,6 +10,7 @@ interface PhaseTimelineProps {
   goal: Goal;
 }
 
+/** 阶段时间线：五段按时间顺序排开，当前段用强调色点亮，已过的段打勾。 */
 export function PhaseTimeline({ goal }: PhaseTimelineProps) {
   if (!goal.target_date) return null;
 
@@ -16,10 +18,8 @@ export function PhaseTimeline({ goal }: PhaseTimelineProps) {
   const currentIndex = PHASE_ORDER.indexOf(currentPhase as typeof PHASE_ORDER[number]);
 
   return (
-    <Card>
-      <h3 className="mb-4 text-subheadline font-semibold text-text-muted">
-        训练阶段
-      </h3>
+    <Card padding="md">
+      <CardHeader title="阶段时间线" />
 
       <div className="relative flex items-center gap-0">
         {PHASE_ORDER.map((phase, i) => {

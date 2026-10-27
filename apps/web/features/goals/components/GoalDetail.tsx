@@ -46,7 +46,7 @@ export function GoalDetail({
           <PhaseTimeline goal={goal} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
           <div className="min-w-0">
             <GoalProgress goal={goal} />
           </div>

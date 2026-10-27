@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Circle } from "lucide-react";
-import { Card } from "@shared/ui/Card";
+import { Section } from "@shared/ui/Section";
 import { Badge } from "@shared/ui/Badge";
 import type { Milestone } from "@shared/types/goals";
 import { formatDate } from "@shared/lib/format";
@@ -23,10 +23,8 @@ export function MilestoneList({
   const achieved = milestones.filter((m) => m.achieved);
 
   return (
-    <Card>
-      <h3 className="mb-4 text-subheadline font-semibold text-text-muted">
-        里程碑
-      </h3>
+    <Section title="里程碑">
+      <div className="p-5">
 
       {/* Upcoming milestones */}
       {upcoming.length > 0 && (
@@ -66,7 +64,8 @@ export function MilestoneList({
           </ul>
         </div>
       )}
-    </Card>
+      </div>
+    </Section>
   );
 }
 
