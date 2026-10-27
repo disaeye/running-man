@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import cast
 
 from fastapi import HTTPException, status
 
 from domain.integrations.crypto import decrypt
+from presentation.api.staleness import staleness_bucket
 
 
 async def credentials(source: str, payload: object) -> dict[str, object]:
@@ -46,19 +47,8 @@ def public_integration(
     data_as_of = activity_data_as_of(data_health)
     return {key: value for key, value in row.items() if key != "credentials"} | {
         "data_as_of": data_as_of,
-        "staleness_bucket": staleness_bucket(data_as_of),
+        "staleness_bucket": staleness_bucket(data_as_of, datetime.now(timezone.utc).date()),
     }
-
-
-def staleness_bucket(data_as_of: datetime | None) -> str:
-    if data_as_of is None:
-        return "missing"
-    age = datetime.now(timezone.utc) - data_as_of
-    if age < timedelta(hours=24):
-        return "fresh"
-    if age < timedelta(hours=72):
-        return "stale"
-    return "missing"
 
 
 def activity_data_as_of(data_health: dict[str, object] | None) -> datetime | None:

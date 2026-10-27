@@ -15,11 +15,11 @@ from infrastructure.repositories.pmc import PmcRepo
 from presentation.api.analytics_analysis_contracts import CoachContextResponse
 from presentation.api.coach_context_paces import latest_acwr, training_paces_for
 from presentation.api.insights_helpers import _readiness_inputs
+from presentation.api.staleness import staleness_bucket
 from presentation.auth.deps import get_current_athlete
 
 router = APIRouter(prefix="/insights", tags=["insights"])
 
-StalenessBucket = Literal["fresh", "stale", "missing"]
 TrendDirection = Literal["up", "down", "stable"]
 WEEK_DAYS = 7
 TREND_MIN_POINTS = 2
@@ -114,7 +114,7 @@ def _freshness_entry(section: dict[str, object], target_day: date) -> dict[str, 
     data_as_of = section.get("data_as_of")
     return {
         "data_as_of": data_as_of.date() if isinstance(data_as_of, datetime) else data_as_of,
-        "staleness_bucket": _staleness_bucket(data_as_of, target_day),
+        "staleness_bucket": staleness_bucket(data_as_of, target_day),
     }
 
 
@@ -199,7 +199,7 @@ def _missing_data_caveats(
         caveats.append(_caveat("hrv", "缺少 7 天数据", "HRV 趋势和恢复评分会偏保守"))
     if _field_count(wellness, "resting_hr") < WEEK_DAYS:
         caveats.append(_caveat("resting_hr", "缺少 7 天数据", "静息心率趋势可信度下降"))
-    wellness_staleness = _staleness_bucket(
+    wellness_staleness = staleness_bucket(
         _section(data_health, "wellness").get("data_as_of"), target_day
     )
     if wellness_staleness != "fresh":
@@ -247,15 +247,6 @@ def _trend(
     if delta < -1:
         return "down"
     return "stable"
-
-
-def _staleness_bucket(value: object, target_day: date) -> StalenessBucket:
-    if value is None:
-        return "missing"
-    as_day = value.date() if isinstance(value, datetime) else value
-    if isinstance(as_day, date) and (target_day - as_day).days <= 1:
-        return "fresh"
-    return "stale"
 
 
 def _event_day(event: dict[str, object]) -> date | None:

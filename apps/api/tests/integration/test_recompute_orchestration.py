@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import anyio
 import psycopg
 import pytest
@@ -69,6 +71,86 @@ async def test_orchestration_removes_activity_facts_after_activity_delete() -> N
             (ATHLETE_ID,),
         )
         assert cur.fetchone()[0] == 0
+
+
+async def test_imported_activity_recomputes_the_thresholds() -> None:
+    """A sync must move the thresholds, not just the load.
+
+    Before this, the post-import chain rescored activities and rebuilt the PMC
+    and stopped there, so the estimate only changed when the athlete remembered
+    to press 开始估算. Imported data could therefore make every zone boundary
+    stale without anything saying so.
+    """
+    configure_database(TEST_DSN)
+    seed_idempotency_inputs(TEST_DSN)
+    for index in range(5):
+        _seed_max_hr_run(
+            f"verify-easy-{index}", datetime(2026, 7, 10 + index, tzinfo=UTC), 170 + index
+        )
+
+    await recompute_after_activity_change(ATHLETE_ID, "sync")
+    assert _estimated_hr_max() == 174
+
+    _seed_max_hr_run("verify-hard", datetime(2026, 7, 20, tzinfo=UTC), 191)
+    await recompute_after_activity_change(ATHLETE_ID, "sync")
+
+    assert _estimated_hr_max() == 191
+    assert _physiology_run_statuses()[-2:] == ["success", "success"]
+
+
+async def test_repeated_import_of_unchanged_data_skips_the_estimate() -> None:
+    configure_database(TEST_DSN)
+    seed_idempotency_inputs(TEST_DSN)
+    for index in range(5):
+        _seed_max_hr_run(
+            f"verify-easy-{index}", datetime(2026, 7, 10 + index, tzinfo=UTC), 170 + index
+        )
+
+    await recompute_after_activity_change(ATHLETE_ID, "sync")
+    await recompute_after_activity_change(ATHLETE_ID, "sync")
+
+    assert _physiology_run_statuses()[-2:] == ["success", "skipped"]
+
+
+def _seed_max_hr_run(activity_id: str, day: datetime, max_hr: int) -> None:
+    with psycopg.connect(TEST_DSN) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO activity_summary (
+                activity_id, athlete_id, start_time, sport, distance_m, duration_s, max_hr
+            ) VALUES (%s, %s, %s, 'run', 8000, 2400, %s)
+            ON CONFLICT (activity_id, start_time) DO UPDATE SET max_hr = EXCLUDED.max_hr
+            """,
+            (activity_id, ATHLETE_ID, day + timedelta(hours=7), max_hr),
+        )
+        conn.commit()
+
+
+def _estimated_hr_max() -> int | None:
+    with psycopg.connect(TEST_DSN) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT hr_max FROM athlete_thresholds
+            WHERE athlete_id = %s AND source = 'estimated'
+            ORDER BY effective_from DESC LIMIT 1
+            """,
+            (ATHLETE_ID,),
+        )
+        row = cur.fetchone()
+    return int(row[0]) if row is not None and row[0] is not None else None
+
+
+def _physiology_run_statuses() -> list[str]:
+    with psycopg.connect(TEST_DSN) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT status FROM computation_runs
+            WHERE athlete_id = %s AND computation_kind = 'physiology'
+            ORDER BY started_at
+            """,
+            (ATHLETE_ID,),
+        )
+        return [str(row[0]) for row in cur.fetchall()]
 
 
 async def test_concurrent_duplicate_activity_load_triggers_have_one_writer() -> None:

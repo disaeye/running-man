@@ -1,4 +1,4 @@
-"""Recompute activity load and PMC facts for one athlete."""
+"""Recompute activity load, PMC and physiology facts for one athlete."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from psycopg.rows import DictRow
 from application.computation.runs import ComputationRunResult
 from application.load.pmc_facts import recompute_pmc_facts
 from application.load.recompute import recompute_activity_load_facts
+from application.physiology.service import calculate_physiology
 from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
 from infrastructure.db.pool import get_pool, open_pool
@@ -39,6 +40,15 @@ async def enqueue_activity_recompute(athlete_id: UUID, trigger: str = "manual") 
 async def recompute_after_activity_change(
     athlete_id: UUID, trigger: str = "manual"
 ) -> RecomputeChainResult:
+    """Bring every derived number back in line with the imported activities.
+
+    Physiology comes first: thresholds are an input to load, so scoring the new
+    activities before re-estimating them would recompute every session against
+    yesterday's thresholds and then throw that work away. ``recompute_load=False``
+    stops the estimator from rescoring inside this call, because the two steps
+    below do exactly that once, after the thresholds are final.
+    """
+    _ = await calculate_physiology(athlete_id, recompute_load=False)
     activity = await recompute_activity_load_facts(athlete_id, trigger)
     await _prune_orphaned_activity_facts(athlete_id)
     pmc = await recompute_pmc_facts(athlete_id, trigger)
