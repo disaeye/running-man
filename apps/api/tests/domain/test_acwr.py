@@ -2,8 +2,8 @@
 
 The ratio is only meaningful once a chronic window of history exists. Before
 that the denominator is a partial window or zero, and returning a number for it
-produced a finding out of nothing: ``0.0`` is labelled "减量风险" (detraining
-risk) by the contract, so a brand-new athlete — or anyone whose first activity
+produced a finding out of nothing: ``0.0`` is labelled "负荷回落" by
+the contract, so a brand-new athlete — or anyone whose first activity
 arrived after a break — was told their load had dropped sharply.
 
 ``None`` is the honest answer and the contract's ``insufficient_load_history``

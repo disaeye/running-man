@@ -7,7 +7,7 @@ is built from a partial window, and with no load at all it is zero.
 
 Both of those cases previously returned ``0.0``, which is indistinguishable from
 a real reading of "your load dropped sharply" — the contract assigns ACWR < 0.8
-the label "减量风险". A new athlete, or anyone returning from a break, was
+the label "负荷回落". A new athlete, or anyone returning from a break, was
 therefore shown a significant finding that was purely an artifact of having no
 data. The honest answer is ``None``: not enough history to say.
 

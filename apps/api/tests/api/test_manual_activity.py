@@ -22,13 +22,17 @@ async def test_manual_activity_is_atomic_and_visible_to_activity_analysis(
     db_conn: psycopg.Connection,
 ) -> None:
     athlete_id = uuid4()
+    wrong_day_id = f"wrong-day-{athlete_id}"
+    planned_run_id = f"planned-run-{athlete_id}"
     goal_day = datetime.now(TEST_TIMEZONE).date() - timedelta(days=1)
     activity_time = datetime.combine(goal_day, time(10), tzinfo=TEST_TIMEZONE)
-    athlete = Athlete(athlete_id, f"manual-{athlete_id}@example.com", "hash", timezone=str(TEST_TIMEZONE))
+    athlete = Athlete(
+        athlete_id, f"manual-{athlete_id}@example.com", "hash", timezone=str(TEST_TIMEZONE)
+    )
     _seed_athlete(db_conn, athlete)
     _seed_threshold(db_conn, athlete_id, goal_day)
-    _seed_calendar_event(db_conn, athlete_id, "wrong-day", activity_time - timedelta(days=1))
-    _seed_calendar_event(db_conn, athlete_id, "planned-run", activity_time)
+    _seed_calendar_event(db_conn, athlete_id, wrong_day_id, activity_time - timedelta(days=1))
+    _seed_calendar_event(db_conn, athlete_id, planned_run_id, activity_time)
     app.dependency_overrides.clear()
     app.dependency_overrides[get_current_athlete] = lambda: athlete
 
@@ -41,7 +45,7 @@ async def test_manual_activity_is_atomic_and_visible_to_activity_analysis(
         "max_hr": 170,
         "rpe": 6,
         "name": "补录晨跑",
-        "event_id": "wrong-day",
+        "event_id": wrong_day_id,
     }
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -51,16 +55,16 @@ async def test_manual_activity_is_atomic_and_visible_to_activity_analysis(
             assert rejected.status_code == 404
             assert after_rejection == before
 
-            payload["event_id"] = "planned-run"
+            payload["event_id"] = planned_run_id
             created = await client.post("/api/v1/activities/manual", json=payload)
             assert created.status_code == 201
             result = created.json()
             assert result["source"] == "manual"
-            assert result["event_id"] == "planned-run"
+            assert result["event_id"] == planned_run_id
             assert result["recompute_status"] == "queued"
             assert result["recompute_generation"] > 0
 
-            completed = _calendar_event(db_conn, athlete_id, "planned-run")
+            completed = _calendar_event(db_conn, athlete_id, planned_run_id)
             assert completed == (True, "completed", result["activity_id"], 10000.0, 3600, 155, 6)
 
             assert await run_queued_recompute_once(athlete_id)
@@ -115,7 +119,9 @@ def _manual_activity_count(conn: psycopg.Connection, athlete_id: object) -> int:
             "SELECT count(*) FROM activity_summary WHERE athlete_id = %s AND source = 'manual'",
             (athlete_id,),
         )
-        return int(cur.fetchone()[0])
+        row = cur.fetchone()
+        assert row is not None
+        return int(row[0])
 
 
 def _calendar_event(
@@ -128,7 +134,9 @@ def _calendar_event(
             "FROM training_calendar WHERE athlete_id = %s AND event_id = %s",
             (athlete_id, event_id),
         )
-        return cur.fetchone()
+        row = cur.fetchone()
+        assert row is not None
+        return tuple(row)
 
 
 def _delete_athlete(conn: psycopg.Connection, athlete_id: object) -> None:
