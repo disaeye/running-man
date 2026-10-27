@@ -39,27 +39,27 @@ export function ActivityFlagActions({
         disabled={pending}
         title="不计入训练负荷、PMC、纪录与心率区间统计，但保留在列表中"
         onClick={() => void ignore(activityId).then(after)}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground disabled:opacity-50"
+        className="inline-flex h-10 items-center gap-1.5 rounded-2xl border border-border/70 bg-card/60 px-3 text-caption1 font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground disabled:opacity-50"
       >
         <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
         <span>忽略</span>
       </button>
 
       {confirmingDelete ? (
-        <span className="inline-flex items-center gap-2 rounded-xl border border-error/40 bg-error/10 px-3 py-1.5 text-xs">
+        <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-error/40 bg-error/10 px-3 text-caption1">
           <span className="text-error">移入回收站？</span>
           <button
             type="button"
             disabled={pending}
             onClick={() => void remove(activityId).then(after)}
-            className="font-semibold text-error underline underline-offset-2 disabled:opacity-50"
+            className="inline-flex min-h-10 items-center font-semibold text-error underline underline-offset-2 disabled:opacity-50"
           >
             确认
           </button>
           <button
             type="button"
             onClick={() => setConfirmingDelete(false)}
-            className="text-muted-foreground underline underline-offset-2"
+            className="inline-flex min-h-10 items-center text-muted-foreground underline underline-offset-2"
           >
             取消
           </button>
@@ -70,7 +70,7 @@ export function ActivityFlagActions({
           disabled={pending}
           title="移入回收站：从列表隐藏，且同步不会再次导入。可恢复。"
           onClick={() => setConfirmingDelete(true)}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-error/40 hover:bg-error/10 hover:text-error disabled:opacity-50"
+          className="inline-flex h-10 items-center gap-1.5 rounded-2xl border border-border/70 bg-card/60 px-3 text-caption1 font-medium text-muted-foreground transition-colors hover:border-error/40 hover:bg-error/10 hover:text-error disabled:opacity-50"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
           <span>删除</span>

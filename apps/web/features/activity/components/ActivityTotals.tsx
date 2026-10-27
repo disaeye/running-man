@@ -111,7 +111,7 @@ export function ActivityTotals({ activities }: ActivityTotalsProps) {
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="focus-ring flex min-h-14 w-full items-center justify-between gap-4 rounded-xl border border-border-subtle bg-surface-card px-4 py-3 text-left transition-colors hover:bg-surface-overlay sm:px-5"
+        className="row-press focus-ring flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl bg-surface-card px-4 py-3 text-left hover:bg-surface-overlay sm:px-5"
         aria-expanded={expanded}
         data-testid="activity-totals-summary"
       >
@@ -119,7 +119,7 @@ export function ActivityTotals({ activities }: ActivityTotalsProps) {
           <p className="text-caption1 font-medium text-text-muted">
             当前筛选汇总
           </p>
-          <p className="mt-1 truncate text-subheadline text-text-secondary">
+          <p className="mt-1 text-subheadline text-text-secondary sm:truncate">
             <span className="font-mono font-semibold tabular-nums text-text-primary">
               {summary.count}
             </span>

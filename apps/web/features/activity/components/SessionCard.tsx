@@ -129,7 +129,7 @@ export function SessionCard({
       }}
       tabIndex={0}
       role="link"
-      className="group card-interactive relative min-h-[44px] cursor-pointer overflow-hidden focus-ring sm:min-h-[64px] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-border"
+      className="group card-interactive relative min-h-[44px] cursor-pointer overflow-hidden focus-ring sm:min-h-[64px] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
     >
       {showRoute && (
         <RouteBackground

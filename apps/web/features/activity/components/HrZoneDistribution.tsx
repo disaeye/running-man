@@ -46,7 +46,7 @@ export function HrZoneDistribution({ zones }: HrZoneDistributionProps) {
   if (!zones || total === 0) {
     return (
       <Card padding="sm">
-        <h2 className="mb-3 text-subheadline font-semibold text-text-secondary">心率区间分布</h2>
+        <h2 className="mb-3 text-caption1 font-semibold text-text-secondary">心率区间分布</h2>
         <p className="text-caption1 text-text-muted">暂无数据</p>
       </Card>
     );
@@ -60,7 +60,7 @@ export function HrZoneDistribution({ zones }: HrZoneDistributionProps) {
 
   return (
     <Card padding="sm">
-      <h2 className="mb-3 text-subheadline font-semibold text-text-secondary">心率区间分布</h2>
+      <h2 className="mb-3 text-caption1 font-semibold text-text-secondary">心率区间分布</h2>
       <p className="mb-3 text-caption1 text-text-muted">
         总心率训练时间 {formatTotalTime(total)}，各区间时长分布。
       </p>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@shared/ui/Card";
-import { apiFetch } from "@shared/lib/api";
+import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 
 interface ExerciseSet {
   id: number;
@@ -72,7 +72,7 @@ export function StrengthDetail({ activityId }: StrengthDetailProps) {
         if (!cancelled) setExercises(data);
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : "加载失败");
+        if (!cancelled) setError(apiErrorMessage(e, "加载失败"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -99,7 +99,7 @@ export function StrengthDetail({ activityId }: StrengthDetailProps) {
   if (!exercises || exercises.length === 0) {
     return (
       <Card padding="sm">
-        <h2 className="mb-2 text-subheadline font-semibold text-text-secondary">动作明细</h2>
+        <h2 className="mb-2 text-caption1 font-semibold text-text-secondary">动作明细</h2>
         <p className="text-caption1 text-text-muted">暂无力量数据</p>
       </Card>
     );
@@ -112,7 +112,7 @@ export function StrengthDetail({ activityId }: StrengthDetailProps) {
     <Card padding="sm">
       {/* ── Header + session totals ── */}
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-subheadline font-semibold text-text-secondary">动作明细</h2>
+        <h2 className="text-caption1 font-semibold text-text-secondary">动作明细</h2>
         <dl className="flex gap-4 text-caption1 text-text-muted">
           <div>
             <dt className="sr-only">动作数</dt>

@@ -1,8 +1,20 @@
 "use client";
 
 import { Card } from "@shared/ui/Card";
-import { SectionHeader } from "@shared/ui/SectionHeader";
-import { formatDistance, formatPace, formatHeartRate, formatElevation } from "@shared/lib/format";
+import { CardHeader } from "@shared/ui/CardHeader";
+import {
+  SplitValue,
+  SPLIT_HEAD_ROW,
+  SPLIT_ROW,
+  fastestPaceIndex,
+  splitUnit,
+} from "@features/activity/components/SplitRow";
+import {
+  formatDistance,
+  formatElevation,
+  formatHeartRate,
+  formatPace,
+} from "@shared/lib/format";
 import type { Lap } from "@features/activity/hooks/useActivityAnalysis";
 
 interface LapAnalysisProps {
@@ -23,6 +35,12 @@ function lapPace(lap: Lap): number | null {
   return lap.distance_m / lap.duration_s;
 }
 
+/** 配速单元：没有速度就只留占位符，别把 `/km` 挂在一个空值后面。 */
+function paceCell(speedMs: number | null): { value: string; unit?: string } {
+  if (speedMs == null || speedMs <= 0) return { value: formatPace(speedMs) };
+  return { value: formatPace(speedMs), unit: "/km" };
+}
+
 export function LapAnalysis({ laps, source = "derived" }: LapAnalysisProps) {
   const sourceHint =
     source === "device"
@@ -31,12 +49,17 @@ export function LapAnalysis({ laps, source = "derived" }: LapAnalysisProps) {
         ? "算法按距离切分（无设备圈段时回退）。重新同步 FIT 可写入手表 laps。"
         : "暂无圈段数据。";
 
+  const fastestIndex = fastestPaceIndex(
+    laps.map(lapPace),
+    // 圈段没有声明步长，按全表距离中位数认尾部残段。
+    { distances: laps.map((lap) => lap.distance_m) },
+  );
+
   return (
     <Card padding="md" data-testid="lap-analysis">
-      <SectionHeader
+      <CardHeader
         title="圈段分析"
-        subtitle={sourceHint}
-        action={
+        trailing={
           source !== "none" ? (
             <span
               className="rounded-full bg-surface-overlay px-2.5 py-1 text-caption1 font-medium text-text-secondary"
@@ -48,47 +71,65 @@ export function LapAnalysis({ laps, source = "derived" }: LapAnalysisProps) {
         }
       />
 
+      <p className="text-caption1 text-text-muted">{sourceHint}</p>
+
       {laps.length === 0 ? (
-        <p className="mt-3 text-footnote text-text-muted" data-testid="lap-analysis-empty">
+        <p className="mt-3 text-caption1 text-text-muted" data-testid="lap-analysis-empty">
           暂无数据
         </p>
       ) : (
-        <div className="mt-3 overflow-x-auto rounded-xl bg-surface-overlay/35">
-          <table className="w-full text-caption1">
-            <thead className="text-text-muted">
-              <tr className="border-b border-border-subtle text-left">
-                <th className="px-3 py-2.5 font-medium">圈段</th>
-                <th className="px-3 py-2.5 font-medium">距离</th>
-                <th className="px-3 py-2.5 font-medium">用时</th>
-                <th className="px-3 py-2.5 font-medium">配速</th>
-                <th className="px-3 py-2.5 font-medium">心率</th>
-                <th className="px-3 py-2.5 font-medium">爬升</th>
-              </tr>
-            </thead>
-            <tbody className="font-mono text-text-secondary">
-              {laps.map((lap) => {
-                const pace = lapPace(lap);
-                return (
-                  <tr
-                    key={lap.lap_index}
-                    className="border-b border-border-subtle/50 last:border-0"
-                  >
-                    <td className="px-3 py-2.5 font-sans text-text-primary">
+        // 手机放不下六列：`用时` 与 `爬升` 在 `sm` 以下隐藏，配速与心率留着。
+        <table className="mt-3 w-full">
+          <thead className="border-b border-border-subtle">
+            <tr className={SPLIT_HEAD_ROW}>
+              <th className="text-left">圈段</th>
+              <th className="text-right">距离</th>
+              <th className="hidden text-right sm:table-cell">用时</th>
+              <th className="text-right">配速</th>
+              <th className="text-right">心率</th>
+              <th className="hidden text-right sm:table-cell">爬升</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-subtle">
+            {laps.map((lap, index) => {
+              const pace = lapPace(lap);
+              const fastest = index === fastestIndex;
+              return (
+                <tr key={lap.lap_index} className={SPLIT_ROW}>
+                  <td className="text-left">
+                    <span className="flex items-center gap-1.5 text-caption1 text-text-secondary">
                       #{lap.lap_index}
-                    </td>
-                    <td className="px-3 py-2.5">{formatDistance(lap.distance_m)}</td>
-                    <td className="px-3 py-2.5">{formatLapDuration(lap.duration_s)}</td>
-                    <td className="px-3 py-2.5">{formatPace(pace)}</td>
-                    <td className="px-3 py-2.5">{formatHeartRate(lap.avg_hr)}</td>
-                    <td className="px-3 py-2.5">
-                      {formatElevation(lap.elevation_gain ?? null)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      {fastest && (
+                        <span className="text-caption1 font-medium text-accent-strong">
+                          最快
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="text-right text-text-primary">
+                    <SplitValue {...splitUnit(formatDistance(lap.distance_m))} />
+                  </td>
+                  <td className="hidden text-right text-text-primary sm:table-cell">
+                    <SplitValue value={formatLapDuration(lap.duration_s)} />
+                  </td>
+                  <td
+                    className={`text-right ${
+                      fastest ? "font-semibold text-accent-strong" : "text-text-primary"
+                    }`}
+                  >
+                    <SplitValue {...paceCell(pace)} />
+                  </td>
+                  <td className="text-right text-text-primary">
+                    <SplitValue {...splitUnit(formatHeartRate(lap.avg_hr))} />
+                  </td>
+                  <td className="hidden text-right text-text-primary sm:table-cell">
+                    <SplitValue {...splitUnit(formatElevation(lap.elevation_gain ?? null))} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       )}
     </Card>
   );

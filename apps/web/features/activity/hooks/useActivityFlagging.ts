@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useSWRConfig } from "swr";
 import { callOrval } from "@shared/api/orval-adapter";
+import { apiErrorMessage } from "@shared/lib/api";
 import {
   deleteActivityApiV1ActivitiesActivityIdDelete,
   ignoreActivitiesBulkApiV1ActivitiesIgnorePost,
@@ -76,7 +77,7 @@ export function useActivityFlagging(): UseActivityFlaggingResult {
         await invalidate();
         return true;
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : failure);
+        setError(apiErrorMessage(err, failure));
         return false;
       } finally {
         setPending(false);

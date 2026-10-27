@@ -126,7 +126,7 @@ export function ColoredGpsTrack({ streams }: ColoredGpsTrackProps) {
   return (
     <Card padding="sm" className="relative" data-testid="gps-map">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-subheadline font-semibold text-text-secondary">GPS · 配速着色</h2>
+        <h2 className="text-caption1 font-semibold text-text-secondary">GPS · 配速着色</h2>
         <div className="flex items-center gap-2 text-caption2 text-text-muted">
           <span className="hidden sm:inline">慢</span>
           <div

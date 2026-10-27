@@ -6,6 +6,7 @@ import "uplot/dist/uPlot.min.css";
 import { ChartShell } from "@shared/ui/ChartShell";
 import { useChartConfig } from "@shared/hooks/useChartConfig";
 import { formatPace } from "@shared/lib/format";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 import type { ChartColors } from "@shared/lib/chart-tokens";
 import type { StreamMap } from "@shared/types/activity";
 
@@ -28,7 +29,7 @@ interface StreamDef {
 }
 
 const STREAM_DEFS: StreamDef[] = [
-  { key: "heart_rate", label: "心率", unit: "bpm", scale: "rate" },
+  { key: "heart_rate", label: "心率", unit: HEART_RATE_UNIT, scale: "rate" },
   { key: "speed", label: "配速", unit: "m/s", scale: "metric" },
   { key: "cadence", label: "步频", unit: "spm", scale: "rate" },
   { key: "altitude", label: "海拔", unit: "m", scale: "metric" },

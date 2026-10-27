@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { AlertTriangle, RotateCcw, Share2, Info } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, RotateCcw, Share2 } from "lucide-react";
 import { groupStreams } from "@shared/types/activity";
+import { Card } from "@shared/ui/Card";
+import { MetricStrip, type MetricStripItem } from "@shared/ui/MetricStrip";
+import { ActivityDetailHeader } from "@features/activity/components/ActivityDetailHeader";
 import { useActivityDetail } from "@features/activity/hooks/useActivityDetail";
 import { useActivityStreams } from "@features/activity/hooks/useActivityStreams";
 import { useActivityAnalysis } from "@features/activity/hooks/useActivityAnalysis";
-import { StatsPanel } from "@features/activity/components/StatsPanel";
 import { StrengthDetail } from "@features/activity/components/StrengthDetail";
 import { ShareDialog } from "@features/activity/components/ShareDialog";
 import { DataAvailabilityCard } from "@features/activity/components/DataAvailabilityCard";
@@ -16,7 +19,14 @@ import { ActivityNullSemantics } from "@features/activity/components/ActivityNul
 import { ActivityWeatherCard } from "@features/activity/components/ActivityWeatherCard";
 import { NonWeightSection } from "@features/activity/components/NonWeightSection";
 import { getSportConfig } from "@shared/config/sport-config";
-import { computeAvailability, extractId, sportSubtitle } from "@features/activity/lib/activity-detail";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
+import { formatDistance, formatDuration, formatPaceFromSeconds } from "@shared/lib/format";
+import { computeAvailability, extractId } from "@features/activity/lib/activity-detail";
+
+function pacePerKm(avgSpeed: number | null): number | null {
+  if (avgSpeed == null || avgSpeed <= 0) return null;
+  return 1000 / avgSpeed;
+}
 
 export default function ActivityDetailPage() {
   const params = useParams();
@@ -29,9 +39,9 @@ export default function ActivityDetailPage() {
 
   if (activityQuery.loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center p-8">
-        <p className="text-sm text-muted-foreground animate-pulse" role="status" aria-busy="true">
-          正在加载活动详情...
+      <div className="flex min-h-[320px] items-center justify-center">
+        <p className="text-subheadline text-text-muted" role="status" aria-busy="true">
+          正在加载活动详情…
         </p>
       </div>
     );
@@ -43,9 +53,15 @@ export default function ActivityDetailPage() {
 
   if (!activityQuery.data) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center p-8 text-center">
-        <p className="text-sm text-muted-foreground">未找到活动记录</p>
-      </div>
+      <Card padding="lg" className="text-center">
+        <p className="text-subheadline text-text-secondary">未找到这条活动记录。</p>
+        <Link
+          href="/activities"
+          className="focus-ring mt-3 inline-flex h-10 items-center rounded-full border border-border-default px-4 text-caption1 font-medium text-text-primary"
+        >
+          回到训练记录
+        </Link>
+      </Card>
     );
   }
 
@@ -54,6 +70,7 @@ export default function ActivityDetailPage() {
   const analysis = analysisQuery.data;
   const streamMap = groupStreams(streams);
   const config = getSportConfig(activity.sport);
+  const availability = computeAvailability(activity, streamMap, analysis);
   const date = new Date(activity.start_time).toLocaleString("zh-CN", {
     year: "numeric",
     month: "long",
@@ -62,108 +79,90 @@ export default function ActivityDetailPage() {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const availability = computeAvailability(activity, streamMap, analysis);
+  const pace = pacePerKm(activity.avg_speed);
+
+  const readings: MetricStripItem[] = [
+    { label: "距离", value: formatDistance(activity.distance_m) },
+    { label: "时间", value: formatDuration(activity.duration_s) },
+    {
+      label: "平均配速",
+      value: pace != null ? formatPaceFromSeconds(Math.round(pace)) : "未记录",
+      unit: pace != null ? "/km" : undefined,
+      note: pace != null ? undefined : "没有速度数据",
+    },
+    {
+      label: "平均心率",
+      value: activity.avg_hr != null ? String(Math.round(activity.avg_hr)) : "未记录",
+      unit: activity.avg_hr != null ? HEART_RATE_UNIT : undefined,
+      note: activity.avg_hr != null ? undefined : "这条记录没有心率",
+    },
+  ];
 
   return (
     <div className="page-stack" data-testid="activity-detail-page">
-      {/* 1. Header Banner */}
-      <div
-        className="rounded-3xl border border-border/70 p-6 shadow-xs backdrop-blur-md transition-all"
-        style={{
-          background: `linear-gradient(135deg, color-mix(in srgb, ${config.color} 15%, transparent), transparent 70%)`,
-        }}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span
-              className="rounded-full border border-border-subtle bg-surface-sunken px-3 py-1 text-caption1 font-semibold"
-              style={{ color: config.color }}
-            >
-              {config.label}
-            </span>
-            <p className="text-xs text-muted-foreground">{sportSubtitle(config)}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowTechnicalDetails((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-card"
-            >
-              <Info className="h-3.5 w-3.5" />
-              <span>{showTechnicalDetails ? "隐藏元数据" : "数据流状态"}</span>
-            </button>
+      <ActivityDetailHeader
+        sportLabel={config.label}
+        dateLabel={date}
+        source={activity.source}
+        technicalOpen={showTechnicalDetails}
+        onToggleTechnical={() => setShowTechnicalDetails((value) => !value)}
+        shareSlot={
+          <>
             <button
               type="button"
               onClick={() => setShareOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/60 px-3.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card"
+              className="focus-ring inline-flex h-10 items-center gap-1.5 rounded-full border border-border-default px-3 text-caption1 font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary"
             >
-              <Share2 className="h-3.5 w-3.5 text-accent-strong" />
-              <span>分享</span>
+              <Share2 className="size-3.5" aria-hidden="true" />
+              分享
             </button>
             <ActivityFlagActions activityId={id} onDone={activityQuery.reload} />
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        <h1 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-          {config.label}
-        </h1>
-        <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{date}</p>
-      </div>
-
-      {/* 2. Core Stats Strip (First Priority) */}
-      <div className="rounded-xl border border-border-subtle bg-surface-card p-6">
-        <StatsPanel activity={activity} />
-      </div>
+      <MetricStrip columns={4} items={readings} />
 
       {activity.weather != null && <ActivityWeatherCard weather={activity.weather} />}
 
       {streamsQuery.loading && (
-        <div className="rounded-xl border border-border-subtle bg-surface-sunken p-4 text-center">
-          <p className="text-xs text-muted-foreground animate-pulse" role="status" aria-busy="true">
-            正在加载轨迹与分段分析…
-          </p>
-        </div>
+        <p className="text-caption1 text-text-muted" role="status" aria-busy="true">
+          正在加载轨迹与分段…
+        </p>
       )}
 
       {streamsQuery.error && (
-        <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-caption1 text-warning" role="status">
-          轨迹数据暂不可用，基础活动指标仍可查看。
-        </div>
+        <p className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-caption1 text-warning" role="status">
+          轨迹数据暂不可用，基础指标仍可查看。
+        </p>
       )}
 
-      {/* 3. Deep Analysis Section (GPS Map, Stream Charts, Laps, HR Zones) */}
-      <div className="space-y-6">
-        {activity.sport === "WeightTraining" ? (
-          <StrengthDetail activityId={id} />
-        ) : (
-          <NonWeightSection activity={activity} streamMap={streamMap} analysis={analysis} />
-        )}
-      </div>
+      {activity.sport === "WeightTraining" ? (
+        <StrengthDetail activityId={id} />
+      ) : (
+        <NonWeightSection activity={activity} streamMap={streamMap} analysis={analysis} />
+      )}
 
-      {/* 4. Secondary Technical Availability & Diagnostics (Foldable) */}
       {showTechnicalDetails && (
-        <div className="space-y-4 pt-4 border-t border-border/40">
-          <h3 className="text-caption1 font-semibold text-text-muted">
-            技术流诊断与元数据
-          </h3>
-          <DataAvailabilityCard
-            rows={[
-              { label: "GPS 轨迹", ok: availability.hasGps },
-              { label: "心率流", ok: availability.hasHr },
-              { label: "功率流", ok: availability.hasPower },
-              { label: "步频/踏频", ok: availability.hasCadence },
-              { label: "分段标记", ok: availability.hasLaps },
-            ]}
-            source={activity.source || ""}
-            fileType={activity.file_type || ""}
-          />
-          <ActivityNullSemantics
-            activity={activity}
-            streamMap={streamMap}
-            analysis={analysis}
-          />
-        </div>
+        <Card padding="md">
+          <h2 className="text-caption1 font-medium text-text-muted">数据流状态</h2>
+          <div className="mt-3">
+            <DataAvailabilityCard
+              rows={[
+                { label: "GPS 轨迹", ok: availability.hasGps },
+                { label: "心率流", ok: availability.hasHr },
+                { label: "功率流", ok: availability.hasPower },
+                { label: "步频/踏频", ok: availability.hasCadence },
+                { label: "分段标记", ok: availability.hasLaps },
+              ]}
+              source={activity.source || ""}
+              fileType={activity.file_type || ""}
+            />
+          </div>
+          <div className="mt-4 border-t border-border-subtle pt-4">
+            <ActivityNullSemantics activity={activity} streamMap={streamMap} analysis={analysis} />
+          </div>
+        </Card>
       )}
 
       <ShareDialog activityId={id} open={shareOpen} onClose={() => setShareOpen(false)} />
@@ -173,18 +172,18 @@ export default function ActivityDetailPage() {
 
 function DetailError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="mx-auto my-8 max-w-md rounded-xl border border-error/30 bg-error/10 p-6 text-center text-error">
-      <AlertTriangle className="mx-auto h-8 w-8" aria-hidden="true" />
-      <h2 className="mt-3 text-base font-bold">活动详情加载失败</h2>
-      <p className="mt-1 text-caption1 text-error/80">{message}</p>
+    <Card padding="lg" className="text-center">
+      <AlertTriangle className="mx-auto size-5 text-error" aria-hidden="true" />
+      <h2 className="mt-2 text-subheadline font-medium text-error">活动详情加载失败</h2>
+      <p className="mt-1 text-caption1 text-text-secondary">{message}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-card/80"
+        className="focus-ring mt-4 inline-flex h-10 items-center gap-1.5 rounded-full border border-border-default px-4 text-caption1 font-medium text-text-primary"
       >
-        <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+        <RotateCcw className="size-3.5" aria-hidden="true" />
         重新加载
       </button>
-    </div>
+    </Card>
   );
 }

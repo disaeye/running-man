@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { apiFetch } from "@shared/lib/api";
+import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import type { Shoe, ShoeAssignment, ShoeWithStats } from "@shared/types/gear";
 
 export interface UseShoesResult {
@@ -79,7 +79,7 @@ export function useShoes(): UseShoesResult {
   return {
     data: data ?? [],
     loading: isLoading,
-    error: error ? (error instanceof Error ? error.message : "加载跑鞋失败") : null,
+    error: error ? apiErrorMessage(error, "加载跑鞋失败") : null,
     reload: () => void mutate(),
   };
 }
@@ -96,7 +96,7 @@ export function useShoe(shoeId: string | null): UseShoeResult {
   return {
     data: data ?? null,
     loading: isLoading,
-    error: error ? (error instanceof Error ? error.message : "加载跑鞋失败") : null,
+    error: error ? apiErrorMessage(error, "加载跑鞋失败") : null,
     reload: () => void mutate(),
   };
 }

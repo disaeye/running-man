@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { Card } from "@shared/ui/Card";
+import { Section } from "@shared/ui/Section";
 import { Skeleton } from "@shared/ui/Skeleton";
 import { formatDate, formatDistance, formatDuration } from "@shared/lib/format";
 import { getSportConfig } from "@shared/config/sport-config";
@@ -101,9 +101,9 @@ function FlaggedList({
   const items = rows ?? [];
 
   return (
-    <Card padding="sm">
-      <h3 className="text-headline font-semibold text-text-primary">{title}</h3>
-      <p className="mt-1 text-caption1 text-text-muted">{description}</p>
+    <Section title={title}>
+      <div className="p-5">
+      <p className="text-caption1 text-text-muted">{description}</p>
       {items.length === 0 ? (
         <p className="mt-3 text-subheadline text-text-muted" data-testid={`${mode}-empty`}>
           {emptyLabel}
@@ -139,7 +139,8 @@ function FlaggedList({
           })}
         </ul>
       )}
-    </Card>
+      </div>
+    </Section>
   );
 }
 
