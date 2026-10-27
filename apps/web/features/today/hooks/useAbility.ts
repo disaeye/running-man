@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { apiErrorMessage } from "@shared/lib/api";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import {
   getAbilityApiV1InsightsAbilityGet,
@@ -111,7 +112,7 @@ export function useAbility() {
   return {
     data: data ?? null,
     loading: isLoading,
-    error: error ? (error instanceof Error ? error.message : "能力数据加载失败") : null,
+    error: error ? apiErrorMessage(error, "能力数据加载失败") : null,
     reload: () => void mutate(),
   };
 }

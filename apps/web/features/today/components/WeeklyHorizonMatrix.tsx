@@ -132,12 +132,12 @@ function WeekGrid() {
         {fromStr.slice(5)} ~ {toStr.slice(5)}
       </p>
 
-      <div className="mt-2.5 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 snap-x snap-proximity sm:grid sm:grid-cols-7 sm:gap-2 sm:overflow-visible sm:pb-0">
+      <div className="mt-2.5 grid grid-cols-7 gap-1 sm:gap-2">
         {days.map((day) => (
           <div
             key={day.dateStr}
             data-today={day.isToday ? "true" : undefined}
-            className={`flex h-32 w-[82px] shrink-0 snap-start flex-col rounded-lg border border-t-2 p-2 transition-colors sm:w-auto ${
+            className={`flex h-24 min-w-0 flex-col rounded-lg border border-t-2 p-1 transition-colors sm:h-32 sm:p-2 ${
               day.isToday
                 ? "border-border-subtle border-t-calendar-today"
                 : day.isCompleted
@@ -145,20 +145,13 @@ function WeekGrid() {
                   : "border-border-subtle border-t-border-subtle"
             } ${day.isCompleted ? "bg-recovery-good/5" : "bg-surface-sunken"}`}
           >
-            <div className="flex h-6 items-baseline justify-between gap-1 border-b border-border-subtle pb-1">
-              <span className="flex items-center gap-1">
-                {day.isToday && (
-                  <span className="size-1.5 shrink-0 rounded-full bg-calendar-today" aria-hidden="true" />
-                )}
-                <span
-                  className={`text-caption1 ${
-                    day.isToday
-                      ? "font-semibold text-calendar-today"
-                      : "text-text-muted"
-                  }`}
-                >
-                  {day.dayLabel}
-                </span>
+            <div className="flex h-5 items-baseline justify-between gap-0.5 border-b border-border-subtle pb-0.5 sm:h-6 sm:gap-1 sm:pb-1">
+              <span
+                className={`truncate text-caption1 ${
+                  day.isToday ? "font-semibold text-calendar-today" : "text-text-muted"
+                }`}
+              >
+                {day.dayLabel.slice(1)}
               </span>
               <span
                 className={`font-mono text-caption1 tabular-nums ${
@@ -170,16 +163,9 @@ function WeekGrid() {
             </div>
 
             {/* Fixed middle: one icon and one line of text, whatever the state. */}
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden text-center">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden text-center sm:gap-1">
               {day.isCompleted ? (
-                <>
-                  <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />
-                  <span className="w-full truncate font-mono text-caption1 tabular-nums text-text-primary">
-                    {day.totalActualDistanceKm > 0
-                      ? `${day.totalActualDistanceKm.toFixed(1)} km`
-                      : "已完成"}
-                  </span>
-                </>
+                <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />
               ) : day.plannedEvent ? (
                 <>
                   <Activity className="size-3.5 shrink-0 text-text-muted" aria-hidden="true" />
@@ -191,18 +177,18 @@ function WeekGrid() {
                   </span>
                 </>
               ) : (
-                <span className="text-caption1 text-text-muted">休息</span>
+                <span className="text-caption1 text-text-muted">休</span>
               )}
             </div>
 
-            <div className="flex h-5 items-center justify-center border-t border-border-subtle pt-1 text-center">
+            <div className="flex h-4 items-center justify-center border-t border-border-subtle pt-0.5 text-center sm:h-5 sm:pt-1">
               {day.isCompleted && day.totalActualTss > 0 ? (
-                <span className="font-mono text-caption1 font-semibold tabular-nums text-text-primary">
-                  {Math.round(day.totalActualTss)} TSS
+                <span className="truncate font-mono text-caption1 font-semibold tabular-nums text-text-primary">
+                  {Math.round(day.totalActualTss)}
                 </span>
               ) : day.plannedEvent?.predicted_tss ? (
-                <span className="font-mono text-caption1 tabular-nums text-text-muted">
-                  ~{Math.round(day.plannedEvent.predicted_tss)} TSS
+                <span className="truncate font-mono text-caption1 tabular-nums text-text-muted">
+                  ~{Math.round(day.plannedEvent.predicted_tss)}
                 </span>
               ) : (
                 <span className="font-mono text-caption1 text-text-muted">-</span>

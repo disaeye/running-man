@@ -1,121 +1,202 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
-import { ArrowUpRight, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Card } from "@shared/ui/Card";
+import { CardHeader } from "@shared/ui/CardHeader";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { useActivities } from "@features/activity/hooks/useActivities";
 import { usePmcData } from "@features/pmc/hooks/usePmcData";
 import { useWellness } from "@features/health/hooks/useWellness";
 import { useCoachContext } from "@features/today/hooks/useCoachContext";
-import { athleteRange, useAthleteTimezone } from "@shared/lib/training-day";
-import { assessReadiness, isStaleData } from "@features/today/lib/readiness-presentation";
-import { useClientDateLabel, useClientGreeting } from "@shared/lib/client-date";
-import { HomeDecisionCard } from "./HomeDecisionCard";
-import { HomeBodySignals } from "./HomeBodySignals";
-import { WeeklyHorizonMatrix } from "./WeeklyHorizonMatrix";
-import { HomeRecentTraining } from "./HomeRecentTraining";
+import { useSyncDetail } from "@features/data/hooks/useSyncDetail";
+import { useLifetimeTotals } from "@features/today/hooks/useLifetimeTotals";
+import { useWeeklyProgress } from "@features/today/hooks/useWeeklyProgress";
+import { PMCChart } from "@features/pmc/components/PMCChart";
+import { useCalendarEvents } from "@features/calendar/hooks/useCalendarEvents";
+import { buildWeekSummary, isoWeek } from "@features/calendar/lib/build-week-summary";
+import {
+  activityLocalDay,
+  athleteRange,
+  athleteToday,
+  athleteWeekRange,
+  useAthleteTimezone,
+} from "@shared/lib/training-day";
+import { assessReadiness, decisionTitle } from "@features/today/lib/readiness-presentation";
+import { readinessFactorValues } from "@features/today/lib/readiness-factor-values";
+import { gradeSnapshot, type GradeSnapshot } from "@features/today/lib/grade-label";
+import { SAMPLE_DATA_ENABLED, SAMPLE_GRADE } from "@shared/dev/sample-data";
+import { useAthleteGrade } from "@features/today/hooks/useAthleteGrade";
+import { trainingStreak } from "@features/today/lib/training-streak";
+import { useClientDateLabel, useHasMounted } from "@shared/lib/client-date";
+import type { ActivitySummary } from "@shared/types/activity";
+import { HomeSetupCard } from "./HomeSetupCard";
+import { IdentityStrip } from "./IdentityStrip";
+import { ReadinessCard } from "./ReadinessCard";
+import { TodayWorkoutCard } from "./TodayWorkoutCard";
+import { WeekCard } from "./WeekCard";
 
 const RECENT_DAYS = 7;
-const TREND_DAYS = 30;
+const TREND_DAYS = 42;
+/** 连续周数最多往回看半年：再长就不是「当前」连续了，是履历。 */
+const STREAK_DAYS = 182;
 
 /**
- * Today is a decision page: one answer, the evidence for it, then the context
- * needed to act on it. The evidence lives inside the answer block rather than
- * beside it, so the page has one thing to read first instead of six panels of
- * equal weight competing for the eye.
+ * 首页：先答「我是谁、练了多少」，再答「今天该干什么」，最后才是趋势。
+ *
+ * 版面顺序固定，桌面 1024 以上两栏、手机单栏同序：
+ * 元信息行 → 身份条 → 准备度 / 今日课表 → 本周 / 负荷趋势。
+ *
+ * 这一页只负责取数和排版，判断逻辑都在 `lib/` 里：分数可不可信
+ * （`assessReadiness`）、连续了多少周（`trainingStreak`）、这一周的计划与实际
+ * （`buildWeekSummary`）。取数只发生在这一层，卡片组件全部是纯展示，
+ * 所以同一个 readiness 不会在两张卡上各请求一次然后各说各话。
  */
 export function HomePortrait() {
-  // Anchored to the athlete's training day, not the host's. The calendar tab
-  // already buckets by the athlete's zone, so a browser-local anchor here makes
-  // the same session show up on two different days depending on which tab is
-  // open.
   const timezone = useAthleteTimezone();
+  const mounted = useHasMounted();
   const range7d = useMemo(() => athleteRange(RECENT_DAYS, timezone), [timezone]);
-  const range30d = useMemo(() => athleteRange(TREND_DAYS, timezone), [timezone]);
+  const range42d = useMemo(() => athleteRange(TREND_DAYS, timezone), [timezone]);
+  const rangeStreak = useMemo(() => athleteRange(STREAK_DAYS, timezone), [timezone]);
+  const todayRange = useMemo(() => athleteRange(1, timezone), [timezone]);
+  const weekRange = useMemo(() => athleteWeekRange(timezone), [timezone]);
+  const weekStart = useMemo(() => new Date(`${weekRange.from}T00:00:00`), [weekRange.from]);
 
   const profileQuery = useProfile();
   const coachQuery = useCoachContext();
+  // The same SWR entry the data page reads, so the two cannot disagree about
+  // whether a source is connected.
+  const integration = useSyncDetail("intervals_icu");
+  const lifetime = useLifetimeTotals();
+  const weekly = useWeeklyProgress(rangeStreak.from, rangeStreak.to);
   const recent = useActivities(range7d.from, range7d.to);
-  const pmc = usePmcData(range30d.from, range30d.to);
-  const wellness = useWellness(range30d.from, range30d.to);
-
-  const briefDate = useClientDateLabel({ month: "long", day: "numeric" });
-  const greeting = useClientGreeting();
-
-  const athlete = profileQuery.profile;
-  const firstName = athlete?.name?.split(/\s+/)[0] ?? "";
+  const pmc = usePmcData(range42d.from, range42d.to);
+  const wellness = useWellness(range42d.from, range42d.to);
+  const grade = useAthleteGrade();
+  const todayEvents = useCalendarEvents(todayRange.from, todayRange.to);
+  const weekEvents = useCalendarEvents(weekRange.from, weekRange.to);
+  const dateLabel = useClientDateLabel({ month: "long", day: "numeric", weekday: "long" });
 
   const readiness = coachQuery.data?.readiness ?? null;
   const assessment = assessReadiness(readiness);
-  const dataStale = isStaleData(coachQuery.data?.data_freshness?.activities?.staleness_bucket);
-
   const decision = coachQuery.data?.recommendation ?? null;
-  const decisionError =
+  const asOf = coachQuery.data?.data_freshness?.activities?.data_as_of?.slice(0, 10) ?? null;
+
+  // 因子格子印读数不印整句：接口的 detail 只留给悬停，数值在 lib 里自己算。
+  const factorValues = readinessFactorValues({ wellness: wellness.data, pmc: pmc.data });
+  // 没有真实等级时用示例顶上（`shared/dev/sample-data.ts`，脚手架，整块可删）：
+  // 这里显式标成 `GradeSnapshot`，示例的字段形状对不上就是 tsc 报错。
+  const measuredGrade = gradeSnapshot(grade.data);
+  const gradeView: GradeSnapshot | null =
+    measuredGrade ?? (SAMPLE_DATA_ENABLED ? SAMPLE_GRADE : null);
+  const showingSampleGrade = measuredGrade === null && gradeView !== null;
+
+  const error =
     [coachQuery.error, recent.error, pmc.error, wellness.error].find((value): value is string =>
       Boolean(value),
     ) ?? null;
 
-  const reloadDecision = () => {
+  const reload = () => {
     coachQuery.reload();
     recent.reload();
     pmc.reload();
     wellness.reload();
   };
 
-  const latestPmc = pmc.data.at(-1) ?? null;
-  const rawTsb = latestPmc?.tsb ?? coachQuery.data?.recent_load?.current_tsb ?? null;
-  // A TSB of 0 with no load history is the EWMA's zero seed, not a measurement.
-  // The API already reports 负荷平衡 as a missing input in that state, so the
-  // number is suppressed rather than presented as "balanced".
-  const tsb = assessment.missingKeys.includes("tsb") ? null : rawTsb;
-  const d7Tss =
-    coachQuery.data?.recent_load?.d7_tss ??
-    (pmc.data.length > 0
-      ? pmc.data.slice(-RECENT_DAYS).reduce((total, point) => total + (point.tss ?? 0), 0)
-      : null);
+  // 本周的课表与实际：`athleteWeekRange` 是周一锚定的，所以「本周」在跨时区时
+  // 也不会从某一天的边角上切过去。活动只取 7 天的那一条请求，
+  // 再按运动员时区把它裁到周一起——同一个窗口不发第二次请求。
+  const activityMap = useMemo(() => {
+    const map = new Map<string, ActivitySummary[]>();
+    for (const activity of recent.data) {
+      const day = activityLocalDay(activity.start_time, timezone);
+      if (day < weekRange.from || day > weekRange.to) continue;
+      const bucket = map.get(day);
+      if (bucket) bucket.push(activity);
+      else map.set(day, [activity]);
+    }
+    return map;
+  }, [recent.data, timezone, weekRange.from, weekRange.to]);
+  const weekSummary = useMemo(
+    () => buildWeekSummary({ events: weekEvents.events, activityMap, weekStart, timezone }),
+    [weekEvents.events, activityMap, weekStart, timezone],
+  );
+  const weekActivitiesMissing = recent.loading || recent.error != null;
+  const weekDistanceM = weekActivitiesMissing
+    ? null
+    : recent.data.reduce((sum, activity) => sum + (activity.distance_m ?? 0), 0);
+  const weekElevationM = weekActivitiesMissing
+    ? null
+    : recent.data.reduce((sum, activity) => sum + (activity.elevation_gain_m ?? 0), 0);
+  const weekLabel = mounted ? `第 ${isoWeek(weekStart).week} 周` : "";
 
-  const caveats = coachQuery.data?.missing_data_caveats ?? [];
+  // 处方分段只有日历事件有；recommendation 只给一节课的总量。
+  // 两天窗口里优先挑运动员今天的那个事件，别把昨晚的课当成今天的分段结构。
+  const prescription = useMemo(() => {
+    const todayKey = athleteToday(timezone);
+    const withPrescription = todayEvents.events.filter((event) => event.workout_prescription);
+    const todayEvent = withPrescription.find(
+      (event) => activityLocalDay(event.start_time, timezone) === todayKey,
+    );
+    return (todayEvent ?? withPrescription[0])?.workout_prescription ?? null;
+  }, [todayEvents.events, timezone]);
 
-  // Nothing at all in the last 30 days: no sessions, no health records, and no
-  // load history for the server to place a TSB in. An account in that state
-  // used to get four missing-input warnings, two empty states, a "数据已过期"
-  // badge and a zeroed week grid, with the only action at the bottom of the
-  // page. It gets a starting point instead.
-  const hasRecentData =
-    recent.data.length > 0 || wellness.data.length > 0 || tsb !== null;
+  const streak = weekly.weeks.length > 0 ? trainingStreak(weekly.weeks) : null;
+
+  // `current_tsb` is always a number — it reads 0 on an account with no load
+  // history — so it cannot be used as evidence that history exists. The PMC
+  // points, the activity feed and the reported data date can.
+  const hasHistory =
+    asOf != null || recent.data.length > 0 || wellness.data.length > 0 || pmc.data.length > 0;
+
+  const firstName = profileQuery.profile?.name?.split(/\s+/)[0] ?? "";
+
+  const connection: "loading" | "error" | "connected" | "disconnected" = integration.error
+    ? "error"
+    : integration.loading || !integration.data
+      ? "loading"
+      : integration.data.status === "connected"
+        ? "connected"
+        : "disconnected";
+  // The header states when the data stops, not that something is wrong. Data
+  // being a few days old is the normal result of not training; calling it
+  // expired puts an alarm on a quiet week. Broken syncing has its own state in
+  // the shell indicator.
+  const freshnessCaption = asOf
+    ? `数据截至 ${asOf.slice(5)}`
+    : connection === "connected"
+      ? "已连接，等待首次同步"
+      : connection === "disconnected"
+        ? "未连接数据源"
+        : connection === "error"
+          ? "读不到数据源状态"
+          : "正在读取数据源状态";
+
+  // 分数是给人做决定的，所以先看分数可不可信：`data_sufficient` 为假时
+  // 结论句说的是「测不到」，不是「状态一般」。
+  const conclusion = assessment.available
+    ? (readiness?.recommendation ?? "")
+    : decisionTitle(decision, assessment, { hasLoadHistory: pmc.data.length > 0 });
 
   return (
     <div className="page-stack" data-testid="home-portrait">
-      <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border-subtle pb-4">
-        <div className="min-w-0">
-          <p className="text-caption1 text-text-muted">{briefDate}</p>
-          <h1
-            id="home-title"
-            className="mt-1 text-display-sm font-semibold tracking-tight text-text-primary"
-          >
-            {firstName ? `${greeting} · ${firstName}` : greeting}
-          </h1>
-        </div>
-        <Link
-          href="/analysis"
-          className="focus-ring flex items-center gap-1 text-caption1 font-medium text-text-muted transition-colors hover:text-text-primary"
-        >
-          训练分析
-          <ArrowUpRight className="size-3.5" aria-hidden="true" />
-        </Link>
+      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="text-caption1 text-text-muted">
+          {dateLabel}
+          {firstName ? ` · ${firstName}` : ""}
+        </p>
+        <p className="text-caption1 text-text-muted">{freshnessCaption}</p>
       </header>
 
-      {decisionError && (
+      {error && (
         <div
           className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-error/30 bg-error/5 px-4 py-3 text-caption1 text-error"
           role="alert"
         >
-          <span>{decisionError}</span>
+          <span>{error}</span>
           <button
             type="button"
-            onClick={reloadDecision}
+            onClick={reload}
             className="focus-ring flex items-center gap-1.5 rounded-lg border border-error/30 px-2.5 py-1 font-medium"
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />
@@ -124,91 +205,67 @@ export function HomePortrait() {
         </div>
       )}
 
-      {!hasRecentData ? (
-        <StartingPoint />
+      {!hasHistory ? (
+        <HomeSetupCard
+          connection={connection}
+          lastSync={integration.data?.last_sync ?? null}
+          profile={profileQuery.profile}
+        />
       ) : (
         <>
-          <HomeDecisionCard
-            decision={decision}
-            assessment={assessment}
-            dataStale={dataStale}
-            ctl={latestPmc?.ctl ?? null}
-            tsb={tsb}
-            d7Tss={d7Tss}
+          <IdentityStrip
+            distanceM={lifetime.error ? null : lifetime.distance_m}
+            sessionCount={lifetime.error ? null : lifetime.activity_count}
+            streakWeeks={streak}
+            readinessScore={readiness?.score ?? null}
+            readinessLevel={readiness?.level ?? null}
+            asOf={asOf}
+            grade={gradeView}
+            sampleGrade={showingSampleGrade}
+            gradeReason={grade.data?.reason ?? null}
           />
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <HomeBodySignals wellness={wellness.data} caveats={caveats} />
-            <Card padding="md" aria-labelledby="week-heading">
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 id="week-heading" className="text-caption1 font-medium tracking-wide text-text-muted">
-                  本周训练轨迹
-                </h2>
-                <Link
-                  href="/calendar"
-                  className="focus-ring flex items-center gap-1 text-caption1 font-medium text-text-muted transition-colors hover:text-text-primary"
-                >
-                  日历
-                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
-                </Link>
-              </div>
-              <WeeklyHorizonMatrix />
-            </Card>
+          {/*
+            两栏只对齐上沿，不拉平高度：行动卡没有处方的日子本来就短，
+            让它长到和准备度卡一样高只会在下面留出一大片空白。
+          */}
+          <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
+            <ReadinessCard
+              score={readiness?.score ?? null}
+              dataSufficient={assessment.available}
+              conclusion={conclusion}
+              asOf={asOf}
+              factors={readiness?.factors ?? []}
+              values={factorValues}
+            />
+            <TodayWorkoutCard decision={decision} prescription={prescription} todayLabel={dateLabel} />
           </div>
 
-          <Card padding="md">
-            <HomeRecentTraining activities={recent.data} loading={recent.loading} />
-          </Card>
+          <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
+            <WeekCard
+              plannedTss={weekSummary.plannedTss}
+              actualTss={weekSummary.actualTss}
+              distanceM={weekDistanceM}
+              elevationM={weekElevationM}
+              sessions={weekSummary.completed}
+              weekLabel={weekLabel}
+              remainingTss={Math.max(0, weekSummary.plannedTss - weekSummary.actualTss)}
+            />
+
+            {/*
+              `PMCChart` 自带 256/320px 画布和底部三个读数块，所以这里不再套
+              `SectionChart` 的固定高度——套了就会把下半截截在卡外面。
+            */}
+            <Card data-testid="home-load">
+              <CardHeader
+                title="负荷趋势"
+                trailing={<span className="text-caption1 text-text-muted">近 42 天</span>}
+              />
+              <PMCChart data={pmc.data} showTitle={false} />
+            </Card>
+          </div>
         </>
       )}
     </div>
-  );
-}
-
-/** What an account with no data in the last 30 days sees instead of the dashboard. */
-function StartingPoint() {
-  const steps = [
-    {
-      title: "连接数据源",
-      body: "用 Intervals.icu 把历史活动、心率和睡眠同步进来。",
-      href: "/settings?section=data",
-      action: "去连接",
-    },
-    {
-      title: "填写阈值",
-      body: "最大心率、乳酸阈心率和阈值配速决定心率与配速区间。",
-      href: "/settings?section=training",
-      action: "去填写",
-    },
-    {
-      title: "回来看今天的建议",
-      body: "有数据之后，这里会给出今天该练什么、强度多少，以及为什么。",
-      href: "/analysis",
-      action: "了解分析",
-    },
-  ];
-
-  return (
-    <Card padding="lg" data-testid="home-starting-point">
-      <h2 className="text-title2 font-semibold text-text-primary">最近 30 天还没有训练或健康记录</h2>
-      <p className="mt-1.5 max-w-2xl text-subheadline leading-relaxed text-text-secondary">
-        这个页面会回答问题「今天该做什么」。它需要一点数据才能开始。
-      </p>
-      <ol className="mt-5 flex flex-col gap-3 border-t border-border-subtle pt-4">
-        {steps.map((step, index) => (
-          <li key={step.title} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-mono text-caption1 text-text-muted">{index + 1}</span>
-            <span className="text-subheadline font-medium text-text-primary">{step.title}</span>
-            <span className="text-caption1 text-text-muted">{step.body}</span>
-            <Link
-              href={step.href}
-              className="focus-ring ml-auto text-caption1 font-medium text-accent-strong underline-offset-4 hover:underline"
-            >
-              {step.action} →
-            </Link>
-          </li>
-        ))}
-      </ol>
-    </Card>
   );
 }

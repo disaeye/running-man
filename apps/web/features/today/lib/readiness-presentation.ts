@@ -84,6 +84,17 @@ export function readinessLevelLabel(level: string): string {
   return band?.label ?? level;
 }
 
+/**
+ * 因子键 → 中文名。
+ *
+ * 接口给的是 `resting_hr`、`atl_velocity` 这类合同键，直接印在卡上读不成句子。
+ * 表原本只服务于 `assessReadiness` 的缺项文案，现在因子网格也要同一套名字，
+ * 所以开一个出口，而不是在组件里抄第二份。查不到的键原样返回。
+ */
+export function readinessFactorLabel(name: string): string {
+  return FACTOR_LABEL[name] ?? name;
+}
+
 export const INTENSITY_LABEL: Record<string, string> = {
   high: "高强度",
   moderate: "中等强度",
@@ -138,8 +149,18 @@ export function isStaleData(bucket: string | null | undefined): boolean {
 export function decisionTitle(
   decision: RecommendationPayload | null,
   assessment: Assessment,
+  options: { readonly hasLoadHistory?: boolean } = {},
 ): string {
-  if (!assessment.available) return "还没有可分析的训练数据";
+  if (!assessment.available) {
+    // Load history and recovery signals are different inputs. With training
+    // data on the page, "还没有可分析的训练数据" reads as a contradiction next to
+    // a filled load chart; name the input that is actually missing instead.
+    if (options.hasLoadHistory) {
+      const missing = assessment.missing.length > 0 ? assessment.missing.join("、") : "恢复信号";
+      return `有训练负荷，缺${missing}，今天无法判断恢复`;
+    }
+    return "还没有可分析的训练数据";
+  }
   const state = assessment.levelLabel;
   if (decision?.next_workout?.name) return `${state} · 按计划${decision.next_workout.name}`;
   if (decision?.action === "rest") return `${state} · 建议休息`;

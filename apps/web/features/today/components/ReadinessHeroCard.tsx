@@ -49,12 +49,8 @@ export function ReadinessHeroCard({ score, level }: ReadinessHeroCardProps) {
   return (
     <div
       data-testid="readiness-hero"
-      className="relative flex flex-col items-start gap-4 overflow-hidden rounded-xl border border-border-subtle bg-surface-card p-4 sm:flex-row sm:items-center sm:p-5"
+      className="relative flex flex-col items-start gap-4 overflow-hidden rounded-2xl bg-surface-card p-4 sm:flex-row sm:items-center sm:p-5"
     >
-      <div
-        className="pointer-events-none absolute -right-8 -top-8 size-36 rounded-full blur-2xl opacity-15"
-        style={{ backgroundColor: ringColor }}
-      />
       <div className="shrink-0">
         <ScoreRing
           value={score}
