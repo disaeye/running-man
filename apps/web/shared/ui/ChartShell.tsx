@@ -26,17 +26,17 @@ export function ChartShell({
     <Card padding="md" className={className} {...props}>
       <div className="flex items-baseline justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-title3 font-semibold text-text-primary">
+          <h3 className="text-caption1 font-semibold text-text-secondary">
             {title}
           </h3>
           {subtitle && (
-            <p className="mt-0.5 text-footnote text-text-muted">{subtitle}</p>
+            <p className="mt-0.5 text-caption1 text-text-muted">{subtitle}</p>
           )}
         </div>
         {legend && <div className="flex shrink-0 items-center gap-3">{legend}</div>}
       </div>
 
-      <div className="mt-4 min-h-[200px]">
+      <div className="mt-3 min-h-[200px]">
         {empty ? (
           <div className="flex h-full min-h-[200px] items-center justify-center">
             <p className="text-body text-text-muted">{emptyMessage}</p>

@@ -19,13 +19,15 @@ import * as Generated from "@shared/api/generated/model";
  * States, in order of how much they should worry the athlete:
  *   not_connected  — nothing to sync from yet
  *   failing        — the most recent attempt failed
- *   stale          — connected and succeeding, but data is old
+ *   empty          — connected, but no activity has ever arrived
+ *   stale          — connected, succeeding, but the newest data is old
  *   ok             — connected, succeeding, recent
  *   unknown        — the check itself could not run
  */
 export type SyncHealthState =
   | "ok"
   | "stale"
+  | "empty"
   | "failing"
   | "not_connected"
   | "unknown";
@@ -41,12 +43,11 @@ export interface SyncHealth {
   loading: boolean;
 }
 
-/** Connected but no new activity for this long reads as "stale", not "fine". */
-const STALE_AFTER_DAYS = 3;
-
+/** Connected but nothing synced yet reads differently from "no source". */
 const HEALTH_LABEL: Record<SyncHealthState, string> = {
   ok: "同步正常",
-  stale: "数据已过期",
+  stale: "最新数据较早",
+  empty: "已连接，尚未同步",
   failing: "上次同步失败",
   not_connected: "未连接数据源",
   unknown: "同步状态未知",
@@ -98,18 +99,31 @@ export function useSyncHealth(): SyncHealth {
           .at(-1) ?? null;
         if (!freshest) {
           return {
-            state: "stale" as const,
-            label: HEALTH_LABEL.stale,
+            state: "empty" as const,
+            label: HEALTH_LABEL.empty,
             dataAsOf: null,
             daysSinceData: null,
             loading: false,
           };
         }
+        // The bucket comes from the API so the shell, the data page and the
+        // Today page cannot each apply their own idea of "old".
+        const bucket = connected.find((row) => row.data_as_of === freshest)?.staleness_bucket;
         const days = daysBetween(freshest, new Date());
-        const stale = days === null || days > STALE_AFTER_DAYS;
+        if (bucket !== "fresh") {
+          return {
+            state: "stale" as const,
+            // The age is the whole message: "5 天前" says what happened, where
+            // "数据已过期" only says the app disapproves.
+            label: days == null ? HEALTH_LABEL.stale : `最新数据 ${days} 天前`,
+            dataAsOf: freshest,
+            daysSinceData: days,
+            loading: false,
+          };
+        }
         return {
-          state: stale ? ("stale" as const) : ("ok" as const),
-          label: stale ? HEALTH_LABEL.stale : HEALTH_LABEL.ok,
+          state: "ok" as const,
+          label: HEALTH_LABEL.ok,
           dataAsOf: freshest,
           daysSinceData: days,
           loading: false,

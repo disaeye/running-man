@@ -1,5 +1,7 @@
 "use client";
 
+import { apiErrorMessage } from "./api";
+
 /**
  * Unified data display state.
  *
@@ -26,8 +28,14 @@ export type DataStateType =
   | "ready"
   | "needs-action";
 
-/** Threshold beyond which `dataAsOf` is considered stale. 48h by default. */
-export const STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000;
+/**
+ * How old data may be and still count as current.
+ *
+ * One day, matching `staleness_bucket` in the API. A second threshold here
+ * meant a two-day-old dataset could read as current on this component and as
+ * expired in the shell's sync indicator at the same moment.
+ */
+export const FRESH_WITHIN_DAYS = 1;
 
 /** Canonical Chinese labels for data display states (single source of truth). */
 export const LOADING_LABEL = "加载中...";
@@ -47,8 +55,8 @@ export interface UseDataStateInput<T> {
   error?: unknown;
   isLoading?: boolean;
   dataAsOf?: string | null;
-  /** Override the staleness threshold (ms). */
-  staleThresholdMs?: number;
+  /** Override how many days of lag still count as fresh. */
+  freshWithinDays?: number;
   /**
    * Predicate deciding whether a non-null `data` actually has rows worth
    * showing. Defaults to "any non-null value is data".
@@ -59,30 +67,38 @@ export interface UseDataStateInput<T> {
 function errorMessage(error: unknown): string | null {
   if (error === null || error === undefined) return null;
   if (typeof error === "string") return error;
-  if (error instanceof Error) return error.message;
-  return String(error);
+  // One place decides what a failed request reads like: the API's own sentence
+  // when it wrote one for a person, otherwise the message for its status class.
+  return apiErrorMessage(error);
+}
+
+function dayNumber(value: string | number): number | null {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return Math.floor(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()) / 86_400_000);
 }
 
 function isStale(
   dataAsOf: string | null | undefined,
   now: number,
-  thresholdMs: number,
+  freshWithinDays: number,
 ): boolean {
   if (!dataAsOf) return false;
-  const ts = new Date(dataAsOf).getTime();
-  if (Number.isNaN(ts)) return false;
-  return now - ts > thresholdMs;
+  const then = dayNumber(dataAsOf);
+  const today = dayNumber(now);
+  if (then === null || today === null) return false;
+  return today - then > freshWithinDays;
 }
 
 export function useDataState<T>(input: UseDataStateInput<T>): DataStateType {
   const { data, error, isLoading, dataAsOf } = input;
-  const thresholdMs = input.staleThresholdMs ?? STALE_THRESHOLD_MS;
+  const freshWithinDays = input.freshWithinDays ?? FRESH_WITHIN_DAYS;
   const hasData = input.hasData;
 
   const noData = data === null || data === undefined;
   if (noData) return resolveMissingState(isLoading, errorMessage(error));
   if (hasData && !hasData(data as T)) return "source-empty";
-  if (isStale(dataAsOf, Date.now(), thresholdMs)) return "stale";
+  if (isStale(dataAsOf, Date.now(), freshWithinDays)) return "stale";
   return "ready";
 }
 

@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { User } from "lucide-react";
 import { getCurrentUser, type UserProfile } from "@shared/lib/auth";
-import { useClientDateLabel } from "@shared/lib/client-date";
 import { ToastProvider } from "@shared/ui/Toast";
 import { MobileTabBar } from "@shared/layout/TopTabBar";
 import { Sidebar } from "@shared/layout/Sidebar";
-import { ThemeToggle } from "@shared/ui/ThemeToggle";
-import { getPageCopy } from "@shared/config/nav-config";
 import { useSyncHealth, type SyncHealth } from "@features/data/hooks/useSyncHealth";
 
 interface AppShellProps {
@@ -23,6 +20,9 @@ interface AppShellProps {
  * Owns PC (sidebar) + mobile (bottom tab) layout, safe-area, content max-width,
  * and scroll region. Route pages should only render content inside a `.page-stack`
  * (or plain fragment) — no max-w / pb-24 / safe-area / dual-layout of their own.
+ *
+ * The bar carries the sync state and the account entry while the page's own
+ * title is on screen; once that title scrolls away the bar takes it over.
  */
 export function AppShell({ children, onAvatarClick }: AppShellProps) {
   // A failed profile fetch leaves `user` null and the avatar renders a neutral
@@ -30,6 +30,7 @@ export function AppShell({ children, onAvatarClick }: AppShellProps) {
   // thresholds (HRmax 188 / LTHR 168 / threshold pace 4'20"), so an unreachable
   // API looked like a fully configured athlete.
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [compactTitle, setCompactTitle] = useState<string | null>(null);
   const pathname = usePathname();
   const syncHealth = useSyncHealth();
 
@@ -47,17 +48,38 @@ export function AppShell({ children, onAvatarClick }: AppShellProps) {
     };
   }, []);
 
-  // Formatted on the client, in the athlete's timezone. Rendering
-  // `new Date().toLocaleDateString()` directly made the server (UTC) and the
-  // browser disagree for eight hours of every day, which React reports as
-  // hydration error 418 on every dashboard page.
-  const dateLabel = useClientDateLabel({
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  });
+  // The page's own title is the large title in the content; once it scrolls out
+  // of view the bar carries the same words, which is how a phone keeps the
+  // screen identifiable without repeating the heading. Client pages render their
+  // heading after mount, so the observer attaches when it appears.
+  useEffect(() => {
+    const main = document.querySelector<HTMLElement>('[data-shell-region="main"]');
+    if (!main) return;
 
-  const { title: pageTitle } = useMemo(() => getPageCopy(pathname), [pathname]);
+    let observer: IntersectionObserver | null = null;
+    let heading: HTMLElement | null = null;
+
+    const attach = () => {
+      const next = main.querySelector<HTMLElement>("[data-page-title]");
+      if (!next || next === heading) return;
+      observer?.disconnect();
+      heading = next;
+      observer = new IntersectionObserver(
+        ([entry]) => setCompactTitle(entry?.isIntersecting ? null : next.textContent),
+        { root: main, threshold: 0, rootMargin: "-8px 0px 0px 0px" },
+      );
+      observer.observe(next);
+    };
+
+    attach();
+    const mutations = new MutationObserver(attach);
+    mutations.observe(main, { childList: true, subtree: true });
+
+    return () => {
+      observer?.disconnect();
+      mutations.disconnect();
+    };
+  }, [pathname]);
 
   return (
     <ToastProvider>
@@ -69,27 +91,22 @@ export function AppShell({ children, onAvatarClick }: AppShellProps) {
       </a>
 
       <div data-shell="root" className="shell-atmosphere flex h-[100dvh] overflow-hidden text-text-primary">
-        <div className="shell-orbs" aria-hidden="true" />
-        <div className="shell-horizon" aria-hidden="true" />
-        <div className="shell-grain" aria-hidden="true" />
         <div className="shell-chrome shell-chrome-row">
-          <Sidebar />
+          <Sidebar athleteName={user?.name} />
           <div className="flex h-[calc(100dvh_-_var(--mobile-nav-height,0px))] min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:h-[100dvh]">
             <header
               data-shell-region="top"
               data-safe-area="top"
-              className="glass-surface-strong shrink-0 border-b border-border-subtle pt-[env(safe-area-inset-top)]"
+              className="shrink-0 border-b border-border-subtle bg-surface-base pt-[env(safe-area-inset-top)]"
             >
               <div className="shell-header-inner">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="hidden h-6 w-px bg-border-default sm:block" aria-hidden="true" />
-                  <div className="min-w-0">
-                    <p className="truncate text-caption1 text-text-secondary">{pageTitle}</p>
-                    <p className="hidden truncate text-caption1 text-text-secondary sm:block">{dateLabel}</p>
-                  </div>
-                </div>
-                <SyncStatusIndicator health={syncHealth} />
-                <ThemeToggle />
+                <p
+                  className="min-w-0 flex-1 truncate text-subheadline font-semibold text-text-primary"
+                  data-testid="compact-title"
+                >
+                  {compactTitle ?? ""}
+                </p>
+                <SyncStatusIndicator health={syncHealth} compact={compactTitle !== null} />
                 <ProfileButton user={user} onClick={onAvatarClick} />
               </div>
             </header>
@@ -105,32 +122,33 @@ export function AppShell({ children, onAvatarClick }: AppShellProps) {
   );
 }
 
-function SyncStatusIndicator({ health }: { health: SyncHealth }) {
-  // Colour encodes the state and the label always says it in words, so the
-  // indicator is not readable as "fine" when it is not.
+function SyncStatusIndicator({ health, compact }: { health: SyncHealth; compact: boolean }) {
+  // Colour marks trouble, words carry facts. A quiet week with a healthy sync
+  // chain is not trouble, so only a failed attempt earns the red dot.
   const tone: Record<SyncHealth["state"], string> = {
-    ok: "bg-primary shadow-[0_0_12px_var(--color-primary)]",
-    stale: "bg-warning",
+    ok: "bg-primary",
+    stale: "bg-text-muted",
+    empty: "bg-text-muted",
     failing: "bg-error",
     not_connected: "bg-text-muted",
     unknown: "bg-text-muted",
   };
-  const detail =
-    health.state === "stale" && health.daysSinceData != null
-      ? `（最新数据 ${health.daysSinceData} 天前）`
-      : "";
-
+  // Once the bar carries the page title there is no room for a second sentence;
+  // the dot keeps the state readable.
   return (
     <div
-      className="hidden items-center gap-2 text-caption1 text-text-muted lg:flex"
+      className="flex shrink-0 items-center gap-2 text-caption1 text-text-muted"
       aria-label="数据同步状态"
       data-testid="sync-status-indicator"
       data-sync-state={health.state}
     >
-      <span className={`size-1.5 rounded-full ${tone[health.state]}`} aria-hidden="true" />
-      <span className={health.state === "ok" ? undefined : "text-text-secondary"}>
+      <span className={`size-1.5 shrink-0 rounded-full ${tone[health.state]}`} aria-hidden="true" />
+      <span
+        className={`truncate ${health.state === "ok" ? "" : "text-text-secondary"} ${
+          compact ? "hidden" : ""
+        }`}
+      >
         {health.label}
-        {detail}
       </span>
     </div>
   );
@@ -150,7 +168,7 @@ function ProfileButton({
       type="button"
       data-testid="profile-button"
       onClick={onClick}
-      className="focus-ring glass-surface flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-semibold text-text-primary transition-transform duration-150 active:scale-90"
+      className="focus-ring flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border-subtle bg-rail text-caption1 font-semibold text-accent-strong transition-transform duration-150 active:scale-95"
       aria-label="打开个人设置"
     >
       {initials ? (

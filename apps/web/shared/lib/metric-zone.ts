@@ -50,10 +50,7 @@ const SHORT_LABELS: Readonly<Record<string, string>> = {
   低负荷: "低",
   中等负荷: "中等",
   高负荷: "高",
-  减量风险: "减量",
-  安全区: "安全",
   偏高: "偏高",
-  损伤风险: "风险",
 };
 
 const TONES: ReadonlySet<string> = new Set(["safe", "caution", "danger", "neutral"]);
@@ -101,7 +98,7 @@ export function zoneFor(
   return metricZones(key).find((zone) => value >= zone.min && value < zone.max) ?? null;
 }
 
-/** `安全区 0.8–1.3`, with the open ends written as `< 0.8` and `> 1.5`. */
+/** `负荷平稳 0.8–1.3`, with the open ends written as `< 0.8` and `> 1.5`. */
 export function formatZoneRange(zone: MetricZone, precision = 1): string {
   const format = (value: number) => Number(value.toFixed(precision)).toString();
   if (zone.min === Number.NEGATIVE_INFINITY) return `< ${format(zone.max)}`;
@@ -111,7 +108,7 @@ export function formatZoneRange(zone: MetricZone, precision = 1): string {
   return `${format(zone.min)}${separator}${format(zone.max)}`;
 }
 
-/** One-line band summary for glossaries: `减量风险 < 0.8 · 安全区 0.8–1.3 · …`. */
+/** One-line band summary for glossaries: `负荷回落 < 0.8 · 负荷平稳 0.8–1.3 · …`. */
 export function zoneReference(key: MetricKey, precision = 1): string {
   return metricZones(key)
     .map((zone) => `${zone.label} ${formatZoneRange(zone, precision)}`)

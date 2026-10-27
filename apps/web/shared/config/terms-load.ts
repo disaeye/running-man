@@ -44,7 +44,7 @@ export const TERMS_LOAD = {
     explanation: {
       summary: "急慢性负荷比 (ACWR) — 7 天 EWMA 负荷与 28 天 EWMA 负荷的比值。",
       reference: zoneReference("acwr", 2),
-      note: "损伤预测效力在近年文献中存在争议，作为辅助参考。"
+      note: "对负荷变化的解释力在近年文献中存在争议，作为辅助参考。"
     },
   },
   NP: {

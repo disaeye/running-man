@@ -4,19 +4,20 @@
 
 /* Running Man — Winter Sky Indigo (v8.5 — 5cm Quiet Winter). Calm dark ink canvas with restrained indigo action tone. */
 :root {
-  --color-surface-base: #f4f6f8;
+  --color-surface-base: #ffffff;
   --color-surface-raised: #ffffff;
-  --color-surface-overlay: #eaeff4;
-  --color-surface-active: #e2e8f0;
-  --color-surface-sunken: #e9eef3;
+  --color-surface-overlay: #f2f4f9;
+  --color-surface-active: #e9edf5;
+  --color-surface-sunken: #f4f6fa;
   --color-surface-card: #ffffff;
-  --color-surface-subtle: #f0f4f8;
+  --color-surface-subtle: #f7f8fc;
+  --color-rail: #eef1f7;
   --color-surface-dark: #0f1722;
   --color-surface-dark-elevated: #16202c;
   --color-surface-dark-soft: #1d2b3a;
-  --color-text-primary: #141c24;
-  --color-text-secondary: #4b5b6d;
-  --color-text-muted: #55667a;
+  --color-text-primary: #1b2430;
+  --color-text-secondary: #4b5666;
+  --color-text-muted: #5b6779;
   --color-text-inverse: #ffffff;
   --color-ink: #141c24;
   --color-on-primary: #ffffff;
@@ -79,12 +80,12 @@
   --color-gps-map-grid: #cbd5e1;
   --color-insight-bg: #edf2f7;
   --color-insight-border: rgba(45, 62, 80, 0.16);
-  --color-border-subtle: rgba(45, 62, 80, 0.18);
-  --color-border-default: rgba(45, 62, 80, 0.26);
-  --color-border-strong: rgba(45, 62, 80, 0.32);
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-bg-strong: rgba(255, 255, 255, 0.95);
-  --glass-border: rgba(45, 62, 80, 0.12);
+  --color-border-subtle: #dfe4ee;
+  --color-border-default: #ccd4e2;
+  --color-border-strong: #b9c3d4;
+  --glass-bg: #ffffff;
+  --glass-bg-strong: #ffffff;
+  --glass-border: #dfe4ee;
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
   --glass-blur: 20px;
   --glass-saturate: 1.2;
@@ -92,8 +93,10 @@
   --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06);
   --shadow-elevated: 0 12px 35px rgba(15, 23, 42, 0.1);
   --shadow-sheet: 0 -12px 36px rgba(15, 23, 42, 0.14);
-  --color-background: #f4f6f8;
-  --color-foreground: #141c24;
+  /* 主卡（行动卡）阴影：一屏一张，靠这一层把行动抬到画布之上。 */
+  --shadow-panel: 0 1px 3px rgb(27 36 48 / 0.08);
+  --color-background: #ffffff;
+  --color-foreground: #1b2430;
   --color-card: #ffffff;
   --color-card-foreground: #141c24;
   --color-popover: #ffffff;
@@ -102,12 +105,12 @@
   --color-secondary: #eaeff4;
   --color-secondary-foreground: #141c24;
   --color-muted: #f0f4f8;
-  --color-muted-foreground: #5a687d;
+  --color-muted-foreground: #5b6779;
   --color-accent-foreground: #ffffff;
   --color-destructive: #dc2626;
   --color-destructive-foreground: #ffffff;
-  --color-border: rgba(45, 62, 80, 0.14);
-  --color-input: rgba(45, 62, 80, 0.18);
+  --color-border: #dfe4ee;
+  --color-input: #ccd4e2;
   /* Two stacks, both ending in CJK faces.
    *
    * The mono stack used to be `"Fira Code", "SFMono-Regular", Consolas,
@@ -131,9 +134,9 @@
   --shell-pad-x: clamp(1rem, 3vw, 3.5rem);
   --shell-pad-x-end: max(var(--shell-pad-x), env(safe-area-inset-right, 0px));
   --shell-pad-y: clamp(1.25rem, 4vw, 3.25rem);
-  --shell-header-h: 4.75rem;
-  --shell-content-max: 64rem;
-  --shell-gap: clamp(1rem, 2vw, 2rem);
+  --shell-header-h: 3.5rem;
+  --shell-content-max: 72rem;
+  --shell-gap: clamp(1.5rem, 2vw, 2rem);
   /*
    * Height reserved for the mobile bottom tab bar.
    *
@@ -157,19 +160,20 @@
 }
 
 .dark {
-  --color-surface-base: #080a0f;
-  --color-surface-raised: #0f131b;
-  --color-surface-overlay: #151b25;
-  --color-surface-active: #1d2633;
-  --color-surface-sunken: #05070a;
-  --color-surface-card: #10151e;
-  --color-surface-subtle: #111822;
+  --color-surface-base: #0f1319;
+  --color-surface-raised: #141a22;
+  --color-surface-overlay: #1a212b;
+  --color-surface-active: #222b37;
+  --color-surface-sunken: #0b0f15;
+  --color-surface-card: #141a22;
+  --color-surface-subtle: #171e27;
+  --color-rail: #151a22;
   --color-surface-dark: #05070a;
   --color-surface-dark-elevated: #111822;
   --color-surface-dark-soft: #18222d;
-  --color-text-primary: #edf3f8;
-  --color-text-secondary: #a5b1bd;
-  --color-text-muted: #8595a5;
+  --color-text-primary: #eef1f6;
+  --color-text-secondary: #a8b2c1;
+  --color-text-muted: #8b96a6;
   --color-text-inverse: #081017;
   --color-ink: #edf3f8;
   --color-on-primary: #ffffff;
@@ -226,18 +230,18 @@
   --color-sport-weighttraining: #ffc857;
   --color-data-emphasis: #59e1ff;
   --color-load-heatmap: #59e1ff;
-  --color-calendar-today: #7c8daf;
+  --color-calendar-today: #8899b8;
   --color-active-phase: #5a6f9a;
   --color-gps-map-bg: #0b1117;
   --color-gps-map-grid: #18232d;
   --color-insight-bg: #0c1218;
   --color-insight-border: rgba(171, 198, 214, 0.2);
-  --color-border-subtle: rgba(171, 198, 214, 0.12);
-  --color-border-default: rgba(171, 198, 214, 0.2);
-  --color-border-strong: rgba(171, 198, 214, 0.34);
-  --glass-bg: rgba(16, 21, 30, 0.78);
-  --glass-bg-strong: rgba(11, 16, 23, 0.92);
-  --glass-border: rgba(171, 198, 214, 0.16);
+  --color-border-subtle: #262f3c;
+  --color-border-default: #303b49;
+  --color-border-strong: #3d4a5a;
+  --glass-bg: #141a22;
+  --glass-bg-strong: #141a22;
+  --glass-border: #262f3c;
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
   --glass-blur: 20px;
   --glass-saturate: 1.15;
@@ -245,7 +249,8 @@
   --shadow-card: 0 14px 38px rgba(0, 0, 0, 0.2);
   --shadow-elevated: 0 24px 70px rgba(0, 0, 0, 0.38);
   --shadow-sheet: 0 -18px 50px rgba(0, 0, 0, 0.5);
-  --color-background: #080a0f;
+  --shadow-panel: 0 2px 8px rgb(0 0 0 / 0.45);
+  --color-background: #0f1319;
   --color-foreground: #edf3f8;
   --color-card: #10151e;
   --color-card-foreground: #edf3f8;
@@ -259,11 +264,12 @@
   --color-accent-foreground: #ffffff;
   --color-destructive: #ff667d;
   --color-destructive-foreground: #ffffff;
-  --color-border: rgba(171, 198, 214, 0.16);
-  --color-input: rgba(171, 198, 214, 0.2);
+  --color-border: #262f3c;
+  --color-input: #303b49;
 }
 @theme inline {
   --color-surface-base: var(--color-surface-base);
+  --color-rail: var(--color-rail);
   --color-surface: var(--color-surface-card);
   --color-surface-card: var(--color-surface-card);
   --color-surface-raised: var(--color-surface-raised);
@@ -359,6 +365,11 @@
   --color-destructive-foreground: var(--color-destructive-foreground);
   --color-border: var(--color-border);
   --color-input: var(--color-input);
+  /* 指标两级大数：56px 一屏一处，40px 次大。 */
+  --text-metric-xl: 3.5rem;
+  --text-metric-xl--line-height: 1.05;
+  --text-metric-lg: 2.5rem;
+  --text-metric-lg--line-height: 1.1;
   --text-display-xl: clamp(2.5rem, 5vw, 3rem);
   --text-display-xl--line-height: 1.15;
   --text-display-lg: clamp(2rem, 4vw, 2.5rem);
@@ -398,10 +409,11 @@
   --shadow-lg: 0 22px 70px rgba(0, 0, 0, 0.35);
 }
 
-html { background: var(--color-surface-base); }
+/* 画布统一为 sunken：所有宽度下都能和白色面板拉开明度差。 */
+html { background: var(--color-surface-sunken); }
 body {
   margin: 0;
-  background: var(--color-surface-base);
+  background: var(--color-surface-sunken);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   font-size: var(--text-body);
@@ -441,55 +453,40 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
-/* Shared surface primitives. */
+/* Panels and chrome are flat surfaces: one hairline edge, no blur, no glow. */
 .glass-surface {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-highlight), var(--shadow-card), var(--glass-glow);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
 }
 .glass-surface-strong {
-  background: var(--glass-bg-strong);
-  backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(var(--glass-saturate));
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-highlight), var(--shadow-elevated), var(--glass-glow);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
 }
 
-/* Atmosphere is CSS-only: no image or video payload on the critical path. */
+/* The rail is the page's only colour field. */
 .shell-atmosphere {
   position: relative;
   isolation: isolate;
-  background:
-    radial-gradient(75rem 34rem at 75% -12%, rgba(90, 111, 154, 0.08), transparent 68%),
-    radial-gradient(42rem 28rem at 12% 75%, rgba(110, 50, 108, 0.04), transparent 70%),
-    var(--color-surface-base);
+  background: var(--color-surface-sunken);
 }
 .dark .shell-atmosphere {
-  background:
-    radial-gradient(75rem 34rem at 75% -12%, rgba(55, 105, 126, 0.18), transparent 68%),
-    radial-gradient(42rem 28rem at 12% 75%, rgba(110, 50, 108, 0.1), transparent 70%),
-    linear-gradient(145deg, #080a0f 0%, #0a1017 48%, #080a0f 100%);
+  background: var(--color-surface-sunken);
 }
-.shell-orbs { pointer-events: none; position: absolute; inset: 0; z-index: 0; overflow: hidden; opacity: 0.5; }
-.dark .shell-orbs { opacity: 0.7; }
-.shell-orbs::before,
-  .shell-orbs::after { content: ""; position: absolute; border-radius: 999px; filter: blur(1px); border: 1px solid rgba(90, 111, 154, 0.18); }
-.shell-orbs::before { width: 42rem; height: 42rem; right: -22rem; top: 7rem; box-shadow: 0 0 0 5rem rgba(89,225,255,.015), 0 0 0 10rem rgba(89,225,255,.012); }
-.shell-horizon { pointer-events: none; position: absolute; left: 0; right: 0; bottom: 0; height: 18rem; z-index: 0; background: linear-gradient(0deg, rgba(90, 111, 154, 0.04), transparent 70%); opacity: .5; }
-.dark .shell-horizon { background: linear-gradient(0deg, rgba(90, 111, 154, 0.06), transparent 70%); opacity: .7; }
+.shell-orbs, .shell-horizon, .shell-grain { display: none; }
 .shell-chrome { position: relative; z-index: 2; }
 .shell-chrome-row { display: flex; min-width: 0; min-height: 0; flex: 1 1 auto; overflow: hidden; width: 100%; }
 
 .shell-header-inner, .shell-main-inner { width: 100%; max-width: var(--shell-content-max); margin-inline: auto; box-sizing: border-box; }
 .shell-header-inner { display: flex; height: var(--shell-header-h); align-items: center; gap: .75rem; padding-inline: var(--shell-pad-x); }
-.shell-main { min-height: 0; flex: 1 1 auto; overflow-x: hidden; overflow-y: auto; padding: var(--shell-pad-y) var(--shell-pad-x-end) calc(var(--mobile-nav-height) + var(--shell-pad-y)) var(--shell-pad-x); -webkit-overflow-scrolling: touch; }
+.shell-main { min-height: 0; flex: 1 1 auto; overflow-x: hidden; overflow-y: auto; padding: var(--shell-pad-y) var(--shell-pad-x-end) var(--shell-pad-y) var(--shell-pad-x); -webkit-overflow-scrolling: touch; background-color: var(--color-surface-sunken); }
 .shell-main-inner { min-width: 0; }
+/* A chart that sizes itself before its container settles must never widen the page. */
+.shell-main-inner canvas, .shell-main-inner svg, .shell-main-inner img, .shell-main-inner video { max-width: 100%; }
 .page-stack { display: flex; flex-direction: column; gap: var(--shell-gap); width: 100%; min-width: 0; }
 
-.card-interactive { cursor: pointer; transition: border-color var(--duration-fast) var(--ease-default), background-color var(--duration-fast) var(--ease-default), transform var(--duration-fast) var(--ease-default); }
-.card-interactive:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, var(--glass-border)); transform: translateY(-2px); }
+/* 卡片没有边线，交互反馈只靠位移和底色，不再改 border-color。 */
+.card-interactive { cursor: pointer; transition: background-color var(--duration-fast) var(--ease-default), transform var(--duration-fast) var(--ease-default); }
+.card-interactive:hover { transform: translateY(-2px); }
 .card-interactive:active { transform: translateY(0) scale(.99); }
 
 /* Mobile shell header is shorter than the desktop rail. */
@@ -503,26 +500,27 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
     transform: scale(0.985);
     transition: transform 120ms cubic-bezier(0.2, 0.8, 0.4, 1);
   }
-  button:active, a[role="button"]:active {
-    transform: scale(0.97);
-    transition: transform 100ms cubic-bezier(0.2, 0.8, 0.4, 1);
-  }
 }
 
-.nav-pill-active { background: color-mix(in srgb, var(--color-accent) 12%, transparent); color: var(--color-accent-strong); box-shadow: inset 2px 0 0 var(--color-accent), inset 0 1px 0 rgba(255,255,255,.05); }
+.nav-pill-active { background: var(--color-surface-base); color: var(--color-accent-strong); }
 .shell-title { letter-spacing: -0.025em; }
 
 /* Keep heavy below-fold feature panels out of the first paint. */
-[data-testid="home-recent"], [data-testid="home-weekly-horizon"] { content-visibility: auto; contain-intrinsic-size: 0 360px; }
+[data-testid="home-weekly-horizon"] { content-visibility: auto; contain-intrinsic-size: 0 360px; }
 
-.uplot { font-family: var(--font-sans); color: var(--color-text-secondary); }
-.u-legend { font-size: var(--text-caption1, 12px); color: var(--color-text-secondary); }
+.uplot { font-family: var(--font-sans); color: var(--color-text-secondary); }.u-legend { font-size: var(--text-caption1, 12px); color: var(--color-text-secondary); }
 .u-legend th { color: var(--color-text-primary); }
 .u-cursor-x, .u-cursor-y { border-color: var(--color-text-muted) !important; }
 .u-select { background: color-mix(in srgb, var(--color-accent) 10%, transparent) !important; }
 .u-axis { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted); }
 
-@media (max-width: 767px) {
-  [data-testid="home-recent-list"], [data-testid="home-recent-skeleton"] { grid-auto-columns: minmax(15.5rem, 1fr); grid-auto-flow: column; grid-template-columns: none; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: .25rem; scroll-snap-type: x proximity; }
-  [data-testid="home-recent-list"] > *, [data-testid="home-recent-skeleton"] > * { min-width: 0; scroll-snap-align: start; }
-}
+/* Touch feedback comes from the surface, not from scaling the whole control:
+   iOS dims a row under the finger, and a global scale on every button made the
+   whole screen wobble. */
+.row-press { transition: background-color 100ms var(--ease-default); }
+.row-press:active { background-color: var(--color-surface-active); }
+
+html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; accent-color: var(--color-accent); }
+
+/* Browser surfaces belong to the palette: caret, selection and scrollbar. */
+input, textarea, [contenteditable="true"] { caret-color: var(--color-accent); }

@@ -5,6 +5,7 @@ import { KpiCard } from "@shared/ui/KpiCard";
 import { ChartShell } from "@shared/ui/ChartShell";
 import { SectionHeader } from "@shared/ui/SectionHeader";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 const SAMPLE_SPARKLINE = [60, 65, 58, 72, 68, 80, 75, 85, 82, 90];
 
@@ -27,7 +28,7 @@ export function CardsGallery() {
           <KpiCard label="距离" value="42.2" unit="km" />
           <KpiCard label="配速" value="4:32" unit="/km" />
           <KpiCard label="爬升" value="320" unit="m" />
-          <KpiCard label="心率" value="148" unit="bpm" />
+          <KpiCard label="心率" value="148" unit={HEART_RATE_UNIT} />
         </div>
       </div>
 
@@ -55,7 +56,7 @@ export function CardsGallery() {
           <KpiCard
             label=" resting HR"
             value="52"
-            unit="bpm"
+            unit={HEART_RATE_UNIT}
             trend="down"
             trendColor="text-success"
             sparklineData={[60, 58, 55, 54, 53, 52, 51, 52]}

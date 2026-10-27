@@ -19,11 +19,11 @@ export function SectionHeader({
       {...props}
     >
       <div className="min-w-0">
-        <h2 className="text-title3 font-semibold text-text-primary">
+        <h2 className="text-caption1 font-semibold text-text-muted">
           {title}
         </h2>
         {subtitle && (
-          <p className="mt-0.5 text-footnote text-text-muted">{subtitle}</p>
+          <p className="mt-0.5 text-caption1 text-text-muted">{subtitle}</p>
         )}
       </div>
       {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}

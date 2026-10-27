@@ -42,37 +42,3 @@ export function activeNavFromPath(pathname: string): string | null {
   return null;
 }
 
-/**
- * Page-copy registry — canonical title (and optional subtitle) for each dashboard path.
- *
- * AppShell is the single large-title owner for dashboard pages. Each dashboard page
- * reads its title from this registry instead of rendering its own page-level `<h1>`.
- *
- * The registry is keyed by pathname prefix so nested routes (e.g. `/activities/[id]`)
- * inherit their parent's title unless an explicit entry overrides it. Query-string
- * state is not read here; section/tab selection is handled by page-level UI (Tabs).
- */
-export interface PageCopy {
-  readonly title: string;
-  readonly subtitle?: string;
-}
-
-/** Pathname → PageCopy. Order matters: longer prefixes must come first. */
-const PAGE_COPY_REGISTRY: ReadonlyArray<readonly [string, PageCopy]> = [
-  ["/activities", { title: "训练记录" }],
-  ["/calendar",   { title: "训练日历" }],
-  ["/analysis",   { title: "训练分析" }],
-  ["/goals",      { title: "目标管理" }],
-  ["/settings",   { title: "运动员档案" }],
-  ["/",           { title: "首页" }],
-] as const;
-
-export function getPageCopy(pathname: string): PageCopy {
-  for (const [prefix, copy] of PAGE_COPY_REGISTRY) {
-    if (prefix === "/" ? pathname === "/" : pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-      return copy;
-    }
-  }
-  return { title: "Running Man" };
-}
-

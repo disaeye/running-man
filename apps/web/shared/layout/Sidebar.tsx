@@ -3,24 +3,29 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, User } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { NAV_ENTRIES, activeNavFromPath } from "@shared/config/nav-config";
-
 import { ThemeToggle } from "@shared/ui/ThemeToggle";
+
 const STORAGE_KEY = "rm.sidebar.collapsed";
-const EXPANDED_WIDTH = "w-60";   // 240px
-const COLLAPSED_WIDTH = "w-16";  // 64px
+const EXPANDED_WIDTH = "w-[15.5rem]";
+const COLLAPSED_WIDTH = "w-[4.25rem]";
+
+function initialsOf(name: string | undefined): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  const first = parts[0] ?? "";
+  if (parts.length === 1) return first.charAt(0).toUpperCase();
+  const last = parts[parts.length - 1] ?? first;
+  return (first.charAt(0) + last.charAt(0)).toUpperCase();
+}
 
 /**
- * Editorial sidebar with pill navigation.
- *
- * - Active item = filled pill background (bg-accent/15) + accent color text/icon.
- * - Clean typography: 17px label, 24px icon.
- * - Hover state is subtle bg shift, not color change.
- * - Collapse behavior preserved (localStorage).
+ * The rail is the page's only colour field: lavender ground, white active pill,
+ * everything else in ink. It carries the five destinations and the athlete.
  */
-export function Sidebar() {
+export function Sidebar({ athleteName }: { athleteName?: string }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -28,14 +33,10 @@ export function Sidebar() {
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored === "1") {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-        setCollapsed(true);
-      } else if (stored === "0") {
-        setCollapsed(false);
-      } else {
-        setCollapsed(window.innerWidth < 1024);
-      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted width after mount
+      if (stored === "1") setCollapsed(true);
+      else if (stored === "0") setCollapsed(false);
+      else setCollapsed(window.innerWidth < 1024);
     } catch {
       setCollapsed(window.innerWidth < 1024);
     }
@@ -48,61 +49,51 @@ export function Sidebar() {
       try {
         window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
       } catch {
-        // ignore
+        // storage unavailable; the toggle still works for this session
       }
       return next;
     });
   };
 
   const activeId = activeNavFromPath(pathname);
+  const initials = initialsOf(athleteName);
 
   return (
     <aside
       data-testid="sidebar"
       data-collapsed={hydrated ? collapsed : undefined}
       className={cn(
-        "glass-surface sticky top-0 hidden h-[100dvh] shrink-0 flex-col border-r border-border-subtle transition-[width] duration-300 ease-out md:flex",
+        "hidden h-[100dvh] shrink-0 flex-col border-r border-border-subtle bg-rail transition-[width] duration-300 ease-out md:flex",
         hydrated && (collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH),
         !hydrated && EXPANDED_WIDTH,
       )}
       aria-label="主导航"
     >
-      {/* `px-4` rather than `px-5`: the wordmark measured 121px against 118px
-          available in the 240px rail, so "Running Man" was silently truncated to
-          "Running …" at every width. The extra 8px is what it needed; nothing
-          else in the rail was tight. */}
-      <div className={cn("flex shrink-0 items-center border-b border-border-subtle", collapsed ? "h-20 justify-center px-2" : "h-20 justify-between px-4")}>
-        {!collapsed && (
-          <Link href="/" className="group min-w-0 rounded-md focus-ring" aria-label="Running Man，返回首页">
-            <div className="flex items-center gap-2.5">
-              <span className="grid size-7 place-items-center rounded-[9px] bg-primary text-on-primary shadow-[0_0_20px_rgba(90,111,154,.25)]" aria-hidden="true">
-                <span className="block size-2 rounded-full bg-on-primary" />
-              </span>
-              {/* Deliberately not a scale token. This is a wordmark sitting in
-                  a 240px rail next to a 28px icon and a collapse button; at
-                  `title3` (20px) it truncates to "Running …". Brand type is
-                  sized to its container, not to the reading scale. */}
-              {/* type-scale-allow */}
-              <span className="shell-title truncate text-[17px] font-semibold text-text-primary">Running Man</span>
-            </div>
-            <p className="mt-1 pl-9 text-caption1 text-text-muted">耐力训练记录</p>
+      <div
+        className={cn(
+          "flex h-14 shrink-0 items-center",
+          collapsed ? "justify-center px-2" : "justify-between px-4",
+        )}
+      >
+        {collapsed ? (
+          <span className="grid size-7 place-items-center rounded-lg bg-primary" aria-hidden="true">
+            <span className="block size-2 rounded-full bg-on-primary" />
+          </span>
+        ) : (
+          <Link href="/" className="focus-ring flex min-w-0 items-center gap-2.5 rounded-md">
+            <span className="grid size-7 place-items-center rounded-lg bg-primary" aria-hidden="true">
+              <span className="block size-2 rounded-full bg-on-primary" />
+            </span>
+            <span className="shell-title truncate text-body font-semibold text-text-primary">
+              Running Man
+            </span>
           </Link>
         )}
-        {collapsed && <span className="grid size-8 place-items-center rounded-[10px] bg-primary text-on-primary shadow-[0_0_20px_rgba(90,111,154,.25)]" aria-hidden="true"><span className="size-2 rounded-full bg-on-primary" /></span>}
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={collapsed ? "展开侧边栏" : "折叠侧边栏"}
-          aria-pressed={collapsed}
-          className="focus-ring flex size-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary"
-        >
-          {collapsed ? <ChevronRight className="size-[17px]" strokeWidth={1.8} /> : <ChevronLeft className="size-[17px]" strokeWidth={1.8} />}
-        </button>
       </div>
-      <nav className="flex-1 overflow-y-auto px-3 py-6" aria-label="工作区">
-        {!collapsed && <p className="mb-3 px-3 text-caption1 text-text-muted">导航</p>}
-        <ul className="space-y-1.5">
-          {NAV_ENTRIES.map((item, index) => {
+
+      <nav className="flex-1 px-2.5 pt-2" aria-label="工作区">
+        <ul className="space-y-0.5">
+          {NAV_ENTRIES.map((item) => {
             const active = activeId === item.id;
             const Icon = item.Icon;
             return (
@@ -112,23 +103,56 @@ export function Sidebar() {
                   aria-current={active ? "page" : undefined}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "focus-ring group relative flex items-center rounded-lg py-3 transition-colors duration-200",
+                    "focus-ring flex h-11 items-center rounded-lg transition-colors",
                     collapsed ? "justify-center px-2" : "gap-3 px-3",
-                    active ? "nav-pill-active" : "text-text-secondary hover:bg-surface-overlay hover:text-text-primary",
+                    active
+                      ? "bg-surface-base font-medium text-accent-strong"
+                      : "text-text-secondary hover:bg-surface-base/70 hover:text-text-primary",
                   )}
                 >
-                  <Icon aria-hidden="true" className="size-[19px] shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={active ? 2 : 1.6} />
-                  {!collapsed && <span className={cn("truncate text-subheadline", active ? "font-semibold" : "font-normal")}>{item.label}</span>}
-                  {!collapsed && <span className="ml-auto font-mono text-caption2 text-text-muted">0{index + 1}</span>}
+                  <Icon
+                    aria-hidden="true"
+                    className="size-[18px] shrink-0"
+                    strokeWidth={active ? 1.9 : 1.6}
+                  />
+                  {!collapsed && <span className="truncate text-subheadline">{item.label}</span>}
                 </Link>
               </li>
             );
           })}
         </ul>
       </nav>
+
       <div className="border-t border-border-subtle p-3">
-        <div className={cn("flex items-center", collapsed ? "justify-center" : "justify-between px-1")}>
-          {!collapsed && <span className="text-caption1 text-text-muted">主题</span>}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={collapsed ? "展开侧边栏" : "折叠侧边栏"}
+          aria-pressed={collapsed}
+          className="focus-ring mb-2 flex h-11 w-full items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-base hover:text-text-primary"
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="size-4" strokeWidth={1.7} />
+          ) : (
+            <PanelLeftClose className="size-4" strokeWidth={1.7} />
+          )}
+        </button>
+        <div className={cn("flex items-center gap-2", collapsed && "flex-col")}>
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-base text-caption1 font-semibold text-accent-strong"
+            aria-hidden={initials ? true : undefined}
+            aria-label={initials ? undefined : "运动员"}
+          >
+            {initials || <User className="size-4" strokeWidth={1.7} />}
+          </span>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-caption1 font-medium text-text-primary">
+                {athleteName || "未登录"}
+              </p>
+              <p className="truncate text-caption1 text-text-muted">档案与阈值</p>
+            </div>
+          )}
           <ThemeToggle />
         </div>
       </div>

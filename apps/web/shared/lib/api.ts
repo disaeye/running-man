@@ -20,6 +20,9 @@ export class ApiError extends Error {
     readonly status: number,
     readonly detail: string,
     readonly kind: ApiErrorKind,
+    readonly code: string | null = null,
+    readonly requestId: string | null = null,
+    readonly fields: readonly { readonly field: string; readonly message: string }[] = [],
   ) {
     super(detail);
   }
@@ -47,22 +50,56 @@ function errorKindForStatus(status: number): ApiErrorKind {
   return API_ERROR_KINDS.request;
 }
 
-function detailFromBody(body: unknown, fallback: string): string {
-  if (body !== null && typeof body === "object") {
-    if ("detail" in body && typeof body.detail === "string") return body.detail;
-    if ("message" in body && typeof body.message === "string") return body.message;
-  }
-  return fallback;
+type ApiErrorBody = {
+  readonly error?: {
+    readonly code?: unknown;
+    readonly message?: unknown;
+    readonly request_id?: unknown;
+    readonly fields?: unknown;
+  };
+  readonly detail?: unknown;
+  readonly message?: unknown;
+};
+
+function textField(value: unknown): string | null {
+  return typeof value === "string" && value.trim() !== "" ? value : null;
 }
 
+function fieldsFrom(error: ApiErrorBody["error"]): { field: string; message: string }[] {
+  if (!error || !Array.isArray(error.fields)) return [];
+  return error.fields.flatMap((entry) => {
+    if (entry === null || typeof entry !== "object") return [];
+    const field = textField((entry as { field?: unknown }).field);
+    const message = textField((entry as { message?: unknown }).message);
+    return field && message ? [{ field, message }] : [];
+  });
+}
+
+/**
+ * Read the API's error envelope.
+ *
+ * Every failure answers with `{error: {code, message, fields, request_id},
+ * detail}`. `error.message` is the field written for a person and `detail` is
+ * the same string kept for older callers; both are read so either shape yields
+ * a usable message.
+ */
 export async function readApiError(response: Response): Promise<ApiError> {
-  let detail = response.statusText;
+  let body: ApiErrorBody | null = null;
   try {
-    detail = detailFromBody(await response.clone().json(), detail);
+    body = (await response.clone().json()) as ApiErrorBody;
   } catch (error) {
     if (!(error instanceof SyntaxError)) throw error;
   }
-  return new ApiError(response.status, detail, errorKindForStatus(response.status));
+  const message =
+    textField(body?.error?.message) ?? textField(body?.detail) ?? textField(body?.message);
+  return new ApiError(
+    response.status,
+    message ?? response.statusText,
+    errorKindForStatus(response.status),
+    textField(body?.error?.code),
+    textField(body?.error?.request_id),
+    fieldsFrom(body?.error),
+  );
 }
 
 export function assertApiVersion(response: Response): void {
@@ -84,28 +121,41 @@ export function apiDownloadUrl(endpoint: string, params: Record<string, string>)
   return apiUrl(endpoint, params);
 }
 
-export function apiErrorMessage(error: unknown): string {
+/** Whether the API wrote this sentence for a person rather than for a log. */
+function isUserFacing(message: string): boolean {
+  return /[\u3400-\u9fff]/u.test(message);
+}
+
+const KIND_MESSAGE: Record<ApiErrorKind, string> = {
+  [API_ERROR_KINDS.unauthorized]: "登录状态已失效，请重新登录。",
+  [API_ERROR_KINDS.notFound]: "请求的数据不存在或已被移除。",
+  [API_ERROR_KINDS.conflict]: "数据已发生变化，请刷新后重试。",
+  [API_ERROR_KINDS.validation]: "提交的数据有误，请检查后重试。",
+  [API_ERROR_KINDS.rateLimited]: "请求过于频繁，请稍后再试。",
+  [API_ERROR_KINDS.server]: "服务暂时不可用，请稍后重试。",
+  [API_ERROR_KINDS.request]: "请求未能完成，请稍后重试。",
+};
+
+/**
+ * One failure → one sentence the interface can show.
+ *
+ * The API's own message wins when it was written for a person — the backend
+ * knows which threshold is missing or which field the database refused, and a
+ * canned sentence throws that away. Router details like `goal not found` are
+ * identifiers rather than copy, so they fall back to the message for the status
+ * class; that keeps the interface Chinese and still tells the reader what kind
+ * of failure it was. `fallback` names the action that failed ("保存偏好设置失败")
+ * for failures that carry no status at all, such as a bug in the page itself.
+ */
+export function apiErrorMessage(error: unknown, fallback?: string): string {
   if (error instanceof ApiContractError) {
     return "后端服务暂时不可达或响应异常，请检查后端服务状态或稍后重试。";
   }
-  if (!(error instanceof ApiError)) return "网络请求失败，请检查网络连接后重试。";
-
-  switch (error.kind) {
-    case API_ERROR_KINDS.unauthorized:
-      return "登录状态已失效，请重新登录。";
-    case API_ERROR_KINDS.notFound:
-      return "请求的数据不存在或已被移除。";
-    case API_ERROR_KINDS.conflict:
-      return "数据已发生变化，请刷新后重试。";
-    case API_ERROR_KINDS.validation:
-      return "提交的数据有误，请检查后重试。";
-    case API_ERROR_KINDS.rateLimited:
-      return "请求过于频繁，请稍后再试。";
-    case API_ERROR_KINDS.server:
-      return "服务暂时不可用，请稍后重试。";
-    case API_ERROR_KINDS.request:
-      return "请求未能完成，请稍后重试。";
+  if (error instanceof ApiError) {
+    if (isUserFacing(error.detail)) return error.detail;
+    return KIND_MESSAGE[error.kind];
   }
+  return fallback ?? "网络请求失败，请检查网络连接后重试。";
 }
 
 function requestHeaders(headers: HeadersInit | undefined, body: BodyInit | null | undefined): HeadersInit | undefined {
@@ -129,8 +179,8 @@ async function requestJson<T>(
   } catch {
     throw new ApiError(0, "网络请求失败", API_ERROR_KINDS.request);
   }
-  assertApiVersion(response);
   if (!response.ok) throw await readApiError(response);
+  assertApiVersion(response);
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }

@@ -49,9 +49,9 @@ export function MobileTabBar() {
       data-layout-token="mobile-nav"
       data-shell-region="bottom"
       data-safe-area="bottom"
-      className="fixed bottom-0 left-[max(0px,env(safe-area-inset-left))] right-[max(0px,env(safe-area-inset-right))] z-40 border-t border-border-subtle/80 bg-surface-raised/90 px-3 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.05)] backdrop-blur-2xl md:hidden"
+      className="fixed bottom-0 left-[max(0px,env(safe-area-inset-left))] right-[max(0px,env(safe-area-inset-right))] z-40 border-t border-border-subtle bg-surface-base px-3 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
     >
-      <div className="grid grid-cols-5 gap-1.5">
+      <div className="grid grid-cols-5">
         {MOBILE_TAB_ENTRIES.map((tab) => {
           const isActive = tab.id === activeId;
           const Icon = tab.Icon;
@@ -61,33 +61,27 @@ export function MobileTabBar() {
               href={tab.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "focus-ring relative flex min-h-[50px] min-w-0 flex-col items-center justify-center rounded-xl px-1 py-1 select-none transition-all duration-150 active:scale-90",
+                "row-press focus-ring relative flex min-h-[50px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 select-none transition-colors duration-150",
                 isActive
-                  ? "bg-primary/10 text-accent-strong"
-                  : "text-text-muted hover:bg-surface-overlay/60 hover:text-text-primary active:opacity-75",
+                  ? "text-accent-strong"
+                  : "text-text-muted hover:text-text-primary",
               )}
             >
               <Icon
                 aria-hidden="true"
                 className={cn(
-                  "size-5 transition-transform duration-200",
-                  isActive ? "scale-105 stroke-[2.2]" : "stroke-[1.7]",
+                  "size-[22px] transition-transform duration-200",
+                  isActive ? "stroke-[2.1]" : "stroke-[1.7]",
                 )}
               />
               <span
                 className={cn(
-                  "mt-1 text-caption2 leading-tight transition-colors duration-150",
-                  isActive ? "font-semibold text-accent-strong" : "font-normal",
+                  "text-caption1 leading-tight transition-colors duration-150",
+                  isActive ? "font-semibold" : "font-normal",
                 )}
               >
                 {tab.label}
               </span>
-              {isActive && (
-                <span
-                  className="absolute bottom-1 h-0.5 w-3 rounded-full bg-primary shadow-[0_0_6px_var(--color-primary)] transition-all duration-200"
-                  aria-hidden="true"
-                />
-              )}
             </Link>
           );
         })}

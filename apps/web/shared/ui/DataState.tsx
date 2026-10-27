@@ -178,8 +178,8 @@ function StateBody({
 
 export function DataState({
   state, source, dataAsOf, completeness, drillDownHref, children,
-  emptyTitle = "尚未接入数据", emptyAction = "前往数据",
-  errorTitle = "数据读取失败", staleTitle = "数据已过期", className,
+  emptyTitle = "这一区间没有数据", emptyAction = "查看数据源",
+  errorTitle = "数据读取失败", staleTitle = "数据待更新", className,
 }: DataStateProps) {
   return (
     <div data-testid="data-state" data-state={state} className={cn("flex flex-col gap-2", className)}>

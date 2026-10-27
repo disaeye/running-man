@@ -31,7 +31,7 @@ export function ThemeToggle() {
   }, []);
 
   if (!mounted) {
-    return <div className="h-10 w-10 rounded-full" aria-hidden="true" />;
+    return <div className="h-11 w-11 rounded-full" aria-hidden="true" />;
   }
 
   const isDark = theme === "dark";
@@ -47,7 +47,7 @@ export function ThemeToggle() {
       type="button"
       onClick={handleToggle}
       aria-label={isDark ? "切换到浅色模式" : "切换到深色模式"}
-      className="focus-ring flex h-10 w-10 items-center justify-center rounded-full text-text-secondary transition-all duration-150 hover:bg-surface-overlay hover:text-text-primary active:scale-90"
+      className="focus-ring flex h-11 w-11 items-center justify-center rounded-full text-text-secondary transition-all duration-150 hover:bg-surface-overlay hover:text-text-primary active:scale-90"
     >
       <span
         key={theme}

@@ -1,3 +1,19 @@
+import { HEART_RATE_UNIT } from "@shared/config/terms";
+
+/**
+ * 时钟式显示：一小时以内 `40:12`，一小时以上 `1:31:20`。
+ *
+ * 秒数先取整并归零（负数变 `0:00`），有小时才带小时位。
+ */
+export function formatClock(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = String(total % 60).padStart(2, "0");
+  if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${secs}`;
+  return `${minutes}:${secs}`;
+}
+
 export function formatDistance(meters: number | null): string {
   if (meters == null) return "--";
   if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
@@ -88,10 +104,10 @@ export function formatElevation(m: number | null): string {
   return `${Math.round(m)} m`;
 }
 
-/** Format heart rate (e.g. 150 → "150 bpm") */
+/** Format heart rate (e.g. 150 → "150 bpm"); 单位来自 HEART_RATE_UNIT。 */
 export function formatHeartRate(bpm: number | null): string {
   if (bpm == null) return "--";
-  return `${Math.round(bpm)} bpm`;
+  return `${Math.round(bpm)} ${HEART_RATE_UNIT}`;
 }
 
 /** Format power output (e.g. 250 → "250 W") */

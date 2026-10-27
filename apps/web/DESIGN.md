@@ -1,124 +1,118 @@
-# Running Man Frontend Design System
+# Running Man 设计系统
 
-> Source of truth: `apps/web/app/globals.css`. Every colour, size, spacing, motion value in this document is a CSS variable defined there, and `scripts/check_design_tokens.py` fails the contract gate when a table row here disagrees with the stylesheet. Never introduce a raw hex in a component — add the token to `globals.css` first.
->
-> Canvas is dusk paper `#f4f6f8`, accent is Winter Sky Indigo `#5a6f9a`, content column is `64rem`. Atmosphere is low-alpha indigo and amber washes on `.shell-atmosphere`; chrome is the only surface that uses `backdrop-filter`.
+> 唯一真源是 `apps/web/app/globals.css`。文档里每个颜色、字号、间距、阴影都必须是那里已经声明的 CSS 变量，`scripts/check_design_tokens.py` 会把本节所有 token 表格与 stylesheet 逐行比对，值写上去了但 stylesheet 没有、或者两边不一致，契约闸门直接失败。组件里永远不写裸十六进制色值——先加 token，再用 token。
 
 ---
 
-## 0. Design Research & Layout Constraints
+## 1. 产品与语气
 
-### 0.1 Sources
+Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，页面要回答的问题只有一个：现在该干什么，以及为什么。
 
-- **Linear / Vercel / Notion**: cool-neutral canvas, one saturated accent reserved for interactive chrome, hairline borders instead of shadows, type at editorial density.
-- **Apple HIG web surfaces**: hairline elevation, weight ladder 300/400/600 (no 500), tabular figures for metrics.
-- **Strava / COROS / Training Peaks**: activity traces, PMC curves, zone ladders, fitness/freshness/form triplets, intensity heatmaps — all on a cool-neutral canvas with a tight typographic grid.
-- **Okabe-Ito qualitative palette** (`chart-tokens.ts`): colour-vision-deficiency-safe categorical encoding, layered over the data-semantic PMC colours.
-- **Geist via `next/font`**: tight-tracked sans at 15px body and fluid display numerals.
+文案口径是运动员对教练说话：给具体数字，不给形容词。「本周 TSS 412，比上周多 38，CTL 涨到 62」，而不是「训练量有所提升」。中文照常写，指标缩写保持拉丁字母——TSS、CTL、ATL、TSB、ACWR、HRV、VO2max、e1RM 不翻译、不音译、不加括号注释。
 
-### 0.2 Layout Constraints That Hold
+三条语气规则：
 
-These were each discovered by getting them wrong, and each has a gate or a token behind it now:
-
-- The mobile tab bar covers the last content row unless `--mobile-nav-height` is reserved; pages never hard-code `pb-24`.
-- Chart tooltips clip at viewport edges; they stay inside `bg-surface-raised` with `--shadow-elevated`.
-- The collapsed sidebar is 68px; icons need that much padding to stay legible.
-- The login form shifts on mobile focus when the card has no fixed vertical rhythm.
-- `--color-accent` fails AA as text on the dark panel; accent text uses `--color-accent-strong`.
+1. **先给结论，再给依据。** 首屏第一句是判断，第二句才是数字。
+2. **数字必须带单位和时间范围。** 「TSS 412」不合格，「本周 TSS 412（10-14 至 10-20）」合格。
+3. **缺数据就说缺数据。** 写「未记录」，不写 0，不写「-」，不用形容词糊过去。
 
 ---
 
-## 1. Product Character
+## 2. 信息层级
 
-Running Man is a **calm dusk cockpit** — soft paper, twilight indigo chrome, quiet sakura and amber sky light. Colour climate: indigo dusk, cherry-blossom pink, golden-hour amber — as atmosphere and one accent, never as illustration.
+层级按变化速度排，不按功能排。变慢的在上，变快的在下：眼睛从上往下扫，先确认「我是谁」，再确认「我现在怎么样」，最后才是「这一次做什么」。
 
-Three principles:
-
-1. **Comfortable density** — Content `max-w-5xl`. Compact 15px body. Tabular metrics.
-2. **One accent, sky-indigo** — Winter Sky Indigo (`#5a6f9a` light / `#8a9bb8` dark) for CTAs, active nav, focus. Sakura (`--color-sakura`) and golden-hour (`--color-golden-hour`) only in atmosphere and rare chips — never second chrome.
-3. **Cinematic shell** — `.shell-atmosphere` multi-layer dusk sky, `.shell-orbs` floating bokeh, `.shell-horizon` golden haze, `.shell-grain` film texture; chrome uses sky-rim liquid glass (`.glass-surface`). Content in `.shell-chrome` above atmosphere.
-
-
-
-Chinese copy must be direct and athlete-specific. Write what an athlete would say to a coach ("本周 TSS 412，昨夜 HRV 48"), not generic SaaS prose.
-
----
-
-## 2. Product Questions & Page Hierarchy
-
-Every page answers a primary question. Layout, density, and chart choices serve that question first.
-
-### 2.1 Page-Question Hierarchy
-
-| Page | Primary Question | Density Mode |
-|---|---|---|
-| Today (今天) | "What should I do right now?" | Decision |
-| Training (训练) | "How is my fitness trending?" | Analysis |
-| Calendar | "What is planned and when?" | Browse |
-| Activity Detail | "How did this specific session go?" | Showcase |
-| Analysis | "What patterns explain my performance?" | Analysis |
-| Goals | "Am I on track for my targets?" | Decision |
-| Settings | "How is the system configured?" | Configuration |
-| Strength | "What did I lift and how does it connect?" | Browse |
-| Data Sources | "Is my data pipeline healthy?" | Configuration |
-
-### 2.2 Density Modes
-
-| Mode | Purpose | Layout Behavior |
-|---|---|---|
-| **Showcase** | Single artifact in focus (activity detail, PR card) | Large hero, generous whitespace, one-up chart |
-| **Decision** | Action-oriented dashboard (Today, Goals) | One answer block with its evidence inside it, then the panels needed to act |
-| **Browse** | Scannable list (calendar, activity list, strength log) | Compact rows, pagination/infinite scroll, filter bar |
-| **Analysis** | Multi-metric comparison (PMC, trends, intensity) | Dense chart grid, linked tooltips, range selector |
-| **Configuration** | Settings and data management | Form-heavy, sectioned cards, inline validation |
-
----
-
-## 3. Color Palette
-
-All tokens live in `app/globals.css` under `:root` (light, default) and `.dark` (toggle). Tailwind reads them via `@theme inline`. Light is the default; the dark theme is opt-in via `next-themes`. **Never introduce a raw hex in a component** — add the token to `globals.css` first.
-
-### 3.1 Core Palette
-
-Every row is verified against `app/globals.css` by `scripts/check_design_tokens.py`; a token that is documented here and absent there, or a value that disagrees, fails the contract gate.
-
-| Token | Light | Dark | Role |
+| 层 | 变化速度 | 装什么 | 渲染位置 |
 |---|---|---|---|
-| `--color-surface-base` | `#f4f6f8` | `#080a0f` | Page canvas |
-| `--color-surface-card` | `#ffffff` | `#10151e` | Panel fill |
-| `--color-surface-raised` | `#ffffff` | `#0f131b` | Sticky chrome |
-| `--color-surface-overlay` | `#eaeff4` | `#151b25` | Ghost fill, hover |
-| `--color-surface-sunken` | `#e9eef3` | `#05070a` | Inset wells |
-| `--color-text-primary` | `#141c24` | `#edf3f8` | Body ink |
-| `--color-text-secondary` | `#4b5b6d` | `#a5b1bd` | Secondary copy |
-| `--color-text-muted` | `#55667a` | `#8595a5` | Captions, provenance |
-| `--color-accent` | `#5a6f9a` | `#5a6f9a` | Accent fill |
-| `--color-accent-strong` | `#405072` | `#9aaecf` | Accent text (AA) |
-| `--color-primary` | `#5a6f9a` | `#5a6f9a` | Primary CTA |
-| `--color-ring` | `#5a6f9a` | `#7a8fb5` | Focus ring |
-| `--color-border-subtle` | `rgba(45, 62, 80, 0.18)` | `rgba(171, 198, 214, 0.12)` | Hairline edge |
-| `--color-border-default` | `rgba(45, 62, 80, 0.26)` | `rgba(171, 198, 214, 0.2)` | Control border |
-| `--glass-bg` | `rgba(255, 255, 255, 0.85)` | `rgba(16, 21, 30, 0.78)` | Chrome glass fill |
-| `--glass-border` | `rgba(45, 62, 80, 0.12)` | `rgba(171, 198, 214, 0.16)` | Chrome glass rim |
+| 身份 | 月级 | 姓名、训练年限、目标赛事、PB | 侧栏与页面首行 |
+| 状态 | 日级 | 就绪分数、HRV、静息心率、TSB、ACWR | 首屏状态条 |
+| 行动 | 每次 | 今天练什么、距离、配速、时长 | 一屏一张行动卡 |
+| 计划 | 周级 | 本周课表、周负荷目标 | 日历、计划周视图 |
+| 趋势 | 周级 | PMC、CTL/ATL 曲线、VO2max、e1RM | 图表区 |
+| 提示 | 事件 | 同步失败、数据缺口、里程碑达成 | 状态行与空态 |
 
-**Single-accent rule**: Winter Sky Indigo carries every interactive element. `--color-accent` is a fill; text that sits on the canvas uses `--color-accent-strong`, which is the value tuned to pass AA against `--color-surface-base`. There is no second chrome colour.
+### 2.1 页面与主问题
 
-**Glass belongs to chrome only.** `--glass-bg` and its blur are applied to the sidebar, the sticky header and the mobile tab bar. Panels use `--color-surface-card` with a hairline edge: stacking `backdrop-filter` on six panels blurs the dusk atmosphere into flat white and costs compositing on every scroll.
+| 页面 | 主问题 | 首屏给什么 |
+|---|---|---|
+| 首页 | 我是什么水平，今天该怎么练 | 身份行、一张行动卡，行动卡下面是三格摘要 |
+| 日历 | 本周还剩什么没做，做的和计划的差在哪 | 按天排列的课表，计划与实际同一行对齐 |
+| 训练记录 | 这段时间练了多少 | 按时间倒排的记录列表，顶部是周负荷摘要 |
+| 活动详情 | 这一次跑得怎么样 | 分段、配速、心率、区间分布 |
+| 分析 | 这段时间的训练哪里对、哪里不对 | 多指标对照图，图下一句结论 |
+| 目标 | 离目标还有多远，现有训练撑不撑得住 | 环形完成度加剩余周数与预测 |
+| 档案 | 系统里的我被配置成了什么样 | 身份行加四项生理参数 |
 
-### 3.2 Data-Semantic Colours
+首页、日历、分析、目标、档案是五个导航入口（`shared/config/nav-config.ts`）。训练记录与活动详情是从属页：训练记录从日历与图表区进入，活动详情从训练记录与日历的课表行进入，两者都不占导航位。
 
-These encode training meaning and are **chart series and category labels only** — never chrome, buttons or links. Verified by the same gate as §3.1.
+### 2.2 身份层伸缩
 
-Status colours are also the text colour for their state. `--color-success`, `--color-warning`, `--color-error`, `--color-info` and `--color-calendar-today` may set status copy ("恢复良好", "数据已过期") as long as they reach 4.5:1 against every surface, which `scripts/check_contrast.py` enforces. `--color-ctl`, `--color-atl`, `--color-tsb` and the `recovery-*` family stay series colours: a number that carries meaning in its value uses `--color-text-primary`, and the colour moves to the dot or bar beside it.
+身份层随里程碑伸缩，不固定高度：
 
-| Token | Light | Dark | Meaning |
+- **有里程碑时**展开成列表：目标赛事、最近一次 PB、当前周期名字，一行一条。
+- **没有里程碑时**压成一行，右端直接接当天的就绪分数。空着的位置不该让一张空卡片占住。
+
+身份层允许一个 40px（`text-metric-lg`）的成绩数字——PB 或等级成绩——加若干个 12px 标签。但一屏唯一的 56px（`text-metric-xl`）主数字属于状态层或行动卡，身份层不与它们争。
+
+---
+
+## 3. 画布与容器
+
+画布是 `--color-surface-sunken`，面板是纯白 `--color-surface-card`。分界靠明度差，不靠投影：卡片比画布亮一档，眼睛就能分出层。因此 `html`、`body`、`.shell-main` 在所有断点下都是 sunken，桌面宽度不再单独切回纯白。
+
+三级容器，从上到下：
+
+| 级别 | 形态 | 用途 |
+|---|---|---|
+| 行动卡 | 白底、圆角 16px、`--shadow-panel` | 一屏一张，承载「现在做的这件事」 |
+| 内容卡 | 白底、圆角 16px、内边距 20px、无阴影、无边线 | 图表、列表、目标、活动等对象 |
+| 信息条 | 不加容器，1px 分隔线 | 轻量说明、出处、参数行 |
+
+规则：
+
+- **行动卡一屏最多一张。** 两张行动卡等于没有行动。它是全站唯一用 `--shadow-panel` 的常驻表面，投影把「这一张和别的卡不一样」这件事说清楚。
+- **卡片不嵌套。** 卡内分组用 `InsetBlock`：比卡片再深一档的底色，圆角 12px，不画边线。再画边线就是第二层框。
+- **弹层也算阴影使用者。** 右上角浮层、底部抽屉、弹窗可以用 `--shadow-elevated` 与 `--shadow-sheet`，因为它们真的是浮在内容之上。
+- **一屏一处大数字。** 主数字属于状态层或行动卡；内容卡里放图表和次级数值。
+
+---
+
+## 4. 颜色
+
+全部 token 在 `app/globals.css` 的 `:root`（浅色，默认）与 `.dark`（深色）里，Tailwind 通过 `@theme inline` 读。**组件里永远不写裸十六进制色值。**
+
+只有一种界面强调色：Winter Sky Indigo `--color-accent`。它是填充色，画布上的强调文字用 `--color-accent-strong`，那个值是按 AA 单独调过的。没有第二个强调色。
+
+### 4.1 界面色
+
+| Token | 浅色 | 深色 | 用途 |
 |---|---|---|---|
-| `--color-ctl` | `#0284c7` | `#59e1ff` | 体能 (CTL) |
-| `--color-atl` | `#7c3aed` | `#b88cff` | 疲劳 (ATL) |
-| `--color-tsb` | `#d97706` | `#ffc857` | 状态 (TSB) |
-| `--color-hr-rest` | `#e11d48` | `#ff788f` | 静息心率 |
-| `--color-sleep` | `#0284c7` | `#59e1ff` | 睡眠 |
-| `--color-weight` | `#16a34a` | `#82d69d` | 体重 |
+| `--color-surface-sunken` | `#f4f6fa` | `#0b0f15` | 画布底 |
+| `--color-surface-card` | `#ffffff` | `#141a22` | 面板底 |
+| `--color-surface-raised` | `#ffffff` | `#141a22` | 顶栏、弹层 |
+| `--color-surface-overlay` | `#f2f4f9` | `#1a212b` | 卡内分组、胶囊底 |
+| `--color-surface-active` | `#e9edf5` | `#222b37` | 按下态、进度条轨道 |
+| `--color-surface-base` | `#ffffff` | `#0f1319` | chrome 表面（顶栏、底栏） |
+| `--color-text-primary` | `#1b2430` | `#eef1f6` | 正文墨色 |
+| `--color-text-secondary` | `#4b5666` | `#a8b2c1` | 次要文字 |
+| `--color-text-muted` | `#5b6779` | `#8b96a6` | 标签、图注、出处 |
+| `--color-accent` | `#5a6f9a` | `#5a6f9a` | 强调填充 |
+| `--color-accent-strong` | `#405072` | `#9aaecf` | 强调文字（AA） |
+| `--color-primary` | `#5a6f9a` | `#5a6f9a` | 主按钮 |
+| `--color-ring` | `#5a6f9a` | `#7a8fb5` | 焦点环 |
+| `--color-border-subtle` | `#dfe4ee` | `#262f3c` | 发丝边 |
+| `--color-border-default` | `#ccd4e2` | `#303b49` | 控件边 |
+| `--color-border-strong` | `#b9c3d4` | `#3d4a5a` | 强调边 |
+
+### 4.2 数据语义色
+
+数据语义色只用于图表序列、分类标签和状态点，**永远不作为按钮、链接、导航的界面色**。数字本身用 `--color-text-primary`，颜色挪到它旁边的点或条上——一个既靠颜色又靠位置表达含义的值，色觉障碍下仍然读得出来。
+
+| Token | 浅色 | 深色 | 含义 |
+|---|---|---|---|
+| `--color-ctl` | `#0284c7` | `#59e1ff` | 体能 CTL |
+| `--color-atl` | `#7c3aed` | `#b88cff` | 疲劳 ATL |
+| `--color-tsb` | `#d97706` | `#ffc857` | 状态 TSB |
 | `--color-zone-1` | `#64748b` | `#71808c` | Z1 恢复 |
 | `--color-zone-2` | `#0284c7` | `#59e1ff` | Z2 耐力 |
 | `--color-zone-3` | `#16a34a` | `#52a86d` | Z3 节奏 |
@@ -130,472 +124,190 @@ Status colours are also the text colour for their state. `--color-success`, `--c
 | `--color-goal-on-track` | `#16a34a` | `#52a86d` | 目标在轨 |
 | `--color-goal-behind` | `#d97706` | `#ffc857` | 目标滞后 |
 | `--color-goal-at-risk` | `#dc2626` | `#ff667d` | 目标有风险 |
+| `--color-data-emphasis` | `#0284c7` | `#59e1ff` | 当前值强调 |
+| `--color-load-heatmap` | `#0284c7` | `#59e1ff` | 负荷热力图 |
 | `--color-sport-run` | `#e11d48` | `#ff788f` | 跑步 |
 | `--color-sport-ride` | `#0284c7` | `#59e1ff` | 骑行 |
 | `--color-sport-workout` | `#d97706` | `#ffc857` | 健身 |
 
-Sport colours are read through `getSportConfig(sport).color`; never map a sport to a colour anywhere else.
-
-### 3.3 Decorative Tint Group
-
-Six decorative tints for chips, badges, insight cards, empty states: `decor-rose`, `decor-mint`, `decor-butter`, `decor-lavender`, `decor-peach`, `decor-sky`. Each has `/10`, `/20`, and `/60` opacity variants via `color-mix()`. Tints stay calm and blue-anchored — no coral, no cream, no warm-dark palette.
-
-### 3.4 Scoped Accent Roles
-
-Purpose-specific slots: `--color-data-emphasis`, `--color-load-heatmap`, `--color-calendar-today`, `--color-active-phase`. These are for specific dashboard contexts, not general decoration.
-
-### 3.5 Gradient Policy
-
-**No decorative gradients.** Atmospheric depth comes from imagery or surface-color change, never from a CSS gradient overlay.
-
-**Information-bearing gradients ARE permitted** when they encode data:
-- Training load heatmaps (calendar cells colored by TSS intensity)
-- GPS route traces (colored by pace/HR/power zones)
-- Intensity distribution bands (zone-colored fills in area charts)
-- Progress gradient fills (e.g., weekly TSS bar with zone stacking)
-
-The test: if removing the gradient removes information the user needs, it is permitted. If removing it removes only aesthetics, it is banned.
+运动颜色一律走 `getSportConfig(sport).color`，任何地方都不许自己写一份 sport → 颜色的映射。
 
 ---
 
-## 4. Typography
+## 5. 字阶
 
-### 4.1 Font Stacks
+六档，中间没有第七档：
 
-| Stack | Fonts | Usage |
-|---|---|---|
-| Sans display/body | Geist (via `next/font`) → Inter fallback, PingFang SC / Microsoft YaHei / Noto Sans CJK SC for CJK, system-ui | Everything — headlines, body, UI, metrics |
-| Mono | `ui-monospace`, SF Mono, Geist Mono, Roboto Mono | Tables, code, aligned numeric columns |
-
-**No serif anywhere.** `font-serif` is repointed to the sans stack. Geist weight 600 approximates SF Pro Display for headlines. Geist at 500 is dropped entirely — the weight ladder is 300/400/600/700.
-
-### 4.2 CJK/Latin Rules
-
-- **Latin headlines**: Negative letter-spacing at display sizes (-0.010em to -0.024em). Never at 12px or below.
-- **CJK text**: Tracking tighten does NOT apply to CJK glyphs. CJK headlines use the same font-size scale but without letter-spacing adjustment. Suppressed via `:where(:lang(zh)) { letter-spacing: normal; }`.
-- **Mixed CJK/Latin body**: `lang` attribute scopes tracking suppression. Latin words embedded in CJK inherit surrounding CJK metrics.
-- **Terminology**: Use established Chinese endurance terms — 训练负荷 (training load), 最大摄氧量 (VO2max), 乳酸阈 (lactate threshold / LTHR), 静息心率 (resting HR), 心率变异 (HRV). Do not translate metric abbreviations (TSS, CTL, ATL, TSB remain Latin).
-
-### 4.3 Type Scale
-
-Each row names the CSS variable that `@theme inline` exposes, so the size in this table and the size the browser renders are the same number. `scripts/check_design_tokens.py` compares them.
-
-| Token | Size | Line-height | Usage |
+| Token | 值 | 行高 | 用途 |
 |---|---|---|---|
-| `--text-display-xl` | `clamp(2.5rem, 5vw, 3rem)` | 1.15 | Hero headline |
-| `--text-display-lg` | `clamp(2rem, 4vw, 2.5rem)` | 1.2 | Tile / page title |
-| `--text-display-md` | `clamp(1.75rem, 3vw, 2rem)` | 1.25 | Section head |
-| `--text-display-sm` | `28px` | 1.3 | Lead / answer headline |
-| `--text-largeTitle` | `28px` | 1.4 | Large title |
-| `--text-title1` | `24px` | 1.4 | Major section header |
-| `--text-title2` | `22px` | 1.4 | Card title, sheet header |
-| `--text-title3` | `20px` | 1.4 | Sub-section header, metric value |
-| `--text-headline` | `15px` | 1.5 | Emphasised body (semibold) |
-| `--text-body` | `15px` | 1.5 | Default body copy |
-| `--text-callout` | `14px` | 1.5 | Secondary body, control label |
-| `--text-subheadline` | `13px` | 1.5 | List row title, supporting copy |
-| `--text-footnote` | `13px` | 1.5 | Helper text |
-| `--text-caption1` | `12px` | 1.5 | Metadata, badges, provenance |
-| `--text-caption2` | `11px` | 1.5 | Latin-only labels — never Chinese |
+| `--text-metric-xl` | `3.5rem` | 1.05 | 56px 主数字，一屏一处 |
+| `--text-metric-lg` | `2.5rem` | 1.1 | 40px 次大数字 |
+| `--text-display-sm` | `1.75rem` | 1.3 | 28px 页面标题与结论句 |
+| `--text-title2` | `1.375rem` | 1.4 | 22px 卡内数值 |
+| `--text-body` | `0.9375rem` | 1.5 | 15px 正文 |
+| `--text-caption1` | `0.75rem` | 1.5 | 12px 标签与出处 |
 
-### 4.4 Principles
+规则：
 
-- **Body at 15px.** Compact body lets data and advice share the same column width without horizontal scroll.
-- **Chinese never below 12px.** CJK glyphs carry far more strokes per em than Latin, and below 12px they smear. `text-caption2` (11px) is therefore Latin-only; Chinese labels start at `text-caption1`. Enforced by `scripts/type-scale.test.ts`.
-- **Use the tokens, not arbitrary sizes.** `text-[13px]` bypasses the scale, so a global change silently misses that element. The gate rejects arbitrary sizes except where a `type-scale-allow` comment records why.
-- **The mono stack names CJK faces.** `font-mono` is for tabular figures and Latin labels; Chinese inside it still resolves to PingFang/YaHei rather than a generic monospace face.
-- **Weight 600 for headlines, 700 for numerals.** Weight 500 is deliberately absent.
-- **Weight 300 is real and rare.** Reserved for airy moments.
-- **Line-height**: display 1.15–1.3 (tight), body 1.5 (never tighter).
-
-### 4.5 Number Rendering
-
-All metric values use **tabular figures** (`font-feature-settings: "tnum" 1`, set globally on `body`). For numeric tables, use `font-mono` to align columns at the decimal.
+- **中文不小于 12px。** 12px 是中文的地板，`--text-caption2`（11px）只给拉丁标签用，出现汉字就超档。
+- **数字等宽。** 指标值一律 `font-mono` 或 `tabular-nums`，一列数字上下对得齐。
+- **小数位一致。** 同一组数字小数位相同：要么全是整数，要么全是一位小数，不混。
+- **单位 12px 贴基线。** 单位用 `--text-caption1`，与数值基线对齐，字号一大会把读数读成两个数。
+- **不写任意字号。** `text-[13px]` 会绕过整个字阶，全局改一次就漏一处。
 
 ---
 
-## 5. Spacing & Layout
+## 6. 间距、圆角、阴影
 
-### 5.1 Spacing Scale (8px base grid)
+### 6.1 间距
 
-| Token | Value | Usage |
-|---|---|---|
-| `1` | 4px | Tight gaps |
-| `2` | 8px | Icon-text gaps |
-| `3` | 12px | List row internal |
-| `4` | 16px | Compact card padding |
-| `5` | 20px | Default card padding |
-| `6` | 24px | Section spacing, card grid gutters |
-| `8` | 32px | Card padding (editorial default) |
-| `10` | 40px | Intermediate rhythm |
-| `12` | 48px | Hero spacing |
-| `16` | 64px | Page breathing room |
-| `section` | 80px | Major section breaks |
+取 4 的倍数，只用这几档：
 
-### 5.2 Page Container
-
-```
-/* Owned by AppShell — do not re-declare on pages */
-.shell-main { padding via --shell-pad-y + --mobile-nav-height }
-.page-stack { gap: var(--shell-gap) }
-```
-
-| Token | Value | Role |
-|---|---|---|
-| `--shell-content-max` | `64rem` | Content column width |
-| `--shell-pad-x` | `clamp(1rem, 3vw, 3.5rem)` | Horizontal page padding |
-| `--shell-pad-y` | `clamp(1.25rem, 4vw, 3.25rem)` | Vertical page padding |
-| `--shell-gap` | `clamp(1rem, 2vw, 2rem)` | Gap between stacked sections |
-| `--shell-header-h` | `4.75rem` | Sticky header height |
-| `--mobile-nav-height` | `4.5rem` | Bottom tab bar clearance |
-
-### 5.3 Grid
-
-- Dashboard: `grid grid-cols-1 lg:grid-cols-2 gap-4`
-- Stat strips: `grid grid-cols-2 lg:grid-cols-4 gap-3`
-- Calendar: `grid grid-cols-7`
-
-### 5.4 Viewport Stability
-
-Use `min-h-[100dvh]`, never `h-screen`.
-
-### 5.5 Density Ladder（密度阶梯，v9）
-
-Three density modes; every page/component picks one and stays in it. The
-modes are the only sanctioned densities — never mix `table` and `card`
-rhythms inside one surface.
-
-| Mode | Use for | Rhythm | Numerals | Interaction |
-|---|---|---|---|---|
-| `table` | 训练日志、活动列表、设置明细 | 行高 44px（`min-h-[44px]`），分隔线 `border-border-subtle`，hover `bg-surface-active` | `tabular-nums` 强制 | 行点击进入详情；筛选/排序在表头或上方 chips |
-| `card` | 首页、目标、健康摘要 | 卡片间距 `gap-4`，卡内 `padding="md"`，值 + 趋势 + 一词释义（见 KpiCard/SessionCard） | `tabular-nums` 强制 | 主行动在卡片内或卡片底部 |
-| `chart` | 洞察、趋势、活动分析 | 统一走 `ChartShell`（title/subtitle/legend/provenance/空态），禁手写标题壳；图表高度 `h-64`–`h-80` | 轴标签 `text-caption1` | tooltip 统一"值 + Δ + 基线"三行 |
-
-Rules:
-- 一个页面一个主模式；`chart` 模式内的卡片 chrome 必须用 `ChartShell`，不手写 `h2` + 描述 + `Card` 三件套。
-- 空态统一：`EmptyState`（title 用共享常量 `EMPTY_LABEL`）+ 指向"同步 Intervals.icu"的引导文案。
-- 数值列一律 `tabular-nums`；百分比/配速等格式走 `shared/lib/format.ts`，不内联拼字符串。
-
----
-
-## 6. Primitives & State Inventory
-
-Every interactive primitive must implement all seven states. Non-interactive primitives implement the first three.
-
-### 6.1 State Inventory
-
-| State | Token / Class | Behavior |
-|---|---|---|
-| **Rest** | Default token values | Baseline appearance |
-| **Hover** | `hover:bg-surface-overlay` (or equivalent) | Subtle surface shift |
-| **Focus** | `focus-ring` utility (2px `ring` color + glow) | Keyboard-visible outline |
-| **Pressed/Active** | `transform: scale(0.95)` | Physical press feedback |
-| **Disabled** | `opacity-50 cursor-not-allowed` | Visually muted, non-interactive |
-| **Loading** | Spinner or skeleton placeholder | Indicates async operation |
-| **Error** | `border-error text-error` | Red hairline + text |
-
-### 6.2 Card
-
-```
-glass-surface rounded-xl p-8
-```
-
-- Flat — no shadow. 1px hairline provides the edge.
-- Border radius: `rounded-2xl` (~16px) for glass cards.
-- Default padding: `p-6` (24px, Card `md`). Hero / editorial: `p-8` (Card `lg`). Compact grids: `p-4` (Card `sm`).
-- Cards never nest. Page roots use `.page-stack` (`gap: var(--shell-gap)` = 32px).
-- States: rest, hover (no change — cards are non-interactive by default), focus (if focusable), error border.
-
-### 6.3 Button
-
-| Variant | Classes | States |
-|---|---|---|
-| Primary pill | `bg-primary text-on-accent rounded-full px-[22px] py-[11px]` | rest, hover (scale 0.98), focus, pressed (scale 0.95), disabled, loading |
-| Secondary pill | `border border-primary text-primary rounded-full` | rest, hover, focus, pressed, disabled |
-| Dark utility | `bg-ink text-on-dark rounded-sm` | rest, hover, focus, pressed, disabled |
-| Pearl capsule | `bg-surface-overlay text-text-secondary rounded-md border-[3px] border-border-subtle` | rest, hover, focus, pressed, disabled |
-| Link | `text-accent-strong hover:underline` | rest, hover, focus |
-
-### 6.4 Badge
-
-- Accent: `bg-accent/10 text-accent-strong rounded-full text-caption1`
-- Neutral: `bg-surface-overlay text-text-secondary rounded-full text-caption1`
-
-### 6.5 List Row
-
-Full-width button pattern for drill-in navigation with chevron indicator. States: rest, hover (`bg-surface-overlay`), focus, pressed.
-
-### 6.6 Sidebar, Tab Bar, Activity Ring, PMC Chart
-
-See component sections in `shared/layout/` and `features/pmc/`. All implement the full state inventory.
-
----
-
-## 7. Charts
-
-### 7.1 Chart Question-to-Type Grammar
-
-Every chart answers a specific data question. Choose the type by the question, not by visual preference.
-
-| Question | Chart Type | Example |
-|---|---|---|
-| "How has X changed over time?" | Line / area | PMC trend, HRV trend |
-| "How does X compare across categories?" | Bar / column | Weekly TSS by sport, zone distribution |
-| "What is the distribution of X?" | Histogram / heatmap | Intensity distribution, training load calendar |
-| "What proportion does X represent?" | Donut / stacked bar | Sport mix, energy system contribution |
-| "How do two metrics relate?" | Scatter / bubble | HR vs pace, power vs cadence |
-| "What is the current value vs target?" | Gauge / bullet | Goal progress, CTL vs target |
-| "What path did I take?" | Route trace (GPS) | Activity map with zone coloring |
-| "What is the multi-metric profile?" | Radar / spider | Ability analysis, fitness fingerprint |
-
-### 7.2 Chart Anatomy
-
-Every chart container follows this structure:
-
-1. **Shell**: `glass-surface rounded-xl p-5` (or `p-8` for showcase)
-2. **Header**: Title (`text-title3 text-text-primary`) + optional subtitle (`text-footnote text-text-muted`)
-3. **Chart area**: ECharts / uPlot instance, min-height 200px, responsive width
-4. **Legend**: Below chart for ≤5 series, right-side for >5. Uses semantic tokens, not raw hex.
-5. **Tooltip**: `bg-surface-raised border border-border-default rounded-lg shadow-elevated p-3`. Tabular numbers. Shows date + all series values.
-6. **Provenance**: Data source + date range in `text-caption1 text-text-muted` below the chart (`caption1`, not `caption2` — the line is Chinese). Format: "数据来源: Intervals.icu · 2026-01-01 至 2026-07-17"
-7. **Empty state**: Centered icon + message (`text-body text-text-muted`). No chart rendered. Message explains why (no data, no selection, loading error).
-
-### 7.3 Chart Colour Rules
-
-- Chart series use semantic tokens: `ctl`, `atl`, `tsb`, `zone-1`..`zone-5`, `sport-run`, etc.
-- Chart accent (`chart-accent`) for emphasis lines, current-value markers, selection highlights.
-- **Okabe-Ito qualitative palette** (via `chart-tokens.ts`) for series that aren't semantically coded (e.g., distribution across many categories).
-- Chart colors auto-brighten in dark mode via CSS variable resolution.
-- Dual-theme ECharts: a single-point re-init via `useECharts` swaps themes without re-mounting the chart.
-- Never use raw hex in chart configuration — use `chart-tokens.ts` to read CSS variables.
-
----
-
-## 8. Motion
-
-### 8.1 Motion Tokens
-
-| Token | Value | Usage |
-|---|---|---|
-| `duration-instant` | 100ms | Press feedback, toggle |
-| `duration-fast` | 200ms | Hover transitions, theme switch |
-| `duration-normal` | 300ms | Sheet open, dialog enter |
-| `duration-slow` | 500ms | Page transitions, chart data update |
-
-### 8.2 Easing
-
-| Token | Value | Usage |
-|---|---|---|
-| `ease-default` | `cubic-bezier(0.25, 0.1, 0.25, 1)` | General transitions |
-| `ease-enter` | `cubic-bezier(0, 0, 0.2, 1)` | Elements entering view |
-| `ease-exit` | `cubic-bezier(0.4, 0, 1, 1)` | Elements leaving view |
-| `ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Playful overshoot (rare — activity ring sweep) |
-
-### 8.3 Rules
-
-- GPU-composited only: `transform`, `opacity`, `filter`. Never animate `width`, `height`, `top`, `left`.
-- Honor `prefers-reduced-motion: reduce` — collapse all durations to 0.01ms.
-- Button press: `transform: scale(0.95)` on active — not a hex change.
-- Theme transition: `background-color 200ms ease, color 200ms ease` on `body`.
-
----
-
-## 9. Responsive Behavior
-
-### 9.0 AppShell is the only layout framework
-
-`AppShell` owns PC + mobile chrome for every dashboard route:
-
-| Concern | Owner | Pages must NOT |
-|---|---|---|
-| Sidebar (md+) / bottom tabs (<md) | `Sidebar` + `MobileTabBar` | Re-implement dual nav |
-| Content max-width | `--shell-content-max` / `.shell-main-inner` | Local `max-w-*` wrappers |
-| Horizontal padding + safe-area | `--shell-pad-x*` | Local `px-4` / safe-area hacks |
-| Bottom clearance for tab bar | `--mobile-nav-height` set by `MobileTabBar` | Hardcoded `pb-24` |
-| Scroll region | `.shell-main` | Nested full-viewport scroll shells |
-
-Route pages render **content only**, ideally:
-
-```tsx
-export default function Page() {
-  return (
-    <div className="page-stack">
-      {/* feature sections */}
-    </div>
-  );
-}
-```
-
-## 9.1 Breakpoints
-
-
-### 9.1 Breakpoints
-
-| Breakpoint | Width | Layout |
-|---|---|---|
-| Mobile | < 768px (375px reference) | Single column, bottom tab bar, full-width cards |
-| Tablet | 768px – 1279px | Sidebar collapsed (68px), 2-column grids |
-| Desktop | >= 1280px | Sidebar expanded (240px), max-w-5xl content, 2–4 column grids |
-
-### 9.2 Composition Rules
-
-- **Mobile (375px)**: Single column, cards full-width, tab bar fixed bottom, content `pb-24` for tab clearance. No hover states (touch-only). Charts: single-up, full-width, simplified tooltips.
-- **Tablet (768px)**: Sidebar collapsed to icon-only. Content area uses 2-column grids. Touch interactions preserved.
-- **Desktop (1280px)**: Sidebar expanded. Content `max-w-5xl` centered. Multi-column chart grids. Full hover/focus interactions.
-
-### 9.3 Safe-Area Rules
-
-- Bottom: `padding-bottom: max(env(safe-area-inset-bottom), 96px)` on mobile main content (96px = 64px tab bar + 32px breathing room).
-- Top: `padding-top: env(safe-area-inset-top)` on sticky headers.
-- Left/Right: `padding-left: env(safe-area-inset-left)` and `padding-right: env(safe-area-inset-right)` on full-bleed containers.
-
----
-
-## 10. Accessibility Constraints
-
-### 10.1 Touch Targets
-
-- **Minimum 44x44px** for all interactive elements at mobile (< 768px). This includes buttons, icon buttons, list rows, tab bar items, sidebar entries.
-- Visual size may be smaller (e.g., 24px icon) but the hit area must be >= 44x44 via padding or min-width/min-height.
-- Desktop does not have this constraint but should maintain >= 32x32 for usability.
-
-### 10.2 Colour & Contrast
-
-- All text passes WCAG AA: 4.5:1 for body, 3:1 for large text (>= 18px, or >= 14px bold).
-- `--color-accent` fill with `--color-on-accent` white: passes for button text.
-- Accent text uses `--color-accent-strong`, never `--color-accent`. Measured: 7.5:1 on the light canvas `#f4f6f8`, 8.1:1 on the dark panel `#10151e`. `--color-accent` on the dark panel is 3.7:1 and fails body text; `scripts/check_web_tokens.py` rejects it.
-- Data-semantic colours are for charts and category labels, not for text that carries critical information without a second encoding (shape, label, pattern).
-
-### 10.3 Keyboard Navigation
-
-- All interactive elements are focusable via Tab.
-- Focus ring: 2px `ring` color + 4px glow (`focus-ring` utility).
-- Skip link: first focusable element on page, hidden until focused.
-- Dialog/sheet: focus trapped, Escape closes, focus returns to trigger.
-
-### 10.4 Screen Reader
-
-- All icons have `aria-label` or are wrapped with `aria-hidden="true"` when decorative.
-- Charts: `aria-label` with summary, data table alternative for critical data.
-- Live regions for async updates (sync status, import progress).
-
-### 10.5 Reduced Motion
-
-- `prefers-reduced-motion: reduce`: all animations collapse to 0.01ms.
-- No auto-playing animations without user interaction.
-
----
-
-## 11. Icons
-
-### 11.1 Icon System
-
-- **Library**: Lucide React (`lucide-react`).
-- **Sizes**: 16px (inline with caption), 20px (default — list rows, nav), 24px (hero/emphasis), 32px (empty state).
-- **Stroke width**: 1.5px default, 2px for emphasis/active, 2.4px for tab bar active state.
-- **Color**: Inherit from parent text color (`currentColor`). Never hardcode icon fill.
-- **No emojis** in visible UI. Lucide only.
-
----
-
-## 12. Action Hierarchy
-
-### 12.1 Levels
-
-| Level | Visual | Usage |
-|---|---|---|
-| **Primary** | Winter Sky Indigo pill (`bg-primary text-on-accent rounded-full`) | One per view. The main action (save, start, confirm). |
-| **Secondary** | Border pill or pearl capsule | Supporting actions (cancel, edit, filter). |
-| **Tertiary** | Link style (`text-accent-strong hover:underline`) | Low-emphasis actions (learn more, view details). |
-| **Destructive** | `text-error` or `bg-error text-white` | Irreversible actions (delete, disconnect). Always requires confirmation dialog. |
-
-### 12.2 Rules
-
-- One primary action per view. If you need two, one is actually secondary.
-- Destructive actions always require explicit confirmation (dialog with typed action name).
-- Disabled states must explain why (tooltip or inline message).
-
----
-
-## 13. Depth & Elevation
-
-| Level | Treatment | Usage |
-|---|---|---|
-| Flat | 1px hairline, no shadow | Every panel (`Card`), buttons, text |
-| Chrome glass | `.glass-surface` / `.glass-surface-strong` | Sidebar, sticky header, mobile tab bar — never panels |
-| Overlay shadow | `--shadow-elevated` | Popovers, dialogs, sheets |
-
-`--shadow-card` and `--shadow-sheet` exist for overlays. Panels carry no shadow: a page of six shadowed cards reads as six competing layers, and the hairline is enough to separate a panel from the canvas.
-
-### Border Radius
-
-Tailwind's default scale, used as written. There is no `--radius-*` token layer; a second scale that nothing read was how the previous table drifted away from the rendered result.
-
-| Class | Value | Usage |
-|---|---|---|
-| `rounded-lg` | 8px | Buttons, chips, inputs |
-| `rounded-xl` | 12px | Every panel (`Card`) |
-| `rounded-2xl` | 16px | Dialogs, sheets |
-| `rounded-full` | 9999px | Pills, dots, avatars |
-
----
-
-## 14. Dual Mode (Light + Dark)
-
-Light mode: dusk paper `--color-surface-base` `#f4f6f8`, Winter Sky Indigo chrome, sakura/amber atmosphere. Dark mode: night sky `#080a0f`, `--color-accent-strong` `#9aaecf` for accent text. Data-semantic palette unchanged in meaning; both modes read the same tokens.
-
-Theme transitions: `transition: background-color 200ms ease, color 200ms ease` on `body`. ECharts re-init via a single `useECharts` swap point keeps dual-mode charts in lockstep with the toggle.
-
----
-
-## 15. Accepted Debt
-
-| Debt | Reason |
+| 值 | 用在哪 |
 |---|---|
-| Playwright E2E uses storage-state auth | The suite boots against a real backend; a scripted login would add a second auth path that production does not use. `npm run qa:auth-bootstrap` mints the state from the app's own JWT secret. |
-| React dev tooling (react-scan, react-grab) not wired | react-scan@0.5.7 fails to import under Node 24. |
+| 8px | 标签与它的值、图标与文字 |
+| 12px | 卡内分组内边距、列表行内边距 |
+| 16px | 同一组的两个块之间 |
+| 20px | 内容卡内边距 |
+| 24px | 页面块与块之间（手机上） |
+| 32px | 页面块与块之间（sm 以上） |
+| 48px | 大段落之间、首屏与正文之间 |
 
-`--color-accent` is a fill token. In dark mode it measures 3.7:1 against `--color-surface-card`, so accent-coloured *text* uses `--color-accent-strong` (8.1:1 dark, 7.5:1 light). `scripts/check_web_tokens.py` enforces the panel, palette and type rules that the rest of this document describes.
+### 6.2 圆角
+
+| 值 | 用在哪 |
+|---|---|
+| 16px | 卡片、面板（`rounded-2xl`） |
+| 12px | 小控件、卡内分组块（`InsetBlock`）、输入框 |
+| 24px | 只在对话框与抽屉上用；面板永远不是 24px |
+| 999px | 按钮、状态点、胶囊标签 |
+
+### 6.3 阴影
+
+三种，作用固定，不互相借用：
+
+| Token | 浅色 | 深色 | 用在哪 |
+|---|---|---|---|
+| `--shadow-panel` | `0 1px 3px rgb(27 36 48 / 0.08)` | `0 2px 8px rgb(0 0 0 / 0.45)` | 行动卡（一屏唯一一张） |
+| `--shadow-elevated` | `0 12px 35px rgba(15, 23, 42, 0.1)` | `0 24px 70px rgba(0, 0, 0, 0.38)` | 浮层、下拉、对话框 |
+| `--shadow-sheet` | `0 -12px 36px rgba(15, 23, 42, 0.14)` | `0 -18px 50px rgba(0, 0, 0, 0.5)` | 底部抽屉 |
+
+只有行动卡和弹层用阴影。内容卡不加阴影：一页六张投影卡片就是六层互相竞争的平面，明度差已经把层次说完了。
 
 ---
 
-## Do's and Don'ts
+## 7. 组件
 
-### Do
-- Reference tokens (`bg-surface-card`, `text-text-primary`) — never raw hex.
-- Use Winter Sky Indigo for **every** interactive element.
-- Build panels with `Card`. One radius (`rounded-xl`), one hairline edge, no shadow.
-- Reserve `.glass-surface` for chrome: sidebar, sticky header, mobile tab bar.
-- Use `text-accent-strong` for accent-coloured text; `--color-accent` is a fill.
-- Resolve every banded metric through `zoneFor()` / `metricZones()` so the number, its band and the band's explanation come from `contracts/v1/metrics.yaml`.
-- Set headlines in sans with negative letter-spacing.
-- Run body copy at 15px.
-- Use `rounded-full` for primary CTAs.
-- Use `chart-accent` for chart emphasis.
-- Apply `transform: scale(0.95)` as the active/press state on buttons.
-- Use Lucide icons — never emojis.
-- Preserve data-semantic colours (PMC, zones, sport, health, recovery, goals).
-- Test both light and dark mode for every component.
-- Ensure >= 44px touch targets on mobile.
-- Include chart provenance (data source + date range) at `text-caption1`.
-- Use information-bearing gradients for heatmaps, route traces, intensity bands.
+### 7.1 已有基础组件（`apps/web/shared/ui/`）
 
-### Don't
-- Don't introduce a second accent colour.
-- Don't add shadows to panels, buttons, or text.
-- Don't nest panels. A group inside one panel is a `border-t` separator.
-- Don't use decorative gradients.
-- Don't set body copy at weight 500.
-- Don't round full-bleed sections.
-- Don't tighten body line-height below 1.5.
-- Don't use raw hex codes — add tokens to `globals.css` first.
-- Don't use `h-screen` — use `min-h-[100dvh]`.
-- Don't animate `width`, `height`, `top`, `left`.
-- Don't mix serif and sans.
-- Don't write generic SaaS copy — be athlete-specific.
-- Don't make touch targets < 44px on mobile.
-- Don't render charts without provenance and empty states.
-- Don't put Chinese at `text-caption2`; that step is 11px and Latin-only.
-- Don't widen the content column past `--shell-content-max` (`64rem`).
-- Don't hard-code a band boundary or a band label in a component; the contract owns them.
-- Don't flood the UI with secondary colours; indigo is the only chrome accent — sakura and amber are atmosphere only.
+| 组件 | 用途 |
+|---|---|
+| `Card` | 唯一的面板原语，白底、圆角 16px、无边框、无阴影；`variant="action"` 才加 `--shadow-panel` |
+| `InsetBlock` | 卡片内部的分组块，靠底色区分，不画边线 |
+| `CardHeader` | 卡片头部信息带：20px 图标、12px 标题、右端 trailing |
+| `ProgressRow` | 标签加 6px 细进度条，一行说清完成度 |
+| `Section` / `SectionHeader` | 页面段落与段落标签 |
+| `ReadingStrip` | 首屏四格读数，应用在仪表盘类页面开头 |
+| `MetricStrip` | 摘要三格：标签、40px 大数、注释，可选 6px 细进度条 |
+| `RingStat` | 环形进度：环宽 6px，环内当前值，环下标签 |
+| `NumberPair` | 双大数块：两组读数左右并排 |
+| `KpiCard` | 单个指标卡：标签、值、比较行 |
+| `Progress` | 通用进度条（可带标签与计数） |
+| `Badge` | 胶囊状态标签 |
+| `EmptyState` | 空态统一容器 |
+| `DataState` | 加载、错误、空三种数据形态的分发 |
+| `Skeleton` | 骨架占位 |
+| `ChartShell` | 图表外壳：标题、范围、出处、空态 |
+| `ListRow` | 可点击的整行 |
+| `ZoneMeter` / `ZoneScale` | 区间条与区间刻度 |
+
+`SectionHeader` 是面板外的段落标签，`CardHeader` 是卡片内的信息带：两者字号与颜色一致（`text-caption1` + `text-text-muted`），区别只在卡片自己的内边距和头部要不要 20px 图标。两种标签在同一页并排时不能出现两种灰。
+
+### 7.2 页面级组件台账
+
+七个页面级组件都已经落在具体页面上。页面要表达这些信息时用下表点名的那个组件，不要临时发明第四种表达方式。
+
+**已实现**
+
+| 组件 | 位置 | 在该页承担什么 |
+|---|---|---|
+| 占比横条 | `SportDistributionBar.tsx`（训练记录列表）、`HrZoneDistribution.tsx`（活动详情）、`MuscleDistribution.tsx`（日历力量页） | 把几项占比叠在一条横条上，读出「各占多少」。三处各自在页内实现，`shared/ui/` 里还没有共用原语。 |
+| 分段表行 | `features/activity/components/SplitRow.tsx`，`SegmentAnalysis.tsx` 与 `LapAnalysis.tsx` 共用 | 活动详情里一段跑得怎么样：距离、用时、配速、心率一列一格，计圈表多一格爬升。行与行对得齐，手机上收起用时与爬升两列，不横向滚动。 |
+| 月历格 | `features/plan/components/MonthDayCell.tsx`（`PlanMonthView.tsx` 使用） | 月视图里的单日：日号、当天负荷、完成标记与比赛标记。一格只表达一天有没有量、做没做完。 |
+| 计划实际双列块 | `features/calendar/components/DayPlanActual.tsx`（`CalendarDaySheet.tsx` 使用） | 同一天的课表与记录左右并排，配速区间、时长、TSS 上下对齐，回答「计划的和做的差在哪」。 |
+| 装备行 | `features/settings/components/GearSection.tsx` | 档案页里一双鞋一行：累计里程，加上退役或建议更换的状态，回答「这双鞋还能不能用」。 |
+| PB 四格 | `features/settings/components/PersonalRecordsGrid.tsx` | 档案页里 5K、10K、半马、全马各占一格，回答「我现在是什么水平」。没跑过的距离写「未记录」，不留空格也不写 0。 |
+| 编号步骤卡 | `features/today/components/WorkoutStepList.tsx`（`WorkoutSegments.tsx` 转交给它，首页 `TodayWorkoutCard.tsx` 使用） | 今日课表里一节课从热身到放松按序号一步一行：序号只表示顺序不表示组数，组数写成贴在步骤名后的 `×N`，组间恢复缩进一行不占序号。行间只用发丝线，不铺底色；「进行到的那一步单独高亮」仍缺数据（没有「进行到第几步」），所以不做高亮。 |
+
+---
+
+## 8. 图表
+
+每张图四个要素，缺一不画：
+
+1. **标题** — 这张图回答什么问题，12px 或 15px，不用大标题。
+2. **范围** — 时间区间，写在标题右侧或下方。
+3. **轴标签** — 12px，`--color-text-muted`；单位贴在轴标题里。
+4. **出处** — 「数据来源：Intervals.icu · 2026-01-01 至 2026-07-17」，12px。
+
+右侧 tooltip 固定三行，顺序不变：
+
+1. 值（带单位）
+2. 与基准的差（Δ，带正负号）
+3. 基准本身（计划值、四周均值或阈值）
+
+空数据不画坐标系。没有数据的图不该留下一副空轴让人以为数据是 0——直接把坐标系收掉，换成一句说明为什么没有数据。
+
+图表颜色只用语义色，走 `chart-tokens.ts` 读 CSS 变量，配置里不写裸十六进制。
+
+---
+
+## 9. 状态
+
+每一屏都要能回答五种形态，缺一种就是没做完：
+
+| 形态 | 页面表现 |
+|---|---|
+| 空 | 一句话说清为什么空，以及怎么补数据（同步 Intervals.icu），不画坐标系 |
+| 部分数据 | 有值的正常渲染，缺的写「未记录」，不拿 0 顶替 |
+| 加载 | 骨架占位，形状与最终内容一致，不用转圈盖住整页 |
+| 错误 | 说清哪个请求失败了、重试按钮在错误行上，不弹全屏对话框 |
+| 未录入 | 引导到设置页填入生理参数，说明为什么需要它 |
+
+两条硬规则：
+
+- **数值缺失写「未记录」。** 不写 0，不写「-」，不写「暂无」。
+- **`data_sufficient: false` 的分数不当真值展示。** 样本量不够的 VO2max、阈值配速、就绪分数，显示「样本不足」并给出还需要几次训练，而不是把噪声印成结论。
+
+---
+
+## 10. 断点与触控
+
+| 断点 | 宽度 | 布局 |
+|---|---|---|
+| 手机 | < 768px | 单栏，底部五个 tab |
+| 平板竖屏 | 768px – 1023px | 图标栏（无底部 tab），单栏或两栏 |
+| 平板横屏 | 1024px – 1279px | 侧栏，两栏 |
+| 桌面 | >= 1280px | 侧栏，内容列居中 |
+
+- **任何一档都不出现横向滚动。** 图表在容器里 `max-width: 100%`，宽表用自适应的分段表行而不是横向滚动。
+- **可点区域不小于 44×44px。** 视觉尺寸可以更小（20px 图标），命中区靠内边距补足。
+- 分段控件（Tabs）在手机上等分整行，不横向滚动。
+- 手机竖屏下内容在滚动区底部结束，滚动区高度已扣除底部 tab，页面不自己加 `pb-24`。
+
+---
+
+## 11. 禁止清单
+
+- 第二强调色。
+- 装饰性渐变（编码数据的渐变——热力图、轨迹着色、区间带——不在此列）。
+- 毛玻璃 / `backdrop-filter`。
+- 插画。
+- 头像（除账户入口的系统占位）。
+- emoji。
+- 卡片套卡片（卡内分组用 `InsetBlock`）。
+- 一屏两张行动卡。
+- 用「等效成绩 / 预测成绩 / 估算成绩」描述真实成绩。
+- 横向滚动。
+- 11px 中文。
+- 裸写十六进制颜色。
