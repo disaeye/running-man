@@ -2,6 +2,7 @@ import { describeAtl, describeTsb } from "@features/pmc/components/pmcSemantics"
 import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
 import type { LocalReadiness } from "@features/today/hooks/useReadiness";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 export type DriverStat = {
   readonly label: string;
@@ -93,8 +94,8 @@ export function buildRecoveryDrivers(wellness: WellnessPoint[]): DriverStat[] {
     },
     {
       label: "RHR",
-      value: latestRhr != null ? `${Math.round(latestRhr)} bpm` : "--",
-      detail: `28日均 ${formatNumber(average(recentValues(wellness, "resting_hr", 28)), "bpm")}`,
+      value: latestRhr != null ? `${Math.round(latestRhr)} ${HEART_RATE_UNIT}` : "--",
+      detail: `28日均 ${formatNumber(average(recentValues(wellness, "resting_hr", 28)), HEART_RATE_UNIT)}`,
       tone: "text-text-primary",
     },
     {

@@ -28,11 +28,11 @@ export function AnalysisRangeControls({
   const timezone = useAthleteTimezone();
   return (
     <div
-      className={`flex flex-wrap items-center justify-end gap-2 ${className ?? ""}`.trim()}
+      className={`flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end ${className ?? ""}`.trim()}
       data-testid="analysis-range-controls"
     >
       <div
-        className="flex items-center gap-1"
+        className="flex w-full items-center gap-1 sm:w-auto"
         role="group"
         aria-label="区间预设"
       >
@@ -45,6 +45,7 @@ export function AnalysisRangeControls({
               variant={active ? "default" : "ghost"}
               onClick={() => onDateRangeChange(rangeEndingOn(dateRange.to, days))}
               aria-pressed={active}
+              className="flex-1 px-2 sm:flex-none"
             >
               {preset.label}
             </Button>
@@ -55,6 +56,7 @@ export function AnalysisRangeControls({
         from={dateRange.from}
         to={dateRange.to}
         onChange={(from, to) => onDateRangeChange({ from, to })}
+        showQuickRanges={false}
       />
     </div>
   );

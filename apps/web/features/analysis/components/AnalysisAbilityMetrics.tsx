@@ -11,6 +11,7 @@ import {
   type AnalysisSportFamily,
 } from "@features/analysis/lib/analysis-metric-taxonomy";
 import { computeRange, toISODate } from "@shared/lib/format";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 type MetricValues = {
   readonly family: AnalysisSportFamily;
@@ -51,17 +52,29 @@ export function AbilityMetricsRow() {
     [profile, weekAgo, wellness]);
   const taxonomy = getAnalysisMetricTaxonomy(profile?.preferred_sport ?? null);
   const values = { ...metricValues, family: taxonomy.family };
+  const cards = taxonomy.primary.map((metric) => ({
+    key: metric.key,
+    testId: `primary-${taxonomy.family}-${metric.key}-card`,
+    props: cardProps(metric, values),
+  }));
+  const notes = cards.filter((card) => card.props.note);
   return (
     <Card padding="md" data-testid="analysis-ability-metrics">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {taxonomy.primary.map((metric) => (
-          <MetricCardWithDelta
-            key={metric.key}
-            {...cardProps(metric, values)}
-            data-testid={`primary-${taxonomy.family}-${metric.key}-card`}
-          />
+        {cards.map((card) => (
+          <MetricCard key={card.key} {...card.props} data-testid={card.testId} />
         ))}
       </div>
+      {notes.length > 0 && (
+        <ul className="mt-3 space-y-1 border-t border-border-subtle pt-3" data-testid="analysis-ability-notes">
+          {notes.map((card) => (
+            <li key={card.key} className="text-caption1 leading-snug text-text-muted">
+              <span className="text-text-secondary">{card.props.label}：</span>
+              {card.props.note}
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }
@@ -103,7 +116,7 @@ function thresholdPaceCard(values: MetricValues): CardProps {
   return {
     label: "阈值配速",
     tooltip: "乳酸阈值配速 — 约一小时全力配速 (min/km)",
-    value: formatThresholdPace(values.thresholdPace),
+    value: formatPaceValue(values.thresholdPace),
     current: values.thresholdPace,
     prior: null,
     unit: "min/km",
@@ -114,12 +127,12 @@ function thresholdPaceCard(values: MetricValues): CardProps {
 function lthrCard(values: MetricValues): CardProps {
   return {
     label: "乳酸阈心率",
-    tooltip: "约一小时全力可持续的心率 (bpm)",
+    tooltip: `约一小时全力可持续的心率 (${HEART_RATE_UNIT})`,
     value: values.lthr != null ? `${Math.round(values.lthr)}` : "--",
     current: values.lthr,
     prior: null,
     color: "text-hr-rest",
-    unit: "bpm",
+    unit: HEART_RATE_UNIT,
     note: values.lthr == null ? "缺少乳酸阈值心率：可在生理设置中填写或自动估算。" : undefined,
   };
 }
@@ -151,7 +164,7 @@ function raceSignalCard(values: MetricValues): CardProps {
   };
 }
 
-function MetricCardWithDelta(props: CardProps & { readonly "data-testid": string }) {
+function MetricCard(props: CardProps & { readonly "data-testid": string }) {
   const delta = props.current != null && props.prior != null ? props.current - props.prior : null;
   const deltaDisplay = buildDeltaDisplay(delta);
   const absDelta = delta != null ? Math.abs(delta) : 0;
@@ -160,30 +173,23 @@ function MetricCardWithDelta(props: CardProps & { readonly "data-testid": string
       data-testid={props["data-testid"]}
       className="flex flex-col gap-1 rounded-xl bg-surface-overlay/55 px-3 py-3"
     >
-      <p className="text-caption1 font-medium text-text-muted">{props.label}</p>
+      <p className="truncate text-caption1 font-medium text-text-muted">{props.label}</p>
       <p
-        className={`mt-0.5 flex items-baseline gap-1 font-mono text-title2 font-semibold tabular-nums ${props.color ?? "text-text-primary"}`}
+        className={`flex items-baseline gap-1 whitespace-nowrap font-mono text-title2 font-semibold tabular-nums ${props.color ?? "text-text-primary"}`}
       >
         <span>{props.value}</span>
         {props.unit && (
           <span className="text-footnote font-medium text-text-secondary">{props.unit}</span>
         )}
       </p>
-      <div className="mt-1 text-caption1">
-        {deltaDisplay && props.prior != null ? (
-          <span
-            className={`inline-flex items-center gap-1 font-mono font-semibold ${deltaDisplay.tone}`}
-          >
-            <deltaDisplay.Icon className="size-3" aria-hidden />
-            较上周 {absDelta.toFixed(absDelta < 1 ? 2 : 1)} {props.unit ?? ""}
-          </span>
-        ) : (
-          <span className="text-text-muted">较上周暂无对比</span>
-        )}
-      </div>
-      {props.note && (
-        <p className="mt-1 text-caption1 leading-snug text-text-muted">{props.note}</p>
-      )}
+      {deltaDisplay && props.prior != null ? (
+        <span
+          className={`flex items-center gap-1 font-mono text-caption1 font-semibold ${deltaDisplay.tone}`}
+        >
+          <deltaDisplay.Icon className="size-3" aria-hidden />
+          较上周 {absDelta.toFixed(absDelta < 1 ? 2 : 1)}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -204,6 +210,14 @@ function formatThresholdPace(seconds: number | null): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.round(seconds % 60).toString().padStart(2, "0");
   return `${mins}'${secs}"/km`;
+}
+
+/** The card prints the unit as its own token, so the value carries only the clock. */
+function formatPaceValue(seconds: number | null): string {
+  if (seconds == null || seconds <= 0) return "--";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60).toString().padStart(2, "0");
+  return `${mins}'${secs}"`;
 }
 
 function vo2ClassificationNote(sex: string | null | undefined): string {

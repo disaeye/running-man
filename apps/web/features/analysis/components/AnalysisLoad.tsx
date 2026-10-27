@@ -4,8 +4,8 @@
 // Range comes from page-level AnalysisRangeProvider.
 
 import { useMemo } from "react";
-import { Card } from "@shared/ui/Card";
 import { EmptyState } from "@shared/ui/EmptyState";
+import { InsetBlock } from "@shared/ui/InsetBlock";
 import { SectionHeader } from "@shared/ui/SectionHeader";
 import { useDataState } from "@shared/lib/use-data-state";
 import { usePmcData } from "@features/pmc/hooks/usePmcData";
@@ -47,18 +47,17 @@ export function AnalysisLoad() {
         rangeTo={range.to}
       />
 
+      {/* 一句话判断直接排在画布上：只有一行字的段落不需要面板去框它 */}
       {diagnosis && (
-        <Card padding="md" data-testid="analysis-load-judgment">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-caption1 font-medium text-text-muted">负荷</span>
-            <h2
-              className="font-mono text-title3 font-semibold tracking-tight text-text-primary sm:text-title2"
-              data-testid="analysis-load-headline"
-            >
-              {diagnosis.headline}
-            </h2>
-          </div>
-        </Card>
+        <div className="flex flex-col gap-1" data-testid="analysis-load-judgment">
+          <p className="text-caption1 text-text-muted">负荷</p>
+          <h2
+            className="text-title2 font-semibold leading-snug tracking-tight text-text-primary"
+            data-testid="analysis-load-headline"
+          >
+            {diagnosis.headline}
+          </h2>
+        </div>
       )}
 
       {diagnosis && (
@@ -91,9 +90,9 @@ export function AnalysisLoad() {
 
 function DiagnosisCard({ card }: { readonly card: LoadDiagnosisCard }) {
   return (
-    <div
+    <InsetBlock
       data-testid={card.testId}
-      className="flex flex-col gap-1.5 rounded-lg bg-surface-sunken px-4 py-3"
+      className="flex flex-col gap-1.5"
     >
       <div className="flex items-center justify-between gap-3">
         <p className="text-caption1 font-medium text-text-muted">{card.label}</p>
@@ -108,7 +107,7 @@ function DiagnosisCard({ card }: { readonly card: LoadDiagnosisCard }) {
         {card.value}
       </p>
       <p className="text-caption1 leading-snug text-text-secondary">{card.detail}</p>
-    </div>
+    </InsetBlock>
   );
 }
 

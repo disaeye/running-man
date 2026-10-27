@@ -77,7 +77,7 @@ export function PerformancePRs() {
         const config = getSportConfig(sport);
         return (
           <section key={sport}>
-            <h2 className="mb-4 text-subheadline font-semibold text-text-muted">
+            <h2 className="mb-3 text-caption1 font-semibold text-text-secondary">
               {config.label || sport}
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,211 +1,171 @@
 "use client";
 
-import { Card } from "@shared/ui/Card";
-import { Sparkline } from "@shared/ui/Sparkline";
-import { cn } from "@shared/lib/utils";
+import { MetricStrip, type MetricStripItem } from "@shared/ui/MetricStrip";
+import { Row, Section, SectionChart } from "@shared/ui/Section";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 import { PMCChart } from "@features/pmc/components/PMCChart";
+import { zoneFor, type ZoneTone } from "@shared/lib/metric-zone";
 import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
 import type { AnalysisPageTab } from "@shared/config/canonical-routes";
 import { useAnalysisOverviewSummary } from "../lib/use-analysis-overview-summary";
-import {
-  ANALYSIS_PILLAR_META,
-} from "../lib/analysis-pillars";
+import { ANALYSIS_PILLAR_META } from "../lib/analysis-pillars";
+import { PeriodReading } from "./PeriodReading";
 
-type OverviewTab = Extract<
-  AnalysisPageTab,
-  "load" | "performance" | "intensity"
->;
+type OverviewTab = Extract<AnalysisPageTab, "load" | "performance" | "intensity">;
 
 type AnalysisOverviewProps = {
   readonly onSelectTab?: (tab: OverviewTab) => void;
+  readonly rangeLabel?: string;
 };
 
 /**
- * Overview = short verdict + risk chip + 3 visual pillars + PMC.
- * Prose is minimal; charts and risk color carry the story.
+ * Overview = the verdict, the four numbers behind it, the load chart, one row
+ * per pillar, and the period reading. The prose stays short; the numbers and
+ * the risk colour carry the story.
  */
-export function AnalysisOverview({ onSelectTab }: AnalysisOverviewProps) {
+export function AnalysisOverview({ onSelectTab, rangeLabel }: AnalysisOverviewProps) {
   const view = useAnalysisOverviewSummary();
-  const verdictTone = toneForRisk(view.summary.risk);
-  const tsbSpark = (view.pmc as PmcPoint[])
-    .map((p) => p.tsb)
-    .filter((v) => Number.isFinite(v));
+  const points = view.pmc as PmcPoint[];
+  const latest = points.at(-1) ?? null;
+  const d7 = points.slice(-7).reduce((sum, point) => sum + (point.tss ?? 0), 0);
+  const tsbZone = zoneFor("tsb", latest?.tsb ?? null);
+
+  const readings: MetricStripItem[] = [
+    {
+      label: "体能 CTL",
+      value: latest?.ctl != null ? String(Math.round(latest.ctl)) : NO_VALUE,
+      note: ctlTrend(points),
+    },
+    {
+      label: "疲劳 ATL",
+      value: latest?.atl != null ? String(Math.round(latest.atl)) : NO_VALUE,
+    },
+    {
+      label: "状态 TSB",
+      value: latest?.tsb != null ? String(Math.round(latest.tsb)) : NO_VALUE,
+      note: tsbNote(tsbZone?.tone, tsbZone?.label),
+    },
+    {
+      label: "近 7 天负荷",
+      value: d7 > 0 ? String(Math.round(d7)) : NO_VALUE,
+      unit: "TSS",
+    },
+  ];
+
+  const pillars = view.summary.pillars.map((pillar) => {
+    const meta = ANALYSIS_PILLAR_META.find((entry) => entry.pillarId === pillar.pillarId);
+    return { ...pillar, title: meta?.title ?? pillar.pillarId };
+  });
 
   return (
     <div className="page-stack" data-testid="analysis-overview-inner">
-      <Card padding="lg">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <h2
-              className="text-title1 font-semibold tracking-tight text-text-primary"
-              data-testid="analysis-overview-verdict"
-            >
-              {view.summary.verdict}
-            </h2>
-            <p
-              className="mt-2 max-w-2xl text-subheadline leading-relaxed text-text-secondary"
-              data-testid="analysis-overview-next-step"
-            >
-              {view.summary.nextStep}
-            </p>
-            <p
-              className="mt-3 text-caption1 text-text-muted"
-              data-testid="analysis-overview-sample-line"
-            >
-              {view.summary.sampleLine}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            <span
-              className={cn(
-                "rounded-full px-3 py-1 text-caption1 font-semibold",
-                verdictTone,
-              )}
-              data-testid="analysis-overview-risk-badge"
-              data-risk={view.summary.risk}
-            >
-              {riskBadgeLabel(view.summary.risk)}
-            </span>
-            {tsbSpark.length >= 2 && (
-              <Sparkline
-                data={tsbSpark.slice(-28)}
-                variant="area"
-                color="var(--color-tsb)"
-                height={36}
-                width={140}
-                className="opacity-90"
-              />
-            )}
-          </div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2
+            className="text-title3 font-semibold tracking-tight text-text-primary"
+            data-testid="analysis-overview-verdict"
+          >
+            {view.summary.verdict}
+          </h2>
+          <p
+            className="mt-2 max-w-2xl text-subheadline leading-relaxed text-text-secondary"
+            data-testid="analysis-overview-next-step"
+          >
+            {view.summary.nextStep}
+          </p>
+          <p className="mt-1 text-caption1 text-text-muted" data-testid="analysis-overview-sample-line">
+            {view.summary.sampleLine}
+          </p>
         </div>
-      </Card>
-
-      <div className="grid grid-cols-1 items-stretch gap-4 sm:gap-5 lg:grid-cols-3">
-        {view.summary.pillars.map((pillar) => {
-          const meta = ANALYSIS_PILLAR_META.find(
-            (entry) => entry.pillarId === pillar.pillarId,
-          );
-          if (meta == null) return null;
-          return (
-            <PillarBentoCard
-              key={pillar.pillarId}
-              pillarId={pillar.pillarId}
-              tabId={pillar.tabId as OverviewTab}
-              title={meta.title}
-              description={meta.description}
-              ctaLabel={meta.ctaLabel}
-              verdict={pillar.verdict}
-              risk={pillar.risk}
-              nextStep={pillar.nextStep}
-              onNavigate={(tab) => onSelectTab?.(tab)}
-            />
-          );
-        })}
+        <span
+          className={`shrink-0 rounded-full px-3 py-1 text-caption1 font-medium ${toneForRisk(view.summary.risk)}`}
+          data-testid="analysis-overview-risk-badge"
+          data-risk={view.summary.risk}
+        >
+          {riskBadgeLabel(view.summary.risk)}
+        </span>
       </div>
 
-      <Card padding="md" aria-label="训练负荷">
-        <div className="mb-3 flex items-baseline justify-between gap-2">
-          <h3 className="text-title3 font-semibold text-text-primary">PMC</h3>
-          <span className="text-caption1 text-text-muted">CTL · ATL · TSB</span>
-        </div>
-        <PMCChart data={view.pmc as PmcPoint[]} showTitle={false} />
-      </Card>
+      <MetricStrip columns={4} testId="analysis-readings" items={readings} />
+
+      <Section
+        title="负荷趋势"
+        action={<span className="text-caption1 text-text-muted">CTL · ATL · TSB</span>}
+      >
+        <SectionChart>
+          <PMCChart data={points} showTitle={false} />
+        </SectionChart>
+      </Section>
+
+      <Section title="四个方面" testId="analysis-pillars">
+        {pillars.map((pillar) => (
+          <Row
+            key={pillar.pillarId}
+            testId={`analysis-pillar-${pillar.pillarId}`}
+            label={pillar.title}
+            detail={pillar.verdict}
+            chevron
+            onClick={() => onSelectTab?.(pillar.tabId as OverviewTab)}
+            trailing={
+              <span
+                className={`size-2 shrink-0 rounded-full ${
+                  pillar.risk === "high"
+                    ? "bg-error"
+                    : pillar.risk === "medium"
+                      ? "bg-warning"
+                      : "bg-success"
+                }`}
+                aria-hidden="true"
+              />
+            }
+          />
+        ))}
+      </Section>
+
+      <PeriodReading
+        loading={view.loading}
+        error={view.error}
+        points={points.map((point) => ({ ctl: point.ctl, tsb: point.tsb, tss: point.tss }))}
+        pillars={pillars.map((pillar) => ({ title: pillar.title, verdict: pillar.verdict }))}
+        rangeLabel={rangeLabel ?? "当前范围"}
+      />
 
       {view.error != null && (
-        <Card
-          padding="md"
-          className="border-error/40 bg-error/5 text-footnote text-error"
-        >
-          数据获取失败
-        </Card>
+        <p className="text-caption1 text-error" role="alert">
+          数据获取失败：{view.error}
+        </p>
       )}
     </div>
   );
 }
 
-interface PillarBentoCardProps {
-  readonly pillarId: string;
-  readonly tabId: OverviewTab;
-  readonly title: string;
-  readonly description: string;
-  readonly ctaLabel: string;
-  readonly verdict: string;
-  readonly risk: "low" | "medium" | "high";
-  readonly nextStep: string;
-  readonly onNavigate: (tab: OverviewTab) => void;
+/**
+ * TSB 的警戒态过去靠红色读数（`tone="attention"`）表达。`MetricStrip` 不做
+ * 单格染色，颜色只留给下方「四个方面」的状态点，所以这里用契约里的分区名
+ * （疲劳偏高 / 过载风险）把判断写成一行 note。
+ */
+function tsbNote(tone: ZoneTone | undefined, label: string | undefined): string | undefined {
+  if (label == null) return undefined;
+  return tone === "caution" || tone === "danger" ? label : undefined;
 }
 
-function PillarBentoCard({
-  pillarId,
-  tabId,
-  title,
-  description,
-  ctaLabel,
-  verdict,
-  risk,
-  nextStep,
-  onNavigate,
-}: PillarBentoCardProps) {
-  return (
-    <Card
-      role="button"
-      tabIndex={0}
-      padding="md"
-      className="group focus-ring flex h-full min-h-34 w-full cursor-pointer flex-col gap-2 text-left transition-colors hover:border-accent/40"
-      data-testid={`analysis-pillar-${pillarId}`}
-      data-pillar-id={pillarId}
-      aria-label={`${title} — ${verdict}。${ctaLabel}`}
-      onClick={() => onNavigate(tabId)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onNavigate(tabId);
-        }
-      }}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-caption1 font-medium text-text-muted">{title}</p>
-        <span
-          className={cn(
-            "size-2.5 rounded-full",
-            risk === "high"
-              ? "bg-error"
-              : risk === "medium"
-                ? "bg-warning"
-                : "bg-success",
-          )}
-          data-risk={risk}
-          aria-label={riskBadgeLabel(risk)}
-        />
-      </div>
-      <p className="text-caption1 leading-snug text-text-muted">{description}</p>
-      <h3
-        className="line-clamp-2 text-title3 font-semibold leading-snug text-text-primary"
-        data-testid={`analysis-pillar-verdict-${pillarId}`}
-      >
-        {verdict}
-      </h3>
-      <p
-        className="text-caption1 leading-relaxed text-text-secondary"
-        data-testid={`analysis-pillar-next-step-${pillarId}`}
-      >
-        {nextStep}
-      </p>
-      <span className="mt-auto text-caption1 font-medium text-accent-strong">
-        {ctaLabel} →
-      </span>
-    </Card>
-  );
+function ctlTrend(points: PmcPoint[]): string | undefined {
+  const first = points[0]?.ctl;
+  const last = points.at(-1)?.ctl;
+  if (first == null || last == null) return undefined;
+  const delta = Math.round((last - first) * 10) / 10;
+  if (Math.abs(delta) < 0.5) return "本期基本持平";
+  return `本期 ${delta > 0 ? "+" : ""}${delta}`;
 }
 
-function toneForRisk(risk: "low" | "medium" | "high"): string {
+function toneForRisk(risk: string): string {
   if (risk === "high") return "bg-error/10 text-error";
   if (risk === "medium") return "bg-warning/10 text-warning";
   return "bg-success/10 text-success";
 }
 
-function riskBadgeLabel(risk: "low" | "medium" | "high"): string {
-  if (risk === "high") return "高风险";
-  if (risk === "medium") return "观察";
-  return "稳定";
+function riskBadgeLabel(risk: string): string {
+  if (risk === "high") return "风险偏高";
+  if (risk === "medium") return "需要留意";
+  return "风险低";
 }

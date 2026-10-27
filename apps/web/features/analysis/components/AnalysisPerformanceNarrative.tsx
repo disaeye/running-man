@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card } from "@shared/ui/Card";
+import { Section } from "@shared/ui/Section";
 import { usePersonalRecords } from "@features/performance/hooks/usePersonalRecords";
 import { useProfile, useZones } from "@features/settings/hooks/useProfile";
 import { useWellness } from "@features/health/hooks/useWellness";
 import { computeRange, toISODate } from "@shared/lib/format";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 import { getAnalysisSportFamily } from "@features/analysis/lib/analysis-metric-taxonomy";
 
 type WellnessSample = {
@@ -44,15 +45,10 @@ export function AnalysisPerformanceNarrative() {
   });
 
   return (
-    <Card padding="md" data-testid="analysis-performance-narrative">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-title3 font-semibold text-text-primary">
-          {narrativeCopy.title}
-        </h2>
-      </div>
-
+    <Section title={narrativeCopy.title} testId="analysis-performance-narrative">
+      <div className="p-5">
       {/* Compact metric chips — numbers first, no essay body */}
-      <div className="mt-3 flex flex-wrap gap-2" data-testid="analysis-performance-metrics">
+      <div className="flex flex-wrap gap-2" data-testid="analysis-performance-metrics">
         {narrativeCopy.chips.map((chip) => (
           <span
             key={chip}
@@ -65,24 +61,25 @@ export function AnalysisPerformanceNarrative() {
 
       <p className="mt-3 text-caption1 leading-relaxed text-text-secondary">{narrativeCopy.body}</p>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-xl bg-surface-overlay/55 px-3 py-3">
-          <p className="text-caption1 font-medium text-text-muted">最大摄氧量</p>
+      <div className="mt-4 grid grid-cols-1 gap-px overflow-hidden rounded-lg bg-border-subtle sm:grid-cols-2">
+        <div className="bg-surface-card px-3 py-2.5">
+          <p className="text-caption1 font-medium text-text-secondary">最大摄氧量</p>
           <p className="mt-1 font-mono text-subheadline font-semibold tabular-nums text-text-primary">
             {changeText}
           </p>
         </div>
         <div
-          className="rounded-xl bg-surface-overlay/55 px-3 py-3"
+          className="bg-surface-card px-3 py-2.5"
           data-testid={
             records.length === 0 ? "analysis-pr-empty-source" : "analysis-pr-source"
           }
         >
-          <p className="text-caption1 font-medium text-text-muted">最佳成绩</p>
+          <p className="text-caption1 font-medium text-text-secondary">最佳成绩</p>
           <p className="mt-1 text-subheadline text-text-primary">{prText}</p>
         </div>
       </div>
-    </Card>
+      </div>
+    </Section>
   );
 }
 
@@ -93,7 +90,7 @@ function buildPhysiologyLine(values: {
 }): readonly string[] {
   return [
     `阈值配速 ${formatThresholdPace(values.thresholdPace)}`,
-    values.lthr != null ? `乳酸阈心率 ${Math.round(values.lthr)} bpm` : "缺少乳酸阈心率",
+    values.lthr != null ? `乳酸阈心率 ${Math.round(values.lthr)} ${HEART_RATE_UNIT}` : "缺少乳酸阈心率",
     values.vo2max != null
       ? `最大摄氧量 ${values.vo2max.toFixed(1)} ml/kg/min`
       : "缺少最大摄氧量",

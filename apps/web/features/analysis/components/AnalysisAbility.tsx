@@ -20,6 +20,7 @@ import { AbilityRadar } from "./AbilityRadar";
 import { AbilityMetricsRow } from "./AnalysisAbilityMetrics";
 import { AnalysisPerformanceNarrative } from "./AnalysisPerformanceNarrative";
 import { Card } from "@shared/ui/Card";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 export function AnalysisAbility() {
   const [moreOpen, setMoreOpen] = useState(false);
@@ -36,10 +37,10 @@ export function AnalysisAbility() {
         <Card padding="md" data-testid="analysis-training-paces">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="text-title3 font-semibold text-text-primary">
+              <h3 className="text-caption1 font-semibold text-text-secondary">
                 Daniels 训练配速
               </h3>
-              <p className="mt-0.5 text-footnote text-text-muted">
+              <p className="mt-0.5 text-caption1 text-text-muted">
                 由当前 VDOT / 阈值配速推导
               </p>
             </div>
@@ -85,13 +86,13 @@ export function AnalysisAbility() {
       <div data-testid="ability-more">
         <button
           type="button"
-          className="focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-card px-4 py-3 text-left transition-colors hover:bg-surface-overlay"
+          className="row-press focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl bg-surface-card px-4 py-3 text-left hover:bg-surface-overlay"
           aria-expanded={moreOpen}
           onClick={() => setMoreOpen((v) => !v)}
           data-testid="ability-more-toggle"
         >
           <div>
-            <span className="block text-title3 font-semibold text-text-primary">
+            <span className="block text-caption1 font-semibold text-text-secondary">
               比赛成绩预测
             </span>
             <span className="mt-0.5 block text-caption1 text-text-muted">
@@ -187,7 +188,7 @@ const SUMMARY_TEXT_BY_METRIC: Record<
       ? `阈值配速 ${formatThresholdPace(values.thresholdPace)}`
       : null,
   lthr: (values) =>
-    values.lthr != null ? `乳酸阈心率 ${Math.round(values.lthr)} bpm` : null,
+    values.lthr != null ? `乳酸阈心率 ${Math.round(values.lthr)} ${HEART_RATE_UNIT}` : null,
   vo2max: (values) =>
     values.vo2max != null
       ? `最大摄氧量 ${values.vo2max.toFixed(1)} ml/kg/min`

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState, Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Activity, Flame, LayoutDashboard, TrendingUp } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
+import { PageHeader } from "@shared/ui/PageHeader";
 import { AnalysisLoad } from "@features/analysis/components/AnalysisLoad";
 import { AnalysisRecovery } from "@features/analysis/components/AnalysisRecovery";
 import { AnalysisAbility } from "@features/analysis/components/AnalysisAbility";
@@ -25,10 +25,10 @@ import {
 // Tab wording matches ANALYSIS_TAB_LABELS and the pillar card titles, so one
 // surface never calls the same thing by a different name.
 const TABS = [
-  { id: "overview", label: "总览", icon: LayoutDashboard },
-  { id: "load", label: "负荷与体能", icon: TrendingUp },
-  { id: "intensity", label: "强度结构", icon: Flame },
-  { id: "performance", label: "表现能力", icon: Activity },
+  { id: "overview", label: "总览" },
+  { id: "load", label: "负荷与体能" },
+  { id: "intensity", label: "强度结构" },
+  { id: "performance", label: "表现能力" },
 ] as const;
 
 type AnalysisTab = (typeof TABS)[number]["id"];
@@ -81,28 +81,20 @@ function AnalysisPageContent() {
 
   return (
     <div className="page-stack" data-testid="analysis-page">
-      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-border-subtle pb-6">
-        <div className="min-w-0">
-          <h1 id="analysis-title" className="text-display-sm text-text-primary">训练分析</h1>
-          <p className="mt-1.5 max-w-xl text-subheadline text-text-secondary">
-            长期体能适应、疲劳平衡与心率区间分布。
-          </p>
-        </div>
-        <AnalysisRangeControls dateRange={range} onDateRangeChange={setRange} />
-      </header>
+      <PageHeader
+        title={<span id="analysis-title">训练分析</span>}
+        action={<AnalysisRangeControls dateRange={range} onDateRangeChange={setRange} />}
+      />
       <Tabs value={tab} onValueChange={(value) => setTab(parseTabParam(value))} className="space-y-6">
-        <div className="overflow-x-auto pb-1">
-          <TabsList className="border border-border-subtle bg-surface-sunken p-1">
-            {TABS.map(({ id, label, icon: Icon }) => (
-              <TabsTrigger key={id} value={id} className="min-h-9 gap-2 rounded-lg px-3 text-caption1">
-                <Icon className="size-3.5" aria-hidden="true" />
-                <span>{label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
+        <TabsList>
+          {TABS.map(({ id, label }) => (
+            <TabsTrigger key={id} value={id} className="px-2 text-caption1 sm:px-3">
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
         <TabsContent value="overview" className="space-y-6" data-testid="analysis-overview">
-          <AnalysisOverview onSelectTab={setTab} />
+          <AnalysisOverview onSelectTab={setTab} rangeLabel={`${range.from} — ${range.to}`} />
         </TabsContent>
         <TabsContent value="load" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-load-adaptation">
           <section aria-label="负荷适应诊断" className="space-y-6">

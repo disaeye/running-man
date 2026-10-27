@@ -13,6 +13,7 @@ import { EmptyState } from "@shared/ui/EmptyState";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -171,7 +172,7 @@ export function TrainingRecoveryCorrelation({ wellness, loads }: TrainingRecover
         insight ? (
           <Badge variant={tone} className="text-subheadline">
             高负荷日次日 RHR {insight.delta > 0 ? "+" : ""}
-            {insight.delta} bpm
+            {insight.delta} {HEART_RATE_UNIT}
           </Badge>
         ) : (
           <Badge variant="neutral" className="text-subheadline">样本不足</Badge>
@@ -192,7 +193,7 @@ export function TrainingRecoveryCorrelation({ wellness, loads }: TrainingRecover
       {insight && (
         <p className="mt-3 text-caption1 text-text-secondary">
           基于 {insight.samples} 个训练日样本，个人 75 分位强度阈值为 TSS≥{insight.threshold} 的训练日后次日 RHR
-          平均较轻松日 {insight.delta > 0 ? "升高" : "降低"} {Math.abs(insight.delta)} bpm。
+          平均较轻松日 {insight.delta > 0 ? "升高" : "降低"} {Math.abs(insight.delta)} {HEART_RATE_UNIT}。
         </p>
       )}
     </ChartShell>

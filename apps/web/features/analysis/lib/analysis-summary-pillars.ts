@@ -5,6 +5,7 @@
 import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
 import type { LocalReadiness } from "@features/today/hooks/useReadiness";
 import type { WeekProgress } from "@features/today/hooks/useWeeklyProgress";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 import {
   buildLoadDiagnosis,
   type LoadDiagnosis,
@@ -173,7 +174,7 @@ function sampleAbilityLine(
   if (sample.thresholdPace != null) {
     parts.push(`阈值配速已建立 ${formatPaceShort(sample.thresholdPace)}`);
   }
-  if (sample.lthr != null) parts.push(`乳酸阈心率 ${Math.round(sample.lthr)} bpm`);
+  if (sample.lthr != null) parts.push(`乳酸阈心率 ${Math.round(sample.lthr)} ${HEART_RATE_UNIT}`);
   if (sample.ftp != null) parts.push(`功能性阈值功率 ${Math.round(sample.ftp)} W`);
   if (sample.vo2max != null) parts.push(`最大摄氧量 ${sample.vo2max.toFixed(1)} ml/kg/min`);
   if (parts.length === 0) {

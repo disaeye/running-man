@@ -5,6 +5,8 @@
  * - RHR_ANOMALY_BPM: 2 SD ≈ 5bpm for trained athletes above 7-day baseline
  */
 
+import { HEART_RATE_UNIT } from "@shared/config/terms";
+
 /** Minimum healthy sleep duration (7 hours, in seconds). */
 export const SLEEP_TARGET_SECS = 7 * 3600;
 
@@ -125,7 +127,7 @@ const TIP_RULES: TipRule[] = [
       : null,
   (i) =>
     i.rhrDeviation != null && i.rhrDeviation > RHR_ANOMALY_BPM
-      ? `静息心率较基线偏高${Math.round(i.rhrDeviation)}bpm，提示疲劳累积`
+      ? `静息心率较基线偏高${Math.round(i.rhrDeviation)} ${HEART_RATE_UNIT}，提示疲劳累积`
       : null,
   (i) =>
     i.sleepDebt7d > 4 * 3600

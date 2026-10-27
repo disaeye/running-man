@@ -122,7 +122,7 @@ export function VO2maxTrend({ data }: VO2maxTrendProps) {
   return (
     <Card padding="md">
       <header className="mb-4 flex items-baseline justify-between">
-        <h3 className="text-subheadline font-semibold text-text-muted">
+        <h3 className="text-caption1 font-semibold text-text-secondary">
           VO₂max 趋势
         </h3>
         {level && (

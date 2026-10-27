@@ -14,6 +14,7 @@ import { useECharts } from "@shared/hooks/useECharts";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -37,7 +38,7 @@ function buildOption(data: WellnessPoint[], chartConfig: ChartConfig): echarts.E
     },
     yAxis: [
       {
-        name: "HR bpm",
+        name: `HR ${HEART_RATE_UNIT}`,
         nameTextStyle: { color: c.textMuted, fontSize: 11 },
       },
       {

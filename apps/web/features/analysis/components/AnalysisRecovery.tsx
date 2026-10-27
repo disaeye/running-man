@@ -20,6 +20,7 @@ import { useWellness } from "@features/health/hooks/useWellness";
 import { usePmcData, type PmcPoint } from "@features/pmc/hooks/usePmcData";
 import { useReadiness } from "@features/today/hooks/useReadiness";
 import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 import { useAnalysisRange } from "../lib/analysis-range";
 import {
   ReadinessDriverHistory,
@@ -78,7 +79,7 @@ export function AnalysisRecovery() {
             <ChartShell title="睡眠" subtitle="小时/晚">
               <SleepAnalysis data={wellness} />
             </ChartShell>
-            <ChartShell title="静息心率" subtitle="bpm">
+            <ChartShell title="静息心率" subtitle={HEART_RATE_UNIT}>
               <RestingHRTrend data={wellness} />
             </ChartShell>
           </div>
@@ -124,7 +125,7 @@ export function AnalysisRecovery() {
             </ChartShell>
           </div>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <ChartShell title="睡眠平均心率" subtitle="bpm">
+            <ChartShell title="睡眠平均心率" subtitle={HEART_RATE_UNIT}>
               <WellnessMetricChart
                 metricKey="avg_sleeping_hr"
                 field="avg_sleeping_hr"

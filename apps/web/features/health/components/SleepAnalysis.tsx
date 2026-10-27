@@ -116,7 +116,7 @@ export function SleepAnalysis({ data }: SleepAnalysisProps) {
   return (
     <Card padding="md">
       <header className="mb-4 flex items-baseline justify-between">
-        <h3 className="text-subheadline font-semibold text-text-muted">
+        <h3 className="text-caption1 font-semibold text-text-secondary">
           睡眠分析
         </h3>
         <span className="text-caption1 text-text-muted">目标 {SLEEP_TARGET_SECS / 3600}h / 夜</span>

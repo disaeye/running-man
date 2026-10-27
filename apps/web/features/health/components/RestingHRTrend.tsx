@@ -12,6 +12,7 @@ import { Badge } from "@shared/ui/Badge";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 import { RHR_ANOMALY_BPM } from "./recovery";
 
 echarts.use([LineChart, GridComponent, TooltipComponent, MarkLineComponent, CanvasRenderer]);
@@ -67,7 +68,7 @@ function buildOption(
       data: days,
     },
     yAxis: {
-      name: "bpm",
+      name: HEART_RATE_UNIT,
       nameTextStyle: { color: c.textMuted, fontSize: 10 },
     },
     series: [
@@ -119,23 +120,25 @@ export function RestingHRTrend({ data }: RestingHRTrendProps) {
   return (
     <Card padding="md">
       <header className="mb-4 flex items-baseline justify-between">
-        <h3 className="text-subheadline font-semibold text-text-muted">
+        <h3 className="text-caption1 font-semibold text-text-secondary">
           静息心率趋势
         </h3>
-        <span className="text-caption1 text-text-muted">28日滚动中位数 · ±{RHR_ANOMALY_BPM} bpm</span>
+        <span className="text-caption1 text-text-muted">
+          28日滚动中位数 · ±{RHR_ANOMALY_BPM} {HEART_RATE_UNIT}
+        </span>
       </header>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Stat
           label="当前静息心率"
           value={stats.last?.resting_hr != null ? `${stats.last.resting_hr}` : "--"}
-          unit="bpm"
+          unit={HEART_RATE_UNIT}
           tone="text-hr-rest"
         />
         <Stat
           label="28日基线"
           value={stats.baseline != null ? `${stats.baseline.toFixed(0)}` : "--"}
-          unit="bpm"
+          unit={HEART_RATE_UNIT}
         />
         <div className="flex flex-col gap-1">
           <span className="text-caption1 text-text-secondary">较基线偏离</span>
@@ -155,7 +158,7 @@ export function RestingHRTrend({ data }: RestingHRTrendProps) {
             <span className="font-mono text-title1 font-bold text-text-primary">
               {stats.deviation != null ? `${stats.deviation > 0 ? "+" : ""}${stats.deviation.toFixed(0)}` : "--"}
             </span>
-            <span className="text-caption1 text-text-muted">bpm</span>
+            <span className="text-caption1 text-text-muted">{HEART_RATE_UNIT}</span>
             {stats.isAnomaly && (
               <Badge variant="error" className="ml-auto">
                 异常波动

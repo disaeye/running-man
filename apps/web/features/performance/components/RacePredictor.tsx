@@ -95,8 +95,8 @@ export function RacePredictor() {
   const basisText = typeof data?.basis === "string" ? data.basis : null;
 
   return (
-    <Card padding="md" className="border-border-default">
-      <h2 className="mb-4 text-headline font-semibold text-text-primary">比赛预测</h2>
+    <Card padding="md">
+      <h2 className="mb-3 text-caption1 font-semibold text-text-secondary">比赛预测</h2>
 
       <div className="mb-4 flex flex-wrap gap-2">
         <Button onClick={handleAuto} disabled={loading}>
@@ -153,7 +153,7 @@ export function RacePredictor() {
               <div
                 key={p.label}
                 data-testid={`race-pred-${p.label}`}
-                className="rounded-xl border border-border-subtle bg-surface-card p-3"
+                className="rounded-2xl bg-surface-card p-3"
               >
                 <p className="text-caption1 font-medium text-text-secondary">
                   {DISTANCE_LABELS[p.label]}

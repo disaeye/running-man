@@ -17,13 +17,13 @@ export function RecoveryCollapsible({ children }: RecoveryCollapsibleProps) {
     <div data-testid="recovery-collapsible">
       <button
         type="button"
-        className="focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-card px-4 py-3 text-left transition-colors hover:bg-surface-overlay"
+        className="row-press focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl bg-surface-card px-4 py-3 text-left hover:bg-surface-overlay"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         data-testid="recovery-collapsible-toggle"
       >
         <div>
-          <span className="block text-title3 font-semibold text-text-primary">
+          <span className="block text-caption1 font-semibold text-text-secondary">
             恢复趋势
           </span>
           <span className="mt-0.5 block text-caption1 text-text-muted">

@@ -9,10 +9,10 @@ import { useIntensityDistribution } from "@features/performance/hooks/useIntensi
 import { LOADING_LABEL } from "@shared/lib/use-data-state";
 import type { IntensityPoint } from "@features/performance/components/PerformanceIntensity";
 import { Card } from "@shared/ui/Card";
+import { CardHeader } from "@shared/ui/CardHeader";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { Badge } from "@shared/ui/Badge";
 import { ChartShell } from "@shared/ui/ChartShell";
-import { SectionHeader } from "@shared/ui/SectionHeader";
 import { IntensityDistributionChart } from "@features/trends/components/IntensityDistributionChart";
 import { PerformanceConsistency } from "@features/performance/components/PerformanceConsistency";
 import {
@@ -60,19 +60,21 @@ function IntensitySummary({
   const shares = useMemo(() => buildZoneShares(data), [data]);
   return (
     <Card padding="md" data-testid="analysis-intensity-summary-card">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-title3 font-semibold text-text-primary">强度结构</h2>
-        {classification ? (
-          <Badge
-            variant={classificationBadgeVariant(classification.type)}
-            data-testid="intensity-classification-badge"
-          >
-            {classification.label}
-          </Badge>
-        ) : null}
-      </div>
+      <CardHeader
+        title="强度结构"
+        trailing={
+          classification ? (
+            <Badge
+              variant={classificationBadgeVariant(classification.type)}
+              data-testid="intensity-classification-badge"
+            >
+              {classification.label}
+            </Badge>
+          ) : null
+        }
+      />
       {shares.length > 0 && (
-        <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
+        <div className="flex h-3 overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
           {shares.map((zone, index) => (
             <div
               key={zone.name}
@@ -125,10 +127,8 @@ export function AnalysisIntensity() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ZoneDonutCard from={range.from} to={range.to} />
         <Card padding="md" className="min-h-[280px]">
-          <SectionHeader title="一致性" />
-          <div className="mt-4">
-            <PerformanceConsistency />
-          </div>
+          <CardHeader title="一致性" />
+          <PerformanceConsistency />
         </Card>
       </div>
     </div>
@@ -157,8 +157,13 @@ function ZoneDonutCard({
 
   return (
     <Card padding="md" className="min-h-[320px]">
-      <SectionHeader title="区间分布（累计）" subtitle="各区间时长占比" />
-      <div className="mt-4 min-h-0 flex-1">
+      <CardHeader
+        title="区间分布（累计）"
+        trailing={
+          <span className="text-caption1 text-text-muted">各区间时长占比</span>
+        }
+      />
+      <div className="min-h-0 flex-1">
         {error ? (
           <div className="flex h-64 items-center justify-center text-subheadline text-error">
             {error}

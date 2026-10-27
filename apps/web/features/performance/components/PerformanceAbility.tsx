@@ -12,6 +12,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import { useChartConfig, type ChartConfig } from "@shared/hooks/useChartConfig";
 import { useECharts } from "@shared/hooks/useECharts";
 import { OKABE_ITO } from "@shared/lib/chart-tokens";
+import { apiErrorMessage } from "@shared/lib/api";
 import { Card } from "@shared/ui/Card";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { EMPTY_LABEL, LOADING_LABEL } from "@shared/lib/use-data-state";
@@ -113,8 +114,7 @@ export function PerformanceAbility() {
         if (!cancelled) setData(rows.filter(hasAnyAbilityValue));
       })
       .catch((err: unknown) => {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed to fetch ability data");
+        if (!cancelled) setError(apiErrorMessage(err, "能力数据加载失败"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -127,7 +127,7 @@ export function PerformanceAbility() {
   return (
     <div className="flex flex-col gap-6">
       <section>
-        <h2 className="mb-3 text-subheadline font-semibold text-text-muted">
+        <h2 className="mb-3 text-caption1 font-semibold text-text-secondary">
           能力指标趋势
         </h2>
         <Card padding="none" className="min-h-[200px] lg:h-[340px]">

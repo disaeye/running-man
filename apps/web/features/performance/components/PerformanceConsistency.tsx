@@ -6,6 +6,7 @@ import { Card } from "@shared/ui/Card";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { Badge } from "@shared/ui/Badge";
 import { computeRange } from "@shared/lib/format";
+import { apiErrorMessage } from "@shared/lib/api";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import { listActivitiesApiV1ActivitiesGet } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
@@ -127,7 +128,7 @@ export function PerformanceConsistency() {
   if (error) {
     return (
       <div className="flex h-64 items-center justify-center text-subheadline text-error">
-        {error instanceof Error ? error.message : error}
+        {apiErrorMessage(error, "一致性数据加载失败")}
       </div>
     );
   }

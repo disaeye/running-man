@@ -52,7 +52,7 @@ export function NutritionChart({ data }: NutritionChartProps) {
   return (
     <div className="relative">
       <div className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-subheadline font-semibold text-text-muted">
+        <h3 className="text-caption1 font-semibold text-text-secondary">
           营养摄入
         </h3>
         <span className="text-caption1 text-text-muted">
