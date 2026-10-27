@@ -56,3 +56,15 @@ research_output/
 
 # Local design mockups + one-off preview screenshots
 .scratch/
+
+# Design tooling scratch: mock payloads and static layout sketches kept for
+# reference only, never imported by the application
+.impeccable/
+apps/web/.impeccable/
+apps/web/public/decision-assets/
+apps/web/public/decision.html
+
+# Local test residue: a fake recipients file left by a shell probe, and a
+# login token left by a browser session
+/--recipients-file
+apps/web/.auth_tmp_token
