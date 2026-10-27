@@ -47,7 +47,10 @@ class AthleteProfileUpdate(BaseModel):
     lthr: int | None = Field(default=None, gt=0, le=240)
     threshold_pace: float | None = Field(default=None, gt=0)
     dob: date | None = None
-    sex: str | None = None
+    # The one spelling the API and the form both use. A single letter is not
+    # accepted: the column used to be VARCHAR(1) and took 'M', which the readers
+    # had to guess at while the select could never match it.
+    sex: Literal["male", "female"] | None = None
     weight_goal: float | None = Field(default=None, gt=0)
     weekly_training_days: int | None = Field(default=None, ge=1, le=7)
     max_session_duration_min: int | None = Field(default=None, gt=0)
