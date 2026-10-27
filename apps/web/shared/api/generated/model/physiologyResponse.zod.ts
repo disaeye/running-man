@@ -9,6 +9,7 @@ import { z as zod } from 'zod';
 export const PhysiologyResponse = zod.object({
   "algorithm_version": zod.union([zod.string(),zod.null()]),
   "computation_run_id": zod.union([zod.uuid(),zod.null()]),
+  "computed_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
   "confidence": zod.enum(['cached', 'stale']),
   "data_sufficient": zod.boolean(),
   "freshness": zod.enum(['fresh', 'stale']),

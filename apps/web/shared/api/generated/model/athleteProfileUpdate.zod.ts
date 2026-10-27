@@ -38,7 +38,7 @@ export const AthleteProfileUpdate = zod.object({
 }),zod.null()]).optional(),
   "preferred_sport": zod.union([zod.string(),zod.null()]).optional(),
   "resting_hr": zod.union([zod.number().gt(athleteProfileUpdateRestingHrOneExclusiveMin).max(athleteProfileUpdateRestingHrOneMax),zod.null()]).optional(),
-  "sex": zod.union([zod.string(),zod.null()]).optional(),
+  "sex": zod.union([zod.enum(['male', 'female']),zod.null()]).optional(),
   "threshold_pace": zod.union([zod.number().gt(athleteProfileUpdateThresholdPaceOneExclusiveMin),zod.null()]).optional(),
   "timezone": zod.union([zod.string(),zod.null()]).optional(),
   "weekly_training_days": zod.union([zod.number().min(1).max(athleteProfileUpdateWeeklyTrainingDaysOneMax),zod.null()]).optional(),

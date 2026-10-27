@@ -14,6 +14,7 @@ import {
   ActivityStatsResponse,
   ActivityStreamSyncResponse,
   ActivityUploadResponse,
+  AthleteGradeResponse,
   AthleteMe,
   AthleteResponse,
   AutoCalculateResponse,
@@ -42,6 +43,7 @@ import {
   PlanQualityResponse,
   PublicActivityResponse,
   RacePredictionResponse,
+  RaceResultResponse,
   ReadinessResponse,
   RecomputeJobStatusResponse,
   RecomputeResponse,
@@ -127,6 +129,7 @@ import type {
   PlanGenerateRequest,
   PmcPointResponse,
   PredictRequest,
+  RaceResultCreate,
   RecomputeRequest,
   RegisterRequest,
   RidePersonalRecordResponse,
@@ -3165,6 +3168,50 @@ export const getAbilityCurrentApiV1InsightsAbilityCurrentGet = async ( options?:
 
 
 
+export type athleteGradeApiV1InsightsAthleteGradeGetResponse200 = {
+  data: AthleteGradeResponse
+  status: 200
+}
+
+export type athleteGradeApiV1InsightsAthleteGradeGetResponseSuccess = (athleteGradeApiV1InsightsAthleteGradeGetResponse200) & {
+  headers: Headers;
+};
+;
+
+export type athleteGradeApiV1InsightsAthleteGradeGetResponse = (athleteGradeApiV1InsightsAthleteGradeGetResponseSuccess)
+
+export const getAthleteGradeApiV1InsightsAthleteGradeGetUrl = () => {
+
+
+
+
+  return `/api/v1/insights/athlete-grade`
+}
+
+/**
+ * @summary Athlete Grade
+ */
+export const athleteGradeApiV1InsightsAthleteGradeGet = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<athleteGradeApiV1InsightsAthleteGradeGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getAthleteGradeApiV1InsightsAthleteGradeGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AthleteGradeResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as athleteGradeApiV1InsightsAthleteGradeGetResponse
+}
+
+
+
 export type getCoachContextApiV1InsightsCoachContextGetResponse200 = {
   data: CoachContextResponse
   status: 200
@@ -4991,6 +5038,150 @@ export const getPmcApiV1PmcGet = async (params: GetPmcApiV1PmcGetParams, options
 
   const data: getPmcApiV1PmcGetResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getPmcApiV1PmcGetResponse
+}
+
+
+
+export type listRaceResultsApiV1RaceResultsGetResponse200 = {
+  data: RaceResultResponse[]
+  status: 200
+}
+
+export type listRaceResultsApiV1RaceResultsGetResponseSuccess = (listRaceResultsApiV1RaceResultsGetResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listRaceResultsApiV1RaceResultsGetResponse = (listRaceResultsApiV1RaceResultsGetResponseSuccess)
+
+export const getListRaceResultsApiV1RaceResultsGetUrl = () => {
+
+
+
+
+  return `/api/v1/race-results`
+}
+
+/**
+ * @summary List Race Results
+ */
+export const listRaceResultsApiV1RaceResultsGet = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<listRaceResultsApiV1RaceResultsGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getListRaceResultsApiV1RaceResultsGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listRaceResultsApiV1RaceResultsGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listRaceResultsApiV1RaceResultsGetResponse
+}
+
+
+
+export type createRaceResultApiV1RaceResultsPostResponse201 = {
+  data: RaceResultResponse
+  status: 201
+}
+
+export type createRaceResultApiV1RaceResultsPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createRaceResultApiV1RaceResultsPostResponseSuccess = (createRaceResultApiV1RaceResultsPostResponse201) & {
+  headers: Headers;
+};
+export type createRaceResultApiV1RaceResultsPostResponseError = (createRaceResultApiV1RaceResultsPostResponse422) & {
+  headers: Headers;
+};
+
+export type createRaceResultApiV1RaceResultsPostResponse = (createRaceResultApiV1RaceResultsPostResponseSuccess | createRaceResultApiV1RaceResultsPostResponseError)
+
+export const getCreateRaceResultApiV1RaceResultsPostUrl = () => {
+
+
+
+
+  return `/api/v1/race-results`
+}
+
+/**
+ * @summary Create Race Result
+ */
+export const createRaceResultApiV1RaceResultsPost = async (raceResultCreate: RaceResultCreate, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<createRaceResultApiV1RaceResultsPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getCreateRaceResultApiV1RaceResultsPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(raceResultCreate)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? RaceResultResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as createRaceResultApiV1RaceResultsPostResponse
+}
+
+
+
+export type deleteRaceResultApiV1RaceResultsResultIdDeleteResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteRaceResultApiV1RaceResultsResultIdDeleteResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type deleteRaceResultApiV1RaceResultsResultIdDeleteResponseSuccess = (deleteRaceResultApiV1RaceResultsResultIdDeleteResponse204) & {
+  headers: Headers;
+};
+export type deleteRaceResultApiV1RaceResultsResultIdDeleteResponseError = (deleteRaceResultApiV1RaceResultsResultIdDeleteResponse422) & {
+  headers: Headers;
+};
+
+export type deleteRaceResultApiV1RaceResultsResultIdDeleteResponse = (deleteRaceResultApiV1RaceResultsResultIdDeleteResponseSuccess | deleteRaceResultApiV1RaceResultsResultIdDeleteResponseError)
+
+export const getDeleteRaceResultApiV1RaceResultsResultIdDeleteUrl = (resultId: string,) => {
+
+
+
+
+  return `/api/v1/race-results/${resultId}`
+}
+
+/**
+ * @summary Delete Race Result
+ */
+export const deleteRaceResultApiV1RaceResultsResultIdDelete = async (resultId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<deleteRaceResultApiV1RaceResultsResultIdDeleteResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getDeleteRaceResultApiV1RaceResultsResultIdDeleteUrl(resultId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deleteRaceResultApiV1RaceResultsResultIdDeleteResponse['data'] = body ? JSON.parse(body) : undefined
+  return { data, status: res.status, headers: res.headers } as deleteRaceResultApiV1RaceResultsResultIdDeleteResponse
 }
 
 

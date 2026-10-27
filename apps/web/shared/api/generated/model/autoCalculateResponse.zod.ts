@@ -7,6 +7,7 @@
 import { z as zod } from 'zod';
 
 export const AutoCalculateResponse = zod.object({
+  "computed_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
   "hr_max": zod.object({
   "algorithm_version": zod.string(),
   "confidence": zod.union([zod.enum(['high', 'medium', 'low']),zod.null()]),
@@ -15,6 +16,7 @@ export const AutoCalculateResponse = zod.object({
   "input_window_days": zod.number(),
   "method": zod.union([zod.string(),zod.null()]),
   "near_max_count": zod.number(),
+  "required_sessions": zod.number(),
   "session_count": zod.number()
 }),
   "lthr": zod.object({
@@ -25,6 +27,7 @@ export const AutoCalculateResponse = zod.object({
   "lthr": zod.union([zod.number(),zod.null()]),
   "method": zod.union([zod.string(),zod.null()]),
   "near_threshold_count": zod.number(),
+  "required_efforts": zod.number(),
   "source_20min": zod.union([zod.number(),zod.null()]),
   "source_60min": zod.union([zod.number(),zod.null()])
 }),
@@ -37,6 +40,7 @@ export const AutoCalculateResponse = zod.object({
   "effort_count": zod.number(),
   "input_window_days": zod.number(),
   "method": zod.union([zod.string(),zod.null()]),
+  "required_efforts": zod.number(),
   "threshold_pace_s_per_km": zod.union([zod.number(),zod.null()])
 })
 })

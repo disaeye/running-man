@@ -15,6 +15,7 @@ export const ThresholdPaceEstimateResponse = zod.object({
   "effort_count": zod.number(),
   "input_window_days": zod.number(),
   "method": zod.union([zod.string(),zod.null()]),
+  "required_efforts": zod.number(),
   "threshold_pace_s_per_km": zod.union([zod.number(),zod.null()])
 })
 

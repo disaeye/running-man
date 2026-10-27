@@ -14,6 +14,7 @@ export const HrMaxEstimateResponse = zod.object({
   "input_window_days": zod.number(),
   "method": zod.union([zod.string(),zod.null()]),
   "near_max_count": zod.number(),
+  "required_sessions": zod.number(),
   "session_count": zod.number()
 })
 

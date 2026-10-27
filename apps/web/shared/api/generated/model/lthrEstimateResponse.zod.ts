@@ -14,6 +14,7 @@ export const LthrEstimateResponse = zod.object({
   "lthr": zod.union([zod.number(),zod.null()]),
   "method": zod.union([zod.string(),zod.null()]),
   "near_threshold_count": zod.number(),
+  "required_efforts": zod.number(),
   "source_20min": zod.union([zod.number(),zod.null()]),
   "source_60min": zod.union([zod.number(),zod.null()])
 })
