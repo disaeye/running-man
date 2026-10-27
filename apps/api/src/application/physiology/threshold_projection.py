@@ -16,6 +16,8 @@ from uuid import UUID
 class CursorLike(Protocol):
     async def execute(self, query: str, params: tuple[object, ...]) -> object: ...
 
+    async def fetchone(self) -> Mapping[str, object] | None: ...
+
 
 async def record_threshold_step(
     cur: CursorLike,
@@ -53,10 +55,14 @@ async def record_threshold_step(
         )
         ON CONFLICT (athlete_id, effective_from) DO UPDATE SET {updates},
             source = 'estimated', algorithm_version = EXCLUDED.algorithm_version
+        RETURNING {columns}
         """,
         (athlete_id, effective_from, *values.values(), version, athlete_id, effective_from),
     )
-    return dict(values)
+    row = await cur.fetchone()
+    # No row means the guard won: a manual step owns this day, so nothing was
+    # written and the caller must not treat these values as in force.
+    return {column: row[column] for column in values} if row is not None else {}
 
 
 async def stamp_physiology_run(

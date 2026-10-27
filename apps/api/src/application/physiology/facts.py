@@ -8,6 +8,15 @@ from datetime import date, datetime
 from typing import Protocol, cast
 from uuid import UUID
 
+import psycopg
+from psycopg.rows import DictRow
+
+from application.computation.runs import ComputationRunSpec
+from application.computation.service import (
+    ComputationExecution,
+    PreparedComputation,
+    execute_idempotent_computation,
+)
 from application.physiology.threshold_projection import (
     record_threshold_step,
     stamp_physiology_run,
@@ -15,7 +24,6 @@ from application.physiology.threshold_projection import (
 from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
 from domain.generated.metrics import Metric
-from infrastructure.db.pool import get_pool
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,21 +41,7 @@ class ComputationWindow:
 
 
 class _CursorLike(Protocol):
-    async def execute(self, query: str, params: tuple[object, ...]) -> None: ...
-
-    async def fetchone(self) -> Mapping[str, object] | None: ...
-
-
-class _TransactionLike(Protocol):
-    async def __aenter__(self) -> object: ...
-
-    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None: ...
-
-
-class _ConnectionLike(Protocol):
-    def cursor(self) -> _CursorLike: ...
-
-    def transaction(self) -> _TransactionLike: ...
+    async def execute(self, query: str, params: tuple[object, ...]) -> object: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,59 +70,65 @@ async def persist_physiology_facts(
     The returned mapping is what remains after the manual-value guard, and the
     caller uses it to widen coverage over earlier activities; an empty mapping
     means the rows were left alone and nothing needs backfilling.
+
+    Runs through the shared idempotent computation, which keys a successful run
+    on its input fingerprint: estimating twice from unchanged data must not
+    insert a second success for the same inputs, because a partial unique index
+    forbids it and the repeat would fail with a unique violation instead of
+    returning the same answer.
     """
     contract = algorithm_contract(Algorithm.PHYSIOLOGY)
     candidates = _fact_candidates(results)
     written: dict[str, object] = {}
-    async with get_pool().connection() as conn:
-        async with cast(_ConnectionLike, conn).transaction():
-            cur = cast(_ConnectionLike, conn).cursor()
-            run_id = await _insert_run(
-                cur,
-                athlete_id,
-                contract.version,
-                _fingerprint(input_payload),
-                window,
-            )
-            for candidate in candidates:
+
+    async def prepare(
+        _conn: psycopg.AsyncConnection[DictRow],
+    ) -> PreparedComputation[list[_FactCandidate]]:
+        return PreparedComputation(
+            spec=ComputationRunSpec(
+                athlete_id=athlete_id,
+                computation_kind="physiology",
+                algorithm_version=contract.version,
+                input_fingerprint=_fingerprint(input_payload),
+                trigger="manual",
+                input_window_start=window.start,
+                input_window_end=window.end,
+            ),
+            payload=candidates,
+        )
+
+    async def write(
+        conn: psycopg.AsyncConnection[DictRow], run_id: UUID, payload: list[_FactCandidate]
+    ) -> int:
+        async with conn.cursor() as cur:
+            for candidate in payload:
                 await _insert_fact(cur, athlete_id, run_id, contract.version, candidate, window.end)
-            await _update_run(cur, run_id, len(candidates))
             # Only a run that produced a fact counts as having computed anything.
             # Stamping `physiology_updated_at` on an empty run makes
             # `cached_physiology` report a fresh hit with every value null for the
             # next seven days, so a later estimate would not be recomputed.
-            if candidates:
-                written = await record_threshold_step(
-                    cur,
-                    athlete_id,
-                    contract.version,
-                    _threshold_values(candidates),
-                    effective_from,
+            if payload:
+                written.update(
+                    await record_threshold_step(
+                        cur,
+                        athlete_id,
+                        contract.version,
+                        _threshold_values(payload),
+                        effective_from,
+                    )
                 )
                 await stamp_physiology_run(cur, athlete_id, contract.version, run_id)
-    return written
+        return len(payload)
 
-
-async def _insert_run(
-    cur: _CursorLike,
-    athlete_id: UUID,
-    version: str,
-    fingerprint: str,
-    window: ComputationWindow,
-) -> UUID:
-    await cur.execute(
-        """
-        INSERT INTO computation_runs (
-            athlete_id, computation_kind, algorithm_version, input_fingerprint,
-            trigger, input_window_start, input_window_end, status
-        ) VALUES (%s, 'physiology', %s, %s, 'manual', %s, %s, 'running')
-        RETURNING id
-        """,
-        (athlete_id, version, fingerprint, window.start, window.end),
+    await execute_idempotent_computation(
+        ComputationExecution(
+            athlete_id=athlete_id,
+            computation_kind="physiology",
+            prepare=prepare,
+            write=write,
+        )
     )
-    row = await cur.fetchone()
-    assert row is not None
-    return cast(UUID, row["id"])
+    return written
 
 
 async def _insert_fact(
@@ -169,17 +169,6 @@ async def _insert_fact(
             candidate.confidence,
             json.dumps(candidate.metadata, sort_keys=True),
         ),
-    )
-
-
-async def _update_run(cur: _CursorLike, run_id: UUID, rows_affected: int) -> None:
-    await cur.execute(
-        """
-        UPDATE computation_runs
-        SET status = 'success', rows_affected = %s, finished_at = now(), updated_at = now()
-        WHERE id = %s
-        """,
-        (rows_affected, run_id),
     )
 
 

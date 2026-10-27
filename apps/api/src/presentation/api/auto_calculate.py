@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -16,6 +17,7 @@ from domain.generated.metrics import Metric
 from domain.physiology.hrmax import MIN_SESSIONS_FALLBACK
 from domain.physiology.lthr import MIN_HARD_EFFORTS
 from infrastructure.auth.models import Athlete
+from infrastructure.repositories.physiology import PhysiologyRepo
 from presentation.api.analytics_performance_contracts import (
     AutoCalculateResponse,
     HrMaxEstimateResponse,
@@ -32,9 +34,14 @@ router = APIRouter(prefix="/athletes", tags=["athletes"])
 async def physiology(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
 ) -> PhysiologyResponse:
-    cached = await cached_physiology(athlete.id)
+    # The timestamp is reported even when the values are too old to serve: "上次
+    # 估算 10-18" and "还没有估算过" are different facts, and saying the second
+    # one while three stored thresholds are in force would be a lie.
+    row = await PhysiologyRepo().cached(athlete.id)
+    cached = await cached_physiology(athlete.id, row=row)
+    computed_at = _as_datetime(row.get("physiology_updated_at")) if row is not None else None
     if cached is None:
-        return _stale_physiology()
+        return _stale_physiology(computed_at)
     return PhysiologyResponse(
         hr_max=cached.hr_max,
         lthr=cached.lthr,
@@ -45,6 +52,7 @@ async def physiology(
         computation_run_id=cached.computation_run_id,
         freshness="fresh",
         source="derived_metric_facts",
+        computed_at=cached.computed_at,
     )
 
 
@@ -78,10 +86,11 @@ async def auto_calculate(
                 "algorithm_version": algorithm_contract(Algorithm.PHYSIOLOGY).version,
             }
         ),
+        computed_at=result.computed_at,
     )
 
 
-def _stale_physiology() -> PhysiologyResponse:
+def _stale_physiology(computed_at: datetime | None) -> PhysiologyResponse:
     return PhysiologyResponse(
         hr_max=None,
         lthr=None,
@@ -92,4 +101,9 @@ def _stale_physiology() -> PhysiologyResponse:
         computation_run_id=None,
         freshness="stale",
         source="derived_metric_facts",
+        computed_at=computed_at,
     )
+
+
+def _as_datetime(value: object) -> datetime | None:
+    return value if isinstance(value, datetime) else None

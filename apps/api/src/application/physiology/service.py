@@ -40,6 +40,7 @@ class CachedPhysiology:
     threshold_pace: float | None
     algorithm_version: str
     computation_run_id: UUID | None
+    computed_at: datetime | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,12 +49,25 @@ class PhysiologyCalculation:
     lthr: Mapping[str, object]
     threshold_pace: Mapping[str, object]
     vdot: Mapping[str, object] | None = None
+    # When these thresholds were last written by an estimate. A repeat estimate
+    # from unchanged data is skipped, so this keeps the original timestamp
+    # instead of pretending the numbers were recomputed just now.
+    computed_at: datetime | None = None
 
 
 async def cached_physiology(
-    athlete_id: UUID, now: datetime | None = None
+    athlete_id: UUID,
+    now: datetime | None = None,
+    row: Mapping[str, object] | None = None,
 ) -> CachedPhysiology | None:
-    row = await PhysiologyRepo().cached(athlete_id)
+    """The stored estimate, or None when it is absent, old or from an old version.
+
+    ``row`` lets a caller that already read the cache metadata pass it in, so the
+    endpoint can report when the estimate last ran even when the values are too
+    old to serve.
+    """
+    if row is None:
+        row = await PhysiologyRepo().cached(athlete_id)
     if row is None:
         return None
     updated_at = row.get("physiology_updated_at")
@@ -72,12 +86,21 @@ async def cached_physiology(
         threshold_pace=_number(row.get("threshold_pace")),
         algorithm_version=algorithm_version,
         computation_run_id=_uuid(row.get("physiology_computation_run_id")),
+        computed_at=updated_at,
     )
 
 
 async def calculate_physiology(
-    athlete_id: UUID, now: datetime | None = None
+    athlete_id: UUID,
+    now: datetime | None = None,
+    recompute_load: bool = True,
 ) -> PhysiologyCalculation:
+    """Estimate the three thresholds and persist them as a dated step.
+
+    ``recompute_load`` is for the post-sync chain, which rescores every activity
+    itself right after this returns; the manual path keeps the default so a
+    threshold change is never left applied to stale load.
+    """
     calculated_at = now or datetime.now(UTC)
     repository = PhysiologyRepo()
     # The threshold step is stamped on the athlete's calendar day, matching the
@@ -149,12 +172,16 @@ async def calculate_physiology(
         effective_from=effective_from,
     )
     _ = await ThresholdRepo().backfill_earlier_gaps(athlete_id, today, written)
-    _ = await recompute_load_after_threshold_change(athlete_id)
+    if recompute_load and written:
+        await recompute_load_after_threshold_change(athlete_id)
+    cached = await repository.cached(athlete_id)
+    computed_at = cached.get("physiology_updated_at") if cached is not None else None
     return PhysiologyCalculation(
         hr_max=hr_result,
         lthr=lthr_result,
         threshold_pace=threshold_pace_result,
         vdot=vdot_result,
+        computed_at=computed_at if isinstance(computed_at, datetime) else None,
     )
 
 

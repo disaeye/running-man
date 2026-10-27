@@ -94,6 +94,10 @@ class AutoCalculateResponse(PerformanceAnalyticsResponse):
     hr_max: HrMaxEstimateResponse
     lthr: LthrEstimateResponse
     threshold_pace: ThresholdPaceEstimateResponse
+    # When the stored thresholds were last written by an estimate. Repeated
+    # estimation from unchanged data is skipped, so this does not move forward
+    # on every press.
+    computed_at: datetime | None
 
 
 class PhysiologyResponse(PerformanceAnalyticsResponse):
@@ -106,3 +110,4 @@ class PhysiologyResponse(PerformanceAnalyticsResponse):
     computation_run_id: UUID | None
     freshness: Literal["fresh", "stale"]
     source: Literal["derived_metric_facts"]
+    computed_at: datetime | None

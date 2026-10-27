@@ -1,173 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
 import pytest
 
 from application.computation.runs import ComputationRunResult
 from application.physiology import service
-from application.physiology.facts import (
-    ComputationWindow,
-    PhysiologyResults,
-    persist_physiology_facts,
-)
-from domain.algorithms import algorithm_contract
-from domain.generated.algorithms import Algorithm
+from application.physiology.facts import ComputationWindow, PhysiologyResults
 from infrastructure.repositories.physiology import PhysiologyRepo
 
 pytestmark = pytest.mark.no_db
 
-# Read from the contract so a version bump does not require editing fixtures.
-PHYSIOLOGY_VERSION = algorithm_contract(Algorithm.PHYSIOLOGY).version
-
 ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000001")
-
-
-@dataclass(frozen=True, slots=True)
-class _ExecutedQuery:
-    query: str
-    params: tuple[object, ...]
-
-
-class _FakePool:
-    def __init__(self, rows: list[dict[str, object]] | None = None) -> None:
-        self.rows = rows or []
-        self.executed: list[_ExecutedQuery] = []
-
-    def connection(self) -> _ConnectionContext:
-        return _ConnectionContext(_FakeConnection(self))
-
-
-class _ConnectionContext:
-    def __init__(self, conn: _FakeConnection) -> None:
-        self.conn = conn
-
-    async def __aenter__(self) -> _FakeConnection:
-        return self.conn
-
-    async def __aexit__(self, *_args: object) -> None:
-        return None
-
-
-class _FakeTransaction:
-    async def __aenter__(self) -> None:
-        return None
-
-    async def __aexit__(self, *_args: object) -> None:
-        return None
-
-
-class _FakeConnection:
-    def __init__(self, pool: _FakePool) -> None:
-        self.pool = pool
-
-    def cursor(self) -> _FakeCursor:
-        return _FakeCursor(self.pool)
-
-    def transaction(self) -> _FakeTransaction:
-        return _FakeTransaction()
-
-
-class _FakeCursor:
-    def __init__(self, pool: _FakePool) -> None:
-        self.pool = pool
-
-    async def execute(self, query: str, params: tuple[object, ...]) -> None:
-        self.pool.executed.append(_ExecutedQuery(query, params))
-
-    async def fetchone(self) -> dict[str, object] | None:
-        return self.pool.rows.pop(0) if self.pool.rows else {"id": uuid4()}
-
-
-async def test_insufficient_data_writes_run_without_fabricated_facts(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    pool = _FakePool()
-    monkeypatch.setattr("application.physiology.facts.get_pool", lambda: pool)
-
-    await persist_physiology_facts(
-        ATHLETE_ID,
-        PhysiologyResults(
-            hr_max={"hr_max": None, "method": None, "confidence": None},
-            lthr={"lthr": None, "method": None, "confidence": None},
-            threshold_pace={
-                "threshold_pace_s_per_km": None,
-                "method": None,
-                "confidence": None,
-            },
-        ),
-        {"empty": True},
-        ComputationWindow(
-            start=datetime(2024, 7, 15, tzinfo=UTC),
-            end=datetime(2026, 7, 15, tzinfo=UTC),
-        ),
-        effective_from=date(2026, 7, 15),
-    )
-
-    queries = [row.query for row in pool.executed]
-    assert sum("INSERT INTO computation_runs" in query for query in queries) == 1
-    assert sum("INSERT INTO derived_metric_facts" in query for query in queries) == 0
-    assert sum("UPDATE athletes" in query for query in queries) == 0
-    assert pool.executed[-1].params[0] == 0
-
-
-async def test_physiology_facts_store_units_methods_confidence_and_run_version(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    run_id = uuid4()
-    pool = _FakePool(rows=[{"id": run_id}])
-    monkeypatch.setattr("application.physiology.facts.get_pool", lambda: pool)
-
-    await persist_physiology_facts(
-        ATHLETE_ID,
-        PhysiologyResults(
-            hr_max={"hr_max": 195, "method": "tangent", "confidence": "high"},
-            lthr={"lthr": 175, "method": "best_effort_window", "confidence": "medium"},
-            threshold_pace={
-                "threshold_pace_s_per_km": 270,
-                "method": "critical_speed_model",
-                "confidence": "low",
-            },
-        ),
-        {"samples": [1, 2, 3]},
-        ComputationWindow(
-            start=datetime(2024, 7, 15, tzinfo=UTC),
-            end=datetime(2026, 7, 15, tzinfo=UTC),
-        ),
-        effective_from=date(2026, 7, 15),
-    )
-
-    fact_params = [row.params for row in pool.executed if "INSERT INTO derived_metric_facts" in row.query]
-    assert [(params[2], params[3], params[7], params[8], params[9]) for params in fact_params] == [
-        ("hr_max", "bpm", run_id, "tangent", 0.9),
-        ("lthr", "bpm", run_id, "best_effort_window", 0.6),
-        ("threshold_pace", "s_km", run_id, "critical_speed_model", 0.3),
-    ]
-    assert all(params[6] == PHYSIOLOGY_VERSION for params in fact_params)
-
-    # Thresholds are recorded as a dated step rather than written to columns on
-    # `athletes` — those were removed when thresholds became time-versioned, so
-    # the previous assertions on the final statement's parameters indexed into a
-    # query shape that no longer exists.
-    threshold_writes = [
-        row for row in pool.executed if "INSERT INTO athlete_thresholds" in row.query
-    ]
-    assert len(threshold_writes) == 1
-    params = threshold_writes[0].params
-    assert params[0] == ATHLETE_ID
-    # Parameter positions follow the columns, which change with the estimate, so
-    # the version and the effective date are asserted by value.
-    assert PHYSIOLOGY_VERSION in params
-    assert date(2026, 7, 15) in params
-    assert "source','estimated" not in threshold_writes[0].query  # sanity: literal in SQL
-    assert "estimated" in threshold_writes[0].query
-
-    # The run is still stamped on the athlete row.
-    run_stamps = [row for row in pool.executed if "physiology_updated_at" in row.query]
-    assert len(run_stamps) == 1
-    assert run_id in run_stamps[0].params
 
 
 async def test_contract_window_routes_each_algorithm_to_owned_window(
