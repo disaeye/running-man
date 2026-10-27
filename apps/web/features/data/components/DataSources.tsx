@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Skeleton } from "@shared/ui/Skeleton";
+import { Card } from "@shared/ui/Card";
 import { useIntegrations } from "@features/data/hooks/useIntegrations";
 import { startBackfill } from "@features/data/hooks/useSyncJobs";
 import { IntervalsSourceCard } from "./IntervalsSourceCard";
@@ -45,86 +46,60 @@ export function DataSources() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* 1. Global Sync & Data Source Overview Metrics */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-subheadline font-semibold text-text-muted">
-            数据源与同步概览
-          </h2>
-        </div>
-        <SyncStatusOverview
-          integrations={{ intervals_icu: integrations.intervals_icu }}
-          syncingSource={syncingSource}
-          onTriggerSync={handleSyncSource}
-        />
-      </section>
+    <div className="space-y-6">
+      <SyncStatusOverview
+        integrations={{ intervals_icu: integrations.intervals_icu }}
+        syncingSource={syncingSource}
+        onTriggerSync={handleSyncSource}
+      />
 
-      {/* 2. Structured Tabs for clear hierarchy */}
       <Tabs defaultValue="sources" className="w-full">
-        <TabsList className="grid grid-cols-4 w-full max-w-2xl bg-surface-sunken p-1 rounded-xl">
-          <TabsTrigger value="sources" className="text-caption1 font-medium">数据源集成</TabsTrigger>
-          <TabsTrigger value="history" className="text-caption1 font-medium">同步历史流水</TabsTrigger>
-          <TabsTrigger value="health" className="text-caption1 font-medium">健康度与质量</TabsTrigger>
-          <TabsTrigger value="import_export" className="text-caption1 font-medium">文件导入与导出</TabsTrigger>
+        <TabsList className="grid w-full max-w-2xl grid-cols-4 rounded-xl bg-surface-sunken p-1">
+          <TabsTrigger value="sources" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">数据源集成</TabsTrigger>
+          <TabsTrigger value="history" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">同步历史流水</TabsTrigger>
+          <TabsTrigger value="health" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">健康度与质量</TabsTrigger>
+          <TabsTrigger value="import_export" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">文件导入与导出</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Data Source Integrations */}
         <TabsContent value="sources" className="pt-4 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Primary Source: Intervals.icu */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-caption1 font-semibold text-accent-strong">
-                  推荐 · 核心数据枢纽
-                </span>
-              </div>
-              <IntervalsSourceCard
-                integration={integrations.intervals_icu}
-                onConnect={async (athleteId, apiKey) => {
-                  await connectIntegration("intervals_icu", {
-                    athlete_id: athleteId,
-                    api_key: apiKey,
-                  });
-                }}
-                onDisconnect={(clearData) => disconnectIntegration("intervals_icu", clearData)}
-                onSync={() => handleSyncSource("intervals_icu")}
-                onBackfill={async (fromDate) => {
-                  await startBackfill("intervals_icu", fromDate);
-                }}
-                onSettingsChange={async (freq, autoSync) => {
-                  await updateIntegrationSettings("intervals_icu", {
-                    sync_frequency: freq,
-                    auto_sync: autoSync,
-                  });
-                }}
-              />
-            </div>
-
+            <IntervalsSourceCard
+              integration={integrations.intervals_icu}
+              onConnect={async (athleteId, apiKey) => {
+                await connectIntegration("intervals_icu", {
+                  athlete_id: athleteId,
+                  api_key: apiKey,
+                });
+              }}
+              onDisconnect={(clearData) => disconnectIntegration("intervals_icu", clearData)}
+              onSync={() => handleSyncSource("intervals_icu")}
+              onBackfill={async (fromDate) => {
+                await startBackfill("intervals_icu", fromDate);
+              }}
+              onSettingsChange={async (freq, autoSync) => {
+                await updateIntegrationSettings("intervals_icu", {
+                  sync_frequency: freq,
+                  auto_sync: autoSync,
+                });
+              }}
+            />
           </div>
         </TabsContent>
 
         {/* Tab 2: Sync History & Audit Log */}
         <TabsContent value="history" className="pt-4 space-y-4">
-          <div className="rounded-xl border border-border-subtle bg-surface-card p-5 space-y-4">
-            <div>
-              <h3 className="text-subheadline font-semibold text-text-primary">
-                数据源同步历史与执行审计
-              </h3>
-              <p className="text-caption1 text-text-muted">
-                查看每次同步的数据吞吐量（新增、去重、时序流）、执行耗时以及异常详情诊断。
-              </p>
-            </div>
+          <Card padding="md">
             <SyncHistoryList />
-          </div>
+          </Card>
         </TabsContent>
 
         {/* Tab 3: Data Health & Quality Diagnostics */}
         <TabsContent value="health" className="pt-4 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="rounded-xl border border-border-subtle bg-surface-card p-5 space-y-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card padding="md" className="space-y-4">
               <div>
-                <h3 className="text-subheadline font-semibold text-text-primary">
+                <h3 className="text-caption1 font-semibold text-text-secondary">
                   数据连续性与健康度
                 </h3>
                 <p className="text-caption1 text-text-muted">
@@ -133,11 +108,11 @@ export function DataSources() {
               </div>
               <DataHealthSummary />
               <RecomputeStatusCard />
-            </div>
+            </Card>
 
-            <div className="rounded-xl border border-border-subtle bg-surface-card p-5 space-y-4">
+            <Card padding="md" className="space-y-4">
               <div>
-                <h3 className="text-subheadline font-semibold text-text-primary">
+                <h3 className="text-caption1 font-semibold text-text-secondary">
                   数据质量与完整度检查
                 </h3>
                 <p className="text-caption1 text-text-muted">
@@ -145,7 +120,7 @@ export function DataSources() {
                 </p>
               </div>
               <DataQuality />
-            </div>
+            </Card>
           </div>
         </TabsContent>
 

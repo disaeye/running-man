@@ -36,7 +36,7 @@ export function RecomputeStatusCard() {
         <button
           type="button"
           onClick={reload}
-          className="focus-ring min-h-10 rounded-md px-3 text-caption1 font-medium text-accent-strong hover:bg-surface-overlay"
+          className="focus-ring min-h-11 rounded-md px-3 text-caption1 font-medium text-accent-strong hover:bg-surface-overlay"
         >
           重新检查
         </button>

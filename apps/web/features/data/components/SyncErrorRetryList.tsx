@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@shared/ui/button";
 import { useToast } from "@shared/ui/Toast";
+import { apiErrorMessage } from "@shared/lib/api";
 import { retryActivityStreams } from "@features/data/hooks/useSyncJobs";
 
 export interface SyncErrorItem {
@@ -29,7 +30,7 @@ export function SyncErrorRetryList({ errors }: SyncErrorRetryListProps) {
       setFixedIds((prev) => new Set(prev).add(activityId));
       toast(`活动 ${activityId} 流数据已重新拉取（${inserted} 条样本）`, "success");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "重试失败";
+      const msg = apiErrorMessage(err, "重试失败");
       toast(`流数据重试失败: ${msg}`, "error");
     } finally {
       setRetryingId(null);

@@ -224,7 +224,7 @@ export function PMCChart({ data, annotations = [], showTitle = true }: PMCChartP
   return (
     <div className="flex flex-col gap-4">
       {showTitle && (
-        <h3 className="text-title3 font-semibold text-text-primary">训练负荷趋势</h3>
+        <h3 className="text-caption1 font-semibold text-text-secondary">训练负荷趋势</h3>
       )}
       {data.length > 0 ? (
         <PmcChartCanvas data={data} chartConfig={chartConfig} annotations={annotations} />

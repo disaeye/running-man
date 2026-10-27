@@ -4,21 +4,21 @@ import { useState, type FormEvent } from "react";
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { register, login } from "@shared/lib/auth";
-import { apiErrorMessage } from "@shared/lib/api";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
+import { classifyAuthError, type AuthErrorState } from "@features/auth/lib/auth-error";
 
 export function RegisterForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState<AuthErrorState | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (loading) return;
-    setError("");
+    setError(null);
     setLoading(true);
 
     try {
@@ -31,7 +31,7 @@ export function RegisterForm() {
       await login({ email, password });
       window.location.assign("/");
     } catch (caught) {
-      setError(apiErrorMessage(caught));
+      setError(classifyAuthError(caught, "register"));
     } finally {
       setLoading(false);
     }
@@ -70,8 +70,16 @@ export function RegisterForm() {
           onChange={(event) => setEmail(event.target.value)}
           required
           autoComplete="email"
+          aria-invalid={error?.field === "email"}
+          aria-describedby={error?.field === "email" ? "register-email-error" : undefined}
           data-testid="register-email"
         />
+        {error?.field === "email" && (
+          <span id="register-email-error" className="text-caption1 text-error" role="alert">
+            {error.message}
+            {error.hint && <span className="mt-0.5 block text-text-muted">{error.hint}</span>}
+          </span>
+        )}
       </label>
 
       <label className="flex flex-col gap-1.5">
@@ -89,23 +97,21 @@ export function RegisterForm() {
         />
       </label>
 
-      {error && (
+      {error && error.field !== "email" && (
         <div
           role="alert"
-          className="flex items-start gap-2.5 rounded-lg border border-error/30 bg-error/10 p-3 text-subheadline text-error"
+          className="flex items-start gap-2.5 rounded-lg border border-error/30 bg-error/5 p-3 text-subheadline text-error"
           data-testid="register-error"
         >
           <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <div className="flex-1 space-y-1">
-            <p className="font-medium leading-snug">{error}</p>
-            {error.includes("后端服务") && (
-              <p className="text-caption1 text-text-muted">请确认后端 API（API_URL）正在运行。</p>
-            )}
+            <p className="font-medium leading-snug">{error.message}</p>
+            {error.hint && <p className="text-caption1 text-text-muted">{error.hint}</p>}
           </div>
         </div>
       )}
 
-      <Button type="submit" className="mt-1 w-full" disabled={loading}>
+      <Button type="submit" className="mt-1 w-full rounded-full" disabled={loading}>
         {loading ? "创建中…" : "创建账号"}
       </Button>
 

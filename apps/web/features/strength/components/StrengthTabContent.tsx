@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "@shared/lib/api";
+import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import { Card } from "@shared/ui/Card";
 import {
   Dialog,
@@ -136,7 +136,7 @@ export function StrengthTabContent() {
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "获取数据失败");
+          setError(apiErrorMessage(err, "获取数据失败"));
         }
       } finally {
         if (!cancelled) setLoading(false);

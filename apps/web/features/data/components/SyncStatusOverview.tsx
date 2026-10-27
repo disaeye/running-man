@@ -35,6 +35,10 @@ export function SyncStatusOverview({
 
   const activeJob = isJobActive(job) ? job : null;
   const isSyncing = syncingSource === "intervals_icu" || activeJob !== null;
+  // A webhook or a backfill can move data without writing a run record, so the
+  // source's own last_sync_at is the fallback — otherwise this card says 未执行
+  // next to a card above it saying 最后同步 5 分钟前.
+  const lastSyncAt = integrations.intervals_icu?.last_sync ?? null;
 
   const handleCancel = async () => {
     if (!activeJob) return;
@@ -76,7 +80,7 @@ export function SyncStatusOverview({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Connected Sources Status */}
-      <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-card p-4">
+      <div className="flex flex-col justify-between rounded-2xl bg-surface-card p-4">
         <div>
           <span className="text-caption1 font-medium text-text-muted">
             数据源连接状态
@@ -107,7 +111,7 @@ export function SyncStatusOverview({
       </div>
 
       {/* Latest Sync Snapshot */}
-      <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-card p-4">
+      <div className="flex flex-col justify-between rounded-2xl bg-surface-card p-4">
         <div>
           <span className="text-caption1 font-medium text-text-muted">
             {activeJob ? "实时同步进度" : "最近一次同步"}
@@ -118,7 +122,9 @@ export function SyncStatusOverview({
                 ? `${PHASE_LABELS[activeJob.phase] ?? activeJob.phase}`
                 : stats.latestRun?.started_at
                   ? formatRelativeTime(stats.latestRun.started_at)
-                  : "未执行"}
+                  : lastSyncAt
+                    ? formatRelativeTime(lastSyncAt)
+                    : "未执行"}
             </span>
             {activeJob ? (
               <Badge variant="info">
@@ -150,12 +156,14 @@ export function SyncStatusOverview({
               : `已见 ${activeJob.activitiesSeen} · 新增 +${activeJob.activitiesUpserted} · 流 +${activeJob.streamsInserted}`
             : stats.latestRun
               ? `来源: ${stats.latestRun.source === "intervals_icu" ? "Intervals" : stats.latestRun.source} · 新增 +${stats.latestRun.activities_upserted} 条`
-              : "暂无同步流水"}
+              : lastSyncAt
+                ? "这次同步没有留下流水记录"
+                : "暂无同步流水"}
         </div>
       </div>
 
       {/* Synchronized Volume stats */}
-      <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-card p-4">
+      <div className="flex flex-col justify-between rounded-2xl bg-surface-card p-4">
         <div>
           <span className="text-caption1 font-medium text-text-muted">
             近期入库与流数据
@@ -177,7 +185,7 @@ export function SyncStatusOverview({
       </div>
 
       {/* Sync Health & Quick Action */}
-      <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-card p-4">
+      <div className="flex flex-col justify-between rounded-2xl bg-surface-card p-4">
         <div>
           <span className="text-caption1 font-medium text-text-muted">
             同步稳定性

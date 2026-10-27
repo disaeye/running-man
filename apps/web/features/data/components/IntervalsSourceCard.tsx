@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@shared/ui/Badge";
+import { Card } from "@shared/ui/Card";
 import { Button } from "@shared/ui/button";
 import { useSyncDetail } from "@features/data/hooks/useSyncDetail";
 import { useSourceCoverage } from "@features/data/hooks/useSyncJobs";
@@ -155,13 +156,13 @@ export function IntervalsSourceCard({
       : null;
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface-card p-5 space-y-4">
+    <Card padding="md" className="space-y-4">
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <IcuIcon />
           <div className="min-w-0">
             <span className="text-subheadline font-medium text-text-primary">Intervals.icu</span>
-            <p className="truncate text-caption1 text-text-secondary">
+            <p className="text-caption1 text-text-secondary sm:truncate">
               <Subtitle connected={connected} lastSync={lastSync} syncStatus={syncStatus} isSyncing={isSyncing} />
             </p>
           </div>
@@ -208,7 +209,7 @@ export function IntervalsSourceCard({
       <IntervalsConnectDialog open={dialogOpen} onClose={() => setDialogOpen(false)} athleteId={athleteId} setAthleteId={setAthleteId} apiKey={apiKey} setApiKey={setApiKey} isBusy={busy} onConnect={handleConnect} />
       <BackfillDialog open={backfillOpen} onClose={() => setBackfillOpen(false)} onStartBackfill={handleStartBackfill} isBusy={busy === "backfill"} />
       <DisconnectConfirmDialog open={disconnectOpen} onClose={() => setDisconnectOpen(false)} onConfirm={handleConfirmDisconnect} isBusy={busy === "disconnect"} />
-    </div>
+    </Card>
   );
 }
 

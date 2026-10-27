@@ -1,92 +1,84 @@
-import { Clock, Flame, Footprints, MapPin } from "lucide-react";
-
 import { getSportConfig } from "@shared/config/sport-config";
+import { HEART_RATE_UNIT } from "@shared/config/terms";
 import { Badge } from "@shared/ui/Badge";
 import { Card } from "@shared/ui/Card";
+import { ReadingStrip, type Reading } from "@shared/ui/ReadingStrip";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 
 import type { PublicActivity } from "../hooks/useShareActivity";
 import { sportIconFor } from "../lib/sport-icon";
-import { MetricCell } from "./MetricCell";
+import { ShareShell } from "./ShareShell";
 
+function pacePerKm(activity: PublicActivity): number | null {
+  if (activity.distance_m == null || activity.duration_s == null) return null;
+  if (activity.distance_m <= 0 || activity.duration_s <= 0) return null;
+  return activity.duration_s / (activity.distance_m / 1000);
+}
+
+function formatPace(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const rest = Math.round(seconds % 60);
+  return `${minutes}'${String(rest).padStart(2, "0")}"`;
+}
+
+/**
+ * The public face of one activity.
+ *
+ * A visitor has no account, so there is no rail, no tabs and no navigation: the
+ * page is the record. Only the fields the share endpoint exposes are shown.
+ */
 export function ShareActivityView({ activity }: { readonly activity: PublicActivity }) {
   const config = getSportConfig(activity.sport);
-  const sportIcon = sportIconFor(activity.sport);
+  const pace = pacePerKm(activity);
 
-  const hasDirMetrics = activity.duration_s != null || activity.distance_m != null;
-  const hasPhysMetrics = activity.avg_hr != null || activity.elevation_gain_m != null;
-  const hasAnyMetrics = hasDirMetrics || hasPhysMetrics;
+  const readings: Reading[] = [
+    {
+      label: "距离",
+      value:
+        activity.distance_m != null ? `${(activity.distance_m / 1000).toFixed(1)} km` : NO_VALUE,
+    },
+    {
+      label: "时长",
+      value: activity.duration_s != null ? `${Math.round(activity.duration_s / 60)} 分钟` : NO_VALUE,
+    },
+    {
+      label: "平均配速",
+      value: pace != null ? `${formatPace(pace)} /km` : NO_VALUE,
+      note: pace == null ? "没有速度数据" : undefined,
+    },
+    {
+      label: "平均心率",
+      value: activity.avg_hr != null ? `${Math.round(activity.avg_hr)} ${HEART_RATE_UNIT}` : "未记录",
+    },
+  ];
 
   return (
-    <div
-      className="flex min-h-[100dvh] flex-col items-center justify-center gap-5 bg-surface-base px-4 py-6"
-      data-testid="share-activity-view"
-    >
-      <Card
-        padding="lg"
-        className="w-full max-w-md overflow-hidden"
-        data-testid="share-activity-card"
-      >
-        {/* sport color accent strip */}
-        <div
-          className="mx-[-24px] -mt-6 mb-5 h-1"
-          style={{ background: config.color }}
-        />
-
-        <div className="flex items-center gap-2">
+    <ShareShell>
+      <Card padding="lg" className="w-full max-w-2xl" data-testid="share-activity-card">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Badge
             variant="neutral"
             className="flex items-center gap-1.5 rounded-md"
             data-testid="share-sport-badge"
           >
-            {sportIcon}
+            {sportIconFor(activity.sport)}
             {config.label}
           </Badge>
+          <p className="text-caption1 tabular-nums text-text-muted">{activity.date}</p>
         </div>
 
         <h1 className="mt-3 text-title1 font-semibold tracking-tight text-text-primary">
           {activity.name ?? config.label}
         </h1>
-        <p className="mt-1 text-caption1 text-text-muted tabular-nums">{activity.date}</p>
 
-        {hasAnyMetrics && (
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            {activity.duration_s != null && (
-              <MetricCell
-                icon={<Clock className="size-3.5" aria-hidden="true" />}
-                label="时长"
-                value={`${Math.round(activity.duration_s / 60)} 分钟`}
-              />
-            )}
-            {activity.distance_m != null && (
-              <MetricCell
-                icon={<MapPin className="size-3.5" aria-hidden="true" />}
-                label="距离"
-                value={`${(activity.distance_m / 1000).toFixed(1)} km`}
-              />
-            )}
-            {activity.avg_hr != null && (
-              <MetricCell
-                icon={<Footprints className="size-3.5" aria-hidden="true" />}
-                label="平均心率"
-                value={`${activity.avg_hr} bpm`}
-              />
-            )}
-            {activity.elevation_gain_m != null && (
-              <MetricCell
-                icon={<Flame className="size-3.5" aria-hidden="true" />}
-                label="累计爬升"
-                value={`${activity.elevation_gain_m} m`}
-              />
-            )}
-          </div>
-        )}
+        <ReadingStrip items={readings} className="mt-5" />
 
-        {!hasAnyMetrics && (
-          <p className="mt-5 text-caption1 text-text-muted">暂无详细数据</p>
+        {activity.elevation_gain_m != null && (
+          <p className="mt-3 text-caption1 text-text-muted">
+            累计爬升 {Math.round(activity.elevation_gain_m)} m
+          </p>
         )}
       </Card>
-
-      <p className="text-caption1 text-text-muted">Powered by Running Man</p>
-    </div>
+    </ShareShell>
   );
 }

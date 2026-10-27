@@ -146,25 +146,25 @@ export function SyncHistoryDetailDialog({
           <div>
             <h4 className="text-subheadline font-semibold text-text-primary mb-3 flex items-center gap-2">数据同步统计</h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl border border-border-default bg-surface-card text-center">
+              <div className="p-3 rounded-2xl border border-border-default bg-surface-card text-center">
                 <span className="text-caption1 text-text-muted block mb-1">扫描活动数</span>
                 <span className="text-title3 font-bold tabular-nums text-text-primary">
                   {run.activities_seen}
                 </span>
               </div>
-              <div className="p-3 rounded-xl border border-border-default bg-surface-card text-center">
+              <div className="p-3 rounded-2xl border border-border-default bg-surface-card text-center">
                 <span className="text-caption1 text-text-muted block mb-1">新增 / 更新</span>
                 <span className="text-title3 font-bold tabular-nums text-accent-strong">
                   {run.activities_upserted}
                 </span>
               </div>
-              <div className="p-3 rounded-xl border border-border-default bg-surface-card text-center">
+              <div className="p-3 rounded-2xl border border-border-default bg-surface-card text-center">
                 <span className="text-caption1 text-text-muted block mb-1">已存在去重</span>
                 <span className="text-title3 font-bold tabular-nums text-text-secondary">
                   {run.activities_deduplicated}
                 </span>
               </div>
-              <div className="p-3 rounded-xl border border-border-default bg-surface-card text-center">
+              <div className="p-3 rounded-2xl border border-border-default bg-surface-card text-center">
                 <span className="text-caption1 text-text-muted block mb-1">时序流 (Streams)</span>
                 <span className="text-title3 font-bold tabular-nums text-text-primary">
                   {run.streams_inserted}
@@ -172,13 +172,13 @@ export function SyncHistoryDetailDialog({
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-3">
-              <div className="p-3 rounded-xl border border-border-default bg-surface-card flex items-center justify-between">
+              <div className="p-3 rounded-2xl border border-border-default bg-surface-card flex items-center justify-between">
                 <span className="text-caption1 text-text-secondary">健康日志 (Wellness)</span>
                 <span className="text-subheadline font-semibold tabular-nums text-text-primary">
                   {run.wellness_seen} 天
                 </span>
               </div>
-              <div className="p-3 rounded-xl border border-border-default bg-surface-card flex items-center justify-between">
+              <div className="p-3 rounded-2xl border border-border-default bg-surface-card flex items-center justify-between">
                 <span className="text-caption1 text-text-secondary">异常与错误数</span>
                 <span
                   className={`text-subheadline font-semibold tabular-nums ${

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useToast } from "@shared/ui/Toast";
+import { apiErrorMessage } from "@shared/lib/api";
 import type { SyncResult } from "@features/data/components/SourceCardShared";
 
 interface UseIntervalsActionsOptions {
@@ -39,7 +40,7 @@ export function useIntervalsActions({
       setAthleteId("");
       setApiKey("");
     } catch (err) {
-      const detail = err instanceof Error ? err.message : "请检查 Athlete ID 与 API Key 是否正确";
+      const detail = apiErrorMessage(err, "请检查 Athlete ID 与 API Key 是否正确");
       toast(`连接失败: ${detail}`, "error");
     } finally {
       setBusy(null);
@@ -59,8 +60,7 @@ export function useIntervalsActions({
       toast(`同步完成：新增 ${upserted} 条，去重 ${deduplicated} 条`, "success");
     } catch (error) {
       setSyncResult(null);
-      const msg = error instanceof Error && error.message ? error.message : "同步失败";
-      toast(msg, "error");
+      toast(apiErrorMessage(error, "同步失败"), "error");
     } finally {
       setBusy(null);
     }
@@ -73,8 +73,7 @@ export function useIntervalsActions({
       try {
         await onBackfill(fromDate);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "历史导入排队失败";
-        toast(msg, "error");
+        toast(apiErrorMessage(error, "历史导入排队失败"), "error");
       } finally {
         setBusy(null);
       }
@@ -88,8 +87,8 @@ export function useIntervalsActions({
       try {
         await onDisconnect(clearData);
         toast(clearData ? "已断开连接并清空同步数据" : "已断开 Intervals.icu 连接", "info");
-      } catch {
-        toast("断开操作失败", "error");
+      } catch (error) {
+        toast(apiErrorMessage(error, "断开操作失败"), "error");
       } finally {
         setBusy(null);
       }
