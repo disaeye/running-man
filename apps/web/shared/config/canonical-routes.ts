@@ -9,7 +9,7 @@
  *
  * - `?tab=` on `/analysis`        (overview | load | performance | intensity)
  * - `?view=` on `/calendar`       (week | month | list)
- * - `?section=` on `/settings`    (data | training | account; legacy `profile` → account)
+ * - `?section=` on `/settings` (data | training | account; legacy `profile` → account)
  *
  * Each dimension has its own alias table and round-trip URL builders.
  * Pages import the resolved tab/section/view and the canonical-write
@@ -150,7 +150,7 @@ export function settingsSectionUrl(
 
 /**
  * Build the canonical replacement URL the settings page writes when the
- * user actively picks a new section. Always canonicalizes: drops legacy
+ * user chooses a section. Always canonicalizes: drops legacy
  * `?tab=`, drops stale `?section=`, preserves everything else.
  */
 export function settingsSectionNavUrl(

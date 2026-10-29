@@ -1,11 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Settings Flow", () => {
-  test("renders settings page with section list", async ({ page }) => {
+test.describe("Profile and settings flow", () => {
+  test("renders settings page with clear profile navigation and sections", async ({ page }) => {
     await page.goto("/settings");
 
-    // Labels come from the page's PROFILE_TABS; assert on the testids (stable)
-    // and check the label inside each.
+    await expect(page.getByRole("heading", { name: "设置", exact: true })).toBeVisible();
+    const backToProfileLink = page.getByTestId("settings-page").getByRole("link", { name: "档案" });
+    await expect(backToProfileLink).toHaveAttribute("href", "/profile");
+
+    // Assert stable section test ids and their visible labels.
     const expectedSections = [
       { id: "data", label: "数据源与同步" },
       { id: "training", label: "生理与区间" },
@@ -16,6 +19,24 @@ test.describe("Settings Flow", () => {
         page.locator(`[data-testid="settings-section-${id}"]`).getByText(label, { exact: true }),
       ).toBeVisible();
     }
+  });
+
+  test("profile page contains read-only information and links to settings", async ({ page }) => {
+    await page.goto("/profile");
+
+    await expect(page.getByRole("heading", { name: "档案", exact: true })).toBeVisible();
+    const settingsLink = page.getByRole("link", { name: "设置" });
+    await expect(settingsLink).toHaveAttribute("href", "/settings");
+    await expect(page.getByTestId("settings-section-data")).toHaveCount(0);
+    await expect(page.getByTestId("demo-identity-card")).toBeVisible();
+    await expect(page.locator("input")).toHaveCount(0);
+
+    await settingsLink.click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole("heading", { name: "设置", exact: true })).toBeVisible();
+    await page.getByTestId("settings-page").getByRole("link", { name: "档案" }).click();
+    await expect(page).toHaveURL(/\/profile$/);
+    await expect(page.getByRole("heading", { name: "档案", exact: true })).toBeVisible();
   });
 
   test("navigates between setting sections via deep links", async ({ page }) => {
@@ -36,8 +57,8 @@ test.describe("Settings Flow", () => {
     await expect(page).toHaveURL(/\/calendar\?view=list/);
   });
 
-  test("legacy profile deep link lands on account", async ({ page }) => {
-    // `profile` is the legacy alias for `account`; resolveSettingsSection maps it.
+  test("legacy profile section deep link lands on account", async ({ page }) => {
+    // `profile` remains the legacy alias for the account settings section.
     await page.goto("/settings?section=profile");
     await expect(page.getByTestId("settings-section-account")).toHaveAttribute(
       "aria-pressed",

@@ -14,7 +14,7 @@ const AUDIT_ROUTES = [
   { path: "/login", kind: "public" }, { path: "/register", kind: "public" },
   { path: "/_not-found", kind: "not-found" }, { path: "/", kind: "authenticated" }, { path: "/calendar?view=week", kind: "authenticated" },
   { path: "/calendar?view=list", kind: "authenticated" }, { path: "/analysis", kind: "authenticated" }, { path: "/analysis?tab=performance", kind: "authenticated" },
-  { path: "/goals", kind: "authenticated" }, { path: "/settings?section=data", kind: "authenticated" }, { path: "/settings?section=strength", kind: "authenticated" },
+  { path: "/goals", kind: "authenticated" }, { path: "/profile", kind: "authenticated" }, { path: "/settings?section=data", kind: "authenticated" }, { path: "/settings?section=strength", kind: "authenticated" },
 ];
 const CATEGORY_LABELS = {
   accessibility: "accessibility",

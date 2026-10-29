@@ -141,6 +141,7 @@ WARM_ROUTES: Final = (
     "/calendar?view=list",
     "/analysis",
     "/goals",
+    "/profile",
     "/settings?section=data",
     "/settings?section=account",
     "/activities",

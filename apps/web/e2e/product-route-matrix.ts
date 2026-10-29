@@ -10,7 +10,12 @@ export const REQUIRED_SHARE_IDENTITIES = ["share-ready", "share-expired", "share
 export const REQUIRED_ACTIVITY_IDENTITIES = ["activity-valid", "activity-not-found", "activity-partial-streams"] as const;
 export const REQUIRED_CALENDAR_IDENTITIES = ["calendar-week", "calendar-month", "calendar-list"] as const;
 export const REQUIRED_ANALYSIS_IDENTITIES = ["analysis-session", "analysis-overview", "analysis-load", "analysis-performance", "analysis-intensity"] as const;
-export const REQUIRED_SETTINGS_IDENTITIES = ["settings-data", "settings-training", "settings-account"] as const;
+export const REQUIRED_SETTINGS_IDENTITIES = [
+  "settings-data",
+  "settings-training",
+  "settings-account",
+] as const;
+export const REQUIRED_PROFILE_IDENTITIES = ["dashboard-profile"] as const;
 
 export type RequiredIdentity =
   | (typeof REQUIRED_PUBLIC_IDENTITIES)[number]
@@ -19,6 +24,7 @@ export type RequiredIdentity =
   | (typeof REQUIRED_CALENDAR_IDENTITIES)[number]
   | (typeof REQUIRED_ANALYSIS_IDENTITIES)[number]
   | (typeof REQUIRED_SETTINGS_IDENTITIES)[number]
+  | (typeof REQUIRED_PROFILE_IDENTITIES)[number]
   | "today-home"
   | "goals";
 export type ProductRouteEntry = {
@@ -46,6 +52,7 @@ const REQUIRED_IDENTITIES = [
   ...REQUIRED_CALENDAR_IDENTITIES,
   ...REQUIRED_ANALYSIS_IDENTITIES,
   ...REQUIRED_SETTINGS_IDENTITIES,
+  ...REQUIRED_PROFILE_IDENTITIES,
   "today-home",
   "goals",
 ] as const satisfies readonly RequiredIdentity[];
@@ -74,6 +81,7 @@ const DASHBOARD_ROUTES = [
   route("analysis-performance", "dashboard", "analysis-performance", "/analysis?tab=performance", ["performance", "sparse", "error"]),
   route("analysis-intensity", "dashboard", "analysis-intensity", "/analysis?tab=intensity", ["intensity", "sparse", "error"]),
   route("dashboard-goals", "dashboard", "goals", "/goals", ["ready", "empty", "error", "edit"]),
+  route("dashboard-profile", "dashboard", "dashboard-profile", "/profile", ["ready", "empty", "error"]),
 ] as const;
 
 const ACTIVITY_ROUTES = [
@@ -100,8 +108,8 @@ const REDIRECT_ALIASES = [
   alias("alias-strength-analytics", "/strength/analytics", "calendar-list", "/calendar?view=list"),
   alias("alias-strength-view", "/calendar?view=strength", "calendar-list", "/calendar?view=list"),
   alias("alias-performance", "/performance", "analysis-performance", "/analysis?tab=performance"),
-  alias("alias-gear", "/gear", "settings-account", "/settings"),
-  alias("alias-library", "/library", "settings-account", "/settings"),
+  alias("alias-gear", "/gear", "settings-account", "/settings?section=account"),
+  alias("alias-library", "/library", "settings-account", "/settings?section=account"),
 ] as const;
 
 export const PRODUCT_ROUTE_MATRIX = [

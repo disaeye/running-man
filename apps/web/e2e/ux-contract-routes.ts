@@ -43,6 +43,7 @@ export const MOCKS: ReadonlyMap<string, RouteCase["mock"]> = new Map([
   ["/analysis?tab=performance", mockDashboard],
   ["/analysis?tab=intensity", mockDashboard],
   ["/goals", mockDashboard],
+  ["/profile", mockDashboard],
   ["/settings", mockDashboard],
   ["/settings?section=data", mockDashboard],
   ["/settings?section=training", mockDashboard],
@@ -80,6 +81,7 @@ export const CORE_ROUTES: readonly RouteCase[] = [
   { path: "/activities", public: false, mock: mockDashboard },
   { path: "/analysis", public: false, mock: mockDashboard },
   { path: "/goals", public: false, mock: mockDashboard },
+  { path: "/profile", public: false, mock: mockDashboard },
   { path: "/settings", public: false, mock: mockDashboard },
   { path: "/activities/e2e-overflow", public: false, mock: mockOverflowActivity },
 ];

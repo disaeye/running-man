@@ -12,7 +12,7 @@ const MOBILE = { width: 375, height: 812 };
 const TABLET = { width: 768, height: 1024 };
 const DESKTOP = { width: 1280, height: 800 };
 
-const DASHBOARD_ROUTES = ["/", "/calendar", "/analysis", "/goals", "/settings"];
+const DASHBOARD_ROUTES = ["/", "/calendar", "/analysis", "/goals", "/profile", "/settings"];
 
 test.describe("app shell", () => {
   test.describe("mobile 375x812", () => {
@@ -75,11 +75,12 @@ test.describe("app shell", () => {
       expect(box!.height).toBeGreaterThanOrEqual(44);
     });
 
-    test("profile button has accessible label", async ({ page }) => {
+    test("profile button opens account settings", async ({ page }) => {
       await page.goto("/");
-      await expect(
-        page.getByRole("button", { name: "打开个人设置" }),
-      ).toBeVisible();
+      const profileButton = page.getByRole("button", { name: "打开设置" });
+      await expect(profileButton).toBeVisible();
+      await profileButton.click();
+      await expect(page).toHaveURL(/\/settings\?section=account$/);
     });
 
     test("content end never sits under the mobile nav", async ({ page }) => {
@@ -155,6 +156,17 @@ test.describe("app shell", () => {
         (el) => el.getBoundingClientRect().height,
       );
       expect(navHeight).toBeGreaterThan(0);
+    });
+
+    test("profile and settings show distinct page titles while sharing the profile tab", async ({ page }) => {
+      for (const [route, title] of [["/profile", "档案"], ["/settings?section=account", "设置"]] as const) {
+        await page.goto(route);
+        await expect(page.locator('[data-shell-region="main"] h1')).toHaveText(title);
+        const profileTab = page
+          .locator('[data-layout-token="mobile-nav"] a')
+          .filter({ hasText: "档案" });
+        await expect(profileTab).toHaveAttribute("aria-current", "page");
+      }
     });
 
     test("alias active state: /activities maps to calendar tab", async ({

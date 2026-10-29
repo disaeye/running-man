@@ -110,10 +110,8 @@ test.describe("auth", () => {
     page,
   }) => {
     await context.clearCookies();
-    // /activities is a permanent redirect to /calendar?view=list, which then
-    // hits the auth check — so the final URL carries ?next= rather than being
-    // the bare /login the test used to expect.
-    await page.goto("/activities");
+    // The requested protected route remains in the login URL so sign-in can return here.
+    await page.goto("/profile");
     await page.waitForURL(/\/login(\?|$)/);
     await expect(page.locator('input[name="email"]')).toBeVisible();
   });

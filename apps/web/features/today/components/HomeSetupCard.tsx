@@ -25,7 +25,7 @@ interface Step {
  * The steps describe the athlete's real state. The card used to offer "连接数据源
  * / 去连接" and "填写阈值 / 去填写" unconditionally, so an athlete who had already
  * connected Intervals.icu and filled all four thresholds was told to do both —
- * while the data page showed 已连接 and the settings page showed 已填写 4/4 项阈值.
+ * while the data settings showed 已连接 and the settings page showed 已填写 4/4 项阈值.
  */
 export function HomeSetupCard({ connection, lastSync, profile }: Props) {
   const recorded = countRecordedThresholds(profile);
