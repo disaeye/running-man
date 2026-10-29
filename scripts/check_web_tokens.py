@@ -6,7 +6,7 @@ together, and all three are mechanically detectable:
   A. `glass-surface` on a panel. Glass is chrome — sidebar, header, tab bar.
      A page of six blurred panels hides the dusk atmosphere and costs a
      compositing layer per card on every scroll.
-  B. A panel surface with the wrong radius. The panel radius is 16px
+  B. A panel surface with the wrong radius. The panel radius is 14px
      (`rounded-2xl`); `rounded-xl` is the legacy 12px panel radius from before
      the canvas moved to sunken, and `rounded-3xl` (24px) belongs to dialogs and
      sheets. A panel surface carrying either is a second panel language.
@@ -50,11 +50,17 @@ FILL_AS_TEXT_EXEMPT_PREFIX: Final = "app/(public)/landing/"
 
 # `--color-accent` and `--color-primary` are fills. As text they measure 3.7:1
 # against the dark panel, so accent-coloured text uses `--color-accent-strong`.
-FILL_AS_TEXT: Final = re.compile(r"(?<![\w-])text-(?:accent|primary)(?![\w-])")
+#
+# That measurement was for the old indigo accent (#5a6f9a). The night-track
+# palette uses a lime accent (#caf300) that reaches 12.7:1 on the panel and
+# 9.6:1 on the lightest container — comfortably above AA as text. The two
+# tokens are now the same value, so accent-coloured text is allowed; the rule
+# stays for `primary`, which is still only ever a fill.
+FILL_AS_TEXT: Final = re.compile(r"(?<![\w-])text-(?:primary)(?![\w-])")
 
 GLASS: Final = re.compile(r"\bglass-surface(-strong)?\b")
 PANEL_SURFACE: Final = re.compile(r"\b(?:bg-surface-card|bg-card)\b")
-# 面板只许 16px：`rounded-xl`（12px）是画布换成 sunken 之前的遗留面板圆角，
+# 面板只许 14px：`rounded-xl`（12px）是画布换成 sunken 之前的遗留面板圆角，
 # `rounded-3xl`（24px）只属于对话框与抽屉。面板表面带上这两个就是第二套面板语言。
 LEGACY_PANEL_RADIUS: Final = re.compile(r"\brounded-(?:xl|3xl)\b")
 
@@ -107,7 +113,7 @@ def scan(path: Path) -> list[Finding]:
                     "panel-radius",
                     relative,
                     number,
-                    "panel surfaces are rounded-2xl (16px); rounded-xl is the legacy "
+                    "panel surfaces are rounded-2xl (14px); rounded-xl is the legacy "
                     "panel radius and rounded-3xl (24px) belongs to dialogs and sheets",
                 )
             )

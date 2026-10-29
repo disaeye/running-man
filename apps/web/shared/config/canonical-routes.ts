@@ -18,7 +18,16 @@
  */
 
 export type AnalysisTabId = "load" | "performance" | "intensity";
-export type AnalysisPageTab = "overview" | AnalysisTabId;
+/**
+ * 分析页的模式。
+ *
+ * `session` 是单次战报（参考稿 analy.html 的样子）：最近一场训练的完整回顾。
+ * 其余四个是周期趋势：一段时间的负荷、强度与能力。
+ *
+ * 单次战报是默认：参考稿的第三个导航项（分析）打开就是一场训练的回顾，
+ * 而不是一组时间段图表。
+ */
+export type AnalysisPageTab = "session" | "overview" | AnalysisTabId;
 
 /** Canonical `/calendar?view=` values. Legacy `strength` resolves to `list` via `CALENDAR_VIEW_ALIASES`. */
 export type CalendarViewId = "week" | "month" | "list";
@@ -28,6 +37,9 @@ const ANALYSIS_TAB_ALIASES: Readonly<Record<string, AnalysisTabId>> = {
   ability: "performance",
   recovery: "load",
 };
+
+/** `session` 是分析页的默认模式（单次战报）。 */
+const DEFAULT_ANALYSIS_TAB: AnalysisPageTab = "session";
 
 const CANONICAL_ANALYSIS_TABS: ReadonlySet<AnalysisTabId> = new Set([
   "load",
@@ -69,11 +81,12 @@ function isSettingsSectionId(value: string): value is SettingsSectionId {
  * Resolve a raw `?tab=` value on `/analysis` to a canonical tab.
  */
 export function resolveAnalysisPageTab(raw: string | null): AnalysisPageTab {
-  if (raw == null || raw === "" || raw === "overview") return "overview";
+  if (raw == null || raw === "") return DEFAULT_ANALYSIS_TAB;
+  if (raw === "session" || raw === "overview") return raw;
   if (isAnalysisTabId(raw)) return raw;
   const aliasTarget = ANALYSIS_TAB_ALIASES[raw];
   if (aliasTarget) return aliasTarget;
-  return "overview";
+  return DEFAULT_ANALYSIS_TAB;
 }
 
 /**
@@ -112,10 +125,10 @@ export function resolveSettingsSection(
 }
 
 /**
- * Canonical `/analysis` URL for a given tab. `"overview"` collapses to bare.
+ * Canonical `/analysis` URL for a given tab. The default mode has no query.
  */
 export function analysisTabUrl(tab: AnalysisPageTab): string {
-  return tab === "overview" ? "/analysis" : `/analysis?tab=${tab}`;
+  return tab === DEFAULT_ANALYSIS_TAB ? "/analysis" : `/analysis?tab=${tab}`;
 }
 
 /**
@@ -243,7 +256,7 @@ export function canonicalAnalysisSearch(
 ): string | null {
   const rawTab = currentParams.get("tab");
   const resolved = resolveAnalysisPageTab(rawTab);
-  const canonicalTab = resolved === "overview" ? null : resolved;
+  const canonicalTab = resolved === DEFAULT_ANALYSIS_TAB ? null : resolved;
   if (isAlreadyCanonical(pathname, currentParams, "tab", canonicalTab)) return null;
   return replaceOwnedKey(pathname, currentParams, "tab", canonicalTab);
 }
@@ -311,6 +324,7 @@ export function canonicalSettingsSearch(
  * `tab=ability` / `tab=recovery`).
  */
 export const ANALYSIS_TAB_ALL_INPUTS: readonly string[] = [
+  "session",
   "overview",
   "load",
   "performance",

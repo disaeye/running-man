@@ -17,6 +17,8 @@ export interface CalendarEventDTO {
   name?: string;
   workout_xml?: string;
   predicted_tss?: number | null;
+  /** 计划距离（米）：课表生成时由步骤与配速算出。 */
+  readonly predicted_distance_m?: number | null;
   status?: string;
   done?: boolean;
   training_type?: string | null;
@@ -26,6 +28,7 @@ export interface CalendarEventDTO {
     duration_min: number;
     pace_min_s_km?: number | null;
     pace_max_s_km?: number | null;
+    heart_rate_max_bpm?: number | null;
     segments: {
       type: string;
       duration_min: number;
@@ -35,10 +38,12 @@ export interface CalendarEventDTO {
       recovery_min?: number;
       rpe_min?: number;
       rpe_max?: number;
+      heart_rate_max_bpm?: number | null;
     }[];
     phase?: string;
   } | null;
   athlete_edited?: boolean;
+  readonly linked_activity_id?: string | null;
   completed_distance_m?: number | null;
   completed_duration_s?: number | null;
   completed_avg_hr?: number | null;

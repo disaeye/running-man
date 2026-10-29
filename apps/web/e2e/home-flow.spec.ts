@@ -3,22 +3,22 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * 锁住首页的阅读顺序。
  *
- * 页面先答「准备度如何」，紧跟它的因子网格说明这个结论是怎么来的；然后是本周还剩
- * 什么，最后是近 42 天的负荷趋势。前两块是一次判断（结论加依据），本周是计划，
- * 负荷趋势是参考——所以这个顺序在手机上也不变。
+ * 页面先答「今天练什么」（34px 结论与说明），紧跟它的四格读数说明这个决定的
+ * 四个口径；然后是近 42 天负荷趋势，最后是本周训练清单与课表。
+ * 所以这个顺序在手机上也不变。
  *
  * 四个块按 testid 定位而不是布局类名，日常的间距与分栏调整不会让这套断言失败：
- * - `home-decision`        准备度卡里的结论块：分数与结论句
- * - `home-readings`        准备度卡里的因子网格
- * - `home-weekly-horizon`  本周卡
+ * - `home-decision`        34px 结论句与说明
+ * - `home-readings`        结论句下面的四格读数
  * - `home-load`            负荷趋势卡（PMC）
+ * - `home-weekly-horizon`  本周训练清单卡
  */
 
 const BLOCKS = [
   "home-decision",
   "home-readings",
-  "home-weekly-horizon",
   "home-load",
+  "home-weekly-horizon",
 ] as const;
 
 async function blockTops(page: Page) {

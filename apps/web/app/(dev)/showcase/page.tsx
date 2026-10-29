@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
-import { ThemeToggle } from "@shared/ui/ThemeToggle";
 import { ButtonGallery } from "./ButtonGallery";
 import { CardsGallery } from "./CardsGallery";
 import { InputsGallery } from "./InputsGallery";
@@ -37,17 +36,16 @@ export default function PrimitiveShowcasePage() {
         </p>
       </div>
 
-      {/* Header with theme toggle */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-display-sm font-bold text-text-primary">
             Primitive Showcase
           </h1>
           <p className="mt-1 text-subheadline text-text-muted">
-            v7 design-system primitives — all variants, all states, both themes.
+            v8 design-system primitives — all variants, all states, one dark theme.
           </p>
         </div>
-        <ThemeToggle />
       </div>
 
       {/* Reduced-motion note */}

@@ -53,11 +53,11 @@ test.describe("primitive showcase", () => {
     expect(box!.height).toBeGreaterThanOrEqual(44);
   });
 
-  test("theme toggle is present and clickable", async ({ page }) => {
+  test("showcase keeps its single dark theme", async ({ page }) => {
     await page.goto("/showcase");
-    const toggle = page.getByRole("button", { name: /切换到/ });
-    await expect(toggle).toBeVisible();
-    await toggle.click();
+    await expect(page.getByRole("heading", { level: 1, name: "Primitive Showcase" })).toBeVisible();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+    await expect(page.getByRole("button", { name: /切换到/ })).toHaveCount(0);
   });
 
   test("reduced-motion note is rendered", async ({ page }) => {

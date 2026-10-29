@@ -24,6 +24,22 @@ export interface ActivitySummary {
   summary_polyline?: string | null;
   /** Whether the activity carries GPS; drives the "GPS only" filter. */
   has_gps?: boolean;
+  /** 活动名称：来源系统自己起的名字。 */
+  name?: string | null;
+  /** 自感用力度（1-10）。 */
+  rpe?: number | null;
+  /** 训练冲量 TRIMP：来源系统自己的算法。 */
+  trimp?: number | null;
+  /** 设备计算的训练效益（0-5）。 */
+  aerobic_te?: number | null;
+  anaerobic_te?: number | null;
+  /** 平均步长（m）与左右触地平衡（%左脚）。 */
+  avg_stride_length_m?: number | null;
+  avg_lr_balance_pct?: number | null;
+  /** 收藏标记。 */
+  is_bookmarked?: boolean;
+  /** 天气来源：intervals_icu 或 open_meteo_best_match。 */
+  weather_source?: string | null;
 }
 
 /** 单次活动的天气块（Intervals.icu 活动天气字段，无天气时为 null）。 */

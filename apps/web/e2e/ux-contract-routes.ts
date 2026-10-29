@@ -1,38 +1,15 @@
-/**
- * Route matrix, API fixtures and layer layout for the UX contract gate.
- *
- * The surfaces themselves are declared in `ux-contract.spec.ts`; this module
- * only answers "which routes, at which widths, under which theme, with which
- * mocked responses" so the spec file stays a declaration and not a data blob.
- */
 import type { Page } from "@playwright/test";
+import { ACTIVITY, ACTIVITY_ANALYSIS, SHARE } from "./ux-activity-fixtures";
+import { mockDashboard } from "./ux-dashboard-mocks";
 import { PRODUCT_ROUTE_MATRIX } from "./product-route-matrix";
 
-export const ACTIVITY = {
-  activity_id: "e2e-overflow", start_time: "2026-07-01T08:00:00Z", sport: "Run",
-  distance_m: 21100, duration_s: 6420, avg_hr: 152, max_hr: 174,
-  avg_power: null, np: null, intensity_factor: null, tss: 118, icu_ctl: 54,
-  avg_cadence: 178, avg_speed: 3.28, elevation_gain_m: 240, calories: 1400,
-  external_id: "i12345", source: "intervals_icu", file_type: "fit",
-  device_name: "Garmin Forerunner 265", raw_data: null, has_gps: false,
-  has_hr: true, has_power: false, has_cadence: true, weather: null,
-  summary_polyline: null,
-};
+export interface RouteCase {
+  readonly path: string;
+  readonly public: boolean;
+  readonly mock: ((page: Page) => Promise<void>) | undefined;
+}
 
-export const SHARE = {
-  sport: "Run", date: "2026-07-17", duration_s: 6420, distance_m: 21100,
-  name: "周末长距离：滨江往返",
-};
-
-/**
- * 分析响应：`ActivityAnalysisResponse` 的 zod 契约要求 `hr_zones` 是一个
- * 五个区间都在的数值对象（不可为 null），`laps` 与 `power_curve` 是数组，
- * `summary` 的四个数字字段可为 null。没有区间数据就把五段时长给 0——
- * 前端把总时长为 0 判成「暂无数据」，不会渲染出一堆假的区间。
- */
-export const ACTIVITY_ANALYSIS = { hr_zones: { z1: 0, z2: 0, z3: 0, z4: 0, z5: 0 }, laps: [], power_curve: [], summary: { np: null, if: null, tss: null, decoupling_pct: null } };
-
-export async function json(page: Page, pattern: string, body: unknown): Promise<void> {
+async function json(page: Page, pattern: string, body: unknown): Promise<void> {
   await page.route(pattern, (route) =>
     route.fulfill({
       status: 200,
@@ -43,22 +20,49 @@ export async function json(page: Page, pattern: string, body: unknown): Promise<
   );
 }
 
-export const MOCKS: ReadonlyMap<string, (page: Page) => Promise<void>> = new Map([
-  ["/activities/e2e-overflow", async (page: Page) => {
-    await json(page, "**/api/v1/activities/e2e-overflow*", ACTIVITY);
-    // 两个子资源各是一条 URL：`/analysis` 是分段与心率区间，`/laps` 是设备圈段。
-    // 没有它们，详情页会打出两条 404 console 错误。
-    await json(page, "**/api/v1/activities/e2e-overflow/analysis", ACTIVITY_ANALYSIS);
-    await json(page, "**/api/v1/activities/e2e-overflow/laps", []);
-  }],
-  ["/share/e2e-overflow", (page: Page) => json(page, "**/api/v1/share/e2e-overflow", SHARE)],
-]);
-
-export interface RouteCase {
-  readonly path: string;
-  readonly public: boolean;
-  readonly mock: ((page: Page) => Promise<void>) | undefined;
+async function mockOverflowActivity(page: Page): Promise<void> {
+  await json(page, "**/api/v1/activities/e2e-overflow", ACTIVITY);
+  await json(page, "**/api/v1/activities/e2e-overflow/analysis", ACTIVITY_ANALYSIS);
+  await json(page, "**/api/v1/activities/e2e-overflow/streams", []);
+  await json(page, "**/api/v1/activities/e2e-overflow/laps", []);
 }
+
+async function mockOverflowShare(page: Page): Promise<void> {
+  await json(page, "**/api/v1/share/e2e-overflow", SHARE);
+}
+
+export const MOCKS: ReadonlyMap<string, RouteCase["mock"]> = new Map([
+  ["/", mockDashboard],
+  ["/calendar", mockDashboard],
+  ["/calendar?view=week", mockDashboard],
+  ["/calendar?view=month", mockDashboard],
+  ["/calendar?view=list", mockDashboard],
+  ["/analysis", mockDashboard],
+  ["/analysis?tab=overview", mockDashboard],
+  ["/analysis?tab=load", mockDashboard],
+  ["/analysis?tab=performance", mockDashboard],
+  ["/analysis?tab=intensity", mockDashboard],
+  ["/goals", mockDashboard],
+  ["/settings", mockDashboard],
+  ["/settings?section=data", mockDashboard],
+  ["/settings?section=training", mockDashboard],
+  ["/settings?section=account", mockDashboard],
+  ["/activities", mockDashboard],
+  ["/plan", mockDashboard],
+  ["/calendar/full", mockDashboard],
+  ["/health", mockDashboard],
+  ["/trends", mockDashboard],
+  ["/data", mockDashboard],
+  ["/export", mockDashboard],
+  ["/strength", mockDashboard],
+  ["/strength/analytics", mockDashboard],
+  ["/calendar?view=strength", mockDashboard],
+  ["/performance", mockDashboard],
+  ["/gear", mockDashboard],
+  ["/library", mockDashboard],
+  ["/activities/e2e-overflow", mockOverflowActivity],
+  ["/share/e2e-overflow", mockOverflowShare],
+]);
 
 export const ALL_ROUTES: readonly RouteCase[] = [
   ...PRODUCT_ROUTE_MATRIX.filter((entry) => entry.fixtureId === undefined).map((entry) => ({
@@ -66,18 +70,18 @@ export const ALL_ROUTES: readonly RouteCase[] = [
     public: entry.routeKind === "public",
     mock: MOCKS.get(entry.path),
   })),
-  { path: "/activities/e2e-overflow", public: false, mock: MOCKS.get("/activities/e2e-overflow") },
-  { path: "/share/e2e-overflow", public: true, mock: MOCKS.get("/share/e2e-overflow") },
+  { path: "/activities/e2e-overflow", public: false, mock: mockOverflowActivity },
+  { path: "/share/e2e-overflow", public: true, mock: mockOverflowShare },
 ];
 
 export const CORE_ROUTES: readonly RouteCase[] = [
-  { path: "/", public: false, mock: undefined },
-  { path: "/calendar", public: false, mock: undefined },
-  { path: "/activities", public: false, mock: undefined },
-  { path: "/analysis", public: false, mock: undefined },
-  { path: "/goals", public: false, mock: undefined },
-  { path: "/settings", public: false, mock: undefined },
-  { path: "/activities/e2e-overflow", public: false, mock: MOCKS.get("/activities/e2e-overflow") },
+  { path: "/", public: false, mock: mockDashboard },
+  { path: "/calendar", public: false, mock: mockDashboard },
+  { path: "/activities", public: false, mock: mockDashboard },
+  { path: "/analysis", public: false, mock: mockDashboard },
+  { path: "/goals", public: false, mock: mockDashboard },
+  { path: "/settings", public: false, mock: mockDashboard },
+  { path: "/activities/e2e-overflow", public: false, mock: mockOverflowActivity },
 ];
 
 export interface Layer {

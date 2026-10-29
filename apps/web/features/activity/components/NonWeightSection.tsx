@@ -11,7 +11,6 @@ import { HrZoneDistribution } from "@features/activity/components/HrZoneDistribu
 import { PowerCurveChart } from "@features/activity/components/PowerCurveChart";
 import { GpsSection } from "@features/activity/components/GpsSection";
 import { AerobicDecouplingCard } from "@features/activity/components/AerobicDecouplingCard";
-import { ActivityShoeAssign } from "@features/activity/components/ActivityShoeAssign";
 import { resolveGpsState } from "@features/activity/lib/activity-detail";
 
 export function NonWeightSection({
@@ -36,7 +35,6 @@ export function NonWeightSection({
   return (
     <>
       <CoachDebrief activity={activity} streams={streamMap} />
-      {isRun && <ActivityShoeAssign activityId={activity.activity_id} />}
       <AerobicDecouplingCard
         summary={analysis?.summary ?? null}
         showEmpty={isRun}

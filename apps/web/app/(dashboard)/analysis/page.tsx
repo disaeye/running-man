@@ -10,6 +10,7 @@ import { AnalysisAbility } from "@features/analysis/components/AnalysisAbility";
 import { AnalysisIntensity } from "@features/analysis/components/AnalysisIntensity";
 import { AnalysisOverview } from "@features/analysis/components/AnalysisOverview";
 import { AnalysisRangeControls } from "@features/analysis/components/AnalysisRangeControls";
+import { DemoAnalysisSession } from "@features/analysis/components/DemoAnalysisSession";
 import {
   AnalysisRangeProvider,
   useAnalysisRange,
@@ -25,6 +26,7 @@ import {
 // Tab wording matches ANALYSIS_TAB_LABELS and the pillar card titles, so one
 // surface never calls the same thing by a different name.
 const TABS = [
+  { id: "session", label: "单次战报" },
   { id: "overview", label: "总览" },
   { id: "load", label: "负荷与体能" },
   { id: "intensity", label: "强度结构" },
@@ -93,6 +95,9 @@ function AnalysisPageContent() {
             </TabsTrigger>
           ))}
         </TabsList>
+        <TabsContent value="session" className="space-y-6" data-testid="analysis-session">
+          <DemoAnalysisSession />
+        </TabsContent>
         <TabsContent value="overview" className="space-y-6" data-testid="analysis-overview">
           <AnalysisOverview onSelectTab={setTab} rangeLabel={`${range.from} — ${range.to}`} />
         </TabsContent>

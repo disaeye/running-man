@@ -8,7 +8,7 @@ export function GpsSection({ gpsState, streamMap }: { gpsState: GpsUiState; stre
   switch (gpsState) {
     case "valid":
       return (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2" data-testid="gps-valid-state">
           <GpsTrack streams={streamMap} />
           <ColoredGpsTrack streams={streamMap} />
         </div>

@@ -2,153 +2,160 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Running Man — Winter Sky Indigo (v8.5 — 5cm Quiet Winter). Calm dark ink canvas with restrained indigo action tone. */
+/*
+ * Running Man — 夜间赛场（Night Track）。
+ *
+ * 视觉取自 stich_demo：深色画布、荧光黄绿主色、青色辅色、橙色警示，
+ * 窄体标题字与等宽数字。画布比卡片亮一档，层次靠明度差而不是投影。
+ *
+ * 这个产品只有一个主题：暗色。白天在户外看手机的强光环境下，深色画布配
+ * 高对比数字比浅色更好读；两个主题会让同一份数据出现两套颜色语义，
+ * 图表配色与区间配色都要各写一遍。
+ *
+ * `:root` 声明真实颜色，`.dark` 重复同一组值：应用始终带着 `dark` 类，
+ * 而设计闸门会分别读这两个块，两处必须一致。
+ */
 :root {
-  --color-surface-base: #ffffff;
-  --color-surface-raised: #ffffff;
-  --color-surface-overlay: #f2f4f9;
-  --color-surface-active: #e9edf5;
-  --color-surface-sunken: #f4f6fa;
-  --color-surface-card: #ffffff;
-  --color-surface-subtle: #f7f8fc;
-  --color-rail: #eef1f7;
-  --color-surface-dark: #0f1722;
-  --color-surface-dark-elevated: #16202c;
-  --color-surface-dark-soft: #1d2b3a;
-  --color-text-primary: #1b2430;
-  --color-text-secondary: #4b5666;
-  --color-text-muted: #5b6779;
-  --color-text-inverse: #ffffff;
-  --color-ink: #141c24;
-  --color-on-primary: #ffffff;
-  --color-on-dark: #f0f4f8;
-  --color-on-dark-soft: #9aa8b5;
-  --color-chrome-accent: #5a6f9a;
-  --color-accent: #5a6f9a;
-  --color-primary: #5a6f9a;
-  --color-ring: #5a6f9a;
-  --color-primary-active: #47587c;
-  --color-primary-disabled: #bcc7d6;
-  --color-accent-strong: #405072;
-  --color-on-accent: #ffffff;
-  --color-chart-accent: #5a6f9a;
-  --color-pink: #cf6888;
-  --color-move: #e54b66;
-  --color-exercise: #2f855a;
-  --color-stand: #0284c7;
-  --color-ctl: #0284c7;
-  --color-atl: #7c3aed;
-  --color-tsb: #d97706;
-  --color-ctl-blue: #0284c7;
-  --color-atl-magenta: #7c3aed;
-  --color-tsb-gold: #d97706;
-  --color-hr-rest: #e11d48;
-  --color-sleep: #0284c7;
-  --color-weight: #16a34a;
-  --color-success: #107736;
-  --color-warning: #9c5504;
-  --color-error: #c82323;
-  --color-info: #026da5;
-  --color-recovery-good: #16a34a;
-  --color-recovery-moderate: #d97706;
-  --color-recovery-poor: #dc2626;
-  --color-zone-1: #64748b;
-  --color-zone-2: #0284c7;
-  --color-zone-3: #16a34a;
-  --color-zone-4: #d97706;
-  --color-zone-5: #dc2626;
-  --color-goal-on-track: #16a34a;
-  --color-goal-behind: #d97706;
-  --color-goal-at-risk: #dc2626;
-  --color-sport-run: #e11d48;
-  --color-sport-virtualrun: #7c3aed;
-  --color-sport-trailrun: #be123c;
-  --color-sport-ride: #0284c7;
-  --color-sport-virtualride: #0284c7;
-  --color-sport-bike: #0284c7;
-  --color-sport-swim: #0284c7;
-  --color-sport-walk: #16a34a;
-  --color-sport-hike: #16a34a;
-  --color-sport-alpineski: #0284c7;
-  --color-sport-workout: #d97706;
-  --color-sport-weighttraining: #d97706;
-  --color-data-emphasis: #0284c7;
-  --color-load-heatmap: #0284c7;
-  --color-calendar-today: #546790;
-  --color-active-phase: #5a6f9a;
-  --color-gps-map-bg: #e2e8f0;
-  --color-gps-map-grid: #cbd5e1;
-  --color-insight-bg: #edf2f7;
-  --color-insight-border: rgba(45, 62, 80, 0.16);
-  --color-border-subtle: #dfe4ee;
-  --color-border-default: #ccd4e2;
-  --color-border-strong: #b9c3d4;
-  --glass-bg: #ffffff;
-  --glass-bg-strong: #ffffff;
-  --glass-border: #dfe4ee;
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  /* 画布与容器：明度逐级上升，最深的是画布。 */
+  --color-surface-sunken: #111317;
+  --color-surface-card: #1e2023;
+  --color-surface-raised: #282a2d;
+  --color-surface-overlay: #1a1c1f;
+  --color-surface-active: #333538;
+  --color-surface-base: #0c0e11;
+  --color-surface-subtle: #16181b;
+  --color-rail: #16181b;
+
+  /* 文字：正文与标签。 */
+  --color-text-primary: #e2e2e6;
+  --color-text-secondary: #c5c9ac;
+  --color-text-muted: #a3a78c;
+  --color-text-inverse: #171e00;
+  --color-ink: #e2e2e6;
+  --color-on-primary: #171e00;
+  --color-on-dark: #e2e2e6;
+  --color-on-dark-soft: #8f9378;
+
+  /* 强调色：荧光黄绿为主，青色为辅，橙色用于警示。 */
+  --color-accent: #caf300;
+  --color-primary: #caf300;
+  --color-accent-strong: #caf300;
+  --color-on-accent: #171e00;
+  --color-chart-accent: #caf300;
+  --color-ring: #7df4ff;
+  --color-primary-active: #b0d500;
+  --color-primary-disabled: #4a4f2a;
+  --color-chrome-accent: #caf300;
+  --color-tertiary: #7df4ff;
+  --color-tertiary-dim: #00dbe9;
+  /* 橙色是警示色，名字是 warm（暖），不是 secondary：`text-secondary` 在
+   * 全站 270 处表示「次要文字」，把它定义成橙色会让次要文字变成橙色，
+   * 并且橙字落在橙底上时对比度是 1.0:1。 */
+  --color-warm: #ffb59c;
+  --color-warm-dim: #ff5708;
+
+  /* 数据语义色：只用于图表序列、分类标签与状态点。 */
+  --color-ctl: #00dbe9;
+  --color-atl: #7df4ff;
+  --color-tsb: #ffb59c;
+  --color-ctl-blue: #00dbe9;
+  --color-atl-magenta: #7df4ff;
+  --color-tsb-gold: #ffb59c;
+  --color-hr-rest: #ff788f;
+  --color-sleep: #00dbe9;
+  --color-weight: #7df4ff;
+  --color-success: #5cb87a;
+  --color-warning: #ffb59c;
+  --color-error: #ffb4ab;
+  --color-info: #00dbe9;
+  --color-recovery-good: #5cb87a;
+  --color-recovery-moderate: #ffb59c;
+  --color-recovery-poor: #ffb4ab;
+  --color-zone-1: #8f9378;
+  --color-zone-2: #00dbe9;
+  --color-zone-3: #5cb87a;
+  --color-zone-4: #ffb59c;
+  --color-zone-5: #ffb4ab;
+  --color-goal-on-track: #5cb87a;
+  --color-goal-behind: #ffb59c;
+  --color-goal-at-risk: #ffb4ab;
+  --color-sport-run: #ff788f;
+  --color-sport-virtualrun: #b88cff;
+  --color-sport-trailrun: #ff8fa4;
+  --color-sport-ride: #00dbe9;
+  --color-sport-virtualride: #00dbe9;
+  --color-sport-bike: #00dbe9;
+  --color-sport-swim: #00dbe9;
+  --color-sport-walk: #5cb87a;
+  --color-sport-hike: #5cb87a;
+  --color-sport-alpineski: #00dbe9;
+  --color-sport-workout: #ffb59c;
+  --color-sport-weighttraining: #ffb59c;
+  --color-data-emphasis: #00dbe9;
+  --color-load-heatmap: #00dbe9;
+  --color-calendar-today: #caf300;
+  --color-active-phase: #caf300;
+  --color-gps-map-bg: #0c0e11;
+  --color-gps-map-grid: #282a2d;
+  --color-insight-bg: #16181b;
+  --color-insight-border: rgba(226, 226, 230, 0.12);
+
+  /* 边线：只有三档，密度靠明度差。 */
+  --color-border-subtle: #313439;
+  --color-border-default: #3f444a;
+  --color-border-strong: #4d5259;
+  --color-outline: #a3a78c;
+  --color-outline-variant: #444932;
+
+  /* 玻璃只在导航与顶栏这类 chrome 上使用。 */
+  --glass-bg: #1e2023;
+  --glass-bg-strong: #16181b;
+  --glass-border: #2a2d31;
+  --glass-highlight: inset 0 1px 0 rgba(226, 226, 230, 0.06);
   --glass-blur: 20px;
-  --glass-saturate: 1.2;
-  --glass-glow: 0 0 35px rgba(90, 111, 154, 0.08);
-  --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06);
-  --shadow-elevated: 0 12px 35px rgba(15, 23, 42, 0.1);
-  --shadow-sheet: 0 -12px 36px rgba(15, 23, 42, 0.14);
-  /* 主卡（行动卡）阴影：一屏一张，靠这一层把行动抬到画布之上。 */
-  --shadow-panel: 0 1px 3px rgb(27 36 48 / 0.08);
-  --color-background: #ffffff;
-  --color-foreground: #1b2430;
-  --color-card: #ffffff;
-  --color-card-foreground: #141c24;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #141c24;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #eaeff4;
-  --color-secondary-foreground: #141c24;
-  --color-muted: #f0f4f8;
-  --color-muted-foreground: #5b6779;
-  --color-accent-foreground: #ffffff;
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-border: #dfe4ee;
-  --color-input: #ccd4e2;
-  /* Two stacks, both ending in CJK faces.
-   *
-   * The mono stack used to be `"Fira Code", "SFMono-Regular", Consolas,
-   * monospace` — no CJK entry at all — while roughly a third of the labels that
-   * use it are Chinese (时长, 目标负荷, 强度, RUNNING MAN / 首页). A Chinese glyph
-   * missing from every listed face falls through to the generic `monospace`,
-   * which for CJK resolves to whatever the platform picks, at full-width
-   * monospaced metrics: the characters came out letter-spaced and grey.
-   *
-   * Naming the system CJK faces explicitly does not change Latin rendering at
-   * all — the browser selects per glyph — but it makes Chinese resolve to the
-   * same face the sans stack uses, so `font-mono` reads as "use tabular figures
-   * and a monospaced Latin face", not "render my Chinese oddly".
-   *
-   * Fira Code itself is intentionally absent: it was declared but never loaded
-   * (no @font-face, no link), so it previously fell through to SFMono/Consolas
-   * anyway. Naming faces the platform actually has is more honest, and removes a
-   * cross-platform inconsistency. */
-  --font-sans: var(--font-geist-sans), "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", "Menlo", "Consolas", "PingFang SC", "Microsoft YaHei", monospace;
+  --glass-saturate: 1.15;
+  --glass-glow: 0 0 24px rgba(202, 243, 0, 0.06);
+
+  /* 阴影：行动卡与浮层各一档，内容卡不投影。 */
+  --shadow-card: 0 1px 8px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 24px 70px rgba(0, 0, 0, 0.55);
+  --shadow-sheet: 0 -18px 50px rgba(0, 0, 0, 0.6);
+  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  /* Tailwind 语义别名。 */
+  --color-background: #111317;
+  --color-foreground: #e2e2e6;
+  --color-card: #1e2023;
+  --color-card-foreground: #e2e2e6;
+  --color-popover: #282a2d;
+  --color-popover-foreground: #e2e2e6;
+  --color-primary-foreground: #171e00;
+  --color-secondary: #282a2d;
+  --color-secondary-foreground: #e2e2e6;
+  --color-muted: #16181b;
+  --color-muted-foreground: #a3a78c;
+  --color-accent-foreground: #171e00;
+  --color-destructive: #ffb4ab;
+  --color-destructive-foreground: #171e00;
+  --color-border: #313439;
+  --color-input: #3f444a;
+
+  /*
+   * 字体：窄体（Barlow Condensed）做标题与标签，等宽（JetBrains Mono）做
+   * 数字，正文用 Space Grotesk。指标数字一律等宽并开表格数字，
+   * 一列数字上下才对得齐。
+   */
+  --font-sans: "Space Grotesk", var(--font-space-grotesk), "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
+  --font-display: "Barlow Condensed", var(--font-barlow-condensed), "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-serif: var(--font-sans);
+
   --shell-pad-x: clamp(1rem, 3vw, 3.5rem);
   --shell-pad-x-end: max(var(--shell-pad-x), env(safe-area-inset-right, 0px));
   --shell-pad-y: clamp(1.25rem, 4vw, 3.25rem);
   --shell-header-h: 3.5rem;
-  --shell-content-max: 72rem;
-  --shell-gap: clamp(1.5rem, 2vw, 2rem);
-  /*
-   * Height reserved for the mobile bottom tab bar.
-   *
-   * MobileTabBar measures itself and overwrites this at runtime (a ResizeObserver
-   * keeps it current, since the bar grows with the safe-area inset). The static
-   * default exists so the reserved space is correct *before* that measurement
-   * runs: at 0px the last element of every page sat underneath the bar until
-   * React mounted, which a test measuring early reported as an overlap.
-   *
-   * 4.5rem covers the bar's own padding plus its tallest content; the runtime
-   * measurement replaces it with the exact value, including any inset.
-   */
+  --shell-content-max: 64rem;
+  --shell-gap: clamp(1rem, 1.6vw, 1.5rem);
   --mobile-nav-height: 4.5rem;
   --duration-instant: 100ms;
   --duration-fast: 180ms;
@@ -159,114 +166,6 @@
   --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
 }
 
-.dark {
-  --color-surface-base: #0f1319;
-  --color-surface-raised: #141a22;
-  --color-surface-overlay: #1a212b;
-  --color-surface-active: #222b37;
-  --color-surface-sunken: #0b0f15;
-  --color-surface-card: #141a22;
-  --color-surface-subtle: #171e27;
-  --color-rail: #151a22;
-  --color-surface-dark: #05070a;
-  --color-surface-dark-elevated: #111822;
-  --color-surface-dark-soft: #18222d;
-  --color-text-primary: #eef1f6;
-  --color-text-secondary: #a8b2c1;
-  --color-text-muted: #8b96a6;
-  --color-text-inverse: #081017;
-  --color-ink: #edf3f8;
-  --color-on-primary: #ffffff;
-  --color-on-dark: #edf3f8;
-  --color-on-dark-soft: #9aa8b5;
-  --color-chrome-accent: #5a6f9a;
-  --color-accent: #5a6f9a;
-  --color-primary: #5a6f9a;
-  --color-ring: #7a8fb5;
-  --color-primary-active: #4a5d84;
-  --color-primary-disabled: #2c384a;
-  --color-accent-strong: #9aaecf;
-  --color-on-accent: #ffffff;
-  --color-chart-accent: #5a6f9a;
-  --color-pink: #d4b8c4;
-  --color-move: #ff5d7a;
-  --color-exercise: #74b886;
-  --color-stand: #59e1ff;
-  --color-ctl: #59e1ff;
-  --color-atl: #b88cff;
-  --color-tsb: #ffc857;
-  --color-ctl-blue: #59e1ff;
-  --color-atl-magenta: #b88cff;
-  --color-tsb-gold: #ffc857;
-  --color-hr-rest: #ff788f;
-  --color-sleep: #59e1ff;
-  --color-weight: #82d69d;
-  --color-success: #52a86d;
-  --color-warning: #ffc857;
-  --color-error: #ff667d;
-  --color-info: #59e1ff;
-  --color-recovery-good: #52a86d;
-  --color-recovery-moderate: #ffc857;
-  --color-recovery-poor: #ff667d;
-  --color-zone-1: #71808c;
-  --color-zone-2: #59e1ff;
-  --color-zone-3: #52a86d;
-  --color-zone-4: #ffc857;
-  --color-zone-5: #ff667d;
-  --color-goal-on-track: #52a86d;
-  --color-goal-behind: #ffc857;
-  --color-goal-at-risk: #ff667d;
-  --color-sport-run: #ff788f;
-  --color-sport-virtualrun: #b88cff;
-  --color-sport-trailrun: #ff8fa4;
-  --color-sport-ride: #59e1ff;
-  --color-sport-virtualride: #59e1ff;
-  --color-sport-bike: #59e1ff;
-  --color-sport-swim: #59e1ff;
-  --color-sport-walk: #52a86d;
-  --color-sport-hike: #52a86d;
-  --color-sport-alpineski: #59e1ff;
-  --color-sport-workout: #ffc857;
-  --color-sport-weighttraining: #ffc857;
-  --color-data-emphasis: #59e1ff;
-  --color-load-heatmap: #59e1ff;
-  --color-calendar-today: #8899b8;
-  --color-active-phase: #5a6f9a;
-  --color-gps-map-bg: #0b1117;
-  --color-gps-map-grid: #18232d;
-  --color-insight-bg: #0c1218;
-  --color-insight-border: rgba(171, 198, 214, 0.2);
-  --color-border-subtle: #262f3c;
-  --color-border-default: #303b49;
-  --color-border-strong: #3d4a5a;
-  --glass-bg: #141a22;
-  --glass-bg-strong: #141a22;
-  --glass-border: #262f3c;
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --glass-blur: 20px;
-  --glass-saturate: 1.15;
-  --glass-glow: 0 0 40px rgba(90, 111, 154, 0.08);
-  --shadow-card: 0 14px 38px rgba(0, 0, 0, 0.2);
-  --shadow-elevated: 0 24px 70px rgba(0, 0, 0, 0.38);
-  --shadow-sheet: 0 -18px 50px rgba(0, 0, 0, 0.5);
-  --shadow-panel: 0 2px 8px rgb(0 0 0 / 0.45);
-  --color-background: #0f1319;
-  --color-foreground: #edf3f8;
-  --color-card: #10151e;
-  --color-card-foreground: #edf3f8;
-  --color-popover: #111822;
-  --color-popover-foreground: #edf3f8;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #151b25;
-  --color-secondary-foreground: #edf3f8;
-  --color-muted: #151b25;
-  --color-muted-foreground: #8d9aa7;
-  --color-accent-foreground: #ffffff;
-  --color-destructive: #ff667d;
-  --color-destructive-foreground: #ffffff;
-  --color-border: #262f3c;
-  --color-input: #303b49;
-}
 @theme inline {
   --color-surface-base: var(--color-surface-base);
   --color-rail: var(--color-rail);
@@ -276,10 +175,9 @@
   --color-surface-overlay: var(--color-surface-overlay);
   --color-surface-active: var(--color-surface-active);
   --color-surface-sunken: var(--color-surface-sunken);
-  --color-surface-card: var(--color-surface-card);
-  --color-surface-dark: var(--color-surface-dark);
-  --color-surface-dark-elevated: var(--color-surface-dark-elevated);
-  --color-surface-dark-soft: var(--color-surface-dark-soft);
+  --color-surface-dark: var(--color-surface-base);
+  --color-surface-dark-elevated: var(--color-surface-raised);
+  --color-surface-dark-soft: var(--color-surface-overlay);
   --color-text-primary: var(--color-text-primary);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-muted: var(--color-text-muted);
@@ -298,10 +196,14 @@
   --color-accent-strong: var(--color-accent-strong);
   --color-on-accent: var(--color-on-accent);
   --color-chart-accent: var(--color-chart-accent);
-  --color-pink: var(--color-pink);
-  --color-move: var(--color-move);
-  --color-exercise: var(--color-exercise);
-  --color-stand: var(--color-stand);
+  --color-tertiary: var(--color-tertiary);
+  --color-tertiary-dim: var(--color-tertiary-dim);
+  --color-warm: var(--color-warm);
+  --color-warm-dim: var(--color-warm-dim);
+  --color-pink: var(--color-sport-run);
+  --color-move: var(--color-sport-run);
+  --color-exercise: var(--color-sport-workout);
+  --color-stand: var(--color-sport-stand);
   --color-ctl: var(--color-ctl);
   --color-atl: var(--color-atl);
   --color-tsb: var(--color-tsb);
@@ -349,6 +251,8 @@
   --color-border-subtle: var(--color-border-subtle);
   --color-border-default: var(--color-border-default);
   --color-border-strong: var(--color-border-strong);
+  --color-outline: var(--color-outline);
+  --color-outline-variant: var(--color-outline-variant);
   --color-background: var(--color-background);
   --color-foreground: var(--color-foreground);
   --color-card: var(--color-card);
@@ -365,11 +269,16 @@
   --color-destructive-foreground: var(--color-destructive-foreground);
   --color-border: var(--color-border);
   --color-input: var(--color-input);
-  /* 指标两级大数：56px 一屏一处，40px 次大。 */
-  --text-metric-xl: 3.5rem;
+
+  /* 指标两级大数：48px 一屏一处，24px 次大。 */
+  --text-metric-xl: 3rem;
   --text-metric-xl--line-height: 1.05;
-  --text-metric-lg: 2.5rem;
+  --text-metric-lg: 1.5rem;
   --text-metric-lg--line-height: 1.1;
+  /* 结论句：34px，整页唯一。 */
+  --text-conclusion: 2.125rem;
+  --text-conclusion--line-height: 1.2;
+  --text-conclusion--letter-spacing: -0.02em;
   --text-display-xl: clamp(2.5rem, 5vw, 3rem);
   --text-display-xl--line-height: 1.15;
   --text-display-lg: clamp(2rem, 4vw, 2.5rem);
@@ -383,33 +292,27 @@
   --text-title2: 1.375rem;
   --text-title3: 1.25rem;
   --text-headline: 0.9375rem;
-  --text-body: 0.9375rem;
+  --text-body: 0.875rem;
   --text-callout: 0.875rem;
   --text-subheadline: 0.8125rem;
   --text-footnote: 0.8125rem;
-  /* Caption sizes carry a floor, not just a preference.
-   *
-   * These were 10px and 11px while DESIGN.md documented 11px and 12px — the
-   * stylesheet and the design reference had drifted a full pixel apart, so
-   * every `text-caption1` in the app rendered smaller than the document that
-   * specifies it. The document is the intent; the tokens now match it.
-   *
-   * The floor matters more for Chinese than for Latin. CJK glyphs carry far
-   * more strokes per em, and below 12px they smear: a rendered comparison at
-   * 9/10/11/12/13px puts the crossover at 12px, where 恢复评估 stops being a grey
-   * smudge. Latin-only labels stay legible a step smaller, which is why
-   * caption2 is not 12px as well. */
+  /* 中文 12px 是地板：11px 的汉字在屏幕上糊成一团。 */
   --text-caption1: 0.75rem;
   --text-caption2: 0.6875rem;
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --font-serif: var(--font-sans);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
-  --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.22);
-  --shadow-lg: 0 22px 70px rgba(0, 0, 0, 0.35);
+  --font-display: var(--font-display);
+  --font-serif: var(--font-serif);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 22px 70px rgba(0, 0, 0, 0.6);
+  /* 面板圆角 12px：参考稿的卡片是 12px，卡内分组是 10px，浮层是 24px。 */
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 1.5rem;
 }
 
-/* 画布统一为 sunken：所有宽度下都能和白色面板拉开明度差。 */
+/* 画布统一为 sunken：所有宽度下都能和面板拉开明度差。 */
 html { background: var(--color-surface-sunken); }
 body {
   margin: 0;
@@ -417,7 +320,7 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   font-size: var(--text-body);
-  line-height: 1.6;
+  line-height: 1.55;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
@@ -427,13 +330,7 @@ body {
 }
 
 :lang(zh), [lang="zh"], [lang^="zh-"] { letter-spacing: normal; }
-:lang(zh) h1, [lang="zh"] h1, [lang^="zh-"] h1,
-:lang(zh) h2, [lang="zh"] h2, [lang^="zh-"] h2,
-:lang(zh) h3, [lang="zh"] h3, [lang^="zh-"] h3,
-:lang(zh) h4, [lang="zh"] h4, [lang^="zh-"] h4,
-:lang(zh) h5, [lang="zh"] h5, [lang^="zh-"] h5,
-:lang(zh) h6, [lang="zh"] h6, [lang^="zh-"] h6 { letter-spacing: normal; }
-h1, h2, h3, h4, h5, h6 { text-wrap: balance; overflow-wrap: break-word; letter-spacing: -0.025em; font-weight: 600; }
+h1, h2, h3, h4, h5, h6 { text-wrap: balance; overflow-wrap: break-word; letter-spacing: normal; font-weight: 600; }
 p, span, li, dt, dd { overflow-wrap: break-word; }
 .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
 
@@ -441,6 +338,7 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
 @keyframes rm-rise { from { opacity: 0; transform: translate3d(0, 16px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
 @keyframes rm-scan { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(100%, 0, 0); } }
 @keyframes rm-pulse { 0%, 100% { opacity: 0.48; } 50% { opacity: 1; } }
+@keyframes rm-glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 
 .focus-ring:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 3px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-ring) 20%, transparent); }
 ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); color: var(--color-text-primary); }
@@ -502,8 +400,8 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
   }
 }
 
-.nav-pill-active { background: var(--color-surface-base); color: var(--color-accent-strong); }
-.shell-title { letter-spacing: -0.025em; }
+.nav-pill-active { background: var(--color-surface-base); color: var(--color-accent); }
+.shell-title { letter-spacing: normal; }
 
 /* Keep heavy below-fold feature panels out of the first paint. */
 [data-testid="home-weekly-horizon"] { content-visibility: auto; contain-intrinsic-size: 0 360px; }
@@ -524,3 +422,13 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; acc
 
 /* Browser surfaces belong to the palette: caret, selection and scrollbar. */
 input, textarea, [contenteditable="true"] { caret-color: var(--color-accent); }
+
+/* 窄体标题字：数字与标题用同一族窄体，视觉上更接近参考稿。 */
+.font-display { font-family: var(--font-display); }
+/* 全大写标签：参考稿的标签都是大写窄体，中文标签保持原样。 */
+.label-caps { font-family: var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; }
+/* 指标数字：等宽，表格数字对齐。 */
+.metric-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* 主色发光：只给行动按钮与状态点。 */
+.accent-glow { box-shadow: 0 0 20px rgba(202, 243, 0, 0.35); }
+.accent-glow-soft { box-shadow: 0 0 16px rgba(202, 243, 0, 0.18); }

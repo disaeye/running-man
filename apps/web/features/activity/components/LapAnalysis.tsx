@@ -15,6 +15,7 @@ import {
   formatHeartRate,
   formatPace,
 } from "@shared/lib/format";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { Lap } from "@features/activity/hooks/useActivityAnalysis";
 
 interface LapAnalysisProps {
@@ -23,7 +24,8 @@ interface LapAnalysisProps {
   source?: "device" | "derived" | "none";
 }
 
-function formatLapDuration(s: number): string {
+function formatLapDuration(s: number | null): string {
+  if (s == null) return NO_VALUE;
   const m = Math.floor(s / 60);
   const sec = Math.round(s % 60);
   return `${m}:${sec.toString().padStart(2, "0")}`;
@@ -31,7 +33,7 @@ function formatLapDuration(s: number): string {
 
 /** Compute avg pace in m/s from a lap's distance and duration */
 function lapPace(lap: Lap): number | null {
-  if (lap.duration_s <= 0) return null;
+  if (lap.duration_s == null || lap.duration_s <= 0) return null;
   return lap.distance_m / lap.duration_s;
 }
 

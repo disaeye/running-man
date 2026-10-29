@@ -6,11 +6,17 @@ import { useEffect, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, User } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { NAV_ENTRIES, activeNavFromPath } from "@shared/config/nav-config";
-import { ThemeToggle } from "@shared/ui/ThemeToggle";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 
 const STORAGE_KEY = "rm.sidebar.collapsed";
-const EXPANDED_WIDTH = "w-[15.5rem]";
+const EXPANDED_WIDTH = "w-[250px]";
 const COLLAPSED_WIDTH = "w-[4.25rem]";
+
+export interface SidebarAthleteInfo {
+  weekLabel?: string;
+  ctl?: number | null;
+  tsb?: number | null;
+}
 
 function initialsOf(name: string | undefined): string {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
@@ -25,7 +31,13 @@ function initialsOf(name: string | undefined): string {
  * The rail is the page's only colour field: lavender ground, white active pill,
  * everything else in ink. It carries the five destinations and the athlete.
  */
-export function Sidebar({ athleteName }: { athleteName?: string }) {
+export function Sidebar({
+  athleteName,
+  athleteInfo,
+}: {
+  athleteName?: string;
+  athleteInfo?: SidebarAthleteInfo;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -124,20 +136,22 @@ export function Sidebar({ athleteName }: { athleteName?: string }) {
       </nav>
 
       <div className="border-t border-border-subtle p-3">
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={collapsed ? "展开侧边栏" : "折叠侧边栏"}
-          aria-pressed={collapsed}
-          className="focus-ring mb-2 flex h-11 w-full items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-base hover:text-text-primary"
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="size-4" strokeWidth={1.7} />
-          ) : (
-            <PanelLeftClose className="size-4" strokeWidth={1.7} />
-          )}
-        </button>
-        <div className={cn("flex items-center gap-2", collapsed && "flex-col")}>
+        <div className="mb-2 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={collapsed ? "展开侧边栏" : "折叠侧边栏"}
+            aria-pressed={collapsed}
+            className="focus-ring flex h-11 w-11 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-base hover:text-text-primary"
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="size-4" strokeWidth={1.7} />
+            ) : (
+              <PanelLeftClose className="size-4" strokeWidth={1.7} />
+            )}
+          </button>
+        </div>
+        <div className={cn("flex items-center gap-2.5", collapsed && "flex-col")}>
           <span
             className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-base text-caption1 font-semibold text-accent-strong"
             aria-hidden={initials ? true : undefined}
@@ -147,13 +161,21 @@ export function Sidebar({ athleteName }: { athleteName?: string }) {
           </span>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-caption1 font-medium text-text-primary">
+              <p className="truncate text-subheadline font-medium text-text-primary">
                 {athleteName || "未登录"}
               </p>
-              <p className="truncate text-caption1 text-text-muted">档案与阈值</p>
+              <p className="font-mono text-caption1 text-text-muted leading-tight mt-0.5">
+                {athleteInfo?.weekLabel ?? "本周"}
+                <br />
+                体能 {athleteInfo?.ctl ?? NO_VALUE} · 状态{" "}
+                {athleteInfo?.tsb !== null && athleteInfo?.tsb !== undefined
+                  ? athleteInfo.tsb > 0
+                    ? `+${athleteInfo.tsb}`
+                    : athleteInfo.tsb
+                  : NO_VALUE}
+              </p>
             </div>
           )}
-          <ThemeToggle />
         </div>
       </div>
     </aside>

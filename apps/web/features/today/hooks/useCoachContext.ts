@@ -41,6 +41,8 @@ export interface RecoverySignals {
   rhr_trend_direction: TrendDirection;
   sleep_avg_7d: number;
   readiness_score: number;
+  /** 休息前提下 TSB 回到正区间所需的天数；投影窗口内到不了就是 null。 */
+  tsb_recovery_days: number | null;
 }
 
 export interface PlanAdherence {
@@ -95,6 +97,19 @@ export interface CoachReadiness {
   factors: ReadinessFactor[];
   recommendation: string;
   max_intensity: "high" | "moderate" | "low" | "none";
+  /** 当日的健康读数，与本人七日基线。 */
+  readings: {
+    readonly hrv: WellnessReading | null;
+    readonly resting_hr: WellnessReading | null;
+    readonly sleep_secs: WellnessReading | null;
+  };
+}
+
+export interface WellnessReading {
+  readonly value: number;
+  readonly unit: string;
+  readonly baseline: number | null;
+  readonly delta: number | null;
 }
 
 export interface ReadinessFactor {
@@ -144,15 +159,38 @@ function mapFreshness(
   };
 }
 
+function mapReading(
+  raw: Generated.WellnessReadingResponseOutput | null | undefined,
+): WellnessReading | null {
+  if (!raw) return null;
+  return {
+    value: raw.value,
+    unit: raw.unit,
+    baseline: raw.baseline ?? null,
+    delta: raw.delta ?? null,
+  };
+}
+
 function mapCoachContext(raw: Generated.CoachContextResponseOutput): CoachContext {
+  const readings = raw.readiness.readings;
   return {
     data_freshness: mapFreshness(raw.data_freshness),
     recent_load: raw.recent_load,
-    recovery_signals: raw.recovery_signals,
+    recovery_signals: {
+      ...raw.recovery_signals,
+      tsb_recovery_days: raw.recovery_signals.tsb_recovery_days ?? null,
+    },
     plan_adherence: raw.plan_adherence,
     missing_data_caveats: raw.missing_data_caveats,
     recommendation: raw.recommendation,
-    readiness: raw.readiness,
+    readiness: {
+      ...raw.readiness,
+      readings: {
+        hrv: mapReading(readings?.hrv),
+        resting_hr: mapReading(readings?.resting_hr),
+        sleep_secs: mapReading(readings?.sleep_secs),
+      },
+    },
   };
 }
 

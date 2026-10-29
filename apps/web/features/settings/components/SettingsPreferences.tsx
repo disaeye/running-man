@@ -13,7 +13,6 @@ import {
 } from "@shared/ui/select";
 import { Button } from "@shared/ui/button";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
-import { ThemeToggle } from "@shared/ui/ThemeToggle";
 import type { UserProfile } from "@shared/lib/auth";
 import { getSportConfig } from "@shared/config/sport-config";
 
@@ -90,14 +89,6 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
         <h2 className="text-caption1 font-semibold text-text-secondary">训练习惯与偏好</h2>
         <p className="mt-0.5 text-caption1 text-text-muted">设置日常运动规划的基准偏好与负荷分配限制</p>
       </div>
-      <div className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-surface-sunken/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <span className="text-subheadline font-semibold text-text-primary">界面显示主题</span>
-          <p className="mt-0.5 text-caption1 text-text-muted">切换日间高可读性模式与夜间低刺激暗色模式</p>
-        </div>
-        <ThemeToggle />
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <label className="flex flex-col gap-1.5">
           <span className="text-subheadline font-medium text-text-secondary">主要偏好运动</span>

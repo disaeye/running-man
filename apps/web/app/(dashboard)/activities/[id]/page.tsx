@@ -1,41 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, RotateCcw, Share2 } from "lucide-react";
-import { groupStreams } from "@shared/types/activity";
+import type { ActivitySummary } from "@shared/types/activity";
 import { Card } from "@shared/ui/Card";
-import { MetricStrip, type MetricStripItem } from "@shared/ui/MetricStrip";
-import { ActivityDetailHeader } from "@features/activity/components/ActivityDetailHeader";
-import { useActivityDetail } from "@features/activity/hooks/useActivityDetail";
-import { useActivityStreams } from "@features/activity/hooks/useActivityStreams";
-import { useActivityAnalysis } from "@features/activity/hooks/useActivityAnalysis";
-import { StrengthDetail } from "@features/activity/components/StrengthDetail";
-import { ShareDialog } from "@features/activity/components/ShareDialog";
-import { DataAvailabilityCard } from "@features/activity/components/DataAvailabilityCard";
-import { ActivityFlagActions } from "@features/activity/components/ActivityFlagActions";
-import { ActivityNullSemantics } from "@features/activity/components/ActivityNullSemantics";
-import { ActivityWeatherCard } from "@features/activity/components/ActivityWeatherCard";
-import { NonWeightSection } from "@features/activity/components/NonWeightSection";
+import { LabelCaps } from "@shared/ui/LabelCaps";
 import { getSportConfig } from "@shared/config/sport-config";
-import { HEART_RATE_UNIT } from "@shared/config/terms";
-import { formatDistance, formatDuration, formatPaceFromSeconds } from "@shared/lib/format";
+import { useActivityDetail } from "@features/activity/hooks/useActivityDetail";
+import { useActivities } from "@features/activity/hooks/useActivities";
+import { useActivityStreams } from "@features/activity/hooks/useActivityStreams";
+import { groupStreams } from "@shared/types/activity";
 import { computeAvailability, extractId } from "@features/activity/lib/activity-detail";
+import { ShareDialog } from "@features/activity/components/ShareDialog";
+import { ActivityFlagActions } from "@features/activity/components/ActivityFlagActions";
+import { DataAvailabilityCard } from "@features/activity/components/DataAvailabilityCard";
+import { DemoSessionSwitcher } from "@features/activity/components/DemoSessionSwitcher";
+import { DemoActivityReport } from "@features/activity/components/DemoActivityReport";
+import { athleteRange, useAthleteTimezone } from "@shared/lib/training-day";
 
-function pacePerKm(avgSpeed: number | null): number | null {
-  if (avgSpeed == null || avgSpeed <= 0) return null;
-  return 1000 / avgSpeed;
-}
-
+/**
+ * 单次训练详情页（按 stich_demo 的 analy.html 重排）。
+ *
+ * 页面本身只负责三件事：场次切换器、导出与分享、数据流状态。
+ * 战报主体在 `DemoActivityReport` 里，分析页的「单次战报」模式用的是同一块，
+ * 两处显示的内容因此不会各自走样。
+ */
 export default function ActivityDetailPage() {
   const params = useParams();
   const id = extractId(params);
   const activityQuery = useActivityDetail(id);
   const streamsQuery = useActivityStreams(id);
-  const analysisQuery = useActivityAnalysis(id);
   const [shareOpen, setShareOpen] = useState(false);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+
+  // 相邻的训练记录：最近 90 天内按时间排出的前后两个。
+  const timezone = useAthleteTimezone();
+  const range = useMemo(() => athleteRange(90, timezone), [timezone]);
+  const siblings = useActivities(range.from, range.to);
 
   if (activityQuery.loading) {
     return (
@@ -66,108 +69,144 @@ export default function ActivityDetailPage() {
   }
 
   const activity = activityQuery.data;
-  const streams = streamsQuery.data ?? [];
-  const analysis = analysisQuery.data;
-  const streamMap = groupStreams(streams);
   const config = getSportConfig(activity.sport);
-  const availability = computeAvailability(activity, streamMap, analysis);
-  const date = new Date(activity.start_time).toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const pace = pacePerKm(activity.avg_speed);
-
-  const readings: MetricStripItem[] = [
-    { label: "距离", value: formatDistance(activity.distance_m) },
-    { label: "时间", value: formatDuration(activity.duration_s) },
-    {
-      label: "平均配速",
-      value: pace != null ? formatPaceFromSeconds(Math.round(pace)) : "未记录",
-      unit: pace != null ? "/km" : undefined,
-      note: pace != null ? undefined : "没有速度数据",
-    },
-    {
-      label: "平均心率",
-      value: activity.avg_hr != null ? String(Math.round(activity.avg_hr)) : "未记录",
-      unit: activity.avg_hr != null ? HEART_RATE_UNIT : undefined,
-      note: activity.avg_hr != null ? undefined : "这条记录没有心率",
-    },
-  ];
+  const adjacent = findAdjacent(siblings.data, activity.activity_id);
+  const tags = buildTags(activity);
+  const availability = computeAvailability(
+    activity,
+    groupStreams(streamsQuery.data),
+    null,
+  );
 
   return (
     <div className="page-stack" data-testid="activity-detail-page">
-      <ActivityDetailHeader
-        sportLabel={config.label}
-        dateLabel={date}
-        source={activity.source}
-        technicalOpen={showTechnicalDetails}
-        onToggleTechnical={() => setShowTechnicalDetails((value) => !value)}
-        shareSlot={
-          <>
-            <button
-              type="button"
-              onClick={() => setShareOpen(true)}
-              className="focus-ring inline-flex h-10 items-center gap-1.5 rounded-full border border-border-default px-3 text-caption1 font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary"
-            >
-              <Share2 className="size-3.5" aria-hidden="true" />
-              分享
-            </button>
-            <ActivityFlagActions activityId={id} onDone={activityQuery.reload} />
-          </>
-        }
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href="/activities"
+          className="focus-ring inline-flex items-center gap-1 text-caption1 text-text-muted transition-colors hover:text-text-primary"
+        >
+          ‹ 训练记录
+        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowTechnicalDetails((value) => !value)}
+            aria-expanded={showTechnicalDetails}
+            className="focus-ring inline-flex h-10 items-center gap-1.5 rounded-full border border-border-default px-3 text-caption1 font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary"
+          >
+            {showTechnicalDetails ? "隐藏数据流状态" : "数据流状态"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className="focus-ring inline-flex h-10 items-center gap-1.5 rounded-full border border-border-default px-3 text-caption1 font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary"
+          >
+            <Share2 className="size-3.5" aria-hidden="true" />
+            分享
+          </button>
+          <ActivityFlagActions activityId={id} onDone={activityQuery.reload} />
+        </div>
+      </div>
+
+      <DemoSessionSwitcher
+        title={activity.name?.trim() || config.label}
+        timeLabel={formatTime(activity.start_time)}
+        tags={tags}
+        previous={adjacent.previous}
+        next={adjacent.next}
       />
 
-      <MetricStrip columns={4} items={readings} />
+      <DemoActivityReport activityId={id} />
 
-      {activity.weather != null && <ActivityWeatherCard weather={activity.weather} />}
-
-      {streamsQuery.loading && (
-        <p className="text-caption1 text-text-muted" role="status" aria-busy="true">
-          正在加载轨迹与分段…
-        </p>
-      )}
-
-      {streamsQuery.error && (
-        <p className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-caption1 text-warning" role="status">
-          轨迹数据暂不可用，基础指标仍可查看。
-        </p>
-      )}
-
-      {activity.sport === "WeightTraining" ? (
-        <StrengthDetail activityId={id} />
-      ) : (
-        <NonWeightSection activity={activity} streamMap={streamMap} analysis={analysis} />
-      )}
-
-      {showTechnicalDetails && (
+      {showTechnicalDetails ? (
         <Card padding="md">
-          <h2 className="text-caption1 font-medium text-text-muted">数据流状态</h2>
+          <LabelCaps>DATA STREAMS · 数据流状态</LabelCaps>
           <div className="mt-3">
             <DataAvailabilityCard
               rows={[
                 { label: "GPS 轨迹", ok: availability.hasGps },
-                { label: "心率流", ok: availability.hasHr },
-                { label: "功率流", ok: availability.hasPower },
-                { label: "步频/踏频", ok: availability.hasCadence },
-                { label: "分段标记", ok: availability.hasLaps },
+                { label: "心率流", ok: activity.has_hr ?? false },
+                { label: "功率流", ok: activity.has_power ?? false },
+                { label: "步频/踏频", ok: activity.has_cadence ?? false },
+                { label: "天气", ok: activity.weather != null },
               ]}
               source={activity.source || ""}
               fileType={activity.file_type || ""}
             />
           </div>
-          <div className="mt-4 border-t border-border-subtle pt-4">
-            <ActivityNullSemantics activity={activity} streamMap={streamMap} analysis={analysis} />
-          </div>
         </Card>
-      )}
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle pt-4">
+        <Link
+          href="/activities"
+          className="focus-ring inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-surface-overlay px-6 font-display text-subheadline font-bold uppercase tracking-wider text-text-primary transition-colors hover:bg-surface-active"
+        >
+          回到训练记录
+        </Link>
+      </div>
 
       <ShareDialog activityId={id} open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   );
+}
+
+/**
+ * 标签行：天气、步频、爬升。
+ *
+ * 只有真的有数据的标签才出现。
+ */
+function buildTags(activity: {
+  weather?: { avg_temp?: number | null } | null;
+  avg_cadence?: number | null;
+  elevation_gain_m?: number | null;
+}): string[] {
+  const tags: string[] = [];
+  if (activity.weather?.avg_temp != null) {
+    tags.push(`天气 ${Math.round(activity.weather.avg_temp)}°C`);
+  }
+  if (activity.avg_cadence != null) {
+    tags.push(`步频 ${Math.round(activity.avg_cadence)} rpm`);
+  }
+  if (activity.elevation_gain_m != null) {
+    tags.push(`爬升 ${Math.round(activity.elevation_gain_m)} m`);
+  }
+  return tags;
+}
+
+/**
+ * 这次训练前后各一次训练记录。
+ *
+ * 列表按开始时间倒序，所以「上一场」是时间上更早的那一条。
+ */
+function findAdjacent(
+  activities: readonly ActivitySummary[],
+  activityId: string,
+): {
+  previous: { activityId: string; label: string } | null;
+  next: { activityId: string; label: string } | null;
+} {
+  const ordered = [...activities].sort((a, b) =>
+    a.start_time < b.start_time ? 1 : a.start_time > b.start_time ? -1 : 0,
+  );
+  const index = ordered.findIndex((entry) => entry.activity_id === activityId);
+  if (index < 0) return { previous: null, next: null };
+  const older = ordered[index + 1] ?? null;
+  const newer = ordered[index - 1] ?? null;
+  return {
+    previous: older ? { activityId: older.activity_id, label: formatTime(older.start_time) } : null,
+    next: newer ? { activityId: newer.activity_id, label: formatTime(newer.start_time) } : null,
+  };
+}
+
+function formatTime(startTime: string): string {
+  return new Date(startTime).toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 function DetailError({ message, onRetry }: { message: string; onRetry: () => void }) {

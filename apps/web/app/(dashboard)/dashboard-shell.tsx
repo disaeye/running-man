@@ -1,7 +1,37 @@
 "use client";
 
+import { useMemo } from "react";
 import { AppShell } from "@shared/layout/AppShell";
 import { SWRProvider } from "@shared/lib/swr-provider";
+import { useCoachContext } from "@features/today/hooks/useCoachContext";
+import { athleteWeekRange, useAthleteTimezone } from "@shared/lib/training-day";
+import { isoWeek } from "@features/calendar/lib/build-week-summary";
+
+function DashboardShellInner({ children }: { children: React.ReactNode }) {
+  const timezone = useAthleteTimezone();
+  const coachQuery = useCoachContext();
+  const weekRange = useMemo(() => athleteWeekRange(timezone), [timezone]);
+  const weekStart = useMemo(() => new Date(`${weekRange.from}T00:00:00`), [weekRange.from]);
+  const weekNumber = isoWeek(weekStart).week;
+
+  const ctl = coachQuery.data?.recent_load?.current_ctl ?? null;
+  const tsb = coachQuery.data?.recent_load?.current_tsb ?? null;
+
+  return (
+    <AppShell
+      athleteInfo={{
+        weekLabel: `第 ${weekNumber} 周`,
+        ctl: ctl !== null ? Math.round(ctl) : null,
+        tsb: tsb !== null ? Math.round(tsb) : null,
+      }}
+      onAvatarClick={() => {
+        window.dispatchEvent(new CustomEvent("navigate-settings"));
+      }}
+    >
+      {children}
+    </AppShell>
+  );
+}
 
 /**
  * Client-side wrapper for the dashboard.
@@ -14,13 +44,7 @@ import { SWRProvider } from "@shared/lib/swr-provider";
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <SWRProvider>
-      <AppShell
-        onAvatarClick={() => {
-          window.dispatchEvent(new CustomEvent("navigate-settings"));
-        }}
-      >
-        {children}
-      </AppShell>
+      <DashboardShellInner>{children}</DashboardShellInner>
     </SWRProvider>
   );
 }

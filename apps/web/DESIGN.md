@@ -35,7 +35,7 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 
 | 页面 | 主问题 | 首屏给什么 |
 |---|---|---|
-| 首页 | 我是什么水平，今天该怎么练 | 身份行、一张行动卡，行动卡下面是三格摘要 |
+| 首页 | 我是什么水平，今天该怎么练 | 34px 结论句、四格读数带、身份行，下方两块面板（负荷趋势与本周训练） |
 | 日历 | 本周还剩什么没做，做的和计划的差在哪 | 按天排列的课表，计划与实际同一行对齐 |
 | 训练记录 | 这段时间练了多少 | 按时间倒排的记录列表，顶部是周负荷摘要 |
 | 活动详情 | 这一次跑得怎么样 | 分段、配速、心率、区间分布 |
@@ -58,77 +58,78 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 
 ## 3. 画布与容器
 
-画布是 `--color-surface-sunken`，面板是纯白 `--color-surface-card`。分界靠明度差，不靠投影：卡片比画布亮一档，眼睛就能分出层。因此 `html`、`body`、`.shell-main` 在所有断点下都是 sunken，桌面宽度不再单独切回纯白。
+画布是 `--color-surface-sunken`，面板是 `--color-surface-card`。分界靠明度差，不靠投影：面板比画布亮一档，眼睛就能分出层。因此 `html`、`body`、`.shell-main` 在所有断点下都是 sunken。
 
 三级容器，从上到下：
 
 | 级别 | 形态 | 用途 |
 |---|---|---|
-| 行动卡 | 白底、圆角 16px、`--shadow-panel` | 一屏一张，承载「现在做的这件事」 |
-| 内容卡 | 白底、圆角 16px、内边距 20px、无阴影、无边线 | 图表、列表、目标、活动等对象 |
+| 行动卡 | 深底、圆角 12px、`--shadow-panel` | 一屏一张，承载「现在做的这件事」 |
+| 内容卡 | 深底、圆角 12px、内边距 20px、无阴影、无边线 | 图表、列表、目标、活动等对象 |
 | 信息条 | 不加容器，1px 分隔线 | 轻量说明、出处、参数行 |
 
 规则：
 
 - **行动卡一屏最多一张。** 两张行动卡等于没有行动。它是全站唯一用 `--shadow-panel` 的常驻表面，投影把「这一张和别的卡不一样」这件事说清楚。
-- **卡片不嵌套。** 卡内分组用 `InsetBlock`：比卡片再深一档的底色，圆角 12px，不画边线。再画边线就是第二层框。
-- **弹层也算阴影使用者。** 右上角浮层、底部抽屉、弹窗可以用 `--shadow-elevated` 与 `--shadow-sheet`，因为它们真的是浮在内容之上。
+- **卡片不嵌套。** 卡内分组用 `InsetBlock`：比卡片深一档的底色，圆角 10px，不画边线。再画边线就是第二层框。
+- **弹层也算阴影使用者。** 右上角浮层、底部抽屉、弹窗可以用 `--shadow-elevated` 与 `--shadow-sheet`，因为它们真的浮在内容之上。
 - **一屏一处大数字。** 主数字属于状态层或行动卡；内容卡里放图表和次级数值。
 
 ---
 
 ## 4. 颜色
 
-全部 token 在 `app/globals.css` 的 `:root`（浅色，默认）与 `.dark`（深色）里，Tailwind 通过 `@theme inline` 读。**组件里永远不写裸十六进制色值。**
+全部 token 在 `app/globals.css` 的 `:root` 里，Tailwind 通过 `@theme inline` 读。**组件里永远不写裸十六进制色值。**
 
-只有一种界面强调色：Winter Sky Indigo `--color-accent`。它是填充色，画布上的强调文字用 `--color-accent-strong`，那个值是按 AA 单独调过的。没有第二个强调色。
+只有一种界面强调色：荧光黄绿 `--color-accent`（`#caf300`）。它是填充色，文字也是同一个值——在深色画布上它对背景的对比度是 12.70:1，远超 AA 的 4.5:1。青色 `--color-tertiary`（`#7df4ff`）与橙色 `--color-secondary`（`#ffb59c`）只作辅色与警示，不做按钮填充。
+
+**这个产品只有一个主题：暗色。** 白天在户外看手机的强光环境下，深色画布配高对比数字比浅色更好读；两个主题会让同一份数据出现两套颜色语义，图表配色与区间配色都要各写一遍。
 
 ### 4.1 界面色
 
-| Token | 浅色 | 深色 | 用途 |
-|---|---|---|---|
-| `--color-surface-sunken` | `#f4f6fa` | `#0b0f15` | 画布底 |
-| `--color-surface-card` | `#ffffff` | `#141a22` | 面板底 |
-| `--color-surface-raised` | `#ffffff` | `#141a22` | 顶栏、弹层 |
-| `--color-surface-overlay` | `#f2f4f9` | `#1a212b` | 卡内分组、胶囊底 |
-| `--color-surface-active` | `#e9edf5` | `#222b37` | 按下态、进度条轨道 |
-| `--color-surface-base` | `#ffffff` | `#0f1319` | chrome 表面（顶栏、底栏） |
-| `--color-text-primary` | `#1b2430` | `#eef1f6` | 正文墨色 |
-| `--color-text-secondary` | `#4b5666` | `#a8b2c1` | 次要文字 |
-| `--color-text-muted` | `#5b6779` | `#8b96a6` | 标签、图注、出处 |
-| `--color-accent` | `#5a6f9a` | `#5a6f9a` | 强调填充 |
-| `--color-accent-strong` | `#405072` | `#9aaecf` | 强调文字（AA） |
-| `--color-primary` | `#5a6f9a` | `#5a6f9a` | 主按钮 |
-| `--color-ring` | `#5a6f9a` | `#7a8fb5` | 焦点环 |
-| `--color-border-subtle` | `#dfe4ee` | `#262f3c` | 发丝边 |
-| `--color-border-default` | `#ccd4e2` | `#303b49` | 控件边 |
-| `--color-border-strong` | `#b9c3d4` | `#3d4a5a` | 强调边 |
+| Token | 值 | 用途 |
+|---|---|---|
+| `--color-surface-sunken` | `#111317` | 画布底 |
+| `--color-surface-card` | `#1e2023` | 面板底 |
+| `--color-surface-raised` | `#282a2d` | 顶栏、弹层 |
+| `--color-surface-overlay` | `#1a1c1f` | 卡内分组、胶囊底 |
+| `--color-surface-active` | `#333538` | 按下态、进度条轨道 |
+| `--color-surface-base` | `#0c0e11` | chrome 表面（顶栏、底栏） |
+| `--color-text-primary` | `#e2e2e6` | 正文墨色 |
+| `--color-text-secondary` | `#c5c9ac` | 次要文字 |
+| `--color-text-muted` | `#a3a78c` | 标签、图注、出处 |
+| `--color-accent` | `#caf300` | 强调填充与强调文字 |
+| `--color-primary` | `#caf300` | 主按钮 |
+| `--color-ring` | `#7df4ff` | 焦点环 |
+| `--color-border-subtle` | `#313439` | 发丝边 |
+| `--color-border-default` | `#3f444a` | 控件边 |
+| `--color-border-strong` | `#4d5259` | 强调边 |
 
 ### 4.2 数据语义色
 
 数据语义色只用于图表序列、分类标签和状态点，**永远不作为按钮、链接、导航的界面色**。数字本身用 `--color-text-primary`，颜色挪到它旁边的点或条上——一个既靠颜色又靠位置表达含义的值，色觉障碍下仍然读得出来。
 
-| Token | 浅色 | 深色 | 含义 |
-|---|---|---|---|
-| `--color-ctl` | `#0284c7` | `#59e1ff` | 体能 CTL |
-| `--color-atl` | `#7c3aed` | `#b88cff` | 疲劳 ATL |
-| `--color-tsb` | `#d97706` | `#ffc857` | 状态 TSB |
-| `--color-zone-1` | `#64748b` | `#71808c` | Z1 恢复 |
-| `--color-zone-2` | `#0284c7` | `#59e1ff` | Z2 耐力 |
-| `--color-zone-3` | `#16a34a` | `#52a86d` | Z3 节奏 |
-| `--color-zone-4` | `#d97706` | `#ffc857` | Z4 阈值 |
-| `--color-zone-5` | `#dc2626` | `#ff667d` | Z5 无氧 |
-| `--color-recovery-good` | `#16a34a` | `#52a86d` | 恢复良好 |
-| `--color-recovery-moderate` | `#d97706` | `#ffc857` | 恢复一般 |
-| `--color-recovery-poor` | `#dc2626` | `#ff667d` | 恢复不足 |
-| `--color-goal-on-track` | `#16a34a` | `#52a86d` | 目标在轨 |
-| `--color-goal-behind` | `#d97706` | `#ffc857` | 目标滞后 |
-| `--color-goal-at-risk` | `#dc2626` | `#ff667d` | 目标有风险 |
-| `--color-data-emphasis` | `#0284c7` | `#59e1ff` | 当前值强调 |
-| `--color-load-heatmap` | `#0284c7` | `#59e1ff` | 负荷热力图 |
-| `--color-sport-run` | `#e11d48` | `#ff788f` | 跑步 |
-| `--color-sport-ride` | `#0284c7` | `#59e1ff` | 骑行 |
-| `--color-sport-workout` | `#d97706` | `#ffc857` | 健身 |
+| Token | 值 | 含义 |
+|---|---|---|
+| `--color-ctl` | `#00dbe9` | 体能 CTL |
+| `--color-atl` | `#7df4ff` | 疲劳 ATL |
+| `--color-tsb` | `#ffb59c` | 状态 TSB |
+| `--color-zone-1` | `#8f9378` | Z1 恢复 |
+| `--color-zone-2` | `#00dbe9` | Z2 耐力 |
+| `--color-zone-3` | `#5cb87a` | Z3 节奏 |
+| `--color-zone-4` | `#ffb59c` | Z4 阈值 |
+| `--color-zone-5` | `#ffb4ab` | Z5 无氧 |
+| `--color-recovery-good` | `#5cb87a` | 恢复良好 |
+| `--color-recovery-moderate` | `#ffb59c` | 恢复一般 |
+| `--color-recovery-poor` | `#ffb4ab` | 恢复不足 |
+| `--color-goal-on-track` | `#5cb87a` | 目标在轨 |
+| `--color-goal-behind` | `#ffb59c` | 目标滞后 |
+| `--color-goal-at-risk` | `#ffb4ab` | 目标有风险 |
+| `--color-data-emphasis` | `#00dbe9` | 当前值强调 |
+| `--color-load-heatmap` | `#00dbe9` | 负荷热力图 |
+| `--color-sport-run` | `#ff788f` | 跑步 |
+| `--color-sport-ride` | `#00dbe9` | 骑行 |
+| `--color-sport-workout` | `#ffb59c` | 健身 |
 
 运动颜色一律走 `getSportConfig(sport).color`，任何地方都不许自己写一份 sport → 颜色的映射。
 
@@ -136,15 +137,15 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 
 ## 5. 字阶
 
-六档，中间没有第七档：
+三套字体各司其职：正文用 Space Grotesk，标题与大写标签用 Barlow Condensed（窄体），指标数字用 JetBrains Mono。字阶六档，中间没有第七档：
 
 | Token | 值 | 行高 | 用途 |
 |---|---|---|---|
-| `--text-metric-xl` | `3.5rem` | 1.05 | 56px 主数字，一屏一处 |
-| `--text-metric-lg` | `2.5rem` | 1.1 | 40px 次大数字 |
+| `--text-metric-xl` | `3rem` | 1.05 | 48px 主数字，一屏一处 |
+| `--text-metric-lg` | `1.5rem` | 1.1 | 24px 次大数字 |
 | `--text-display-sm` | `1.75rem` | 1.3 | 28px 页面标题与结论句 |
 | `--text-title2` | `1.375rem` | 1.4 | 22px 卡内数值 |
-| `--text-body` | `0.9375rem` | 1.5 | 15px 正文 |
+| `--text-body` | `0.875rem` | 1.55 | 14px 正文 |
 | `--text-caption1` | `0.75rem` | 1.5 | 12px 标签与出处 |
 
 规则：
@@ -154,6 +155,7 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 - **小数位一致。** 同一组数字小数位相同：要么全是整数，要么全是一位小数，不混。
 - **单位 12px 贴基线。** 单位用 `--text-caption1`，与数值基线对齐，字号一大会把读数读成两个数。
 - **不写任意字号。** `text-[13px]` 会绕过整个字阶，全局改一次就漏一处。
+- **标签用窄体大写。** 拉丁标签加 `label-caps`；中文标签保持原样，不做全大写转换。
 
 ---
 
@@ -177,20 +179,20 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 
 | 值 | 用在哪 |
 |---|---|
-| 16px | 卡片、面板（`rounded-2xl`） |
-| 12px | 小控件、卡内分组块（`InsetBlock`）、输入框 |
-| 24px | 只在对话框与抽屉上用；面板永远不是 24px |
+| 12px | 卡片、面板（`rounded-2xl`） |
+| 10px | 小控件、卡内分组块（`InsetBlock`）、输入框（`rounded-xl`） |
+| 24px | 只在对话框与抽屉上用（`rounded-3xl`）；面板永远不是 24px |
 | 999px | 按钮、状态点、胶囊标签 |
 
 ### 6.3 阴影
 
 三种，作用固定，不互相借用：
 
-| Token | 浅色 | 深色 | 用在哪 |
-|---|---|---|---|
-| `--shadow-panel` | `0 1px 3px rgb(27 36 48 / 0.08)` | `0 2px 8px rgb(0 0 0 / 0.45)` | 行动卡（一屏唯一一张） |
-| `--shadow-elevated` | `0 12px 35px rgba(15, 23, 42, 0.1)` | `0 24px 70px rgba(0, 0, 0, 0.38)` | 浮层、下拉、对话框 |
-| `--shadow-sheet` | `0 -12px 36px rgba(15, 23, 42, 0.14)` | `0 -18px 50px rgba(0, 0, 0, 0.5)` | 底部抽屉 |
+| Token | 值 | 用在哪 |
+|---|---|---|
+| `--shadow-panel` | `0 8px 24px rgba(0, 0, 0, 0.45)` | 行动卡（一屏唯一一张） |
+| `--shadow-elevated` | `0 24px 70px rgba(0, 0, 0, 0.55)` | 浮层、下拉、对话框 |
+| `--shadow-sheet` | `0 -18px 50px rgba(0, 0, 0, 0.6)` | 底部抽屉 |
 
 只有行动卡和弹层用阴影。内容卡不加阴影：一页六张投影卡片就是六层互相竞争的平面，明度差已经把层次说完了。
 
@@ -202,7 +204,7 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 
 | 组件 | 用途 |
 |---|---|
-| `Card` | 唯一的面板原语，白底、圆角 16px、无边框、无阴影；`variant="action"` 才加 `--shadow-panel` |
+| `Card` | 唯一的面板原语，白底、圆角 14px、无边框、无阴影；`variant="action"` 才加 `--shadow-panel` |
 | `InsetBlock` | 卡片内部的分组块，靠底色区分，不画边线 |
 | `CardHeader` | 卡片头部信息带：20px 图标、12px 标题、右端 trailing |
 | `ProgressRow` | 标签加 6px 细进度条，一行说清完成度 |
@@ -237,7 +239,7 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 | 计划实际双列块 | `features/calendar/components/DayPlanActual.tsx`（`CalendarDaySheet.tsx` 使用） | 同一天的课表与记录左右并排，配速区间、时长、TSS 上下对齐，回答「计划的和做的差在哪」。 |
 | 装备行 | `features/settings/components/GearSection.tsx` | 档案页里一双鞋一行：累计里程，加上退役或建议更换的状态，回答「这双鞋还能不能用」。 |
 | PB 四格 | `features/settings/components/PersonalRecordsGrid.tsx` | 档案页里 5K、10K、半马、全马各占一格，回答「我现在是什么水平」。没跑过的距离写「未记录」，不留空格也不写 0。 |
-| 编号步骤卡 | `features/today/components/WorkoutStepList.tsx`（`WorkoutSegments.tsx` 转交给它，首页 `TodayWorkoutCard.tsx` 使用） | 今日课表里一节课从热身到放松按序号一步一行：序号只表示顺序不表示组数，组数写成贴在步骤名后的 `×N`，组间恢复缩进一行不占序号。行间只用发丝线，不铺底色；「进行到的那一步单独高亮」仍缺数据（没有「进行到第几步」），所以不做高亮。 |
+| 编号步骤卡 | `features/today/components/WorkoutStepList.tsx`（`WorkoutSegments.tsx` 转交给它，首页 `WeekTrainingCard.tsx` 使用） | 今日课表里一节课从热身到放松按序号一步一行：序号只表示顺序不表示组数，组数写成贴在步骤名后的 `×N`，组间恢复缩进一行不占序号。行间只用发丝线，不铺底色；「进行到的那一步单独高亮」仍缺数据（没有「进行到第几步」），所以不做高亮。 |
 
 ---
 

@@ -85,5 +85,14 @@ function mapActivitySummary(
     file_type: nn(row.file_type),
     device_name: nn(row.device_name),
     summary_polyline: nn(row.summary_polyline),
+    name: nn(row.name),
+    rpe: nn(row.rpe),
+    trimp: nn(row.trimp),
+    aerobic_te: nn(row.aerobic_te),
+    anaerobic_te: nn(row.anaerobic_te),
+    avg_stride_length_m: nn(row.avg_stride_length_m),
+    avg_lr_balance_pct: nn(row.avg_lr_balance_pct),
+    is_bookmarked: row.is_bookmarked ?? false,
+    weather_source: nn(row.weather_source),
   };
 }

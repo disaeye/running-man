@@ -111,6 +111,26 @@ function responseForPath(pathname: string, fixture: ApiFixture): unknown {
       return { zones: [], summary: null };
     case "/api/v1/insights/readiness":
       return { score: 72, factors: [] };
+    case "/api/v1/insights/personal-range":
+      return {
+        window_start: "2026-06-30",
+        window_end: "2026-09-27",
+        window_days: 90,
+        figures: [
+          {
+            key: "ctl",
+            label: "体能 CTL",
+            unit: "points",
+            value: 54,
+            minimum: 38,
+            maximum: 61,
+            median: 50,
+            observations: 49,
+            percent: 76,
+            insufficient: false,
+          },
+        ],
+      };
     case "/api/v1/insights/plan-quality":
       return { grade: "B", score: 82, message: "计划负荷可执行", weekly_tss: 310, target_tss: 360, key_sessions_completed: 2, key_sessions_total: 3, concerns: [] };
     case "/api/v1/calendar":

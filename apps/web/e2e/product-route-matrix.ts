@@ -9,7 +9,7 @@ export const REQUIRED_PUBLIC_IDENTITIES = ["public-login", "public-register", "p
 export const REQUIRED_SHARE_IDENTITIES = ["share-ready", "share-expired", "share-not-found", "share-network-error"] as const;
 export const REQUIRED_ACTIVITY_IDENTITIES = ["activity-valid", "activity-not-found", "activity-partial-streams"] as const;
 export const REQUIRED_CALENDAR_IDENTITIES = ["calendar-week", "calendar-month", "calendar-list"] as const;
-export const REQUIRED_ANALYSIS_IDENTITIES = ["analysis-overview", "analysis-load", "analysis-performance", "analysis-intensity"] as const;
+export const REQUIRED_ANALYSIS_IDENTITIES = ["analysis-session", "analysis-overview", "analysis-load", "analysis-performance", "analysis-intensity"] as const;
 export const REQUIRED_SETTINGS_IDENTITIES = ["settings-data", "settings-training", "settings-account"] as const;
 
 export type RequiredIdentity =
@@ -68,7 +68,8 @@ const DASHBOARD_ROUTES = [
   route("calendar-week", "dashboard", "calendar-week", "/calendar?view=week", ["week", "empty", "error"]),
   route("calendar-month", "dashboard", "calendar-month", "/calendar?view=month", ["month", "empty", "error"]),
   route("calendar-list", "dashboard", "calendar-list", "/calendar?view=list", ["list", "empty", "error"]),
-  route("analysis-overview", "dashboard", "analysis-overview", "/analysis", ["overview", "sparse", "error"]),
+  route("analysis-session", "dashboard", "analysis-session", "/analysis", ["session", "sparse", "error"]),
+  route("analysis-overview", "dashboard", "analysis-overview", "/analysis?tab=overview", ["overview", "sparse", "error"]),
   route("analysis-load", "dashboard", "analysis-load", "/analysis?tab=load", ["load", "sparse", "error"]),
   route("analysis-performance", "dashboard", "analysis-performance", "/analysis?tab=performance", ["performance", "sparse", "error"]),
   route("analysis-intensity", "dashboard", "analysis-intensity", "/analysis?tab=intensity", ["intensity", "sparse", "error"]),

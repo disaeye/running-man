@@ -6,11 +6,12 @@ import { User } from "lucide-react";
 import { getCurrentUser, type UserProfile } from "@shared/lib/auth";
 import { ToastProvider } from "@shared/ui/Toast";
 import { MobileTabBar } from "@shared/layout/TopTabBar";
-import { Sidebar } from "@shared/layout/Sidebar";
+import { Sidebar, type SidebarAthleteInfo } from "@shared/layout/Sidebar";
 import { useSyncHealth, type SyncHealth } from "@features/data/hooks/useSyncHealth";
 
 interface AppShellProps {
   children: React.ReactNode;
+  athleteInfo?: SidebarAthleteInfo;
   onAvatarClick: () => void;
 }
 
@@ -24,7 +25,7 @@ interface AppShellProps {
  * The bar carries the sync state and the account entry while the page's own
  * title is on screen; once that title scrolls away the bar takes it over.
  */
-export function AppShell({ children, onAvatarClick }: AppShellProps) {
+export function AppShell({ children, athleteInfo, onAvatarClick }: AppShellProps) {
   // A failed profile fetch leaves `user` null and the avatar renders a neutral
   // placeholder. It used to substitute a hard-coded "耐力跑者" with invented
   // thresholds (HRmax 188 / LTHR 168 / threshold pace 4'20"), so an unreachable
@@ -92,7 +93,7 @@ export function AppShell({ children, onAvatarClick }: AppShellProps) {
 
       <div data-shell="root" className="shell-atmosphere flex h-[100dvh] overflow-hidden text-text-primary">
         <div className="shell-chrome shell-chrome-row">
-          <Sidebar athleteName={user?.name} />
+          <Sidebar athleteName={user?.name} athleteInfo={athleteInfo} />
           <div className="flex h-[calc(100dvh_-_var(--mobile-nav-height,0px))] min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:h-[100dvh]">
             <header
               data-shell-region="top"

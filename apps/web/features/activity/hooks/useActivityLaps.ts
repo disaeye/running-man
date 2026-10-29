@@ -9,13 +9,16 @@ import type { Lap } from "@features/activity/hooks/useActivityAnalysis";
 
 function mapLap(row: Generated.LapResponseOutput): Lap {
   const distance = row.distance_m ?? 0;
-  const duration = row.duration_s ?? 0;
+  const duration = row.duration_s ?? null;
   return {
     lap_index: row.lap_index,
     distance_m: distance,
     duration_s: duration,
     avg_hr: row.avg_hr ?? null,
-    avg_pace: distance > 0 && duration > 0 ? distance / duration : null,
+    avg_power: row.avg_power ?? null,
+    avg_speed: duration != null && duration > 0 ? distance / duration : null,
+    pace_s_per_km: distance > 0 && duration != null && duration > 0 ? duration / (distance / 1000) : null,
+    avg_pace: distance > 0 && duration != null && duration > 0 ? distance / duration : null,
     elevation_gain: null,
   };
 }

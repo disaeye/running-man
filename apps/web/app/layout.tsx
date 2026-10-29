@@ -1,18 +1,33 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { Barlow_Condensed, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 
-/**
- * Geist via next/font carries Latin glyphs and numerals; system CJK fonts
- * (`PingFang SC`, `Microsoft YaHei`, `Noto Sans CJK SC`) fall through from
- * the `--font-sans` and `--font-mono` stacks in globals.css for Chinese glyphs — no download.
- * Targeted weight range keeps the variable font payload small.
+/*
+ * 三套字体各司其职：
+ *   Space Grotesk    正文
+ *   Barlow Condensed  标题与大写标签（参考稿的窄体）
+ *   JetBrains Mono   指标数字
  */
-const geistSans = GeistSans;
-const geistMono = GeistMono;
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+});
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-barlow-condensed",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 /**
  * Baseline metadata only.
@@ -36,7 +51,7 @@ export default function RootLayout({
     <html
       lang="zh"
       suppressHydrationWarning
-      className={`h-full antialiased ${geistSans.variable} ${geistMono.variable}`}
+      className={`h-full antialiased ${spaceGrotesk.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         {process.env.NODE_ENV === "development" && (

@@ -214,6 +214,7 @@ function mapCalendarEvent(raw: Generated.CalendarEventOutputOutput): CalendarEve
     name: raw.name ?? undefined,
     workout_xml: raw.workout_xml ?? undefined,
     predicted_tss: raw.predicted_tss ?? null,
+    predicted_distance_m: raw.predicted_distance_m ?? null,
     status: raw.status ?? undefined,
     done: raw.done ?? undefined,
     training_type: raw.training_type ?? null,

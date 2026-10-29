@@ -45,6 +45,8 @@ export interface UserProfile {
   readonly max_session_duration_min: number;
   readonly preferred_sport: string;
   readonly notification_prefs?: NotificationPrefs | null;
+  /** 身高（cm），从 Intervals.icu 的运动员档案同步。 */
+  readonly height_cm?: number | null;
 }
 
 export function login(credentials: LoginCredentials): Promise<AuthResponse> {

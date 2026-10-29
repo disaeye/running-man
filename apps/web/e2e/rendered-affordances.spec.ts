@@ -16,6 +16,7 @@
  * @tag: rendered-affordances
  */
 import { test, expect, type Page } from "@playwright/test";
+import { mockDashboard } from "./ux-dashboard-mocks";
 
 const ROUTES = ["/", "/activities", "/analysis", "/calendar", "/goals", "/settings"] as const;
 
@@ -145,9 +146,10 @@ async function auditRoute(page: Page, route: string, theme: "light" | "dark") {
   });
   page.on("pageerror", (error) => failures.push(error.message.slice(0, 160)));
   page.on("response", (response) => {
-    if (response.status() >= 500) failures.push(`${response.status()} ${response.url()}`);
+    if (response.status() >= 400) failures.push(`${response.status()} ${response.url()}`);
   });
 
+  if (route !== "/login") await mockDashboard(page);
   await page.addInitScript((value) => {
     window.localStorage.setItem("rm.theme", value);
   }, theme);

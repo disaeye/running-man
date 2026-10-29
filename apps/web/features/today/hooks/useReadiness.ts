@@ -16,6 +16,17 @@ export interface ReadinessFactor {
   detail: string;
 }
 
+export interface WellnessReading {
+  /** 当前值。 */
+  readonly value: number;
+  /** 单位：ms / bpm / s。 */
+  readonly unit: string;
+  /** 本人七日均值。 */
+  readonly baseline: number | null;
+  /** 与七日均值的差。 */
+  readonly delta: number | null;
+}
+
 export interface LocalReadiness {
   readonly score: number;
   readonly level: ReadinessLevel;
@@ -26,6 +37,12 @@ export interface LocalReadiness {
   readonly data_sufficient: boolean;
   /** Date of the wellness observation the score was built from. */
   readonly observed_on: string | null;
+  /** 当日的健康读数，与本人七日基线。 */
+  readonly readings: {
+    readonly hrv: WellnessReading | null;
+    readonly resting_hr: WellnessReading | null;
+    readonly sleep_secs: WellnessReading | null;
+  };
   readonly provenance: {
     readonly wellness_as_of: string | null;
     readonly pmc_as_of: string | null;
@@ -51,10 +68,23 @@ interface UseReadinessResult {
   reload: () => void;
 }
 
+function mapReading(
+  raw: Generated.WellnessReadingResponseOutput | null | undefined,
+): WellnessReading | null {
+  if (!raw) return null;
+  return {
+    value: raw.value,
+    unit: raw.unit,
+    baseline: raw.baseline ?? null,
+    delta: raw.delta ?? null,
+  };
+}
+
 function mapReadiness(
   raw: Generated.ReadinessResponseOutput,
 ): ReadinessResponse {
   const lr = raw.local_readiness;
+  const readings = lr.readings;
   return {
     local_readiness: {
       score: lr.score,
@@ -68,6 +98,11 @@ function mapReadiness(
       max_intensity: lr.max_intensity,
       data_sufficient: lr.data_sufficient ?? false,
       observed_on: lr.observed_on ?? null,
+      readings: {
+        hrv: mapReading(readings?.hrv),
+        resting_hr: mapReading(readings?.resting_hr),
+        sleep_secs: mapReading(readings?.sleep_secs),
+      },
       provenance: {
         wellness_as_of: lr.provenance.wellness_as_of,
         pmc_as_of: lr.provenance.pmc_as_of,

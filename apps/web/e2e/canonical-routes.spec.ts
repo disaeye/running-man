@@ -54,7 +54,10 @@ const ANALYSIS_INPAGE_ALIASES: readonly InPageAlias[] = [
   { search: "?tab=load", settled: "/analysis?tab=load" },
   { search: "?tab=performance", settled: "/analysis?tab=performance" },
   { search: "?tab=intensity", settled: "/analysis?tab=intensity" },
-  { search: "?tab=overview", settled: "/analysis" },
+  // 分析页的默认模式是单次战报（session），所以裸 URL 就是那个模式；
+  // 总览是另一个模式，需要显式写在 URL 里。
+  { search: "?tab=session", settled: "/analysis" },
+  { search: "?tab=overview", settled: "/analysis?tab=overview" },
   { search: "?tab=garbage", settled: "/analysis" },
   { search: "?tab=ABILITY", settled: "/analysis" },
 ];

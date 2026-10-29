@@ -2,7 +2,7 @@ import { Badge } from "@shared/ui/Badge";
 import { Card } from "@shared/ui/Card";
 import { SectionHeader } from "@shared/ui/SectionHeader";
 import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
-import { READINESS_LEVEL_LABEL } from "@features/today/components/ReadinessHeroCard";
+import { READINESS_LEVEL_LABEL } from "@features/today/lib/readiness-level";
 import type { LocalReadiness } from "@features/today/hooks/useReadiness";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 import {

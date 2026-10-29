@@ -1,35 +1,49 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
 import { Button } from "@shared/ui/button";
-import { Card } from "@shared/ui/Card";
-import { CardHeader } from "@shared/ui/CardHeader";
 import { EmptyState } from "@shared/ui/EmptyState";
-import { MetricStrip } from "@shared/ui/MetricStrip";
 import { PageHeader } from "@shared/ui/PageHeader";
 import { Section } from "@shared/ui/Section";
-import { EmptyWeek, PlanErrorBanner } from "@features/calendar/components/CalendarStates";
+import { PlanErrorBanner } from "@features/calendar/components/CalendarStates";
 import { PlanGenerateDialog } from "@features/plan/components/PlanGenerateDialog";
 import { CalendarDaySheet } from "@features/calendar/components/CalendarDaySheet";
 import { CalendarWeekSkeleton } from "@features/calendar/components/CalendarWeekSkeleton";
 import { CalendarListView } from "@features/calendar/components/CalendarListView";
 import { CalendarStrengthView } from "@features/calendar/components/CalendarStrengthView";
-import { MobileSchedule } from "@features/calendar/components/MobileSchedule";
-import { CalendarInsights } from "@features/calendar/components/CalendarInsights";
 import { CalendarHeaderActions } from "@features/calendar/components/CalendarHeaderActions";
-import { PlanAdherenceCard } from "@features/plan/components/PlanAdherenceCard";
+import { CalendarInsights } from "@features/calendar/components/CalendarInsights";
+import { Card } from "@shared/ui/Card";
+import { MetricStrip } from "@shared/ui/MetricStrip";
 import { PlanForecast } from "@features/plan/components/PlanForecast";
 import { PlanQuality } from "@features/plan/components/PlanQuality";
-import { PlanWeekView } from "@features/plan/components/PlanWeekView";
-import { PlanMonthView } from "@features/plan/components/PlanMonthView";
+import { DemoMonthGrid } from "@features/calendar/components/DemoMonthGrid";
+import { DemoMonthSummary } from "@features/calendar/components/DemoMonthSummary";
+import { DemoWeekStrip } from "@features/calendar/components/DemoWeekStrip";
+import { DemoDayPanel } from "@features/calendar/components/DemoDayPanel";
 import { useCalendarPage } from "@features/calendar/hooks/useCalendarPage";
 import { useProfile } from "@features/settings/hooks/useProfile";
-import { usePlanMatch } from "@features/calendar/hooks/usePlanMatch";
 import { buildWeekSummary, isoWeek } from "@features/calendar/lib/build-week-summary";
-import { qualityRange } from "@features/calendar/lib/calendar-page-view";
 import { weekSummaryMetrics } from "@features/calendar/lib/week-summary-metrics";
+import { qualityRange } from "@features/calendar/lib/calendar-page-view";
 import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
+import { activityLocalDay } from "@shared/lib/training-day";
+import { DemoLegend, monthTotalsFor } from "@features/calendar/components/DemoCalendarSummary";
 
+/**
+ * 训练日历（按 stich_demo 的 cal.html 重排）。
+ *
+ * 顺序与参考稿一致：
+ *   1. 月份与周期导航 + 视图切换
+ *   2. 月度遥测三格摘要
+ *   3. 图例
+ *   4. 月历热力矩阵
+ *   5. 本周快览条
+ *   6. 选中日期详情面板（计划与实际对照）
+ *
+ * 桌面端是同一批卡片的两栏排布：左边是月历与周条，右边常驻选中日详情；
+ * 点左边任意一天，右边立刻跟着变。
+ */
 export default function CalendarPage() {
   return (
     <Suspense fallback={<CalendarWeekSkeleton />}>
@@ -65,14 +79,11 @@ function CalendarPageContent() {
   } = useCalendarPage();
 
   const { profile } = useProfile();
-  const weekSummary = useMemo(
-    () => buildWeekSummary({ events, activityMap, weekStart }),
-    [events, activityMap, weekStart],
-  );
+  const timezone = useAthleteTimezone();
+  const today = athleteToday(timezone);
 
-  // 周摘要三格：课次、实际负荷、完成率。纯格式化，不缓存；数组每帧重建，
-  // 三格的成本比一次 useMemo 的比较还低。
-  const weekSummaryItems = weekSummaryMetrics(weekSummary);
+  // 选中的日期：默认是今天，所以右侧面板一开始就有内容。
+  const activeDate = selectedDate ?? today;
 
   const periodLabel = useMemo(() => {
     if (view === "month") {
@@ -86,42 +97,37 @@ function CalendarPageContent() {
     () => qualityRange(view, weekStart, monthDate),
     [view, weekStart, monthDate],
   );
-  const { matches: planMatches } = usePlanMatch(
-    planRange?.from ?? "",
-    planRange?.to ?? "",
-    events,
+
+  const weekSummaryItems = useMemo(
+    () => weekSummaryMetrics(buildWeekSummary({ events, activityMap, weekStart, timezone })),
+    [events, activityMap, weekStart, timezone],
   );
 
-  const timezone = useAthleteTimezone();
-  const today = athleteToday(timezone);
-  const [openIso, setOpenIso] = useState<string | null>(today);
+  // 月度三格摘要：跑量、课次、爬升，都按当前月份算。
+  const monthTotals = useMemo(
+    () => monthTotalsFor(events, activityMap, monthDate, timezone),
+    [events, activityMap, monthDate, timezone],
+  );
 
-  // A month is rendered as its days in reading order; a phone cannot show a
-  // seven-column table and a table is how the month grid would have to be drawn.
-  const visibleDays = useMemo(() => {
-    if (view === "month") {
-      const year = monthDate.getFullYear();
-      const month = monthDate.getMonth();
-      const last = new Date(year, month + 1, 0).getDate();
-      return Array.from({ length: last }, (_, index) => new Date(year, month, index + 1));
-    }
-    return Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(weekStart);
-      date.setDate(date.getDate() + index);
-      return date;
-    });
-  }, [view, weekStart, monthDate]);
+  // 周条的七天：从周一开始。
+  const weekDays = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(weekStart);
+        date.setDate(date.getDate() + index);
+        return {
+          iso: toIso(date),
+          dayLabel: WEEKDAY_NAMES[index] ?? "",
+        };
+      }),
+    [weekStart],
+  );
 
-  const selectDay = (iso: string) => {
-    setOpenIso(iso);
-    requestAnimationFrame(() => {
-      document
-        .querySelector<HTMLElement>(`[data-testid="day-row-${iso}"]`)
-        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    });
-  };
-
-  const isEmptyWeek = !loading && !error && events.length === 0;
+  const activeEvent = useMemo(
+    () => events.find((event) => activityLocalDay(event.start_time, timezone) === activeDate),
+    [events, timezone, activeDate],
+  );
+  const activeActivities = activityMap.get(activeDate) ?? [];
 
   return (
     <div className="page-stack" data-testid="calendar-page">
@@ -133,6 +139,11 @@ function CalendarPageContent() {
             view={view}
             onChange={handleSetView}
             onGenerate={() => setGenerateOpen(true)}
+            periodLabel={periodLabel}
+            onNavigate={(delta) => {
+              if (view === "month") navMonth(delta);
+              else navWeek(delta);
+            }}
           />
         }
       />
@@ -167,79 +178,69 @@ function CalendarPageContent() {
       ) : error ? (
         <PlanErrorBanner message={error} onRetry={loadEvents} />
       ) : (
-        <div className="space-y-6">
-          <MetricStrip testId="week-summary" items={weekSummaryItems} />
+        <div className="space-y-4">
+          {view === "month" ? (
+            <>
+              <DemoMonthSummary
+                actualDistanceM={monthTotals.actualDistanceM}
+                plannedDistanceM={monthTotals.plannedDistanceM}
+                completedSessions={monthTotals.completedSessions}
+                plannedSessions={monthTotals.plannedSessions}
+                elevationM={monthTotals.elevationM}
+              />
+              <DemoLegend />
+            </>
+          ) : (
+            <MetricStrip testId="week-summary" items={weekSummaryItems} />
+          )}
 
-          <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
-            <div className="min-w-0 space-y-6 lg:col-span-8">
-              <div className="space-y-6 lg:hidden">
-                {isEmptyWeek && <EmptyWeek onGenerate={() => setGenerateOpen(true)} />}
-                {loading ? (
-                  <CalendarWeekSkeleton />
-                ) : (
-                  <MobileSchedule
-                    days={visibleDays}
-                    events={events}
-                    activities={activityMap}
-                    matches={planMatches}
-                    today={today}
-                    timezone={timezone}
-                    monthView={view === "month"}
-                    openIso={openIso}
-                    onSelectDay={selectDay}
-                    onToggleDay={(iso) =>
-                      setOpenIso((current) => (current === iso ? null : iso))
-                    }
-                    onRecord={handleSelectDate}
-                  />
-                )}
-              </div>
-
-              <div className="hidden lg:block">
-                {loading ? (
-                  <CalendarWeekSkeleton />
-                ) : (
-                  <Card padding="sm">
-                    {view === "month" ? (
-                      <PlanMonthView
-                        events={events}
-                        monthDate={monthDate}
-                        onNavMonth={navMonth}
-                        onSelectDate={handleSelectDate}
-                        completedActivities={activityMap}
-                      />
-                    ) : (
-                      <PlanWeekView
-                        events={events}
-                        weekStart={weekStart}
-                        onNavWeek={navWeek}
-                        onSelectDate={handleSelectDate}
-                        completedActivities={activityMap}
-                      />
-                    )}
-                  </Card>
-                )}
-              </div>
-              <Section title="训练日志">
-                <div className="p-5">
-                  <CalendarStrengthView />
-                </div>
-              </Section>
+          <div className="grid min-w-0 gap-4 lg:grid-cols-12 lg:items-start">
+            <div className="min-w-0 space-y-4 lg:col-span-7">
+              {loading ? (
+                <CalendarWeekSkeleton />
+              ) : view === "month" ? (
+                <DemoMonthGrid
+                  events={events}
+                  monthDate={monthDate}
+                  completedActivities={activityMap}
+                  selectedDate={activeDate}
+                  testId="plan-month-grid"
+                  dayTestIdPrefix="plan-month-day"
+                  onSelectDate={(iso) => {
+                    handleSelectDate(iso);
+                    setSelectedDate(iso);
+                  }}
+                />
+              ) : (
+                <DemoWeekStrip
+                  days={weekDays}
+                  events={events}
+                  activities={activityMap}
+                  selectedDate={activeDate}
+                  testId="plan-week-grid"
+                  dayTestIdPrefix="plan-week-day"
+                  onSelectDate={(iso) => {
+                    handleSelectDate(iso);
+                    setSelectedDate(iso);
+                  }}
+                />
+              )}
             </div>
 
-            <aside className="space-y-6 lg:col-span-4">
+            <aside className="min-w-0 space-y-4 lg:col-span-5">
+              <DemoDayPanel
+                date={activeDate}
+                event={activeEvent}
+                activities={activeActivities}
+                onEdit={() => handleSelectDate(activeDate)}
+                onAdd={() => handleSelectDate(activeDate)}
+              />
               <CalendarInsights>
-                <Card padding="md">
-                  <CardHeader title="近 7 日执行" />
-                  <PlanAdherenceCard />
-                </Card>
-                <Card padding="md">
-                  <CardHeader title="28 日负荷预测" />
-                  <PlanForecast events={events} />
-                </Card>
-                <Card padding="md">
-                  <CardHeader title="计划评分" />
+                <Card padding="md" data-testid="calendar-plan-quality">
                   <PlanQuality from={planRange?.from} to={planRange?.to} />
+                </Card>
+                <Card padding="md" data-testid="calendar-load-forecast">
+                  <PlanForecast events={events} />
                 </Card>
               </CalendarInsights>
             </aside>
@@ -247,7 +248,7 @@ function CalendarPageContent() {
         </div>
       )}
 
-      {isGridView && !loading && !error && (
+      {isGridView && !loading && !error && selectedDate != null && (
         <CalendarDaySheet
           selectedDate={selectedDate}
           activities={summaryActivities}
@@ -265,4 +266,13 @@ function CalendarPageContent() {
       />
     </div>
   );
+}
+
+const WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+
+function toIso(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
