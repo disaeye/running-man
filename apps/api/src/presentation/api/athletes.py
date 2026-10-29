@@ -39,6 +39,7 @@ _PROFILE_COLS = (
     "weekly_training_days",
     "max_session_duration_min",
     "preferred_sport",
+    "height_cm",
 )
 _THRESHOLD_COLS: tuple[ThresholdField, ...] = (
     "hr_max",
@@ -55,9 +56,7 @@ async def me(athlete: Annotated[Athlete, Depends(get_current_athlete)]) -> Athle
     data: dict[str, object] = dict(row) if row else {}
     data["id"] = str(athlete.id)
     data.setdefault("email", athlete.email)
-    data.update(
-        {field: getattr(thresholds, field).value for field in _THRESHOLD_COLS}
-    )
+    data.update({field: getattr(thresholds, field).value for field in _THRESHOLD_COLS})
 
     # Wellness supplies body weight for the goal field; the resting-HR and
     # observed-HR fallbacks already live in the shared resolver, so they are not
@@ -77,9 +76,7 @@ async def update_me(
     supplied = body.model_dump(exclude_unset=True)
     notif_prefs = supplied.pop("notification_prefs", None)
     profile_values: dict[str, object] = {
-        column: supplied[column]
-        for column in _PROFILE_COLS
-        if column in supplied
+        column: supplied[column] for column in _PROFILE_COLS if column in supplied
     }
     if notif_prefs is not None:
         profile_values["notification_prefs"] = notif_prefs

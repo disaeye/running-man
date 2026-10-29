@@ -19,7 +19,7 @@ from domain.insights.plan_intensity import (
     MAX_HIGH_INTENSITY_TIME_SHARE,
 )
 from domain.insights.plan_intensity import intensity_score as _intensity_score
-from domain.workout.plan_generator import generate_weekly_plan
+from domain.workout.plan_generator import WeekPlanOptions, generate_weekly_plan
 from domain.workout.prescription import (
     EASY,
     INTERVALS,
@@ -63,7 +63,7 @@ def test_two_hours_of_intervals_is_still_flagged() -> None:
 
 def test_the_generators_own_week_passes_the_scorecard() -> None:
     """The default weekly template must not fail its own quality check."""
-    days = generate_weekly_plan(target_weekly_tss=420.0, rest_days=1)
+    days = generate_weekly_plan(target_weekly_tss=420.0, options=WeekPlanOptions(rest_days=1))
     trained = [day for day in days if day.workout_type != REST]
     types = [day.workout_type for day in trained]
     minutes = [float(day.duration_min) for day in trained]

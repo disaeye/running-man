@@ -5,7 +5,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from presentation.api.readiness_contract import ReadinessFactorResponse
+from presentation.api.readiness_contract import (
+    ReadinessFactorResponse,
+    WellnessReadingsResponse,
+)
 
 
 class AnalysisAnalyticsResponse(BaseModel):
@@ -57,9 +60,11 @@ class RacePredictionResponse(AnalysisAnalyticsResponse):
 class ActivityAnalysisLapResponse(AnalysisAnalyticsResponse):
     lap_index: int
     distance_m: int
-    duration_s: int
+    duration_s: int | None
     avg_hr: int | None
     avg_power: int | None
+    avg_speed: float | None = None
+    pace_s_per_km: float | None = None
 
 
 class HrZoneTimesResponse(AnalysisAnalyticsResponse):
@@ -68,6 +73,55 @@ class HrZoneTimesResponse(AnalysisAnalyticsResponse):
     z3: int
     z4: int
     z5: int
+
+
+class HrZoneResidenceResponse(AnalysisAnalyticsResponse):
+    """Time spent in one heart-rate zone, with the boundaries that applied.
+
+    ``min_bpm``/``max_bpm`` are the athlete's own zone edges for the date of
+    the activity, so the page can print the range next to the time.
+    ``pct`` is the share of the covered time, and the shares of all five zones
+    add up to 100.
+    """
+
+    zone: int
+    seconds: int
+    pct: float
+    min_bpm: int | None = None
+    max_bpm: int | None = None
+
+
+class BiomechanicsSampleCountsResponse(AnalysisAnalyticsResponse):
+    """How many samples each biomechanics figure was computed from.
+
+    A single-sample average is not a measured average, so the page needs to
+    see the sample count behind every figure it shows.
+    """
+
+    cadence: int = 0
+    stride_length: int = 0
+    vertical_oscillation: int = 0
+    ground_contact_time: int = 0
+    left_right_balance: int = 0
+
+
+class BiomechanicsResponse(AnalysisAnalyticsResponse):
+    """The biomechanics matrix the activity detail page shows.
+
+    A field is ``None`` when the device did not record that channel; the page
+    shows "未记录" for those. ``sample_counts`` says how many samples each
+    figure was computed from, so a single-sample average cannot be mistaken
+    for a measured average.
+    """
+
+    avg_cadence_spm: float | None = None
+    avg_stride_length_m: float | None = None
+    avg_vertical_oscillation_cm: float | None = None
+    avg_ground_contact_time_ms: float | None = None
+    avg_lr_balance_pct: float | None = None
+    sample_counts: BiomechanicsSampleCountsResponse = Field(
+        default_factory=BiomechanicsSampleCountsResponse
+    )
 
 
 class PowerCurvePointResponse(AnalysisAnalyticsResponse):
@@ -87,6 +141,14 @@ class ActivityAnalysisResponse(AnalysisAnalyticsResponse):
     hr_zones: HrZoneTimesResponse
     power_curve: list[PowerCurvePointResponse]
     summary: ActivityAnalysisSummaryResponse
+    # 分段表需要的额外信息：真实配速波动与最快分段。
+    pace_variation_s: float | None = None
+    fastest_lap_index: int | None = None
+    # 心率区间驻留时间与边界。
+    zone_residence: list[HrZoneResidenceResponse] = Field(default_factory=list)
+    dominant_zone: int | None = None
+    # 跑步动力学矩阵。
+    biomechanics: BiomechanicsResponse = Field(default_factory=BiomechanicsResponse)
 
 
 class CoachFreshnessEntryResponse(AnalysisAnalyticsResponse):
@@ -117,6 +179,8 @@ class CoachRecoverySignalsResponse(AnalysisAnalyticsResponse):
     rhr_trend_direction: Literal["up", "down", "stable"]
     sleep_avg_7d: float
     readiness_score: int
+    # 休息前提下 TSB 回到正区间所需的天数；投影窗口内到不了就是 null。
+    tsb_recovery_days: int | None = None
 
 
 class CoachPlanAdherenceResponse(AnalysisAnalyticsResponse):
@@ -170,6 +234,8 @@ class CoachContextReadinessResponse(AnalysisAnalyticsResponse):
     max_intensity: Literal["high", "moderate", "low", "none"]
     data_sufficient: bool = False
     observed_on: date | None = None
+    # 当日的健康读数（HRV、静息心率、睡眠）与本人七日基线。
+    readings: WellnessReadingsResponse = Field(default_factory=WellnessReadingsResponse)
 
 
 class CoachContextResponse(AnalysisAnalyticsResponse):

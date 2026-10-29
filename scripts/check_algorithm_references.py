@@ -136,6 +136,44 @@ def _pmc(inputs: dict[str, object]) -> dict[str, float]:
     }
 
 
+def _recovery_projection(inputs: dict[str, object]) -> dict[str, float]:
+    from domain.insights.recovery_projection import project_recovery
+
+    result = project_recovery(
+        float(inputs["current_ctl"]),
+        float(inputs["current_atl"]),
+        int(inputs.get("horizon_days", 60)),
+    )
+    return {
+        "days_to_recovery": float(result.days) if result.days is not None else -1.0,
+        "projected_tsb": result.projected_tsb,
+        "reachable": float(result.reachable),
+    }
+
+
+def _load_adjustment(inputs: dict[str, object]) -> dict[str, float]:
+    from domain.insights.load_adjustment import detect_adjustment
+
+    result = detect_adjustment(
+        event_id=str(inputs["event_id"]),
+        hrv_today=float(inputs["hrv_today"]) if inputs.get("hrv_today") is not None else None,
+        hrv_baseline=float(inputs["hrv_baseline"])
+        if inputs.get("hrv_baseline") is not None
+        else None,
+        tsb=float(inputs["tsb"]) if inputs.get("tsb") is not None else None,
+        hr_drift_bpm=float(inputs["hr_drift_bpm"])
+        if inputs.get("hr_drift_bpm") is not None
+        else None,
+        long_run_seconds=int(inputs["long_run_seconds"])
+        if inputs.get("long_run_seconds") is not None
+        else None,
+    )
+    return {
+        "reduction_pct": result.reduction_pct if result is not None else 0.0,
+        "trigger_count": float(len(result.triggers)) if result is not None else 0.0,
+    }
+
+
 def _hrmax(inputs: dict[str, object]) -> dict[str, float]:
     from domain.physiology.hrmax import estimate_hrmax
 
@@ -166,6 +204,11 @@ EVALUATORS: Final[dict[tuple[str, str], Callable[[dict[str, object]], dict[str, 
     ("vdot", "daniels_threshold_pace_for_vdot_50"): _daniels_paces,
     ("physiology", "lthr_from_best_effort_windows"): _lthr,
     ("physiology", "threshold_pace_from_vdot_50"): _threshold_pace_from_vdot,
+    ("recovery_projection", "negative_balance_recovers_in_four_days"): _recovery_projection,
+    ("recovery_projection", "severe_fatigue_exceeds_projection_horizon"): _recovery_projection,
+    ("load_adjustment", "low_hrv_recommends_ten_percent_reduction"): _load_adjustment,
+    ("load_adjustment", "combined_triggers_respect_reduction_cap"): _load_adjustment,
+    ("load_adjustment", "no_recovery_signals_produce_no_adjustment"): _load_adjustment,
 }
 
 

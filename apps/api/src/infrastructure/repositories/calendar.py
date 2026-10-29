@@ -23,6 +23,7 @@ class CalendarRepo:
     ) -> list[dict[str, object]]:
         query = """
         SELECT event_id, start_time, category, sport_type, name, workout_xml, predicted_tss,
+               predicted_distance_m,
                external_id, status, done, plan_goal_id, plan_source, training_type,
                workout_prescription, athlete_edited, linked_activity_id,
                completed_distance_m, completed_duration_s, completed_avg_hr,

@@ -32,6 +32,8 @@ class FitSample:
     stance_time: float | None = None
     stride_length: float | None = None
     temperature: float | None = None
+    # 左右触地平衡：FIT 的 stance_time_balance 是左脚占比百分比。
+    lr_balance: float | None = None
 
     # Allow arbitrary extra fields for format-specific data.
     extra: dict[str, object] = field(default_factory=dict)

@@ -6,8 +6,10 @@ from typing import Final
 
 class Algorithm(StrEnum):
     ACTIVITY_LOAD = "activity_load"
+    LOAD_ADJUSTMENT = "load_adjustment"
     PHYSIOLOGY = "physiology"
     PMC = "pmc"
+    RECOVERY_PROJECTION = "recovery_projection"
     VDOT = "vdot"
 
 ALGORITHM_DEFINITIONS: Final = [{'input_window_days': 1,
@@ -22,6 +24,11 @@ ALGORITHM_DEFINITIONS: Final = [{'input_window_days': 1,
               'aerobic_decoupling_pct',
               'rtss'],
   'version': '1.1.0'},
+ {'input_window_days': 7,
+  'key': 'load_adjustment',
+  'materialization': 'derived_on_read',
+  'outputs': ['reduction_pct', 'trigger_count'],
+  'version': '1.0.0'},
  {'calculations': [{'input_window_days': 730, 'key': 'hr_max'},
                    {'input_window_days': 365, 'key': 'lthr'},
                    {'input_window_days': 365, 'key': 'threshold_pace'}],
@@ -35,6 +42,11 @@ ALGORITHM_DEFINITIONS: Final = [{'input_window_days': 1,
   'key': 'pmc',
   'materialization': 'stored_fact',
   'outputs': ['daily_tss', 'ctl', 'atl', 'tsb', 'acwr'],
+  'version': '1.0.0'},
+ {'input_window_days': 60,
+  'key': 'recovery_projection',
+  'materialization': 'derived_on_read',
+  'outputs': ['days_to_recovery', 'current_tsb', 'projected_tsb', 'reachable'],
   'version': '1.0.0'},
  {'input_window_days': 365,
   'key': 'vdot',

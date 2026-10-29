@@ -10,7 +10,7 @@ from sqlalchemy import (
     Text,
     text,
 )
-from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
+from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
 from infrastructure.db import Base
 
@@ -52,6 +52,40 @@ class Goal(Base):
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
 
 
+class PlanAdjustment(Base):
+    """A suggested change to one planned session.
+
+    The row is a proposal: the calendar row keeps its original prescription
+    until the athlete accepts. ``status`` moves from ``pending`` to
+    ``applied`` (accepted, the calendar was rewritten) or ``reverted`` (the
+    athlete kept the original).
+    """
+
+    __tablename__ = "plan_adjustments"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'applied', 'reverted')",
+            name="ck_plan_adjustments_status",
+        ),
+    )
+
+    adjustment_id = Column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    athlete_id = Column(
+        UUID(as_uuid=True), ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False
+    )
+    event_id = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    decided_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    trigger_type = Column(Text, nullable=False)
+    trigger_summary = Column(Text, nullable=False)
+    original_prescription = Column(JSONB, nullable=True)
+    adjusted_prescription = Column(JSONB, nullable=True)
+    load_delta_pct = Column(Double, nullable=True)
+    status = Column(Text, nullable=False, server_default="pending")
+
+
 class Milestone(Base):
     __tablename__ = "milestones"
 
@@ -84,3 +118,4 @@ class TrainingPhase(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     target_weekly_tss = Column(Double, nullable=True)
+    target_weekly_distance_m = Column(Double, nullable=True)

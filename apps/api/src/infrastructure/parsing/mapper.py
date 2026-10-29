@@ -51,6 +51,7 @@ def _sample_metrics(sample: FitSample) -> tuple[tuple[str, int | float | None], 
         ("vertical_oscillation", sample.vertical_oscillation),
         ("ground_contact_time", sample.stance_time),
         ("stride_length", sample.stride_length),
+        ("left_right_balance", sample.lr_balance),
         ("temperature", sample.temperature),
     )
 

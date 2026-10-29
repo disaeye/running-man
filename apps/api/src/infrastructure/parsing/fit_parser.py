@@ -90,6 +90,7 @@ def _record_to_sample(frame: fitdecode.records.FitDataMessage) -> FitSample | No
         stance_time=_first_float(frame, "stance_time"),
         stride_length=_scaled_first_float(frame, 1000.0, "step_length", "stride_length"),
         temperature=_first_float(frame, "temperature"),
+        lr_balance=_first_float(frame, "stance_time_balance", "left_right_balance"),
     )
 
 

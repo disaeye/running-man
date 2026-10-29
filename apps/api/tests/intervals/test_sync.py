@@ -1,4 +1,4 @@
-# pyright: reportArgumentType=false, reportMissingTypeStubs=false, reportPrivateImportUsage=false, reportUnknownMemberType=false, reportImplicitOverride=false, reportUnannotatedClassAttribute=false, reportExplicitAny=false, reportUnusedCallResult=false, reportImplicitStringConcatenation=false
+# pyright: reportArgumentType=false, reportMissingTypeStubs=false, reportPrivateImportUsage=false, reportUnknownMemberType=false, reportImplicitOverride=false, reportUnusedCallResult=false, reportImplicitStringConcatenation=false
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ import vcr
 
 from infrastructure.integrations.intervals import sync
 from infrastructure.integrations.intervals.client import IntervalsClient
+from infrastructure.repositories.activity_summary import execute_upsert
 
 CASSETTE = Path(__file__).parents[1] / "cassettes" / "intervals_api_validation.yaml"
 TEST_ATHLETE_ID = "00000000-0000-0000-0000-000000000000"
@@ -96,6 +97,14 @@ def ensure_activity_summary(db_conn: psycopg.Connection) -> None:
              weather_clouds_pct DOUBLE PRECISION,
              weather_max_rain DOUBLE PRECISION,
              weather_max_snow DOUBLE PRECISION,
+             name TEXT,
+             rpe SMALLINT,
+             trimp DOUBLE PRECISION,
+             avg_stride_length_m DOUBLE PRECISION,
+             avg_lr_balance_pct DOUBLE PRECISION,
+             is_bookmarked BOOLEAN NOT NULL DEFAULT FALSE,
+             weather_source TEXT,
+             weather_fetched_at TIMESTAMPTZ,
              PRIMARY KEY (activity_id, start_time)
             )
             """
@@ -185,10 +194,8 @@ async def test_cross_source_dedup_updates_existing_activity(db_conn: psycopg.Con
     }
 
     with db_conn.cursor() as cur:
-        cur.execute(sync._UPSERT_SQL, sync._activity_params(TEST_ATHLETE_ID, intervals_activity))
-        first = cur.fetchone()
-        cur.execute(sync._UPSERT_SQL, sync._activity_params(TEST_ATHLETE_ID, strava_activity))
-        second = cur.fetchone()
+        first = execute_upsert(cur, sync._activity_params(TEST_ATHLETE_ID, intervals_activity))
+        second = execute_upsert(cur, sync._activity_params(TEST_ATHLETE_ID, strava_activity))
         cur.execute(
             "SELECT count(*), max(activity_id), max(external_id) "
             "FROM activity_summary WHERE athlete_id = %s",
@@ -197,8 +204,8 @@ async def test_cross_source_dedup_updates_existing_activity(db_conn: psycopg.Con
         row = cur.fetchone()
 
     assert row is not None
-    assert first == (False,)
-    assert second == (True,)
+    assert first is False
+    assert second is True
     assert row[0] == 1
     assert row[1] in ("strava:12345678", b"strava:12345678")
     assert row[2] in ("app:strava:12345678", b"app:strava:12345678")

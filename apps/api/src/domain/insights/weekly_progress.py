@@ -15,6 +15,12 @@ class WeekProgress(TypedDict):
     completion_pct: int | str
     planned_distance_m: float
     actual_distance_m: float
+    # 实际累计爬升（米）。
+    actual_elevation_m: float
+    # 平均配速（秒/公里），按距离与时长算出；没有距离时为 None。
+    avg_pace_s_per_km: float | None
+    # 计划距离目标之差（米）：正数表示还差多少。
+    remaining_distance_m: float
 
 
 def compute_weekly_progress(
@@ -65,6 +71,7 @@ def _aggregate_planned(
         week = totals[_iso_week(as_date(event.get("start_time")))]
         week["tss"] += num(event.get("predicted_tss"))
         week["sessions"] += 1
+        week["distance_m"] += num(event.get("predicted_distance_m"))
     return totals
 
 
@@ -79,10 +86,14 @@ def _aggregate_actual(
         week["tss"] += num(activity.get("tss"))
         week["sessions"] += 1
         week["distance_m"] += num(activity.get("distance_m"))
+        week["elevation_m"] += num(activity.get("elevation_gain_m"))
+        week["duration_s"] += num(activity.get("duration_s"))
     return totals
 
 
 def _week_progress(week: str, planned: dict[str, float], actual: dict[str, float]) -> WeekProgress:
+    planned_distance = planned["distance_m"]
+    actual_distance = actual["distance_m"]
     return {
         "week": week,
         "planned_tss": round(planned["tss"], 1),
@@ -90,9 +101,23 @@ def _week_progress(week: str, planned: dict[str, float], actual: dict[str, float
         "planned_sessions": round(planned["sessions"]),
         "actual_sessions": round(actual["sessions"]),
         "completion_pct": _completion_pct(planned["tss"], actual["tss"]),
-        "planned_distance_m": round(planned["distance_m"], 1),
-        "actual_distance_m": round(actual["distance_m"], 1),
+        "planned_distance_m": round(planned_distance, 1),
+        "actual_distance_m": round(actual_distance, 1),
+        "actual_elevation_m": round(actual["elevation_m"], 1),
+        "avg_pace_s_per_km": _avg_pace(actual_distance, actual["duration_s"]),
+        "remaining_distance_m": round(max(planned_distance - actual_distance, 0.0), 1),
     }
+
+
+def _avg_pace(distance_m: float, duration_s: float) -> float | None:
+    """Seconds per kilometre for a week.
+
+    ``None`` when the week has no distance: a pace without distance would be a
+    division by nothing.
+    """
+    if distance_m <= 0 or duration_s <= 0:
+        return None
+    return round(duration_s / (distance_m / 1000.0), 1)
 
 
 def _iso_week(day: date) -> str:
@@ -101,7 +126,13 @@ def _iso_week(day: date) -> str:
 
 
 def _empty_totals() -> dict[str, float]:
-    return {"tss": 0.0, "sessions": 0.0, "distance_m": 0.0}
+    return {
+        "tss": 0.0,
+        "sessions": 0.0,
+        "distance_m": 0.0,
+        "elevation_m": 0.0,
+        "duration_s": 0.0,
+    }
 
 
 def _completion_pct(planned_tss: float, actual_tss: float) -> int | str:

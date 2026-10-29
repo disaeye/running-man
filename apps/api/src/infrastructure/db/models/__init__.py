@@ -21,7 +21,13 @@ from infrastructure.db.models.derived_metrics import (
     DerivedMetricFact,
     MetricDefinition,
 )
-from infrastructure.db.models.plan_entities import Goal, Milestone, TrainingPhase, WebhookEvent
+from infrastructure.db.models.plan_entities import (
+    Goal,
+    Milestone,
+    PlanAdjustment,
+    TrainingPhase,
+    WebhookEvent,
+)
 from infrastructure.db.models.platform import (
     ActivityLap,
     Notification,
@@ -57,6 +63,7 @@ __all__ = [
     "Milestone",
     "Notification",
     "NotificationRule",
+    "PlanAdjustment",
     "RevokedToken",
     "ShareToken",
     "SourceDefinition",

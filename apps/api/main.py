@@ -29,7 +29,10 @@ from presentation.api import (
     integrations,
     manual_activity,
     metrics,
+    personal_range,
     plan,
+    plan_adjustments,
+    plan_state,
     pmc,
     race,
     race_results,
@@ -99,6 +102,8 @@ app.include_router(athletes.router, prefix=API_V1_PREFIX)
 app.include_router(pmc.router, prefix=API_V1_PREFIX)
 app.include_router(race.router, prefix=API_V1_PREFIX)
 app.include_router(plan.router, prefix=API_V1_PREFIX)
+app.include_router(plan_state.router, prefix=API_V1_PREFIX)
+app.include_router(plan_adjustments.router, prefix=API_V1_PREFIX)
 app.include_router(activity_stats.router, prefix=API_V1_PREFIX)
 app.include_router(activity_flags.router, prefix=API_V1_PREFIX)
 app.include_router(activities.router, prefix=API_V1_PREFIX)
@@ -110,6 +115,7 @@ app.include_router(goals.router, prefix=API_V1_PREFIX)
 app.include_router(coach_context.router, prefix=API_V1_PREFIX)
 app.include_router(data_health.router, prefix=API_V1_PREFIX)
 app.include_router(insights_ability.router, prefix=API_V1_PREFIX)
+app.include_router(personal_range.router, prefix=API_V1_PREFIX)
 app.include_router(insights.router, prefix=API_V1_PREFIX)
 app.include_router(zones_router, prefix=API_V1_PREFIX)
 app.include_router(sync_runs.router, prefix=f"{API_V1_PREFIX}/integrations")

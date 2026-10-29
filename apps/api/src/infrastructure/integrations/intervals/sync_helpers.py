@@ -7,9 +7,10 @@ from datetime import date, timedelta
 from typing import Any, cast
 
 import psycopg
+from psycopg import sql
 
 from domain.ingestion import DistanceUnit, canonical_distance, canonical_sport
-from domain.time import local_day_sql, resolve_zone
+from domain.time import resolve_zone
 from infrastructure.parsing.models import FitSample
 from infrastructure.polyline_encoder import encode_polyline, extract_gps_from_raw
 from infrastructure.repositories.activity import compute_source_hash
@@ -78,6 +79,26 @@ def activity_params(athlete_id: int | str, activity: Mapping[str, object]) -> tu
         activity.get("average_clouds"),
         activity.get("max_rain"),
         activity.get("max_snow"),
+        # 活动名称：页面上显示“昨晚 19:42 · 奥森南园节奏跑”需要它。
+        _text(activity.get("name")),
+        # 自感用力度：Intervals.icu 用 icu_rpe，另有 perceived_exertion 与 feel 两个别名。
+        _int(activity.get("icu_rpe", activity.get("perceived_exertion", activity.get("feel")))),
+        # 训练冲量 TRIMP：Intervals.icu 自己算的，与本系统的 TSS 算法不同，单独存。
+        as_float(activity.get("trimp")),
+        # 平均步长：Intervals.icu 的 average_stride 单位是米。
+        as_float(activity.get("average_stride")),
+        # 左右平衡：Intervals.icu 的 avg_lr_balance 是左脚占比百分比。
+        as_float(activity.get("avg_lr_balance")),
+        # 天气来源：Intervals.icu 自带天气时标为 intervals_icu；
+        # 没有时保持 NULL，天气回补模块按坐标取数后另写。
+        "intervals_icu"
+        if (
+            activity.get("average_weather_temp") is not None
+            or activity.get("min_weather_temp") is not None
+            or activity.get("max_weather_temp") is not None
+            or activity.get("average_wind_speed") is not None
+        )
+        else None,
     )
 
 
@@ -137,6 +158,7 @@ def fit_sample_metrics(sample: FitSample) -> tuple[tuple[str, float], ...]:
             ("vertical_oscillation", sample.vertical_oscillation),
             ("ground_contact_time", sample.stance_time),
             ("stride_length", sample.stride_length),
+            ("left_right_balance", sample.lr_balance),
             ("temperature", sample.temperature),
         )
         if value is not None and _emit_stream_metric(metric_type, value)
@@ -153,6 +175,20 @@ def _emit_stream_metric(metric_type: str, value: object) -> bool:
 
 def as_float(value: object) -> float | None:
     return float(value) if isinstance(value, int | float | str) and value != "" else None
+
+
+def _int(value: object) -> int | None:
+    number = as_float(value)
+    if number is None:
+        return None
+    return int(number)
+
+
+def _text(value: object) -> str | None:
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped or None
+    return None
 
 
 def as_date(value: date | str) -> date:
@@ -218,10 +254,14 @@ def next_sync_date(
     Greenwich — the upstream API would then re-request a day it already has,
     forever. The cursor is a date handed to that API, so it is their local day.
     """
-    day = local_day_sql("%s")
+    # 与 local_day_sql("%s") 相同的表达式，写成字面量以便 psycopg 的类型检查
+    # 接受（f-string 拼接出来的语句不在 LiteralString 里）。
+    query = sql.SQL(
+        "SELECT max((start_time AT TIME ZONE %s)::date) FROM activity_summary WHERE athlete_id = %s"
+    )
     with conn.cursor() as cur:
         _ = cur.execute(
-            f"SELECT max({day}) FROM activity_summary WHERE athlete_id = %s",
+            query,
             (athlete_timezone(conn, athlete_id), athlete_id),
         )
         row = cur.fetchone()

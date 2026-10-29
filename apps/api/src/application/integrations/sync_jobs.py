@@ -21,12 +21,8 @@ import anyio
 from anyio.to_thread import run_sync as run_sync_in_worker_thread
 
 from application.computation.queue_worker import enqueue_activity_recompute
-from application.integrations.sync_job_phases import (
-    SyncCancelledError,
-    finish_job_detail,
-    run_phases,
-    running_detail,
-)
+from application.integrations.sync_job_details import finish_job_detail, running_detail
+from application.integrations.sync_job_phases import SyncCancelledError, run_phases
 from infrastructure.db.pool import get_sync_pool
 from infrastructure.integrations.intervals.client import IntervalsClient
 from infrastructure.integrations.intervals.sync import sync_activity_streams
@@ -77,13 +73,9 @@ async def run_sync_job(
     """Run one job to a terminal state and mirror the result onto the integration row."""
     repo = UserIntegrationRepo()
     started_at = monotonic()
-    await repo.update_sync_status(
-        athlete_id, source, "running", None, running_detail(started_at)
-    )
+    await repo.update_sync_status(athlete_id, source, "running", None, running_detail(started_at))
     outcome = await run_sync_in_worker_thread(execute_job, job_id, credentials)
-    await repo.update_sync_status(
-        athlete_id, source, outcome.status, outcome.error, outcome.detail
-    )
+    await repo.update_sync_status(athlete_id, source, outcome.status, outcome.error, outcome.detail)
     return outcome
 
 

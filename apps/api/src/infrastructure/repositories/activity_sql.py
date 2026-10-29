@@ -43,6 +43,8 @@ def _summary_params(athlete_id: UUID, summary: dict[str, object]) -> tuple[objec
         json.dumps(canonical.get("raw_data", {}), ensure_ascii=True),
         source_hash,
         canonical.get("summary_polyline"),
+        canonical.get("avg_stride_length_m"),
+        canonical.get("avg_lr_balance_pct"),
     )
 
 
@@ -74,7 +76,9 @@ WITH input AS (
            %s::smallint AS avg_power, %s::double precision AS avg_cadence,
            %s::double precision AS avg_speed, %s::double precision AS elevation_gain_m,
             %s::integer AS calories, %s AS external_id, %s AS source, %s AS file_type,
-            %s AS device_name, %s::jsonb AS raw_data, %s AS source_hash, %s AS summary_polyline
+            %s AS device_name, %s::jsonb AS raw_data, %s AS source_hash, %s AS summary_polyline,
+            %s::double precision AS avg_stride_length_m,
+            %s::double precision AS avg_lr_balance_pct
 ), locked AS (
     SELECT pg_advisory_xact_lock(hashtextextended(athlete_id::text || '|' || source_hash::text, 0))
     FROM input
@@ -111,7 +115,9 @@ WITH input AS (
         device_name = i.device_name,
         raw_data = i.raw_data,
         source_hash = i.source_hash,
-        summary_polyline = i.summary_polyline
+        summary_polyline = i.summary_polyline,
+        avg_stride_length_m = COALESCE(i.avg_stride_length_m, a.avg_stride_length_m),
+        avg_lr_balance_pct = COALESCE(i.avg_lr_balance_pct, a.avg_lr_balance_pct)
     FROM existing, input i
     WHERE a.activity_id = existing.activity_id AND a.start_time = existing.start_time
     RETURNING a.activity_id, a.start_time, a.sport, a.distance_m, a.duration_s,
@@ -124,10 +130,12 @@ WITH input AS (
     INSERT INTO activity_summary
      (activity_id, athlete_id, start_time, sport, distance_m, duration_s,
       avg_hr, max_hr, avg_power, avg_cadence, avg_speed, elevation_gain_m,
-      calories, external_id, source, file_type, device_name, raw_data, source_hash, summary_polyline)
+      calories, external_id, source, file_type, device_name, raw_data, source_hash, summary_polyline,
+      avg_stride_length_m, avg_lr_balance_pct)
     SELECT activity_id, athlete_id, start_time, sport, distance_m, duration_s,
            avg_hr, max_hr, avg_power, avg_cadence, avg_speed, elevation_gain_m,
-           calories, external_id, source, file_type, device_name, raw_data, source_hash, summary_polyline
+           calories, external_id, source, file_type, device_name, raw_data, source_hash, summary_polyline,
+           avg_stride_length_m, avg_lr_balance_pct
     FROM input
     WHERE NOT EXISTS (SELECT 1 FROM updated)
 ON CONFLICT (activity_id, start_time) DO UPDATE SET
@@ -148,7 +156,9 @@ ON CONFLICT (activity_id, start_time) DO UPDATE SET
     device_name = EXCLUDED.device_name,
     raw_data = EXCLUDED.raw_data,
      source_hash = EXCLUDED.source_hash,
-     summary_polyline = EXCLUDED.summary_polyline
+     summary_polyline = EXCLUDED.summary_polyline,
+     avg_stride_length_m = COALESCE(EXCLUDED.avg_stride_length_m, activity_summary.avg_stride_length_m),
+     avg_lr_balance_pct = COALESCE(EXCLUDED.avg_lr_balance_pct, activity_summary.avg_lr_balance_pct)
 RETURNING activity_id, start_time, sport, distance_m, duration_s, avg_hr, max_hr,
           avg_power, NULL::double precision AS np, icu_ctl,
           NULL::double precision AS intensity_factor, NULL::double precision AS tss,

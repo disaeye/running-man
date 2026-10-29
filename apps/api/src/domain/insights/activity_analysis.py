@@ -1,35 +1,50 @@
+"""Per-activity analysis: laps, HR zone times, biomechanics and summary metrics.
+
+Heart-rate zone statistics are restricted to running, because the zones are
+built from running thresholds. A cycling or strength session recorded on the
+same watch has a different threshold heart rate, so bucketing its samples with
+running zones would file ordinary work under the wrong intensities and inflate
+the totals. Non-running activities therefore report no zone times at all rather
+than a misleading breakdown.
+
+Timing is taken from the sample timestamps, never from the sample count. The
+older version of this module used ``end - start`` on the sample index as the
+lap duration, which is only correct for a 1 Hz device; a watch sampling every
+2 s produced laps that were half as long as reality. Every duration here comes
+from the real timestamp difference between the first and last sample of the
+segment, so the number means the same thing on any device.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from statistics import mean
 
+from domain.insights.activity_laps import (
+    LapSegment,
+    compute_lap_segments,
+    compute_laps,
+)
+from domain.insights.biomechanics import (
+    BiomechanicsSummary,
+    summarize_biomechanics,
+)
 from domain.insights.prs import max_sustained_power
 from domain.insights.zones import Zone
 from domain.load.decoupling import aerobic_decoupling, pair_by_time
 from domain.load.normalized_power import normalized_power
 from domain.load.tss import estimate_tss, intensity_factor
+from domain.sports import is_running
+
+__all__ = ["LapSegment", "compute_lap_segments", "compute_laps"]
 
 STANDARD_POWER_DURATIONS: list[int] = [60, 300, 600, 1200, 3600]
-LAP_DISTANCE_M = 1000.0
-FALLBACK_LAP_SECONDS = 300
 HR_ZONE_COUNT = 5
 
-
-def compute_laps(streams: dict[str, list[float]]) -> list[dict[str, float | int | None]]:
-    distances = streams.get("distance", [])
-    sample_count = _sample_count(streams)
-    if not sample_count:
-        return []
-    boundaries = _distance_boundaries(distances) or _time_boundaries(sample_count)
-    laps: list[dict[str, float | int | None]] = []
-    start = 0
-    for lap_index, end in enumerate(boundaries, start=1):
-        if end <= start:
-            continue
-        laps.append(_lap(lap_index, start, end, streams))
-        start = end
-    return laps
+# A pace variation figure is only meaningful with enough samples to average
+# out; below this the "±N seconds" line is noise.
+MIN_PACE_VARIATION_SAMPLES = 20
 
 
 def compute_hr_zone_times(
@@ -46,6 +61,72 @@ def compute_hr_zone_times(
     return totals
 
 
+def compute_hr_zone_residence(
+    hr_samples: list[float],
+    hr_times: Sequence[float],
+    hr_zones: list[Zone],
+) -> list[dict[str, float | int | None]]:
+    """Time in each heart-rate zone, measured between sample timestamps.
+
+    Each sample owns the interval that follows it, so the total of all zones
+    equals the span the samples cover. ``min_bpm``/``max_bpm`` are the
+    boundaries in force for the activity, and ``pct`` is the share of the
+    covered time the zone holds.
+    """
+    empty = [
+        {
+            "zone": zone,
+            "seconds": 0,
+            "pct": 0.0,
+            "min_bpm": _zone_min(zone, hr_zones),
+            "max_bpm": _zone_max(zone, hr_zones),
+        }
+        for zone in range(1, HR_ZONE_COUNT + 1)
+    ]
+    if not hr_samples or not hr_zones:
+        return empty
+    times = list(hr_times)
+    if len(times) != len(hr_samples):
+        return empty
+    seconds = {f"z{zone}": 0.0 for zone in range(1, HR_ZONE_COUNT + 1)}
+    for index in range(len(hr_samples) - 1):
+        dt = times[index + 1] - times[index]
+        if dt <= 0:
+            continue
+        zone = _zone_for_value(hr_samples[index], hr_zones)
+        if zone is not None and 1 <= zone <= HR_ZONE_COUNT:
+            seconds[f"z{zone}"] += dt
+    total = sum(seconds.values())
+    rows: list[dict[str, float | int | None]] = []
+    for zone in range(1, HR_ZONE_COUNT + 1):
+        value = seconds[f"z{zone}"]
+        rows.append(
+            {
+                "zone": zone,
+                "seconds": round(value),
+                "pct": round(value / total * 100, 1) if total > 0 else 0.0,
+                "min_bpm": _zone_min(zone, hr_zones),
+                "max_bpm": _zone_max(zone, hr_zones),
+            }
+        )
+    return rows
+
+
+def dominant_zone(rows: Sequence[Mapping[str, object]]) -> int | None:
+    """The zone holding the most time, or ``None`` when no zone has any."""
+    best: int | None = None
+    best_seconds = 0.0
+    for row in rows:
+        seconds = row.get("seconds")
+        if not isinstance(seconds, int | float):
+            continue
+        if float(seconds) > best_seconds:
+            best_seconds = float(seconds)
+            zone = row.get("zone")
+            best = int(zone) if isinstance(zone, int) else None
+    return best
+
+
 def compute_power_curve(
     power_samples: list[float], durations: list[int] = STANDARD_POWER_DURATIONS
 ) -> list[dict[str, int]]:
@@ -55,6 +136,45 @@ def compute_power_curve(
         if avg_w is not None:
             curve.append({"duration_s": duration_s, "avg_w": round(avg_w)})
     return curve
+
+
+def compute_biomechanics(
+    streams: dict[str, list[float]],
+    *,
+    sport: str | None,
+    source_avg_cadence: float | None = None,
+    source_avg_stride_length_m: float | None = None,
+    source_avg_lr_balance_pct: float | None = None,
+) -> BiomechanicsSummary:
+    """The six-cell biomechanics matrix the demo analysis page shows."""
+    return summarize_biomechanics(
+        streams,
+        is_running=is_running(sport),
+        source_avg_cadence=source_avg_cadence,
+        source_avg_stride_length_m=source_avg_stride_length_m,
+        source_avg_lr_balance_pct=source_avg_lr_balance_pct,
+    )
+
+
+def pace_variation_s(speed_samples: Sequence[float], duration_s: int | None) -> float | None:
+    """The "±N seconds" pace stability figure for the recent-activity card.
+
+    The spread of the per-kilometre pace, expressed in seconds per kilometre.
+    Computed from the speed stream: each sample's instantaneous pace is
+    converted to seconds per kilometre, and the standard deviation of those
+    values is the figure. ``None`` when there are too few samples for the
+    number to mean anything.
+    """
+    paces = [
+        1000.0 / value for value in speed_samples if isinstance(value, int | float) and value > 0.5
+    ]
+    if len(paces) < MIN_PACE_VARIATION_SAMPLES:
+        return None
+    average = mean(paces)
+    if average <= 0:
+        return None
+    variance = mean((pace - average) ** 2 for pace in paces)
+    return round(variance**0.5, 1)
 
 
 def compute_summary(
@@ -76,18 +196,14 @@ def compute_summary(
     effort_values: Sequence[float]
     cardio: Sequence[float]
     if effort and cardio_times and effort_times:
-        effort_values, cardio = pair_by_time(
-            effort_times, effort, cardio_times, heart_rates
-        )
+        effort_values, cardio = pair_by_time(effort_times, effort, cardio_times, heart_rates)
     else:
         # Without timestamps the two streams can only be aligned by position,
         # so the shorter one bounds the comparison.
         cardio = heart_rates[: len(effort)] if effort else []
         effort_values = effort[: len(cardio)]
     decoupling = (
-        aerobic_decoupling(effort_values, cardio, duration_s=float(duration_s))
-        if cardio
-        else None
+        aerobic_decoupling(effort_values, cardio, duration_s=float(duration_s)) if cardio else None
     )
     return {
         "np": round(np_value) if np_value is not None else None,
@@ -125,62 +241,26 @@ def stream_times_by_metric(
     return grouped
 
 
-def _sample_count(streams: Mapping[str, Sequence[float]]) -> int:
-    return max((len(values) for values in streams.values()), default=0)
-
-
-def _distance_boundaries(distances: Sequence[float]) -> list[int]:
-    if not distances:
-        return []
-    boundaries: list[int] = []
-    next_distance = (distances[0] // LAP_DISTANCE_M + 1) * LAP_DISTANCE_M
-    for index, distance in enumerate(distances, start=1):
-        if distance >= next_distance:
-            boundaries.append(index)
-            next_distance += LAP_DISTANCE_M
-    if boundaries[-1:] != [len(distances)]:
-        boundaries.append(len(distances))
-    return boundaries
-
-
-def _time_boundaries(sample_count: int) -> list[int]:
-    return [*range(FALLBACK_LAP_SECONDS, sample_count, FALLBACK_LAP_SECONDS), sample_count]
-
-
-def _lap(
-    lap_index: int,
-    start: int,
-    end: int,
-    streams: Mapping[str, Sequence[float]],
-) -> dict[str, float | int | None]:
-    distances = streams.get("distance", [])
-    speeds = streams.get("speed", [])
-    distance = _distance_delta(distances, speeds, start, end)
-    return {
-        "lap_index": lap_index,
-        "distance_m": round(distance),
-        "duration_s": end - start,
-        "avg_hr": _rounded_mean(streams.get("heart_rate", [])[start:end]),
-        "avg_power": _rounded_mean(streams.get("power", [])[start:end]),
-    }
-
-
-def _distance_delta(
-    distances: Sequence[float], speeds: Sequence[float], start: int, end: int
-) -> float:
-    if len(distances) >= end > start:
-        return max(0.0, distances[end - 1] - distances[start])
-    return sum(speeds[start:end]) if len(speeds) >= end else float(end - start)
-
-
-def _rounded_mean(values: Sequence[float]) -> int | None:
-    return round(mean(values)) if values else None
-
-
 def _zone_for_value(value: float, zones: Sequence[Zone]) -> int | None:
     for zone in zones:
         min_value = zone["min_value"]
         max_value = zone["max_value"]
         if value >= min_value and (max_value is None or value <= max_value):
             return zone["zone"]
+    return None
+
+
+def _zone_min(zone: int, zones: Sequence[Zone]) -> int | None:
+    for row in zones:
+        if row["zone"] == zone:
+            value = row["min_value"]
+            return int(value) if isinstance(value, int | float) else None
+    return None
+
+
+def _zone_max(zone: int, zones: Sequence[Zone]) -> int | None:
+    for row in zones:
+        if row["zone"] == zone:
+            value = row["max_value"]
+            return int(value) if isinstance(value, int | float) else None
     return None

@@ -82,12 +82,12 @@ async def test_generate_plan_preview_passes_dry_run_and_returns_dates() -> None:
 
     assert response.status_code == 200
     assert response.json()["affected_dates"] == ["2026-08-01", "2026-08-02"]
-    assert mock_gen.call_args.kwargs == {
-        "dry_run": True,
-        "rest_days": None,
-        "preferred_days_off": None,
-        "weekly_tss": None,
-    }
+    request = mock_gen.call_args.args[3]
+    assert request.dry_run is True
+    assert request.rest_days is None
+    assert request.preferred_days_off is None
+    assert request.weekly_tss is None
+    assert request.long_run_day is None
 
 
 @pytest.mark.no_db
@@ -138,8 +138,9 @@ async def test_generate_plan_accepts_zero_rest_days() -> None:
         )
 
     assert response.status_code == 200
-    assert mock_gen.call_args.kwargs["rest_days"] == 0
-    assert mock_gen.call_args.kwargs["preferred_days_off"] == []
+    request = mock_gen.call_args.args[3]
+    assert request.rest_days == 0
+    assert request.preferred_days_off == []
 
 
 @pytest.mark.no_db

@@ -12,6 +12,7 @@ class Athlete(Base):
     password_hash = Column(Text, nullable=False)
     name = Column(Text, nullable=False, server_default="")
     timezone = Column(Text, nullable=False, server_default="UTC")
+    height_cm = Column(Double, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
     hr_max = Column(Integer, nullable=True)
     resting_hr = Column(Integer, nullable=True)

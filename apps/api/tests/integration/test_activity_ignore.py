@@ -20,6 +20,8 @@ import pytest
 
 from conftest import TEST_DSN
 from infrastructure.auth.settings import settings
+from infrastructure.integrations.intervals import sync
+from infrastructure.repositories.activity_summary import execute_upsert
 from tests.application.load.activity_fact_schema import ensure_activity_fact_schema
 
 # These tests are synchronous: the guarantees under test live in SQL, not in
@@ -28,7 +30,6 @@ from tests.application.load.activity_fact_schema import ensure_activity_fact_sch
 pytestmark = [pytest.mark.no_db]
 
 ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000021")
-
 
 
 def _configure() -> None:
@@ -46,6 +47,7 @@ def _seed_activity(activity_id: str, day: int, *, sport: str = "run") -> None:
             (activity_id, ATHLETE_ID, datetime(2026, 7, day, tzinfo=UTC), sport),
         )
 
+
 def _flag(activity_id: str, column: str, value: bool) -> None:
     assert column in {"deleted_at", "ignored_at"}
     with psycopg.connect(TEST_DSN) as conn, conn.cursor() as cur:
@@ -56,19 +58,16 @@ def _flag(activity_id: str, column: str, value: bool) -> None:
             (ATHLETE_ID, activity_id),
         )
 
+
 def _count_in_view() -> int:
     with psycopg.connect(TEST_DSN) as conn, conn.cursor() as cur:
-        cur.execute(
-            "SELECT count(*) FROM activity_compute WHERE athlete_id = %s", (ATHLETE_ID,)
-        )
+        cur.execute("SELECT count(*) FROM activity_compute WHERE athlete_id = %s", (ATHLETE_ID,))
         return int(cur.fetchone()[0])
 
 
 def _count_in_table() -> int:
     with psycopg.connect(TEST_DSN) as conn, conn.cursor() as cur:
-        cur.execute(
-            "SELECT count(*) FROM activity_summary WHERE athlete_id = %s", (ATHLETE_ID,)
-        )
+        cur.execute("SELECT count(*) FROM activity_summary WHERE athlete_id = %s", (ATHLETE_ID,))
         return int(cur.fetchone()[0])
 
 
@@ -77,6 +76,7 @@ def _reset() -> None:
     ensure_activity_fact_schema(ATHLETE_ID)
     with psycopg.connect(TEST_DSN) as conn, conn.cursor() as cur:
         cur.execute("DELETE FROM activity_summary WHERE athlete_id = %s", (ATHLETE_ID,))
+
 
 class TestComputeViewExcludesFlaggedRows:
     """The view is the single gate every derived number passes through."""
@@ -189,32 +189,33 @@ class TestUpsertPreservesTheFlags:
     being a decision and being a suggestion.
     """
 
-    def test_neither_flag_is_mentioned_in_the_upsert(self) -> None:
-        from infrastructure.repositories import activity_summary
-
-        statement = activity_summary.UPSERT_SQL
-
-        assert "deleted_at" not in statement
-        assert "ignored_at" not in statement
-
-    def test_a_flagged_row_keeps_its_flag_after_an_upsert(self) -> None:
+    def test_resync_preserves_the_ignored_flag(self) -> None:
         _reset()
-        _seed_activity("resync", 1)
-        _flag("resync", "ignored_at", True)
+        activity = {
+            "id": "resync",
+            "start_date": "2026-07-01T10:00:00Z",
+            "type": "Run",
+            "distance": 5000.0,
+            "moving_time": 4000,
+        }
+        params = sync._activity_params(str(ATHLETE_ID), activity)
 
-        # Simulate the sync touching the row's measurements.
         with psycopg.connect(TEST_DSN) as conn, conn.cursor() as cur:
+            execute_upsert(cur, params)
             cur.execute(
-                "UPDATE activity_summary SET duration_s = 4000 "
+                "UPDATE activity_summary SET ignored_at = now() "
                 "WHERE athlete_id = %s AND activity_id = %s",
                 (ATHLETE_ID, "resync"),
             )
+            execute_upsert(cur, params)
             cur.execute(
-                "SELECT ignored_at FROM activity_summary "
+                "SELECT ignored_at, duration_s FROM activity_summary "
                 "WHERE athlete_id = %s AND activity_id = %s",
                 (ATHLETE_ID, "resync"),
             )
-            still_ignored = cur.fetchone()[0] is not None
+            row = cur.fetchone()
 
-        assert still_ignored is True
+        assert row is not None
+        assert row[0] is not None
+        assert row[1] == 4000
         assert _count_in_view() == 0

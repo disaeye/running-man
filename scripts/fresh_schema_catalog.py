@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Final
 
-HEAD_REVISION: Final = "f6a7b8c9d0e1"
+HEAD_REVISION: Final = "k5a6b7c8d9e0"
 EXPECTED_TABLES: Final = frozenset({
     "activity_laps",
     "activity_streams",
@@ -25,6 +25,7 @@ EXPECTED_TABLES: Final = frozenset({
     "milestones",
     "notification_rules",
     "notifications",
+    "plan_adjustments",
     "revoked_tokens",
     "share_tokens",
     "source_definitions",

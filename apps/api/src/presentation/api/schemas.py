@@ -33,6 +33,8 @@ class AthleteMe(BaseModel):
     max_session_duration_min: int | None = 120
     preferred_sport: str | None = "Run"
     notification_prefs: NotificationPrefs | None = None
+    # 身高（cm）。没有它就算不出体质指数。
+    height_cm: float | None = None
 
 
 class PmcPoint(BaseModel):
@@ -89,6 +91,22 @@ class ActivitySummary(BaseModel):
     # that never occurs (this deployment syncs from Intervals.icu), so the
     # "GPS" filter always returned nothing.
     has_gps: bool = False
+    # 活动名称：来源系统自己起的名字。
+    name: str | None = None
+    # 自感用力度（1-10）：来源系统记录的值。
+    rpe: int | None = None
+    # 训练冲量 TRIMP：来源系统自己的算法，与本系统的 TSS 不同源。
+    trimp: float | None = None
+    # 设备计算的训练效益（0-5）；设备未提供时为 None。
+    aerobic_te: float | None = None
+    anaerobic_te: float | None = None
+    # 跑步动力学：步长（m）与左右触地平衡（%左脚）。
+    avg_stride_length_m: float | None = None
+    avg_lr_balance_pct: float | None = None
+    # 收藏标记。
+    is_bookmarked: bool = False
+    # 天气来源：intervals_icu 或 open_meteo_best_match。
+    weather_source: str | None = None
 
 
 class ActivityUploadResponse(ActivitySummary):
@@ -132,6 +150,8 @@ class CalendarEvent(BaseModel):
     name: str | None = None
     workout_xml: str | None = None
     predicted_tss: float | None = None
+    # 计划距离（米）：课表生成时由步骤与配速算出；没有配速可推算时为 null。
+    predicted_distance_m: float | None = None
     status: str | None = None
     done: bool | None = None
     plan_goal_id: UUID | None = None

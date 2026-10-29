@@ -87,6 +87,56 @@ algorithms:
         inputs: { start_bpm: 160, end_bpm: 180, sessions: 30 }
         expect: { hr_max: 184, near_max_count: 5 }
         tolerance: 0
+  - key: recovery_projection
+    version: 1.0.0
+    input_window_days: 60
+    materialization: derived_on_read
+    outputs: [days_to_recovery, current_tsb, projected_tsb, reachable]
+    reference_cases:
+      - name: negative_balance_recovers_in_four_days
+        inputs: { current_ctl: 40, current_atl: 60 }
+        expect: { days_to_recovery: 4, projected_tsb: 3.9379, reachable: 1 }
+        tolerance: 0.001
+      - name: severe_fatigue_exceeds_projection_horizon
+        inputs: { current_ctl: 0, current_atl: 1000, horizon_days: 60 }
+        expect: { reachable: 0 }
+        tolerance: 0
+  - key: load_adjustment
+    version: 1.0.0
+    input_window_days: 7
+    materialization: derived_on_read
+    outputs: [reduction_pct, trigger_count]
+    reference_cases:
+      - name: low_hrv_recommends_ten_percent_reduction
+        inputs:
+          event_id: reference-session
+          hrv_today: 50
+          hrv_baseline: 60
+          tsb: 0
+          hr_drift_bpm: 0
+          long_run_seconds: 3600
+        expect: { reduction_pct: 10, trigger_count: 1 }
+        tolerance: 0
+      - name: combined_triggers_respect_reduction_cap
+        inputs:
+          event_id: reference-session
+          hrv_today: 50
+          hrv_baseline: 60
+          tsb: -25
+          hr_drift_bpm: 10
+          long_run_seconds: 3600
+        expect: { reduction_pct: 30, trigger_count: 3 }
+        tolerance: 0
+      - name: no_recovery_signals_produce_no_adjustment
+        inputs:
+          event_id: reference-session
+          hrv_today: 60
+          hrv_baseline: 60
+          tsb: 0
+          hr_drift_bpm: 0
+          long_run_seconds: 3600
+        expect: { reduction_pct: 0, trigger_count: 0 }
+        tolerance: 0
   - key: vdot
     version: 1.1.0
     input_window_days: 365

@@ -76,6 +76,8 @@ def summary_from_samples(
         "file_type": ftype,
         "device_name": _device_name(metadata),
         "raw_data": {"filename": filename, "metadata": _jsonable(metadata)},
+        "avg_stride_length_m": _mean_float([s.stride_length for s in samples]),
+        "avg_lr_balance_pct": _mean_float([s.lr_balance for s in samples]),
     }
 
 
@@ -106,6 +108,7 @@ def _sample_metrics(sample: FitSample) -> list[tuple[str, float]]:
         "vertical_oscillation": sample.vertical_oscillation,
         "ground_contact_time": sample.stance_time,
         "stride_length": sample.stride_length,
+        "left_right_balance": sample.lr_balance,
         "temperature": sample.temperature,
     }
     return [(metric, float(value)) for metric, value in values.items() if value is not None]

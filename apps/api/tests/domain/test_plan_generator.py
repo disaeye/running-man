@@ -1,4 +1,8 @@
-from domain.workout.plan_generator import PlannedDay, generate_weekly_plan
+from domain.workout.plan_generator import (
+    PlannedDay,
+    WeekPlanOptions,
+    generate_weekly_plan,
+)
 
 
 def _high_tss_days(plan: list[PlannedDay], threshold: float) -> list[int]:
@@ -36,14 +40,14 @@ def test_600_tss_week_spreads_load_without_single_day_overload() -> None:
 
 
 def test_preferred_day_off_is_used_when_it_preserves_long_run_rule() -> None:
-    plan = generate_weekly_plan(350.0, preferred_days_off=[5])
+    plan = generate_weekly_plan(350.0, WeekPlanOptions(preferred_days_off=[5]))
 
     assert plan[5].workout_type == "rest"
     assert plan[6].workout_type == "long"
 
 
 def test_custom_rest_days_add_recovery_days() -> None:
-    plan = generate_weekly_plan(300.0, rest_days=2, preferred_days_off=[0, 5])
+    plan = generate_weekly_plan(300.0, WeekPlanOptions(rest_days=2, preferred_days_off=[0, 5]))
 
     assert sum(1 for day in plan if day.workout_type == "rest") == 2
     assert plan[0].workout_type == "rest"
@@ -51,23 +55,25 @@ def test_custom_rest_days_add_recovery_days() -> None:
 
 
 def test_zero_rest_days_keeps_all_seven_days_available() -> None:
-    plan = generate_weekly_plan(300.0, rest_days=0)
+    plan = generate_weekly_plan(300.0, WeekPlanOptions(rest_days=0))
 
     assert len(plan) == 7
     assert all(day.workout_type != "rest" for day in plan)
 
 
 def test_all_weekdays_can_be_selected_as_rest_preferences() -> None:
-    plan = generate_weekly_plan(300.0, rest_days=6, preferred_days_off=[0, 1, 2, 3, 4, 5])
+    plan = generate_weekly_plan(
+        300.0, WeekPlanOptions(rest_days=6, preferred_days_off=[0, 1, 2, 3, 4, 5])
+    )
 
     assert sum(1 for day in plan if day.workout_type == "rest") == 6
     assert sum(1 for day in plan if day.workout_type != "rest") == 1
 
 
 def test_progression_deload_repeats_after_each_cycle() -> None:
-    week_three = generate_weekly_plan(300.0, week_number=2)
-    week_four = generate_weekly_plan(300.0, week_number=3)
-    week_seven = generate_weekly_plan(300.0, week_number=6)
+    week_three = generate_weekly_plan(300.0, WeekPlanOptions(week_number=2))
+    week_four = generate_weekly_plan(300.0, WeekPlanOptions(week_number=3))
+    week_seven = generate_weekly_plan(300.0, WeekPlanOptions(week_number=6))
 
     assert sum(day.target_tss for day in week_three) == sum(day.target_tss for day in week_seven)
     assert sum(day.target_tss for day in week_four) < sum(day.target_tss for day in week_three)

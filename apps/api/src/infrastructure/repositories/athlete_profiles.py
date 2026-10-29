@@ -11,6 +11,8 @@ from collections.abc import Mapping
 from typing import cast
 from uuid import UUID
 
+from psycopg import sql
+
 from infrastructure.db.pool import ConnectionContext, get_pool
 
 _PROFILE_COLUMNS = (
@@ -22,8 +24,14 @@ _PROFILE_COLUMNS = (
     "weekly_training_days",
     "max_session_duration_min",
     "preferred_sport",
+    "height_cm",
 )
-_PROFILE_COLUMNS_SQL = ", ".join(_PROFILE_COLUMNS)
+# The profile columns are a fixed list, so the statement lists them verbatim
+# instead of building the SQL by interpolation.
+_PROFILE_COLUMNS_SQL = (
+    "name, timezone, dob, sex, weight_goal, weekly_training_days, "
+    "max_session_duration_min, preferred_sport, height_cm"
+)
 
 
 def _connect() -> ConnectionContext:
@@ -44,8 +52,9 @@ class AthleteProfileRepo:
         has not entered: a measured resting HR from a wellness upload, or a
         maximum observed HR from an activity, both beat showing nothing.
         """
-        profile_query = f"""
-        SELECT id, email, name, timezone, {_PROFILE_COLUMNS_SQL}, notification_prefs
+        profile_query = """
+        SELECT id, email, name, timezone, dob, sex, weight_goal, weekly_training_days,
+               max_session_duration_min, preferred_sport, height_cm, notification_prefs
         FROM athletes WHERE id = %s
         """
         wellness_query = """
@@ -77,12 +86,18 @@ class AthleteProfileRepo:
         """
         if not values:
             return None
-        assignments = ", ".join(f"{column} = %s" for column in values)
-        query = f"""
-        UPDATE athletes SET {assignments}
-        WHERE id = %s
-        RETURNING id, email, name, timezone, {_PROFILE_COLUMNS_SQL}, notification_prefs
-        """
+        assignments = sql.SQL(", ").join(
+            sql.SQL("{column} = %s").format(column=sql.Identifier(column)) for column in values
+        )
+        query = sql.SQL(
+            """
+            UPDATE athletes SET {assignments}
+            WHERE id = %s
+            RETURNING id, email, name, timezone, dob, sex, weight_goal,
+                      weekly_training_days, max_session_duration_min,
+                      preferred_sport, height_cm, notification_prefs
+            """
+        ).format(assignments=assignments)
         async with _connect() as conn, conn.cursor() as cur:
             _ = await cur.execute(query, (*values.values(), athlete_id))
             row = await cur.fetchone()

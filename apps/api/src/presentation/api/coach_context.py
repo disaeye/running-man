@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from datetime import date, datetime, time, timedelta
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 
@@ -14,15 +14,21 @@ from infrastructure.repositories.calendar import CalendarRepo
 from infrastructure.repositories.pmc import PmcRepo
 from presentation.api.analytics_analysis_contracts import CoachContextResponse
 from presentation.api.coach_context_paces import latest_acwr, training_paces_for
+from presentation.api.coach_context_recovery import (
+    recovery_signals as _recovery_signals,
+)
+from presentation.api.coach_context_recovery import (
+    trend as _trend,
+)
 from presentation.api.insights_helpers import _readiness_inputs
 from presentation.api.staleness import staleness_bucket
 from presentation.auth.deps import get_current_athlete
 
 router = APIRouter(prefix="/insights", tags=["insights"])
 
-TrendDirection = Literal["up", "down", "stable"]
+__all__ = ["_recovery_signals", "_trend"]
+
 WEEK_DAYS = 7
-TREND_MIN_POINTS = 2
 
 
 def get_coach_pmc_repo() -> PmcRepo:
@@ -58,33 +64,35 @@ async def get_coach_context(
     readiness = compute_readiness(target_day, wellness, readiness_loads)
     completed_tss = _sum_tss(pmc_loads[-7:])
     planned_tss = _sum_planned_tss(events)
-    return CoachContextResponse.model_validate({
-        "data_freshness": _data_freshness(data_health, target_day),
-        "recent_load": _recent_load(pmc_loads),
-        "recovery_signals": _recovery_signals(wellness, readiness, target_day),
-        "plan_adherence": _plan_adherence(completed_tss, planned_tss),
-        "missing_data_caveats": _missing_data_caveats(data_health, wellness, target_day),
-        "recommendation": compute_recommendation(
-            readiness,
-            _events_for_target_day(events, target_day),
-            completed_tss,
-            planned_tss,
-            # Days with actual training, not days with a load row. The PMC series
-            # is emitted for every calendar day including rest days, so its row
-            # count is 7 for anyone with a week of history and the
-            # `insufficient_rest_days` risk fired for everybody.
-            _training_days(pmc_loads[-WEEK_DAYS:]),
-            TrainingContext(
-                chronic_ctl=_chronic_ctl(pmc_loads),
-                training_paces=await training_paces_for(athlete.id),
-                acwr=latest_acwr(pmc_loads),
-                has_plan_tomorrow=bool(
-                    _events_for_target_day(events, target_day + timedelta(days=1))
+    return CoachContextResponse.model_validate(
+        {
+            "data_freshness": _data_freshness(data_health, target_day),
+            "recent_load": _recent_load(pmc_loads),
+            "recovery_signals": _recovery_signals(wellness, readiness, target_day, pmc_loads),
+            "plan_adherence": _plan_adherence(completed_tss, planned_tss),
+            "missing_data_caveats": _missing_data_caveats(data_health, wellness, target_day),
+            "recommendation": compute_recommendation(
+                readiness,
+                _events_for_target_day(events, target_day),
+                completed_tss,
+                planned_tss,
+                # Days with actual training, not days with a load row. The PMC series
+                # is emitted for every calendar day including rest days, so its row
+                # count is 7 for anyone with a week of history and the
+                # `insufficient_rest_days` risk fired for everybody.
+                _training_days(pmc_loads[-WEEK_DAYS:]),
+                TrainingContext(
+                    chronic_ctl=_chronic_ctl(pmc_loads),
+                    training_paces=await training_paces_for(athlete.id),
+                    acwr=latest_acwr(pmc_loads),
+                    has_plan_tomorrow=bool(
+                        _events_for_target_day(events, target_day + timedelta(days=1))
+                    ),
                 ),
             ),
-        ),
-        "readiness": readiness,
-    })
+            "readiness": readiness,
+        }
+    )
 
 
 def _training_days(loads: Sequence[dict[str, object]]) -> int:
@@ -147,42 +155,6 @@ def _ctl_warming_up(loads: Sequence[dict[str, object]]) -> bool:
     return warmup_days(len(loads)) > 0
 
 
-def _recovery_signals(
-    wellness: Sequence[dict[str, object]], readiness: dict[str, object], target_day: date
-) -> dict[str, object]:
-    """Recovery trends and the 7-day sleep average.
-
-    The average used to be `sum(values) / len(values)` over `ordered[-7:]`, and
-    both halves of that were wrong in a way that made the number systematically
-    low:
-
-    - `ordered[-7:]` is the last seven *rows*, not the last seven days. Wellness
-      rows are sparse — rest days often have none — so the window drifted onto
-      whatever happened to be recorded, and one of the seven slots was usually
-      consumed by today's row with no sleep value yet.
-    - Dividing by the count including rows whose value is null charged those
-      rows a zero. For the athlete this was found on, the real average was
-      4.48 h and the reported figure was 3.8 h: 26.86 / 7 instead of 26.86 / 6.
-
-    A missing night is unknown, not zero hours of sleep. Only measured nights
-    count toward the divisor, and only nights inside the window count at all.
-    """
-    ordered = sorted(wellness, key=_row_day)
-    window_start = target_day - timedelta(days=WEEK_DAYS - 1)
-    measured = [
-        _num(row.get("sleep_secs")) / 3600
-        for row in ordered
-        if row.get("sleep_secs") is not None
-        and window_start <= _row_day(row) <= target_day
-    ]
-    return {
-        "hrv_trend_direction": _trend(ordered, "hrv", target_day),
-        "rhr_trend_direction": _trend(ordered, "resting_hr", target_day),
-        "sleep_avg_7d": round(sum(measured) / len(measured), 1) if measured else 0.0,
-        "readiness_score": readiness["score"],
-    }
-
-
 def _plan_adherence(completed_tss: float, planned_tss: float) -> dict[str, float]:
     return {
         "completed_tss_7d": completed_tss,
@@ -216,39 +188,6 @@ def _events_for_target_day(
     return [event for event in events if _event_day(event) == target_day]
 
 
-def _trend(
-    rows: Sequence[dict[str, object]], field: str, target_day: date
-) -> TrendDirection:
-    """Direction of a metric over the last week, or `stable` when unsure.
-
-    Two faults lived in the `rows[-WEEK_DAYS:]` slice this used to take, the
-    same pair as the sleep average above it:
-
-    - It selected the last seven *rows*, not the last seven days. Wellness rows
-      are sparse, so a quiet fortnight left the window spanning months — the
-      direction then compared a reading from June against one from September and
-      reported it as this week's trend.
-    - `TREND_MIN_POINTS` exists to say "too few readings to call a direction",
-      but the slice had already reached back arbitrarily far to fill itself, so
-      the guard rarely fired. It now counts points that are genuinely inside the
-      window, and a sparse week correctly reads as `stable`.
-    """
-    window_start = target_day - timedelta(days=WEEK_DAYS - 1)
-    values = [
-        _num(row.get(field))
-        for row in sorted(rows, key=_row_day)
-        if row.get(field) is not None and window_start <= _row_day(row) <= target_day
-    ]
-    if len(values) < TREND_MIN_POINTS:
-        return "stable"
-    delta = values[-1] - values[0]
-    if delta > 1:
-        return "up"
-    if delta < -1:
-        return "down"
-    return "stable"
-
-
 def _event_day(event: dict[str, object]) -> date | None:
     value = event.get("start_time")
     if isinstance(value, datetime):
@@ -256,13 +195,6 @@ def _event_day(event: dict[str, object]) -> date | None:
     if isinstance(value, date):
         return value
     return None
-
-
-def _row_day(row: dict[str, object]) -> date:
-    value = row["day"]
-    if isinstance(value, date):
-        return value
-    return date.min
 
 
 def _section(data_health: dict[str, object], key: str) -> dict[str, object]:

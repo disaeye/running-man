@@ -5,6 +5,7 @@ from uuid import UUID
 import psycopg
 
 from infrastructure.integrations.intervals import sync
+from infrastructure.repositories.activity_summary import execute_upsert
 
 ATHLETE_ID = UUID("00000000-0000-0000-0000-000000000003")
 
@@ -24,7 +25,7 @@ def test_activity_summary_polyline_roundtrip(
         "summary_polyline": "TEST_POLYLINE_STRING_abc123",
     }
     with db_conn.cursor() as cur:
-        cur.execute(sync._UPSERT_SQL, sync._activity_params(str(ATHLETE_ID), activity))
+        execute_upsert(cur, sync._activity_params(str(ATHLETE_ID), activity))
         cur.execute(
             """
             SELECT summary_polyline
@@ -52,7 +53,7 @@ def test_activity_summary_polyline_null_by_default(
         "type": "Ride",
     }
     with db_conn.cursor() as cur:
-        cur.execute(sync._UPSERT_SQL, sync._activity_params(str(ATHLETE_ID), activity))
+        execute_upsert(cur, sync._activity_params(str(ATHLETE_ID), activity))
         cur.execute(
             """
             SELECT summary_polyline
@@ -104,30 +105,42 @@ def _ensure_schema(db_conn: psycopg.Connection) -> None:
                 has_power BOOLEAN DEFAULT FALSE,
                 has_cadence BOOLEAN DEFAULT FALSE,
                 summary_polyline TEXT,
+                weather_avg_temp DOUBLE PRECISION,
+                weather_min_temp DOUBLE PRECISION,
+                weather_max_temp DOUBLE PRECISION,
+                weather_feels_like DOUBLE PRECISION,
+                weather_wind_speed DOUBLE PRECISION,
+                weather_wind_gust DOUBLE PRECISION,
+                weather_wind_deg DOUBLE PRECISION,
+                weather_headwind_pct DOUBLE PRECISION,
+                weather_tailwind_pct DOUBLE PRECISION,
+                weather_clouds_pct DOUBLE PRECISION,
+                weather_max_rain DOUBLE PRECISION,
+                weather_max_snow DOUBLE PRECISION,
+                name TEXT,
+                rpe SMALLINT,
+                trimp DOUBLE PRECISION,
+                avg_stride_length_m DOUBLE PRECISION,
+                avg_lr_balance_pct DOUBLE PRECISION,
+                weather_source TEXT,
                 PRIMARY KEY (activity_id, start_time)
             )
             """
         )
         cur.execute(
-            "ALTER TABLE activity_summary "
-            "ADD COLUMN IF NOT EXISTS has_gps BOOLEAN DEFAULT FALSE"
+            "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS has_gps BOOLEAN DEFAULT FALSE"
         )
         cur.execute(
-            "ALTER TABLE activity_summary "
-            "ADD COLUMN IF NOT EXISTS has_hr BOOLEAN DEFAULT FALSE"
+            "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS has_hr BOOLEAN DEFAULT FALSE"
         )
         cur.execute(
-            "ALTER TABLE activity_summary "
-            "ADD COLUMN IF NOT EXISTS has_power BOOLEAN DEFAULT FALSE"
+            "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS has_power BOOLEAN DEFAULT FALSE"
         )
         cur.execute(
             "ALTER TABLE activity_summary "
             "ADD COLUMN IF NOT EXISTS has_cadence BOOLEAN DEFAULT FALSE"
         )
-        cur.execute(
-            "ALTER TABLE activity_summary "
-            "ADD COLUMN IF NOT EXISTS summary_polyline TEXT"
-        )
+        cur.execute("ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS summary_polyline TEXT")
         cur.execute(
             """
             CREATE OR REPLACE FUNCTION _has_gps(raw_data jsonb)

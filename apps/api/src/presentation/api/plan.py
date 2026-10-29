@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
-from application.plan.generator_service import generate_plan
+from application.plan.generator_service import PlanRequest, generate_plan
 from infrastructure.auth.models import Athlete
 from infrastructure.db.pool import get_pool
 from infrastructure.repositories.goals import GoalsRepo
@@ -21,6 +21,8 @@ class PlanGenerateRequest(BaseModel):
     rest_days: int | None = Field(default=None, ge=0, le=6)
     preferred_days_off: list[int] | None = Field(default=None, max_length=7)
     weekly_tss: float | None = Field(default=None, gt=0, le=2000)
+    # 运动员指定的长距离日（星期几），不填则由生成器安排。
+    long_run_day: int | None = Field(default=None, ge=0, le=WEEKDAY_MAX)
 
     @field_validator("preferred_days_off")
     @classmethod
@@ -49,6 +51,8 @@ class PlanEventPreview(BaseModel):
     predicted_tss: float
     pace_min_s_km: int | None = None
     pace_max_s_km: int | None = None
+    # 目标距离（米）。没有配速可推算时为 None。
+    predicted_distance_m: float | None = None
     segments: list[RunWorkoutSegment]
     phase: str
 
@@ -88,10 +92,13 @@ async def generate_training_plan(
                 athlete.id,
                 payload.goal_id,
                 conn,
-                dry_run=dry_run,
-                rest_days=payload.rest_days,
-                preferred_days_off=payload.preferred_days_off,
-                weekly_tss=payload.weekly_tss,
+                PlanRequest(
+                    dry_run=dry_run,
+                    rest_days=payload.rest_days,
+                    preferred_days_off=payload.preferred_days_off,
+                    weekly_tss=payload.weekly_tss,
+                    long_run_day=payload.long_run_day,
+                ),
             )
             return PlanGenerateResponse.model_validate(plan)
     except ValueError as exc:

@@ -227,6 +227,235 @@
         "title": "AccountExportResourceName",
         "type": "string"
       },
+      "ActivePlanResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "current_phase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanPhaseView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "goal_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Title"
+          },
+          "goal_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Type"
+          },
+          "long_run_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Long Run Day"
+          },
+          "phase_total_weeks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Total Weeks"
+          },
+          "phase_week_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Week Number"
+          },
+          "phases": {
+            "items": {
+              "$ref": "#/components/schemas/PlanPhaseView"
+            },
+            "title": "Phases",
+            "type": "array"
+          },
+          "plan_progress_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Progress Pct"
+          },
+          "race_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race Distance M"
+          },
+          "race_target_time_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race Target Time S"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "training_paces": {
+            "items": {
+              "$ref": "#/components/schemas/PlanPaceTarget"
+            },
+            "title": "Training Paces",
+            "type": "array"
+          },
+          "vdot": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vdot"
+          },
+          "week_actual_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week Actual Distance M"
+          },
+          "week_actual_tss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week Actual Tss"
+          },
+          "week_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week End"
+          },
+          "week_planned_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week Planned Distance M"
+          },
+          "week_planned_tss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week Planned Tss"
+          },
+          "week_sessions": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSessionView"
+            },
+            "title": "Week Sessions",
+            "type": "array"
+          },
+          "week_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week Start"
+          }
+        },
+        "title": "ActivePlanResponse",
+        "type": "object"
+      },
       "ActivityAnalysisLapResponse": {
         "additionalProperties": false,
         "properties": {
@@ -252,17 +481,46 @@
             ],
             "title": "Avg Power"
           },
+          "avg_speed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Speed"
+          },
           "distance_m": {
             "title": "Distance M",
             "type": "integer"
           },
           "duration_s": {
-            "title": "Duration S",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
           },
           "lap_index": {
             "title": "Lap Index",
             "type": "integer"
+          },
+          "pace_s_per_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace S Per Km"
           }
         },
         "required": [
@@ -278,6 +536,31 @@
       "ActivityAnalysisResponse": {
         "additionalProperties": false,
         "properties": {
+          "biomechanics": {
+            "$ref": "#/components/schemas/BiomechanicsResponse"
+          },
+          "dominant_zone": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dominant Zone"
+          },
+          "fastest_lap_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fastest Lap Index"
+          },
           "hr_zones": {
             "$ref": "#/components/schemas/HrZoneTimesResponse"
           },
@@ -288,6 +571,17 @@
             "title": "Laps",
             "type": "array"
           },
+          "pace_variation_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Variation S"
+          },
           "power_curve": {
             "items": {
               "$ref": "#/components/schemas/PowerCurvePointResponse"
@@ -297,6 +591,13 @@
           },
           "summary": {
             "$ref": "#/components/schemas/ActivityAnalysisSummaryResponse"
+          },
+          "zone_residence": {
+            "items": {
+              "$ref": "#/components/schemas/HrZoneResidenceResponse"
+            },
+            "title": "Zone Residence",
+            "type": "array"
           }
         },
         "required": [
@@ -371,6 +672,28 @@
             "title": "Activity Id",
             "type": "string"
           },
+          "aerobic_te": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aerobic Te"
+          },
+          "anaerobic_te": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anaerobic Te"
+          },
           "avg_cadence": {
             "anyOf": [
               {
@@ -393,6 +716,17 @@
             ],
             "title": "Avg Hr"
           },
+          "avg_lr_balance_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Lr Balance Pct"
+          },
           "avg_power": {
             "anyOf": [
               {
@@ -414,6 +748,17 @@
               }
             ],
             "title": "Avg Speed"
+          },
+          "avg_stride_length_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Stride Length M"
           },
           "calories": {
             "anyOf": [
@@ -534,6 +879,11 @@
             ],
             "title": "Intensity Factor"
           },
+          "is_bookmarked": {
+            "default": false,
+            "title": "Is Bookmarked",
+            "type": "boolean"
+          },
           "max_hr": {
             "anyOf": [
               {
@@ -544,6 +894,17 @@
               }
             ],
             "title": "Max Hr"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           },
           "np": {
             "anyOf": [
@@ -565,6 +926,17 @@
                 "type": "null"
               }
             ]
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
           },
           "source": {
             "anyOf": [
@@ -597,6 +969,17 @@
             ],
             "title": "Summary Polyline"
           },
+          "trimp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trimp"
+          },
           "tss": {
             "anyOf": [
               {
@@ -617,6 +1000,17 @@
                 "type": "null"
               }
             ]
+          },
+          "weather_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather Source"
           }
         },
         "required": [
@@ -693,6 +1087,28 @@
             "title": "Activity Id",
             "type": "string"
           },
+          "aerobic_te": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aerobic Te"
+          },
+          "anaerobic_te": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anaerobic Te"
+          },
           "avg_cadence": {
             "anyOf": [
               {
@@ -715,6 +1131,17 @@
             ],
             "title": "Avg Hr"
           },
+          "avg_lr_balance_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Lr Balance Pct"
+          },
           "avg_power": {
             "anyOf": [
               {
@@ -736,6 +1163,17 @@
               }
             ],
             "title": "Avg Speed"
+          },
+          "avg_stride_length_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Stride Length M"
           },
           "calories": {
             "anyOf": [
@@ -841,6 +1279,11 @@
             ],
             "title": "Intensity Factor"
           },
+          "is_bookmarked": {
+            "default": false,
+            "title": "Is Bookmarked",
+            "type": "boolean"
+          },
           "max_hr": {
             "anyOf": [
               {
@@ -852,6 +1295,17 @@
             ],
             "title": "Max Hr"
           },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "np": {
             "anyOf": [
               {
@@ -862,6 +1316,17 @@
               }
             ],
             "title": "Np"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
           },
           "source": {
             "anyOf": [
@@ -894,6 +1359,17 @@
             ],
             "title": "Summary Polyline"
           },
+          "trimp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trimp"
+          },
           "tss": {
             "anyOf": [
               {
@@ -904,6 +1380,17 @@
               }
             ],
             "title": "Tss"
+          },
+          "weather_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather Source"
           }
         },
         "required": [
@@ -919,6 +1406,28 @@
           "activity_id": {
             "title": "Activity Id",
             "type": "string"
+          },
+          "aerobic_te": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aerobic Te"
+          },
+          "anaerobic_te": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anaerobic Te"
           },
           "avg_cadence": {
             "anyOf": [
@@ -942,6 +1451,17 @@
             ],
             "title": "Avg Hr"
           },
+          "avg_lr_balance_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Lr Balance Pct"
+          },
           "avg_power": {
             "anyOf": [
               {
@@ -963,6 +1483,17 @@
               }
             ],
             "title": "Avg Speed"
+          },
+          "avg_stride_length_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Stride Length M"
           },
           "calories": {
             "anyOf": [
@@ -1068,6 +1599,11 @@
             ],
             "title": "Intensity Factor"
           },
+          "is_bookmarked": {
+            "default": false,
+            "title": "Is Bookmarked",
+            "type": "boolean"
+          },
           "max_hr": {
             "anyOf": [
               {
@@ -1078,6 +1614,17 @@
               }
             ],
             "title": "Max Hr"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           },
           "np": {
             "anyOf": [
@@ -1099,6 +1646,17 @@
             "title": "Recompute Status",
             "type": "string"
           },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
           "source": {
             "anyOf": [
               {
@@ -1130,6 +1688,17 @@
             ],
             "title": "Summary Polyline"
           },
+          "trimp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trimp"
+          },
           "tss": {
             "anyOf": [
               {
@@ -1140,6 +1709,17 @@
               }
             ],
             "title": "Tss"
+          },
+          "weather_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather Source"
           }
         },
         "required": [
@@ -1290,6 +1870,47 @@
         "title": "ActivityWeather",
         "type": "object"
       },
+      "AdjustmentListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "adjustments": {
+            "items": {
+              "$ref": "#/components/schemas/PlanAdjustmentResponse"
+            },
+            "title": "Adjustments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "adjustments"
+        ],
+        "title": "AdjustmentListResponse",
+        "type": "object"
+      },
+      "AdjustmentTriggerResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "detail"
+        ],
+        "title": "AdjustmentTriggerResponse",
+        "type": "object"
+      },
       "AthleteGradeResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1353,6 +1974,17 @@
           "email": {
             "title": "Email",
             "type": "string"
+          },
+          "height_cm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height Cm"
           },
           "hr_max": {
             "anyOf": [
@@ -1796,6 +2428,105 @@
         "title": "BatchUploadResponse",
         "type": "object"
       },
+      "BiomechanicsResponse": {
+        "additionalProperties": false,
+        "description": "The biomechanics matrix the activity detail page shows.\n\nA field is ``None`` when the device did not record that channel; the page\nshows \"\u672a\u8bb0\u5f55\" for those. ``sample_counts`` says how many samples each\nfigure was computed from, so a single-sample average cannot be mistaken\nfor a measured average.",
+        "properties": {
+          "avg_cadence_spm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Cadence Spm"
+          },
+          "avg_ground_contact_time_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Ground Contact Time Ms"
+          },
+          "avg_lr_balance_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Lr Balance Pct"
+          },
+          "avg_stride_length_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Stride Length M"
+          },
+          "avg_vertical_oscillation_cm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Vertical Oscillation Cm"
+          },
+          "sample_counts": {
+            "$ref": "#/components/schemas/BiomechanicsSampleCountsResponse"
+          }
+        },
+        "title": "BiomechanicsResponse",
+        "type": "object"
+      },
+      "BiomechanicsSampleCountsResponse": {
+        "additionalProperties": false,
+        "description": "How many samples each biomechanics figure was computed from.\n\nA single-sample average is not a measured average, so the page needs to\nsee the sample count behind every figure it shows.",
+        "properties": {
+          "cadence": {
+            "default": 0,
+            "title": "Cadence",
+            "type": "integer"
+          },
+          "ground_contact_time": {
+            "default": 0,
+            "title": "Ground Contact Time",
+            "type": "integer"
+          },
+          "left_right_balance": {
+            "default": 0,
+            "title": "Left Right Balance",
+            "type": "integer"
+          },
+          "stride_length": {
+            "default": 0,
+            "title": "Stride Length",
+            "type": "integer"
+          },
+          "vertical_oscillation": {
+            "default": 0,
+            "title": "Vertical Oscillation",
+            "type": "integer"
+          }
+        },
+        "title": "BiomechanicsSampleCountsResponse",
+        "type": "object"
+      },
       "Body_batch_upload_activities_api_v1_activities_batch-upload_post": {
         "properties": {
           "files": {
@@ -2145,6 +2876,17 @@
               }
             ],
             "title": "Plan Source"
+          },
+          "predicted_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Distance M"
           },
           "predicted_tss": {
             "anyOf": [
@@ -2615,6 +3357,9 @@
             ],
             "title": "Observed On"
           },
+          "readings": {
+            "$ref": "#/components/schemas/WellnessReadingsResponse"
+          },
           "recommendation": {
             "title": "Recommendation",
             "type": "string"
@@ -2957,6 +3702,17 @@
           "sleep_avg_7d": {
             "title": "Sleep Avg 7D",
             "type": "number"
+          },
+          "tsb_recovery_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tsb Recovery Days"
           }
         },
         "required": [
@@ -3477,6 +4233,25 @@
         "title": "DataQualityResponse",
         "type": "object"
       },
+      "DecisionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "adjustment_id": {
+            "title": "Adjustment Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "adjustment_id",
+          "status"
+        ],
+        "title": "DecisionResponse",
+        "type": "object"
+      },
       "DeletedEvent": {
         "properties": {
           "id": {
@@ -3499,6 +4274,20 @@
           "id"
         ],
         "title": "DeletedEvent",
+        "type": "object"
+      },
+      "DetectionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id"
+        ],
+        "title": "DetectionRequest",
         "type": "object"
       },
       "E1rmTrendResponse": {
@@ -4212,6 +5001,53 @@
         "title": "HrSchemeUpdate",
         "type": "object"
       },
+      "HrZoneResidenceResponse": {
+        "additionalProperties": false,
+        "description": "Time spent in one heart-rate zone, with the boundaries that applied.\n\n``min_bpm``/``max_bpm`` are the athlete's own zone edges for the date of\nthe activity, so the page can print the range next to the time.\n``pct`` is the share of the covered time, and the shares of all five zones\nadd up to 100.",
+        "properties": {
+          "max_bpm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Bpm"
+          },
+          "min_bpm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Bpm"
+          },
+          "pct": {
+            "title": "Pct",
+            "type": "number"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "zone": {
+            "title": "Zone",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "zone",
+          "seconds",
+          "pct"
+        ],
+        "title": "HrZoneResidenceResponse",
+        "type": "object"
+      },
       "HrZoneTimesResponse": {
         "additionalProperties": false,
         "properties": {
@@ -4760,6 +5596,9 @@
           },
           "provenance": {
             "$ref": "#/components/schemas/LocalReadinessProvenanceResponse"
+          },
+          "readings": {
+            "$ref": "#/components/schemas/WellnessReadingsResponse"
           },
           "recommendation": {
             "title": "Recommendation",
@@ -5784,6 +6623,130 @@
         "title": "PaceTargetsResponse",
         "type": "object"
       },
+      "PersonalRangeFigureResponse": {
+        "additionalProperties": false,
+        "description": "One figure and the range it sits in.\n\n``percent`` is the position inside the athlete's own range over the window:\n0% is the window's lowest observation, 100% its highest. It is ``None``\nwhen there is no range to be in \u2014 too few observations, or no current\nvalue \u2014 and the page shows \"\u6837\u672c\u4e0d\u8db3\" for those.",
+        "properties": {
+          "insufficient": {
+            "default": false,
+            "title": "Insufficient",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "maximum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum"
+          },
+          "median": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median"
+          },
+          "minimum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum"
+          },
+          "observations": {
+            "default": 0,
+            "title": "Observations",
+            "type": "integer"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "unit"
+        ],
+        "title": "PersonalRangeFigureResponse",
+        "type": "object"
+      },
+      "PersonalRangeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalRangeFigureResponse"
+            },
+            "title": "Figures",
+            "type": "array"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          },
+          "window_end": {
+            "format": "date",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "format": "date",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "window_start",
+          "window_end",
+          "window_days",
+          "figures"
+        ],
+        "title": "PersonalRangeResponse",
+        "type": "object"
+      },
       "PhysiologyResponse": {
         "additionalProperties": false,
         "properties": {
@@ -5896,6 +6859,80 @@
         "title": "PhysiologyResponse",
         "type": "object"
       },
+      "PlanAdjustmentResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "adjustment_id": {
+            "title": "Adjustment Id",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Date"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Title"
+          },
+          "load_delta_pct": {
+            "title": "Load Delta Pct",
+            "type": "number"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "trigger_summary": {
+            "title": "Trigger Summary",
+            "type": "string"
+          },
+          "trigger_type": {
+            "title": "Trigger Type",
+            "type": "string"
+          },
+          "triggers": {
+            "items": {
+              "$ref": "#/components/schemas/AdjustmentTriggerResponse"
+            },
+            "title": "Triggers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "adjustment_id",
+          "event_id",
+          "trigger_type",
+          "trigger_summary",
+          "load_delta_pct",
+          "status",
+          "created_at"
+        ],
+        "title": "PlanAdjustmentResponse",
+        "type": "object"
+      },
       "PlanEventPreview": {
         "properties": {
           "category": {
@@ -5946,6 +6983,17 @@
             "title": "Phase",
             "type": "string"
           },
+          "predicted_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Distance M"
+          },
           "predicted_tss": {
             "title": "Predicted Tss",
             "type": "number"
@@ -5981,6 +7029,19 @@
             "format": "uuid",
             "title": "Goal Id",
             "type": "string"
+          },
+          "long_run_day": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Long Run Day"
           },
           "preferred_days_off": {
             "anyOf": [
@@ -6113,6 +7174,43 @@
         "title": "PlanGenerateResponse",
         "type": "object"
       },
+      "PlanPaceTarget": {
+        "additionalProperties": false,
+        "description": "One of the five Daniels training paces.",
+        "properties": {
+          "key": {
+            "enum": [
+              "easy",
+              "marathon",
+              "threshold",
+              "interval",
+              "repetition"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "max_s_per_km": {
+            "title": "Max S Per Km",
+            "type": "integer"
+          },
+          "min_s_per_km": {
+            "title": "Min S Per Km",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "min_s_per_km",
+          "max_s_per_km"
+        ],
+        "title": "PlanPaceTarget",
+        "type": "object"
+      },
       "PlanPhasePreview": {
         "properties": {
           "end_date": {
@@ -6141,6 +7239,64 @@
           "target_weekly_tss"
         ],
         "title": "PlanPhasePreview",
+        "type": "object"
+      },
+      "PlanPhaseView": {
+        "additionalProperties": false,
+        "properties": {
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "is_current": {
+            "default": false,
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "target_weekly_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Weekly Distance M"
+          },
+          "target_weekly_tss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Weekly Tss"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "start_date",
+          "end_date"
+        ],
+        "title": "PlanPhaseView",
         "type": "object"
       },
       "PlanQualityResponse": {
@@ -6223,6 +7379,102 @@
           "concerns"
         ],
         "title": "PlanQualityResponse",
+        "type": "object"
+      },
+      "PlanSessionView": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "duration_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Min"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "is_completed": {
+            "default": false,
+            "title": "Is Completed",
+            "type": "boolean"
+          },
+          "pace_max_s_km": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Max S Km"
+          },
+          "pace_min_s_km": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Min S Km"
+          },
+          "predicted_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Distance M"
+          },
+          "predicted_tss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Tss"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "training_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Type"
+          }
+        },
+        "required": [
+          "event_id",
+          "date",
+          "title"
+        ],
+        "title": "PlanSessionView",
         "type": "object"
       },
       "PmcPointResponse": {
@@ -9048,6 +10300,11 @@
             "title": "Actual Distance M",
             "type": "number"
           },
+          "actual_elevation_m": {
+            "default": 0.0,
+            "title": "Actual Elevation M",
+            "type": "number"
+          },
           "actual_sessions": {
             "title": "Actual Sessions",
             "type": "integer"
@@ -9055,6 +10312,17 @@
           "actual_tss": {
             "title": "Actual Tss",
             "type": "number"
+          },
+          "avg_pace_s_per_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Pace S Per Km"
           },
           "completion_pct": {
             "anyOf": [
@@ -9077,6 +10345,11 @@
           },
           "planned_tss": {
             "title": "Planned Tss",
+            "type": "number"
+          },
+          "remaining_distance_m": {
+            "default": 0.0,
+            "title": "Remaining Distance M",
             "type": "number"
           },
           "week": {
@@ -9445,6 +10718,84 @@
           "comments"
         ],
         "title": "WellnessEntryResponse",
+        "type": "object"
+      },
+      "WellnessReadingResponse": {
+        "description": "One wellness reading of the day, with the athlete's own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"\u672a\u8bb0\u5f55\" instead of showing a zero.",
+        "properties": {
+          "baseline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "value",
+          "unit"
+        ],
+        "title": "WellnessReadingResponse",
+        "type": "object"
+      },
+      "WellnessReadingsResponse": {
+        "description": "The day's wellness readings, each with the athlete's own baseline.\n\nThe three readings the page shows are named fields rather than a map, so\nthe contract states exactly which ones exist and what their units are.",
+        "properties": {
+          "hrv": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WellnessReadingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resting_hr": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WellnessReadingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sleep_secs": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WellnessReadingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "WellnessReadingsResponse",
         "type": "object"
       },
       "WorkoutCreate": {
@@ -12887,6 +14238,52 @@
         ]
       }
     },
+    "/api/v1/insights/personal-range": {
+      "get": {
+        "description": "Where today's values sit inside the athlete's own recent range.\n\nThe window ends today on the athlete's calendar, so \"recent\" means recent\nfor them rather than for the server.",
+        "operationId": "get_personal_range_api_v1_insights_personal-range_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "window_days",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "maximum": 365,
+              "minimum": 14,
+              "title": "Window Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalRangeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Personal Range",
+        "tags": [
+          "insights"
+        ]
+      }
+    },
     "/api/v1/insights/personal-records": {
       "get": {
         "operationId": "get_personal_records_api_v1_insights_personal-records_get",
@@ -14259,6 +15656,237 @@
         "summary": "Mark Notification Read",
         "tags": [
           "notifications"
+        ]
+      }
+    },
+    "/api/v1/plan/active": {
+      "get": {
+        "description": "The plan in force for this athlete right now.\n\nWithout ``goal_id`` the active goal is used: the one whose target date is\nstill ahead, and among those the one that closes soonest. A plan that was\nnever generated is not an error \u2014 the response simply carries no plan, and\nthe page asks for one to be created.",
+        "operationId": "get_active_plan_api_v1_plan_active_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "goal_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivePlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Active Plan",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/api/v1/plan/adjustments": {
+      "get": {
+        "description": "The athlete's adjustment proposals.",
+        "operationId": "list_adjustments_api_v1_plan_adjustments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Adjustments",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/api/v1/plan/adjustments/detect": {
+      "post": {
+        "description": "Check one planned session against the athlete's own data.\n\nNothing is written to the calendar here: a proposal is recorded so the\nathlete can compare the original and the adjusted session before deciding.",
+        "operationId": "detect_adjustment_for_event_api_v1_plan_adjustments_detect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DetectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanAdjustmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Detect Adjustment For Event",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/api/v1/plan/adjustments/{adjustment_id}/accept": {
+      "post": {
+        "description": "Accept a proposal: the session's prescription is rewritten.",
+        "operationId": "accept_adjustment_api_v1_plan_adjustments_adjustment_id_accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "adjustment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Adjustment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Adjustment",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/api/v1/plan/adjustments/{adjustment_id}/keep": {
+      "post": {
+        "description": "Keep the original plan: the proposal is closed without a change.",
+        "operationId": "keep_adjustment_api_v1_plan_adjustments_adjustment_id_keep_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "adjustment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Adjustment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Keep Adjustment",
+        "tags": [
+          "plan"
         ]
       }
     },

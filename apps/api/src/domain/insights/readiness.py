@@ -69,15 +69,48 @@ def compute_readiness(target_day: date, wellness: list[Row], loads: list[Row]) -
         "max_intensity": max_intensity,
         "data_sufficient": any(weight > 0.0 for weight in weights),
         "observed_on": day,
+        "readings": _readings(target_day, day, by_day),
     }
+
+
+def _readings(target_day: date, day: date | None, by_day: dict[date, Row]) -> dict[str, object]:
+    """The wellness readings of the day, with their seven-day baseline.
+
+    The page shows the current value next to the athlete's own baseline
+    rather than to a population average: the baseline is what the athlete's
+    own recent days look like, so a difference from it means something about
+    this athlete.
+
+    A reading that was not measured is absent from the result rather than
+    present as zero.
+    """
+    today = by_day.get(day) if day is not None else None
+    readings: dict[str, object] = {}
+    for key, unit in (("hrv", "ms"), ("resting_hr", "bpm"), ("sleep_secs", "s")):
+        value = _num(today, key)
+        if value is None:
+            continue
+        baseline = _baseline(target_day, by_day, key)
+        entry: dict[str, object] = {"value": value, "unit": unit}
+        if baseline is not None:
+            entry["baseline"] = round(baseline, 1)
+            entry["delta"] = round(value - baseline, 1)
+        readings[key] = entry
+    return readings
+
+
+def _baseline(target_day: date, by_day: dict[date, Row], key: str) -> float | None:
+    """The seven-day mean of one wellness reading."""
+    history = [_num(by_day.get(day), key) for day in baseline_days(target_day, tuple(by_day))]
+    return _avg([value for value in history if value])
+
 
 def _sleep_factor(
     target_day: date, today: Row | None, by_day: dict[date, Row]
 ) -> tuple[Factor, float]:
     sleep_secs = _num(today, "sleep_secs")
     history = [
-        _num(by_day.get(day), "sleep_secs")
-        for day in baseline_days(target_day, tuple(by_day))
+        _num(by_day.get(day), "sleep_secs") for day in baseline_days(target_day, tuple(by_day))
     ]
     baseline = _avg([value for value in history if value])
     if sleep_secs is None or baseline is None:
@@ -100,8 +133,7 @@ def _rhr_factor(
 ) -> tuple[Factor, float]:
     rhr = _num(today, "resting_hr")
     history = [
-        _num(by_day.get(day), "resting_hr")
-        for day in baseline_days(target_day, tuple(by_day))
+        _num(by_day.get(day), "resting_hr") for day in baseline_days(target_day, tuple(by_day))
     ]
     baseline = _avg([value for value in history if value])
     if rhr is None or baseline is None:
@@ -133,17 +165,13 @@ def _tsb_factor(target_day: date, load_by_day: dict[date, Row]) -> tuple[Factor,
     return _factor("tsb", score, _impact(score), f"TSB {tsb:+.1f}"), READINESS_WEIGHT_TSB
 
 
-def _atl_velocity_factor(
-    target_day: date, loads: dict[date, Row]
-) -> tuple[Factor, float]:
+def _atl_velocity_factor(target_day: date, loads: dict[date, Row]) -> tuple[Factor, float]:
     """Seven-day change in ATL, measured to the start of the target day."""
     latest = observation_day(
         target_day - timedelta(days=1), tuple(loads), max_age_days=LOAD_WINDOW_DAYS
     )
     today = _num(loads.get(latest), "atl") if latest is not None else None
-    week_ago = (
-        _num(loads.get(latest - timedelta(days=7)), "atl") if latest is not None else None
-    )
+    week_ago = _num(loads.get(latest - timedelta(days=7)), "atl") if latest is not None else None
     if today is None or week_ago is None:
         return _factor("atl_velocity", 50, "neutral", "ATL 变化数据不足"), 0.0
     velocity = today - week_ago
@@ -153,14 +181,12 @@ def _atl_velocity_factor(
         READINESS_WEIGHT_ATL_VELOCITY,
     )
 
+
 def _hrv_factor(
     target_day: date, today: Row | None, by_day: dict[date, Row]
 ) -> tuple[Factor, float]:
     hrv = _num(today, "hrv")
-    history = [
-        _num(by_day.get(day), "hrv")
-        for day in baseline_days(target_day, tuple(by_day))
-    ]
+    history = [_num(by_day.get(day), "hrv") for day in baseline_days(target_day, tuple(by_day))]
     baseline = _avg([value for value in history if value])
     if hrv is None or baseline is None:
         return _factor("hrv", 50, "neutral", "HRV 数据不足"), 0.0
@@ -168,6 +194,7 @@ def _hrv_factor(
     return _factor(
         "hrv", score, _impact(score), f"HRV {hrv:.0f}，7日均值 {baseline:.0f}"
     ), READINESS_WEIGHT_HRV
+
 
 def _compute_hrv_score(today_hrv: float, baseline_hrv: float) -> float:
     if today_hrv <= 0 or baseline_hrv <= 0:
@@ -183,6 +210,7 @@ def _compute_hrv_score(today_hrv: float, baseline_hrv: float) -> float:
         return _clamp(20.0 + (ratio - 0.8) / 0.1 * 20.0)
     return _clamp(ratio / 0.8 * 20.0)
 
+
 def _readiness_band(score: int) -> tuple[str, str, str]:
     # The band table and its lookup are shared with the recommendation module,
     # which needs the same thresholds to choose a session type. Imported here
@@ -193,8 +221,10 @@ def _readiness_band(score: int) -> tuple[str, str, str]:
     band = band_for_score(score)
     return str(band["level"]), str(band["max_intensity"]), str(band["recommendation"])
 
+
 def _factor(name: str, score: int, impact: str, detail: str) -> Factor:
     return {"name": name, "score": _clamp(score), "impact": impact, "detail": detail}
+
 
 def _public_factor(factor: Factor) -> dict[str, str]:
     return {
@@ -202,6 +232,7 @@ def _public_factor(factor: Factor) -> dict[str, str]:
         "impact": str(factor["impact"]),
         "detail": str(factor["detail"]),
     }
+
 
 def _weighted_score(factors: list[Factor], weights: list[float]) -> int:
     total_weight = sum(weights)
@@ -212,11 +243,14 @@ def _weighted_score(factors: list[Factor], weights: list[float]) -> int:
     )
     return _clamp(round(total / total_weight))
 
+
 def _impact(score: int) -> str:
     return "positive" if score >= 70 else "negative" if score < 45 else "neutral"
 
+
 def _avg(values: list[float]) -> float | None:
     return mean(values) if values else None
+
 
 def _num(row: Row | None, key: str) -> float | None:
     value = None if row is None else row.get(key)
@@ -224,10 +258,12 @@ def _num(row: Row | None, key: str) -> float | None:
         return None
     return float(value) if isinstance(value, int | float | Decimal | str) else None
 
+
 def _as_date(value: object) -> date:
     if isinstance(value, datetime):
         return value.date()
     return value if isinstance(value, date) else date.fromisoformat(str(value))
+
 
 def _clamp(value: float | int) -> int:
     return max(0, min(100, int(value)))

@@ -26,7 +26,7 @@ from application.plan.training_paces import (
     training_pace_history,
 )
 from domain.workout.periodization import Phase, generate_phases
-from domain.workout.plan_generator import generate_weekly_plan
+from domain.workout.plan_generator import WeekPlanOptions, generate_weekly_plan
 from domain.workout.prescription import REST
 
 WEEKDAY_MAX = 6
@@ -44,6 +44,24 @@ class ScheduleOptions:
     rest_days: int
     preferred_days_off: list[int]
     max_session_duration_min: int
+    # 运动员指定的长距离日（星期几）。为 None 时由生成器自行安排。
+    long_run_day: int | None = None
+
+
+@dataclass(frozen=True)
+class PlanRequest:
+    """What the caller asks a generated plan to look like.
+
+    Grouped into one object because the generator's parameters had grown past
+    the point where a caller could tell them apart by position.
+    """
+
+    dry_run: bool = False
+    rest_days: int | None = None
+    preferred_days_off: list[int] | None = None
+    weekly_tss: float | None = None
+    today: date | None = None
+    long_run_day: int | None = None
 
 
 @dataclass(frozen=True)
@@ -59,18 +77,58 @@ class PlanContext:
     race_date: date
     race_title: str | None
     now: datetime
+    # 预览模式：只算出计划，不写入数据库。
+    dry_run: bool = False
+    # 是否有可用的负荷历史；没有时计划需要运动员自己给出每周目标。
+    load_available: bool = False
 
 
 async def generate_plan(
     athlete_id: UUID,
     goal_id: UUID,
     db_conn: AsyncConnection[DictRow],
-    dry_run: bool = False,
-    rest_days: int | None = None,
-    preferred_days_off: list[int] | None = None,
-    weekly_tss: float | None = None,
-    today: date | None = None,
+    request: PlanRequest | None = None,
 ) -> dict[str, object]:
+    context = await _plan_context(athlete_id, goal_id, db_conn, request or PlanRequest())
+    events = _planned_events(context)
+    planned_dates = affected_dates(events, context.timezone)
+    result: dict[str, object] = {
+        "phases_created": len(context.phases),
+        "events_created": len(events),
+        "affected_dates": planned_dates,
+    }
+    if context.dry_run:
+        result.update(_preview_payload(context, events))
+        return result
+
+    await replace_future_generated_plan(
+        athlete_id, goal_id, context.now, context.today, events, db_conn
+    )
+    await insert_phases(athlete_id, goal_id, context.phases, context.today, db_conn)
+    inserted = await insert_events(events, db_conn)
+    await db_conn.commit()
+    return {"phases_created": len(context.phases), "events_created": inserted}
+
+
+def _preview_payload(context: PlanContext, events: list[dict[str, object]]) -> dict[str, object]:
+    """The extra fields a dry run returns."""
+    return {
+        "phases": [phase_preview(phase) for phase in context.phases],
+        "events": [event["preview"] for event in events],
+        "training_paces_available": any(
+            paces_for_date(context.paces, phase.start_date) is not None for phase in context.phases
+        ),
+        "training_load_available": context.load_available,
+    }
+
+
+async def _plan_context(
+    athlete_id: UUID,
+    goal_id: UUID,
+    db_conn: AsyncConnection[DictRow],
+    request: PlanRequest,
+) -> PlanContext:
+    """Read everything a generated plan depends on, and validate it."""
     goal = await _load_goal(athlete_id, goal_id, db_conn)
     target_date = goal.get("target_date")
     if not isinstance(target_date, date):
@@ -78,29 +136,30 @@ async def generate_plan(
 
     settings = await athlete_settings(athlete_id, db_conn)
     timezone = ZoneInfo(settings.timezone)
-    if today is None:
-        today = datetime.now(timezone).date()
+    today = request.today or datetime.now(timezone).date()
     if target_date < today:
         raise ValueError("目标日期已过去")
 
     ctl, load_available = await current_ctl(athlete_id, today, db_conn)
     goal_tss = goal_weekly_tss(goal)
-    effective_weekly_tss = weekly_tss if weekly_tss is not None else goal_tss
-    if effective_weekly_tss is None and not load_available:
+    weekly_tss = request.weekly_tss if request.weekly_tss is not None else goal_tss
+    if weekly_tss is None and not load_available:
         raise ValueError("训练负荷历史不足，请填写每周目标 TSS")
-    if effective_weekly_tss is not None and effective_weekly_tss <= 0:
+    if weekly_tss is not None and weekly_tss <= 0:
         raise ValueError("每周目标 TSS 必须大于零")
 
     sport = SPORT_BY_GOAL.get(str(goal.get("type") or "").strip().lower(), "Run")
-    count_rest = rest_days if rest_days is not None else 7 - settings.weekly_training_days
+    count_rest = (
+        request.rest_days if request.rest_days is not None else 7 - settings.weekly_training_days
+    )
     days_off = (
-        _valid_days(preferred_days_off)
-        if preferred_days_off is not None
+        _valid_days(request.preferred_days_off)
+        if request.preferred_days_off is not None
         else _default_days_off(target_date, today, count_rest)
     )
     if len(days_off) > count_rest:
         raise ValueError("偏好休息日数量不能超过每周休息日数量")
-    phases = generate_phases(target_date, ctl, today, effective_weekly_tss)
+    phases = generate_phases(target_date, ctl, today, weekly_tss)
     if not phases or all(phase.name == "race" for phase in phases):
         raise ValueError("目标日期至少需要七天准备时间")
     paces = await training_pace_history(athlete_id, target_date, db_conn)
@@ -110,9 +169,9 @@ async def generate_plan(
         rest_days=min(max(count_rest, 0), 6),
         preferred_days_off=days_off,
         max_session_duration_min=settings.max_session_duration_min,
+        long_run_day=request.long_run_day,
     )
-    now = datetime.now(UTC)
-    context = PlanContext(
+    return PlanContext(
         athlete_id,
         goal_id,
         phases,
@@ -123,33 +182,10 @@ async def generate_plan(
         paces,
         target_date,
         str(goal.get("title") or "比赛") if goal.get("type") == "event" else None,
-        now,
+        datetime.now(UTC),
+        request.dry_run,
+        load_available,
     )
-    events = _planned_events(context)
-    planned_dates = affected_dates(events, timezone)
-    result: dict[str, object] = {
-        "phases_created": len(phases),
-        "events_created": len(events),
-        "affected_dates": planned_dates,
-    }
-    if dry_run:
-        result.update(
-            {
-                "phases": [phase_preview(phase) for phase in phases],
-                "events": [event["preview"] for event in events],
-                "training_paces_available": any(
-                    paces_for_date(paces, phase.start_date) is not None for phase in phases
-                ),
-                "training_load_available": load_available,
-            }
-        )
-        return result
-
-    await replace_future_generated_plan(athlete_id, goal_id, now, today, events, db_conn)
-    await insert_phases(athlete_id, goal_id, phases, today, db_conn)
-    inserted = await insert_events(events, db_conn)
-    await db_conn.commit()
-    return {"phases_created": len(phases), "events_created": inserted}
 
 
 async def _load_goal(
@@ -188,12 +224,15 @@ def _planned_events(context: PlanContext) -> list[dict[str, object]]:
                     continue
                 day = generate_weekly_plan(
                     weekly_tss,
-                    context.sport,
-                    context.options.rest_days,
-                    context.options.preferred_days_off,
-                    paces_for_date(context.paces, event_day),
-                    week_number,
-                    max_session_duration_min=context.options.max_session_duration_min,
+                    WeekPlanOptions(
+                        sport=context.sport,
+                        rest_days=context.options.rest_days,
+                        preferred_days_off=context.options.preferred_days_off,
+                        training_paces=paces_for_date(context.paces, event_day),
+                        week_number=week_number,
+                        max_session_duration_min=context.options.max_session_duration_min,
+                        long_run_day=context.options.long_run_day,
+                    ),
                 )[day_offset]
                 if day.workout_type == REST:
                     continue

@@ -11,6 +11,7 @@ from psycopg.rows import DictRow
 
 from domain.workout.periodization import Phase
 from domain.workout.plan_generator import PlannedDay
+from domain.workout.prescription import session_distance_m
 
 PLAN_NAMESPACE = UUID("cb6e2c29-61e6-43ff-ae44-2da0224a93c8")
 
@@ -36,12 +37,16 @@ def event_record(
         "segments": list(day.workout_segments),
         "phase": phase_name,
     }
+    # 目标距离：从步骤与配速区间算出。没有配速时算不出距离，
+    # 课表因此不声明距离目标，而不是给一个编出来的数字。
+    distance_m = session_distance_m(day.workout_segments, day.pace_min_s_km, day.pace_max_s_km)
     return {
         "event_id": event_id,
         "athlete_id": athlete_id,
         "start_time": start_time,
         "name": name,
         "predicted_tss": round(day.target_tss, 1),
+        "predicted_distance_m": distance_m,
         "sport_type": sport,
         "plan_goal_id": goal_id,
         "plan_source": "generator",
@@ -55,6 +60,7 @@ def event_record(
             "category": "workout",
             "duration_min": day.duration_min,
             "predicted_tss": round(day.target_tss, 1),
+            "predicted_distance_m": distance_m,
             "pace_min_s_km": day.pace_min_s_km,
             "pace_max_s_km": day.pace_max_s_km,
             "segments": list(day.workout_segments),

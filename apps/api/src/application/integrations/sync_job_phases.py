@@ -1,9 +1,10 @@
 """Phase execution for durable sync jobs.
 
-Runs the three phases of a job in order:
+Runs the phases of a job in order:
   1. Activity windows (incremental or monthly backfill)
   2. Streams (downloads missing FIT samples, throttled progress)
   3. Wellness (incremental from last stored day, or backfill window)
+  4. Weather (fills the weather of activities that carry a position)
 
 Each phase writes progress through ``sync_jobs.update_progress``, commits its
 step, and honours cancellation at phase and window boundaries.
@@ -12,9 +13,9 @@ step, and honours cancellation at phase and window boundaries.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from time import monotonic
 from uuid import UUID
 
+import httpx
 from psycopg import Connection
 
 from infrastructure.integrations.intervals.client import IntervalsClient
@@ -43,6 +44,10 @@ from infrastructure.repositories.sync_jobs_types import (
     job_window_start,
 )
 from infrastructure.repositories.wellness import last_wellness_day
+from infrastructure.weather.service import (
+    activities_without_weather,
+    fetch_for_activity,
+)
 
 STREAM_PROGRESS_EVERY = 5
 INCREMENTAL_WELLNESS_DAYS = 90
@@ -64,6 +69,7 @@ async def run_phases(
     else:
         await _run_incremental(conn, job, client, errors)
     await _run_wellness_phase(conn, job, client)
+    await _run_weather_phase(conn, job, errors)
 
 
 async def _run_incremental(
@@ -109,9 +115,7 @@ async def _run_incremental(
     )
 
 
-async def _run_backfill(
-    conn: Connection, job: dict[str, object], client: IntervalsClient
-) -> None:
+async def _run_backfill(conn: Connection, job: dict[str, object], client: IntervalsClient) -> None:
     job_id = job_id_of(job)
     athlete_id = athlete_id_of(job)
     start = job_window_start(job)
@@ -165,8 +169,7 @@ async def _run_streams_phase(
         on_progress=_StreamReporter(conn, job_id),
     )
     errors.extend(
-        {"activity_id": error.activity_id, "message": error.message}
-        for error in result.errors
+        {"activity_id": error.activity_id, "message": error.message} for error in result.errors
     )
     if errors:
         sync_jobs.store_errors(conn, job_id, errors)
@@ -184,17 +187,46 @@ async def _run_wellness_phase(
         newest = min(job_window_end(job), today)
     else:
         stored = last_wellness_day(conn, athlete_id)
-        oldest = (
-            stored if stored is not None else today - timedelta(days=INCREMENTAL_WELLNESS_DAYS)
-        )
+        oldest = stored if stored is not None else today - timedelta(days=INCREMENTAL_WELLNESS_DAYS)
         newest = today
     if oldest > newest:
         return
     _progress(conn, job_id, JobProgress(phase="wellness"))
-    days = await sync_wellness(
-        athlete_id, client, conn, oldest.isoformat(), newest.isoformat()
-    )
+    days = await sync_wellness(athlete_id, client, conn, oldest.isoformat(), newest.isoformat())
     _progress(conn, job_id, JobProgress(phase="wellness", wellness_days=days))
+
+
+async def _run_weather_phase(
+    conn: Connection, job: dict[str, object], errors: list[dict[str, object]]
+) -> None:
+    """Fill in the weather of activities that carry a position.
+
+    Intervals.icu supplies a weather block with an activity when its own
+    weather service has data for that place; this deployment's activities
+    carry none. The conditions are fetched from a reanalysis service instead,
+    using the activity's own GPS position and time.
+
+    The phase runs after the streams phase, because the position comes from
+    the GPS samples that phase downloads.
+    """
+    job_id = job_id_of(job)
+    athlete_id = athlete_id_of(job)
+    rows = activities_without_weather(conn, athlete_id)
+    if not rows:
+        return
+    written = 0
+    failed = 0
+    with httpx.Client() as client:
+        for row in rows:
+            result = fetch_for_activity(conn, row, client)
+            if result.error is not None:
+                failed += 1
+                errors.append({"activity_id": result.activity_id, "message": result.error})
+            elif result.written:
+                written += 1
+    conn.commit()
+    _progress(conn, job_id, JobProgress(phase="weather", errors_count=failed))
+    _ = written
 
 
 class _StreamReporter:
@@ -223,63 +255,3 @@ def _progress(conn: Connection, job_id: UUID, progress: JobProgress) -> None:
     conn.commit()
     if sync_jobs.is_cancel_requested(conn, job_id):
         raise SyncCancelledError()
-
-
-def finish_job_detail(
-    conn: Connection,
-    job_id: UUID,
-    status: str,
-    error: str | None,
-    errors: list[dict[str, object]],
-    started_at: float,
-) -> dict[str, object]:
-    if errors:
-        sync_jobs.store_errors(conn, job_id, errors)
-    sync_jobs.finish_job(conn, job_id, status, error)
-    conn.commit()
-    row = sync_jobs.load_job(conn, job_id)
-    return job_detail(row, started_at, status, error)
-
-
-def job_detail(
-    job: dict[str, object], started_at: float, status: str, error: str | None
-) -> dict[str, object]:
-    stage: dict[str, object] = {"name": "sync", "status": status}
-    if error is not None:
-        stage["error"] = error
-    errors = job.get("errors")
-    counts = {
-        "activities_upserted": job["activities_upserted"],
-        "activities_deduped": job["activities_deduplicated"],
-        "wellness_days": job["wellness_days"],
-        "streams_inserted": job["streams_inserted"],
-        "ghosts_deleted": job["ghosts_deleted"],
-    }
-    return {
-        "counts": counts,
-        "duration_ms": int((monotonic() - started_at) * 1000),
-        "stages": [stage],
-        "errors": errors if isinstance(errors, list) else [],
-        "job_id": str(job["id"]),
-    }
-
-
-_EMPTY_COUNTS = dict.fromkeys(
-    (
-        "activities_upserted",
-        "activities_deduped",
-        "wellness_days",
-        "streams_inserted",
-        "ghosts_deleted",
-    ),
-    0,
-)
-
-
-def running_detail(started_at: float) -> dict[str, object]:
-    return {
-        "counts": dict(_EMPTY_COUNTS),
-        "duration_ms": int((monotonic() - started_at) * 1000),
-        "stages": [{"name": "sync", "status": "running"}],
-        "errors": [],
-    }

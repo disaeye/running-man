@@ -17,10 +17,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from domain.insights.activity_analysis import (
+    compute_biomechanics,
+    compute_hr_zone_residence,
     compute_hr_zone_times,
     compute_laps,
     compute_power_curve,
     compute_summary,
+    dominant_zone,
+    pace_variation_s,
     stream_times_by_metric,
     streams_by_metric,
 )
@@ -41,6 +45,8 @@ from presentation.api.analytics_analysis_contracts import (
     ActivityAnalysisLapResponse,
     ActivityAnalysisResponse,
     ActivityAnalysisSummaryResponse,
+    BiomechanicsResponse,
+    HrZoneResidenceResponse,
     HrZoneTimesResponse,
     PowerCurvePointResponse,
 )
@@ -70,8 +76,21 @@ async def get_activity_analysis(
     stream_times = stream_times_by_metric(stream_rows)
     duration_s = _duration(activity, streams)
     hr_zone_rows = await _hr_zones_for_activity(athlete, activity)
+    laps = compute_laps(streams, stream_times=stream_times)
+    residence = compute_hr_zone_residence(
+        streams.get("heart_rate", []),
+        stream_times.get("heart_rate", []),
+        hr_zone_rows,
+    )
+    biomechanics = compute_biomechanics(
+        streams,
+        sport=_text(activity.get("sport")),
+        source_avg_cadence=_float_or_none(activity.get("avg_cadence")),
+        source_avg_stride_length_m=_float_or_none(activity.get("avg_stride_length_m")),
+        source_avg_lr_balance_pct=_float_or_none(activity.get("avg_lr_balance_pct")),
+    )
     return ActivityAnalysisResponse(
-        laps=[ActivityAnalysisLapResponse.model_validate(lap) for lap in compute_laps(streams)],
+        laps=[ActivityAnalysisLapResponse.model_validate(lap) for lap in laps],
         hr_zones=HrZoneTimesResponse.model_validate(
             compute_hr_zone_times(streams.get("heart_rate", []), duration_s, hr_zone_rows)
         ),
@@ -82,16 +101,63 @@ async def get_activity_analysis(
         summary=ActivityAnalysisSummaryResponse.model_validate(
             compute_summary(streams, duration_s, None, stream_times=stream_times), by_name=True
         ),
+        pace_variation_s=pace_variation_s(streams.get("speed", []), duration_s),
+        fastest_lap_index=_fastest_lap(laps),
+        zone_residence=[HrZoneResidenceResponse.model_validate(row) for row in residence],
+        dominant_zone=dominant_zone(residence),
+        biomechanics=BiomechanicsResponse.model_validate(
+            {
+                "avg_cadence_spm": biomechanics.avg_cadence_spm,
+                "avg_stride_length_m": biomechanics.avg_stride_length_m,
+                "avg_vertical_oscillation_cm": biomechanics.avg_vertical_oscillation_cm,
+                "avg_ground_contact_time_ms": biomechanics.avg_ground_contact_time_ms,
+                "avg_lr_balance_pct": biomechanics.avg_lr_balance_pct,
+                "sample_counts": biomechanics.sample_counts,
+            }
+        ),
     )
+
+
+def _fastest_lap(laps: list[dict[str, float | int | None]]) -> int | None:
+    """The lap with the quickest pace, or ``None`` when no lap has a pace.
+
+    A lap without a duration has no pace, so it cannot be the fastest; a
+    session with no timed lap reports no fastest split rather than a guess.
+    """
+    best_index: int | None = None
+    best_pace: float | None = None
+    for lap in laps:
+        distance = lap.get("distance_m")
+        duration = lap.get("duration_s")
+        if not isinstance(distance, int | float) or not isinstance(duration, int | float):
+            continue
+        if distance <= 0 or duration <= 0:
+            continue
+        pace = duration / (distance / 1000.0)
+        if best_pace is None or pace < best_pace:
+            best_pace = pace
+            index = lap.get("lap_index")
+            best_index = int(index) if isinstance(index, int) else None
+    return best_index
+
+
+def _text(value: object) -> str | None:
+    if isinstance(value, str):
+        return value
+    return None
+
+
+def _float_or_none(value: object) -> float | None:
+    if isinstance(value, int | float):
+        return float(value)
+    return None
 
 
 async def _activity_streams(athlete_id: UUID, activity_id: str) -> list[dict[str, object]]:
     return await AnalyticsRepo().activity_streams(athlete_id, activity_id)
 
 
-async def _hr_zones_for_activity(
-    athlete: Athlete, activity: dict[str, object]
-) -> list[Zone]:
+async def _hr_zones_for_activity(athlete: Athlete, activity: dict[str, object]) -> list[Zone]:
     """Zones for this activity, or ``[]`` when running zones do not apply.
 
     Thresholds are resolved for the activity's own date, so an activity keeps
@@ -108,14 +174,10 @@ async def _hr_zones_for_activity(
     lthr = _int_or_none(resolved["lthr"])
     resting_hr = _int_or_none(resolved["resting_hr"])
     scheme = scheme_for(await _hr_scheme_key(athlete.id))
-    base = hr_zones_for_scheme(
-        scheme, hr_max=hr_max, lthr=lthr, resting_hr=resting_hr
-    )
+    base = hr_zones_for_scheme(scheme, hr_max=hr_max, lthr=lthr, resting_hr=resting_hr)
     if base is None:
         return []
-    overrides = cast(
-        list[ZoneOverrideLike], cast(object, await list_overrides(athlete.id))
-    )
+    overrides = cast(list[ZoneOverrideLike], cast(object, await list_overrides(athlete.id)))
     updated, _ = apply_overrides(base, None, overrides)
     return updated
 

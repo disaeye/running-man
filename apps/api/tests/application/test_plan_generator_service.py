@@ -1,9 +1,10 @@
 from datetime import date
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
 
-from application.plan.generator_service import generate_plan
+from application.plan.generator_service import PlanRequest, generate_plan
 
 
 @pytest.mark.no_db
@@ -12,19 +13,27 @@ async def test_generate_plan_dry_run_does_not_write_to_db() -> None:
     goal_id = uuid4()
     conn = FakeConnection(athlete_id, goal_id)
 
-    result = await generate_plan(athlete_id, goal_id, conn, dry_run=True, today=date(2026, 1, 1))
+    result = await generate_plan(
+        athlete_id,
+        goal_id,
+        cast(Any, conn),
+        PlanRequest(dry_run=True, today=date(2026, 1, 1)),
+    )
 
-    assert result["phases_created"] > 0
-    assert result["events_created"] > 0
+    phases_created = cast(int, result["phases_created"])
+    events_created = cast(int, result["events_created"])
+    events = cast(list[dict[str, object]], result["events"])
+    assert phases_created > 0
+    assert events_created > 0
     assert result["affected_dates"]
     assert conn.write_queries == []
     assert conn.commits == 0
     assert result["training_load_available"] is True
     assert result["training_paces_available"] is False
-    assert len(result["events"]) == result["events_created"]
-    event_dates = [event["date"] for event in result["events"]]
+    assert len(events) == events_created
+    event_dates = [event["date"] for event in events]
     assert len(event_dates) == len(set(event_dates))
-    race_events = [event for event in result["events"] if event["training_type"] == "race"]
+    race_events = [event for event in events if event["training_type"] == "race"]
     assert len(race_events) == 1
     assert race_events[0]["date"] == "2026-10-18"
     assert race_events[0]["name"] == "比赛日 · 目标比赛"

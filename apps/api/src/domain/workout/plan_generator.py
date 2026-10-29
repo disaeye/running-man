@@ -53,20 +53,43 @@ class PlannedDay:
     pace_max_s_km: int | None = None
 
 
+@dataclass(frozen=True)
+class WeekPlanOptions:
+    """The shape of one generated week.
+
+    Grouped into one object because the generator's parameters had grown past
+    the point where a caller could tell them apart by position.
+    """
+
+    sport: str = "Run"
+    rest_days: int = 1
+    preferred_days_off: list[int] | None = None
+    training_paces: dict[str, dict[str, float]] | None = None
+    week_number: int = 0
+    progression_weeks: int = 3
+    max_session_duration_min: int = 180
+    long_run_day: int | None = None
+
+
 def generate_weekly_plan(
     target_weekly_tss: float,
-    sport: str = "Run",
-    rest_days: int = 1,
-    preferred_days_off: list[int] | None = None,
-    training_paces: dict[str, dict[str, float]] | None = None,
-    week_number: int = 0,
-    progression_weeks: int = 3,
-    max_session_duration_min: int = 180,
+    options: WeekPlanOptions | None = None,
 ) -> list[PlannedDay]:
+    """The seven days of one week of training.
+
+    The shape of the week comes from ``options``; a caller that only wants
+    the default week passes nothing.
+    """
+    settings = options or WeekPlanOptions()
+    sport = settings.sport
+    rest_count = min(max(settings.rest_days, 0), 6)
+    preferred = _valid_days(settings.preferred_days_off)
+    training_paces = settings.training_paces
+    week_number = settings.week_number
+    progression_weeks = settings.progression_weeks
+    max_session_duration_min = min(max(settings.max_session_duration_min, 1), 600)
+    long_run_day = settings.long_run_day
     target = max(target_weekly_tss, 0.0)
-    max_session_duration_min = min(max(max_session_duration_min, 1), 600)
-    rest_count = min(max(rest_days, 0), 6)
-    preferred = _valid_days(preferred_days_off)
     if target == 0.0:
         return [_planned_day(day, REST, 0.0, sport) for day in range(7)]
 
@@ -74,6 +97,12 @@ def generate_weekly_plan(
     rest_day_set = _rest_days(preferred, rest_count, long_day, rest_before_long)
     if long_day in rest_day_set:
         long_day = 5 if 5 not in rest_day_set else 6
+    if long_run_day is not None and 0 <= long_run_day <= MAX_WEEKDAY:
+        # 运动员可以指定长距离日。指定之后，那一天固定为长距离，
+        # 原本落在长距离日的休息日回到休息日集合里。
+        long_day = long_run_day
+        rest_day_set = _rest_days(preferred, rest_count, long_day, rest_before_long)
+        rest_day_set.discard(long_day)
     workout_types: dict[int, str] = {day: REST for day in rest_day_set}
     workout_types[long_day] = LONG
 
@@ -93,9 +122,7 @@ def generate_weekly_plan(
     progression_index = week_number % max(progression_weeks + 1, 1)
     progressed = target * min(1.0 + 0.025 * progression_index, 1.2)
     is_recovery_week = progression_weeks > 0 and (week_number + 1) % (progression_weeks + 1) == 0
-    tss_by_day = _target_tss_by_day(
-        workout_types, progressed * (0.7 if is_recovery_week else 1.0)
-    )
+    tss_by_day = _target_tss_by_day(workout_types, progressed * (0.7 if is_recovery_week else 1.0))
     return [
         _planned_day(
             day,
@@ -133,9 +160,7 @@ def _rest_days(
     preferred_rest = [day for day in preferred_days if day != long_day][:rest_count]
     fallback_rest_days = [rest_before_long, 0, 2, 4, 6, 3, 1]
     remaining_rest = [
-        day
-        for day in fallback_rest_days
-        if day != long_day and day not in preferred_rest
+        day for day in fallback_rest_days if day != long_day and day not in preferred_rest
     ][: max(rest_count - len(preferred_rest), 0)]
     rest = preferred_rest + remaining_rest
     return set(rest[:rest_count])

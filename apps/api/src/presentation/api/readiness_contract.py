@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from domain.insights.readiness import Readiness
 
@@ -13,6 +13,35 @@ class ReadinessFactorResponse(BaseModel):
     name: str
     impact: Literal["positive", "negative", "neutral"]
     detail: str
+
+
+class WellnessReadingResponse(BaseModel):
+    """One wellness reading of the day, with the athlete's own baseline.
+
+    ``baseline`` is the seven-day mean of the same reading; ``delta`` is the
+    difference from it. A reading that was not measured is ``None`` at the
+    field level, so the page can say "未记录" instead of showing a zero.
+    """
+
+    value: float
+    unit: str
+    baseline: float | None = None
+    delta: float | None = None
+
+
+class WellnessReadingsResponse(BaseModel):
+    """The day's wellness readings, each with the athlete's own baseline.
+
+    The three readings the page shows are named fields rather than a map, so
+    the contract states exactly which ones exist and what their units are.
+    """
+
+    # 心率变异性（ms）。
+    hrv: WellnessReadingResponse | None = None
+    # 静息心率（bpm）。
+    resting_hr: WellnessReadingResponse | None = None
+    # 睡眠时长（秒）。
+    sleep_secs: WellnessReadingResponse | None = None
 
 
 class LocalReadinessProvenanceResponse(BaseModel):
@@ -38,6 +67,8 @@ class LocalReadinessResponse(BaseModel):
     max_intensity: Literal["high", "moderate", "low", "none"]
     data_sufficient: bool = False
     observed_on: date | None = None
+    # 当日的健康读数（HRV、静息心率、睡眠）与本人七日基线。
+    readings: WellnessReadingsResponse = Field(default_factory=WellnessReadingsResponse)
     provenance: LocalReadinessProvenanceResponse
 
 
@@ -64,15 +95,15 @@ def build_readiness_response(
             local_readiness
             | {
                 "provenance": LocalReadinessProvenanceResponse(
-                wellness_as_of=_latest_day(wellness),
-                pmc_as_of=_latest_day(loads),
-                factor_sources={
-                    "sleep": "health_wellness",
-                    "resting_hr": "health_wellness",
-                    "hrv": "health_wellness",
-                    "tsb": "current_daily_facts",
-                    "atl_velocity": "current_daily_facts",
-                },
+                    wellness_as_of=_latest_day(wellness),
+                    pmc_as_of=_latest_day(loads),
+                    factor_sources={
+                        "sleep": "health_wellness",
+                        "resting_hr": "health_wellness",
+                        "hrv": "health_wellness",
+                        "tsb": "current_daily_facts",
+                        "atl_velocity": "current_daily_facts",
+                    },
                 )
             }
         ),

@@ -58,6 +58,12 @@ class WeeklyProgressResponse(InsightAnalyticsResponse):
     completion_pct: int | str
     planned_distance_m: float
     actual_distance_m: float
+    # 实际累计爬升（米）。
+    actual_elevation_m: float = 0.0
+    # 平均配速（秒/公里）；没有距离时为 None。
+    avg_pace_s_per_km: float | None = None
+    # 距离目标之差（米）：正数表示还差多少。
+    remaining_distance_m: float = 0.0
 
 
 class PlanQualityResponse(InsightAnalyticsResponse):
