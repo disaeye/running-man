@@ -1,1 +1,4 @@
 .vercel
+
+# Temporary engineering artifacts
+.intermediate/

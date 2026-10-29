@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { groupStreams } from "@shared/types/activity";
+import { groupStreams, type ActivityDetail } from "@shared/types/activity";
 import { Card } from "@shared/ui/Card";
 import { LabelCaps } from "@shared/ui/LabelCaps";
 import { getSportConfig } from "@shared/config/sport-config";
@@ -12,6 +12,7 @@ import { MultiStreamChart } from "@features/activity/components/MultiStreamChart
 import { GpsSection } from "@features/activity/components/GpsSection";
 import { resolveGpsState } from "@features/activity/lib/activity-detail";
 import { StrengthDetail } from "@features/activity/components/StrengthDetail";
+import { StrengthSessionMetrics } from "@features/activity/components/StrengthSessionMetrics";
 import { DemoActivityHero } from "@features/activity/components/DemoActivityHero";
 import { DemoBiomechanicsGrid } from "@features/activity/components/DemoBiomechanicsGrid";
 import { DemoZoneDistribution } from "@features/activity/components/DemoZoneDistribution";
@@ -19,34 +20,9 @@ import { DemoEffectivenessCard } from "@features/activity/components/DemoEffecti
 import { DemoSplitTable } from "@features/activity/components/DemoSplitTable";
 import { useCoachContext } from "@features/today/hooks/useCoachContext";
 
-/**
- * 单次训练战报（参考稿 analy.html 的主体）。
- *
- * 顺序与参考稿一致：
- *   1. 核心里程大卡
- *   2. 生物力学与动力学监测六格矩阵
- *   3. 心率五区间能量分配
- *   4. 运动效能评估与恢复建议
- *   5. 每公里逐段配速表
- *   6. GPS 轨迹
- *
- * 这一块被两个页面共用：活动详情页（`/activities/[id]`）与分析页的
- * 「单次战报」模式。两处显示的是同一场训练，内容必须完全一致，
- * 所以取数与排版都在这里。
- */
-export function DemoActivityReport({
-  activityId,
-  showStrength = true,
-}: {
-  readonly activityId: string;
-  /** 力量训练要不要显示力量训练明细。 */
-  readonly showStrength?: boolean;
-}) {
+/** 单次训练详情：力量训练与耐力运动分别呈现适用的读数和分析内容。 */
+export function DemoActivityReport({ activityId }: { readonly activityId: string }) {
   const activityQuery = useActivityDetail(activityId);
-  const streamsQuery = useActivityStreams(activityId);
-  const analysisQuery = useActivityAnalysis(activityId);
-  const coachQuery = useCoachContext();
-  const [activeMetric, setActiveMetric] = useState<string | null>(null);
 
   if (activityQuery.loading) {
     return (
@@ -70,11 +46,41 @@ export function DemoActivityReport({
     );
   }
 
-  const streamMap = groupStreams(streamsQuery.data ?? []);
+  const config = getSportConfig(activity.sport);
+  if (config.isStrength) {
+    return (
+      <div className="space-y-4" data-testid="demo-activity-report">
+        <StrengthSessionMetrics
+          durationS={activity.duration_s}
+          calories={activity.calories}
+          avgHeartRate={activity.avg_hr}
+          rpe={activity.rpe ?? null}
+        />
+        <StrengthDetail activityId={activityId} />
+      </div>
+    );
+  }
+
+  return <EnduranceActivityReport activityId={activityId} activity={activity} />;
+}
+
+function EnduranceActivityReport({
+  activityId,
+  activity,
+}: {
+  readonly activityId: string;
+  readonly activity: ActivityDetail;
+}) {
+  const streamsQuery = useActivityStreams(activityId);
+  const analysisQuery = useActivityAnalysis(activityId);
+  const coachQuery = useCoachContext();
+  const [activeMetric, setActiveMetric] = useState<string | null>(null);
+  const streamMap = groupStreams(streamsQuery.data);
   const analysis = analysisQuery.data;
   const config = getSportConfig(activity.sport);
-  const pace =
-    activity.avg_speed != null && activity.avg_speed > 0 ? 1000 / activity.avg_speed : null;
+  const pace = activity.avg_speed != null && activity.avg_speed > 0
+    ? 1000 / activity.avg_speed
+    : null;
 
   return (
     <div className="space-y-4" data-testid="demo-activity-report">
@@ -86,49 +92,34 @@ export function DemoActivityReport({
         completionPct={null}
         sportLabel={config.label}
       />
-
-      {activity.sport === "WeightTraining" ? (
-        showStrength ? (
-          <StrengthDetail activityId={activityId} />
-        ) : null
-      ) : (
-        <>
-          <DemoBiomechanicsGrid
-            biomechanics={analysis?.biomechanics ?? null}
-            heartRate={{ avg: activity.avg_hr, max: activity.max_hr }}
-            activeMetric={activeMetric}
-            onSelectMetric={setActiveMetric}
-            chartSlot={activeMetric ? <MultiStreamChart streams={streamMap} /> : null}
-          />
-
-          <DemoZoneDistribution
-            residence={analysis?.zone_residence ?? []}
-            dominantZone={analysis?.dominant_zone ?? null}
-            thresholdHr={null}
-          />
-
-          <DemoEffectivenessCard
-            decouplingPct={analysis?.summary?.decoupling_pct ?? null}
-            trimp={activity.trimp ?? null}
-            tss={activity.tss}
-            aerobicTe={activity.aerobic_te ?? null}
-            anaerobicTe={activity.anaerobic_te ?? null}
-            tsbRecoveryDays={
-              coachQuery.data?.recovery_signals.tsb_recovery_days ?? null
-            }
-            tsb={coachQuery.data?.recent_load.current_tsb ?? null}
-          />
-
-          <DemoSplitTable
-            laps={analysis?.laps ?? []}
-            fastestLapIndex={analysis?.fastest_lap_index ?? null}
-          />
-
-          {!streamsQuery.loading ? (
-            <GpsSection gpsState={resolveGpsState(activity, streamMap)} streamMap={streamMap} />
-          ) : null}
-        </>
-      )}
+      <DemoBiomechanicsGrid
+        biomechanics={analysis?.biomechanics ?? null}
+        heartRate={{ avg: activity.avg_hr, max: activity.max_hr }}
+        activeMetric={activeMetric}
+        onSelectMetric={setActiveMetric}
+        chartSlot={activeMetric ? <MultiStreamChart streams={streamMap} /> : null}
+      />
+      <DemoZoneDistribution
+        residence={analysis?.zone_residence ?? []}
+        dominantZone={analysis?.dominant_zone ?? null}
+        thresholdHr={null}
+      />
+      <DemoEffectivenessCard
+        decouplingPct={analysis?.summary?.decoupling_pct ?? null}
+        trimp={activity.trimp ?? null}
+        tss={activity.tss}
+        aerobicTe={activity.aerobic_te ?? null}
+        anaerobicTe={activity.anaerobic_te ?? null}
+        tsbRecoveryDays={coachQuery.data?.recovery_signals.tsb_recovery_days ?? null}
+        tsb={coachQuery.data?.recent_load.current_tsb ?? null}
+      />
+      <DemoSplitTable
+        laps={analysis?.laps ?? []}
+        fastestLapIndex={analysis?.fastest_lap_index ?? null}
+      />
+      {!streamsQuery.loading ? (
+        <GpsSection gpsState={resolveGpsState(activity, streamMap)} streamMap={streamMap} />
+      ) : null}
     </div>
   );
 }

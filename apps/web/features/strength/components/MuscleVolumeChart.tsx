@@ -1,58 +1,55 @@
 "use client";
 
 import type { MuscleVolumeItem } from "@shared/types/strength";
-import { Badge } from "@shared/ui/Badge";
+import { Card } from "@shared/ui/Card";
 
 interface MuscleVolumeChartProps {
   data: MuscleVolumeItem[];
 }
 
 export function MuscleVolumeChart({ data }: MuscleVolumeChartProps) {
-  const sorted = [...data].sort((a, b) => b.volume_kg - a.volume_kg);
+  const sorted = [...data].sort((left, right) => right.volume_kg - left.volume_kg);
   const maxVolume = sorted[0]?.volume_kg ?? 0;
 
   if (sorted.length === 0) {
     return (
-      <div className="flex h-[200px] items-center justify-center text-subheadline text-text-muted">
-        暂无肌群容量数据
-      </div>
+      <Card padding="md" className="flex min-h-40 items-center justify-center text-subheadline text-text-muted">
+        暂无肌群训练量数据
+      </Card>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <dl className="space-y-3">
       {sorted.map((item) => {
-        const pct = maxVolume > 0 ? (item.volume_kg / maxVolume) * 100 : 0;
+        const width = maxVolume > 0 ? `${(item.volume_kg / maxVolume) * 100}%` : "0%";
         return (
-          <div key={item.muscle} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between text-subheadline">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-text-primary">
-                  {item.muscle}
-                </span>
-                <Badge variant="neutral">
-                  {item.set_count} 组 · {item.exercise_count} 动作
-                </Badge>
-              </div>
-              <span className="font-mono text-text-secondary">
+          <div key={item.muscle} className="space-y-1">
+            <div className="flex items-center justify-between gap-3 text-caption1">
+              <dt className="truncate font-medium text-text-primary">{item.muscle}</dt>
+              <dd className="shrink-0 font-mono tabular-nums text-text-secondary">
                 {formatKg(item.volume_kg)}
-              </span>
+              </dd>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-overlay">
+            <div
+              className="h-2 w-full overflow-hidden rounded-full bg-surface-overlay"
+              role="img"
+              aria-label={`${item.muscle} ${formatKg(item.volume_kg)}`}
+            >
               <div
-                className="h-full rounded-full bg-gradient-to-r from-ctl to-atl-magenta transition-all duration-500"
-                style={{ width: `${pct}%` }}
+                className="h-full rounded-full bg-sport-workout"
+                style={{ width }}
               />
             </div>
           </div>
         );
       })}
-    </div>
+    </dl>
   );
 }
 
-function formatKg(v: number): string {
-  if (v >= 1000) return `${(v / 1000).toFixed(1)} t`;
-  if (v >= 100) return `${Math.round(v)} kg`;
-  return `${v.toFixed(1)} kg`;
+function formatKg(value: number): string {
+  if (value >= 1000) return `${(value / 1000).toFixed(1)} t`;
+  if (value >= 100) return `${Math.round(value)} kg`;
+  return `${value.toFixed(1)} kg`;
 }

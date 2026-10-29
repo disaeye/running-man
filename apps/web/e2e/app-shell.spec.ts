@@ -12,7 +12,7 @@ const MOBILE = { width: 375, height: 812 };
 const TABLET = { width: 768, height: 1024 };
 const DESKTOP = { width: 1280, height: 800 };
 
-const DASHBOARD_ROUTES = ["/", "/calendar", "/analysis", "/goals", "/profile", "/settings"];
+const DASHBOARD_ROUTES = ["/", "/calendar", "/analysis", "/analysis?tab=strength", "/goals", "/profile", "/settings"];
 
 test.describe("app shell", () => {
   test.describe("mobile 375x812", () => {

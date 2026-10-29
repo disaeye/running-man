@@ -8,8 +8,16 @@ export type RouteKind = "public" | "share" | "dashboard" | "activity-detail" | "
 export const REQUIRED_PUBLIC_IDENTITIES = ["public-login", "public-register", "public-not-found"] as const;
 export const REQUIRED_SHARE_IDENTITIES = ["share-ready", "share-expired", "share-not-found", "share-network-error"] as const;
 export const REQUIRED_ACTIVITY_IDENTITIES = ["activity-valid", "activity-not-found", "activity-partial-streams"] as const;
+export const REQUIRED_STRENGTH_ACTIVITY_IDENTITIES = ["activity-strength-valid", "activity-strength-empty"] as const;
 export const REQUIRED_CALENDAR_IDENTITIES = ["calendar-week", "calendar-month", "calendar-list"] as const;
-export const REQUIRED_ANALYSIS_IDENTITIES = ["analysis-session", "analysis-overview", "analysis-load", "analysis-performance", "analysis-intensity"] as const;
+export const REQUIRED_ANALYSIS_IDENTITIES = [
+  "analysis-session",
+  "analysis-overview",
+  "analysis-load",
+  "analysis-performance",
+  "analysis-intensity",
+] as const;
+export const REQUIRED_STRENGTH_ANALYSIS_IDENTITIES = ["analysis-strength"] as const;
 export const REQUIRED_SETTINGS_IDENTITIES = [
   "settings-data",
   "settings-training",
@@ -21,12 +29,15 @@ export type RequiredIdentity =
   | (typeof REQUIRED_PUBLIC_IDENTITIES)[number]
   | (typeof REQUIRED_SHARE_IDENTITIES)[number]
   | (typeof REQUIRED_ACTIVITY_IDENTITIES)[number]
+  | (typeof REQUIRED_STRENGTH_ACTIVITY_IDENTITIES)[number]
   | (typeof REQUIRED_CALENDAR_IDENTITIES)[number]
   | (typeof REQUIRED_ANALYSIS_IDENTITIES)[number]
+  | (typeof REQUIRED_STRENGTH_ANALYSIS_IDENTITIES)[number]
   | (typeof REQUIRED_SETTINGS_IDENTITIES)[number]
   | (typeof REQUIRED_PROFILE_IDENTITIES)[number]
   | "today-home"
   | "goals";
+
 export type ProductRouteEntry = {
   readonly evidenceName: string;
   readonly routeKind: RouteKind;
@@ -41,7 +52,10 @@ export type ProductRouteEntry = {
   readonly redirectDestination?: string;
 };
 
-export type MatrixValidationResult = { readonly valid: boolean; readonly diagnostics: readonly string[] };
+export type MatrixValidationResult = {
+  readonly valid: boolean;
+  readonly diagnostics: readonly string[];
+};
 
 const ALL_SURFACES = { themes: THEMES, viewports: VIEWPORTS, todo15ServedBrowserOnly: true } as const;
 
@@ -49,8 +63,10 @@ const REQUIRED_IDENTITIES = [
   ...REQUIRED_PUBLIC_IDENTITIES,
   ...REQUIRED_SHARE_IDENTITIES,
   ...REQUIRED_ACTIVITY_IDENTITIES,
+  ...REQUIRED_STRENGTH_ACTIVITY_IDENTITIES,
   ...REQUIRED_CALENDAR_IDENTITIES,
   ...REQUIRED_ANALYSIS_IDENTITIES,
+  ...REQUIRED_STRENGTH_ANALYSIS_IDENTITIES,
   ...REQUIRED_SETTINGS_IDENTITIES,
   ...REQUIRED_PROFILE_IDENTITIES,
   "today-home",
@@ -76,6 +92,7 @@ const DASHBOARD_ROUTES = [
   route("calendar-month", "dashboard", "calendar-month", "/calendar?view=month", ["month", "empty", "error"]),
   route("calendar-list", "dashboard", "calendar-list", "/calendar?view=list", ["list", "empty", "error"]),
   route("analysis-session", "dashboard", "analysis-session", "/analysis", ["session", "sparse", "error"]),
+  route("analysis-strength", "dashboard", "analysis-strength", "/analysis?tab=strength", ["strength", "ready", "empty", "error"]),
   route("analysis-overview", "dashboard", "analysis-overview", "/analysis?tab=overview", ["overview", "sparse", "error"]),
   route("analysis-load", "dashboard", "analysis-load", "/analysis?tab=load", ["load", "sparse", "error"]),
   route("analysis-performance", "dashboard", "analysis-performance", "/analysis?tab=performance", ["performance", "sparse", "error"]),
@@ -88,6 +105,8 @@ const ACTIVITY_ROUTES = [
   fixtureRoute("activity-valid", "activity-detail", "/activities/activity-valid", ["valid"]),
   fixtureRoute("activity-not-found", "activity-detail", "/activities/activity-not-found", ["not-found"]),
   fixtureRoute("activity-partial-streams", "activity-detail", "/activities/activity-partial-streams", ["partial-streams"]),
+  fixtureRoute("activity-strength-valid", "activity-detail", "/activities/activity-strength", ["strength-session", "exercise-set-summary"]),
+  fixtureRoute("activity-strength-empty", "activity-detail", "/activities/activity-strength-empty", ["strength-exercise-empty"]),
 ] as const;
 
 const SETTINGS_ROUTES = [
@@ -144,7 +163,7 @@ function route(
 }
 
 function fixtureRoute(
-  fixtureId: (typeof REQUIRED_SHARE_IDENTITIES)[number] | (typeof REQUIRED_ACTIVITY_IDENTITIES)[number],
+  fixtureId: (typeof REQUIRED_SHARE_IDENTITIES)[number] | (typeof REQUIRED_ACTIVITY_IDENTITIES)[number] | (typeof REQUIRED_STRENGTH_ACTIVITY_IDENTITIES)[number],
   routeKind: "share" | "activity-detail",
   path: string,
   requiredStates: readonly string[],

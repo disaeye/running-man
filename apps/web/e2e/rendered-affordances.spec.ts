@@ -18,7 +18,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mockDashboard } from "./ux-dashboard-mocks";
 
-const ROUTES = ["/", "/activities", "/analysis", "/calendar", "/goals", "/profile", "/settings"] as const;
+const ROUTES = ["/", "/activities", "/analysis", "/analysis?tab=strength", "/calendar", "/goals", "/profile", "/settings"] as const;
 
 /** Variants whose affordance is a fill. `ghost`, `link` and `outline` are not. */
 const FILLED_VARIANTS = new Set(["default", "secondary", "destructive"]);

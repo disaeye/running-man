@@ -9,7 +9,7 @@ import { test, expect, type Page } from "@playwright/test";
  * The same header puts controls beside the title once there is room.
  */
 
-const PAGES = ["/calendar", "/analysis", "/goals", "/profile", "/settings"] as const;
+const PAGES = ["/calendar", "/analysis", "/analysis?tab=strength", "/goals", "/profile", "/settings"] as const;
 
 interface Geometry {
   readonly h1Count: number;

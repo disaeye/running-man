@@ -4,13 +4,13 @@ export interface WorkoutSet {
   id: number;
   workout_exercise_id: number;
   set_number: number;
-  weight_kg: number | null;
+  weight_kg?: number | null;
   reps: number;
-  rpe: number | null;
-  set_type: string;
-  rest_seconds: number | null;
+  rpe?: number | null;
+  set_type?: string | null;
+  rest_seconds?: number | null;
   completed: boolean;
-  estimated_1rm_kg: number | null;
+  estimated_1rm_kg?: number | null;
 }
 
 export interface Exercise {
@@ -48,18 +48,15 @@ export interface WorkoutExercise {
 
 /** Payload to create a new set. */
 export interface SetCreatePayload {
-  set_number: number;
-  weight_kg?: number | null;
+  weight_kg: number;
   reps: number;
   rpe?: number | null;
   set_type?: string;
   rest_seconds?: number | null;
-  completed?: boolean;
 }
 
 /** Payload to update a set. */
 export interface SetUpdatePayload {
-  set_number?: number;
   weight_kg?: number | null;
   reps?: number;
   rpe?: number | null;
@@ -86,8 +83,6 @@ export interface WorkoutExerciseUpdatePayload {
 export interface MuscleVolumeItem {
   muscle: string;
   volume_kg: number;
-  exercise_count: number;
-  set_count: number;
 }
 
 /** Analytics: estimated 1RM progression. */
@@ -101,6 +96,7 @@ export interface E1rmItem {
 /** Analytics: volume distribution by category. */
 export interface DistributionItem {
   category: string;
+  set_count: number;
   percentage: number;
   volume_kg: number;
 }

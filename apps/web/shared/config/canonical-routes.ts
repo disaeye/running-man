@@ -21,13 +21,12 @@ export type AnalysisTabId = "load" | "performance" | "intensity";
 /**
  * 分析页的模式。
  *
- * `session` 是单次战报（参考稿 analy.html 的样子）：最近一场训练的完整回顾。
- * 其余四个是周期趋势：一段时间的负荷、强度与能力。
+ * `session` 是跑步单次战报；`strength` 是按动作、训练量和 e1RM 组织的力量训练分析。
+ * 其余模式是周期训练趋势。
  *
- * 单次战报是默认：参考稿的第三个导航项（分析）打开就是一场训练的回顾，
- * 而不是一组时间段图表。
+ * 跑步单次战报是默认，现有 `?tab=` 深链接继续有效。
  */
-export type AnalysisPageTab = "session" | "overview" | AnalysisTabId;
+export type AnalysisPageTab = "session" | "strength" | "overview" | AnalysisTabId;
 
 /** Canonical `/calendar?view=` values. Legacy `strength` resolves to `list` via `CALENDAR_VIEW_ALIASES`. */
 export type CalendarViewId = "week" | "month" | "list";
@@ -82,7 +81,7 @@ function isSettingsSectionId(value: string): value is SettingsSectionId {
  */
 export function resolveAnalysisPageTab(raw: string | null): AnalysisPageTab {
   if (raw == null || raw === "") return DEFAULT_ANALYSIS_TAB;
-  if (raw === "session" || raw === "overview") return raw;
+  if (raw === "session" || raw === "strength" || raw === "overview") return raw;
   if (isAnalysisTabId(raw)) return raw;
   const aliasTarget = ANALYSIS_TAB_ALIASES[raw];
   if (aliasTarget) return aliasTarget;
@@ -320,11 +319,11 @@ export function canonicalSettingsSearch(
 
 /**
  * All recognized analysis tab values including aliases, for validation
- * paths (the route matrix uses this to reject canonical references to
- * `tab=ability` / `tab=recovery`).
+ * paths (the route matrix checks canonical tab references).
  */
 export const ANALYSIS_TAB_ALL_INPUTS: readonly string[] = [
   "session",
+  "strength",
   "overview",
   "load",
   "performance",

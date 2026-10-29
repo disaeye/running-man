@@ -22,7 +22,7 @@ test.describe("client-only rendering", () => {
    * "9月14日星期一". Every dashboard page logged hydration error 418 while looking
    * completely normal.
    */
-  const PAGES = ["/", "/calendar", "/analysis", "/goals", "/profile", "/settings"];
+  const PAGES = ["/", "/calendar", "/analysis", "/analysis?tab=strength", "/goals", "/profile", "/settings"];
 
   for (const path of PAGES) {
     test(`${path} hydrates without an error`, async ({ page }) => {

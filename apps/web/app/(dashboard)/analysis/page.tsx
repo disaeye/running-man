@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
+import { getSportConfig } from "@shared/config/sport-config";
 import { PageHeader } from "@shared/ui/PageHeader";
 import { AnalysisLoad } from "@features/analysis/components/AnalysisLoad";
 import { AnalysisRecovery } from "@features/analysis/components/AnalysisRecovery";
@@ -11,6 +12,7 @@ import { AnalysisIntensity } from "@features/analysis/components/AnalysisIntensi
 import { AnalysisOverview } from "@features/analysis/components/AnalysisOverview";
 import { AnalysisRangeControls } from "@features/analysis/components/AnalysisRangeControls";
 import { DemoAnalysisSession } from "@features/analysis/components/DemoAnalysisSession";
+import { StrengthSessionAnalysis } from "@features/analysis/components/StrengthSessionAnalysis";
 import {
   AnalysisRangeProvider,
   useAnalysisRange,
@@ -26,7 +28,8 @@ import {
 // Tab wording matches ANALYSIS_TAB_LABELS and the pillar card titles, so one
 // surface never calls the same thing by a different name.
 const TABS = [
-  { id: "session", label: "单次战报" },
+  { id: "session", label: "跑步战报" },
+  { id: "strength", label: "力量训练" },
   { id: "overview", label: "总览" },
   { id: "load", label: "负荷与体能" },
   { id: "intensity", label: "强度结构" },
@@ -63,6 +66,8 @@ function AnalysisPageContent() {
     parseTabParam(searchParams.get("tab")),
   );
   const { range, setRange } = useAnalysisRange();
+  const isStrengthTab = tab === "strength";
+  const runningSportLabel = getSportConfig("Run").label;
 
   // Settle legacy aliases once on mount (ability → performance, etc.).
   useEffect(() => {
@@ -85,10 +90,10 @@ function AnalysisPageContent() {
     <div className="page-stack" data-testid="analysis-page">
       <PageHeader
         title={<span id="analysis-title">训练分析</span>}
-        action={<AnalysisRangeControls dateRange={range} onDateRangeChange={setRange} />}
+        action={!isStrengthTab ? <AnalysisRangeControls dateRange={range} onDateRangeChange={setRange} /> : undefined}
       />
-      <Tabs value={tab} onValueChange={(value) => setTab(parseTabParam(value))} className="space-y-6">
-        <TabsList>
+      <Tabs value={tab} onValueChange={(value) => setTab(parseTabParam(value))} className="space-y-6" data-testid="analysis-tabs">
+        <TabsList className="grid grid-cols-3 sm:grid-cols-6">
           {TABS.map(({ id, label }) => (
             <TabsTrigger key={id} value={id} className="px-2 text-caption1 sm:px-3">
               {label}
@@ -96,7 +101,10 @@ function AnalysisPageContent() {
           ))}
         </TabsList>
         <TabsContent value="session" className="space-y-6" data-testid="analysis-session">
-          <DemoAnalysisSession />
+          <DemoAnalysisSession sportLabel={runningSportLabel} />
+        </TabsContent>
+        <TabsContent value="strength" className="space-y-6" data-testid="analysis-strength">
+          <StrengthSessionAnalysis />
         </TabsContent>
         <TabsContent value="overview" className="space-y-6" data-testid="analysis-overview">
           <AnalysisOverview onSelectTab={setTab} rangeLabel={`${range.from} — ${range.to}`} />

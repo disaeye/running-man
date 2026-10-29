@@ -37,7 +37,7 @@ let uid = 0;
 const newId = (): string => `draft-${++uid}`;
 
 function emptySet(): DraftSet {
-  return { id: newId(), weight_kg: "", reps: "8", rpe: "" };
+  return { id: newId(), weight_kg: "", reps: "8", rpe: "", completed: true };
 }
 
 /* ------------------------------------------------------------------ */
@@ -94,18 +94,14 @@ export function StrengthWorkoutEditor({
   }, []);
 
   const updateSet = useCallback(
-    (draftId: string, setId: string, field: keyof DraftSet, value: string) => {
+    (draftId: string, setId: string, field: keyof DraftSet, value: string | boolean) => {
       setDrafts((prev) =>
-        prev.map((d) =>
-          d.id === draftId
-            ? {
-                ...d,
-                sets: d.sets.map((s) =>
-                  s.id === setId ? { ...s, [field]: value } : s,
-                ),
-              }
-            : d,
-        ),
+        prev.map((draft) => draft.id !== draftId
+          ? draft
+          : {
+              ...draft,
+              sets: draft.sets.map((set) => set.id === setId ? { ...set, [field]: value } : set),
+            }),
       );
     },
     [],
@@ -160,15 +156,23 @@ export function StrengthWorkoutEditor({
           const s = draft.sets[j]!;
           const weight = parseFloat(s.weight_kg);
 
-          await apiFetch(`/strength/workout-exercises/${ex.id}/sets`, {
-            method: "POST",
-            body: JSON.stringify({
-              set_number: j + 1,
-              weight_kg: Number.isNaN(weight) || weight < 0 ? null : weight,
-              reps: Math.max(1, parseInt(s.reps) || 1),
-              rpe: s.rpe ? parseFloat(s.rpe) : null,
-            }),
-          });
+          const createdSet = await apiFetch<{ id: number }>(
+            `/strength/workout-exercises/${ex.id}/sets`,
+            {
+              method: "POST",
+              body: JSON.stringify({
+                weight_kg: Number.isNaN(weight) || weight < 0 ? null : weight,
+                reps: Math.max(1, parseInt(s.reps) || 1),
+                rpe: s.rpe ? parseFloat(s.rpe) : null,
+              }),
+            },
+          );
+          if (!s.completed) {
+            await apiFetch(`/strength/workout-exercises/${ex.id}/sets/${createdSet.id}`, {
+              method: "PUT",
+              body: JSON.stringify({ completed: false }),
+            });
+          }
         }
       }
 

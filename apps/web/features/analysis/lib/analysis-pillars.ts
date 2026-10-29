@@ -51,7 +51,8 @@ export const ANALYSIS_PILLAR_META: readonly AnalysisPillarMeta[] = [
 export const ANALYSIS_TAB_LABELS: Readonly<
   Record<AnalysisPageTab, string>
 > = {
-  session: "单次战报",
+  session: "跑步战报",
+  strength: "力量训练",
   overview: "总览",
   load: "负荷适应",
   performance: "表现能力",

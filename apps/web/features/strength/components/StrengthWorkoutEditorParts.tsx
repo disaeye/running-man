@@ -5,6 +5,7 @@ export interface DraftSet {
   weight_kg: string;
   reps: string;
   rpe: string;
+  completed: boolean;
 }
 
 export interface DraftExercise {
@@ -18,7 +19,7 @@ interface DraftListProps {
   onAddSet: (draftId: string) => void;
   onRemoveExercise: (draftId: string) => void;
   onRemoveSet: (draftId: string, setId: string) => void;
-  onUpdateSet: (draftId: string, setId: string, field: keyof DraftSet, value: string) => void;
+  onUpdateSet: (draftId: string, setId: string, field: keyof DraftSet, value: string | boolean) => void;
 }
 
 interface PickerProps {
@@ -57,7 +58,10 @@ export function DraftExerciseList({
               <span className="text-subheadline font-semibold text-text-primary">{draft.exercise.name_cn}</span>
               <span className="text-caption1 text-text-muted">{draft.exercise.category}</span>
             </div>
-            <IconButton label="移除动作" onClick={() => onRemoveExercise(draft.id)} iconPath="M18 6L6 18M6 6l12 12" />
+            <div className="flex items-center gap-2">
+              <span className="text-caption1 text-text-muted">{draft.sets.length} 组</span>
+              <IconButton label="移除动作" onClick={() => onRemoveExercise(draft.id)} iconPath="M18 6L6 18M6 6l12 12" />
+            </div>
           </div>
           <SetsTable draft={draft} onRemoveSet={onRemoveSet} onUpdateSet={onUpdateSet} />
           <div className="border-t border-border-subtle p-3">
@@ -83,7 +87,7 @@ function SetsTable({
 }: {
   draft: DraftExercise;
   onRemoveSet: (draftId: string, setId: string) => void;
-  onUpdateSet: (draftId: string, setId: string, field: keyof DraftSet, value: string) => void;
+  onUpdateSet: (draftId: string, setId: string, field: keyof DraftSet, value: string | boolean) => void;
 }) {
   return (
     <div className="px-4 pt-3">
@@ -94,6 +98,7 @@ function SetsTable({
             <th className="px-1 py-1 text-right font-medium">重量(kg)</th>
             <th className="px-1 py-1 text-right font-medium">次数</th>
             <th className="px-1 py-1 text-right font-medium">RPE</th>
+            <th className="px-1 py-1 text-center font-medium">完成</th>
             <th className="w-8" />
           </tr>
         </thead>
@@ -104,6 +109,15 @@ function SetsTable({
               <SetInput value={set.weight_kg} placeholder="kg" step="0.5" min="0" onChange={(value) => onUpdateSet(draft.id, set.id, "weight_kg", value)} />
               <SetInput value={set.reps} placeholder="次" min="1" max="50" onChange={(value) => onUpdateSet(draft.id, set.id, "reps", value)} />
               <SetInput value={set.rpe} placeholder="RPE" step="0.5" min="1" max="10" onChange={(value) => onUpdateSet(draft.id, set.id, "rpe", value)} />
+              <td className="px-1 py-2 text-center">
+                <input
+                  type="checkbox"
+                  checked={set.completed}
+                  onChange={(event) => onUpdateSet(draft.id, set.id, "completed", event.target.checked)}
+                  aria-label={`第 ${setIndex + 1} 组已完成`}
+                  className="size-5 accent-accent"
+                />
+              </td>
               <td className="px-1 py-2 text-right">
                 <IconButton
                   label="删除这组"

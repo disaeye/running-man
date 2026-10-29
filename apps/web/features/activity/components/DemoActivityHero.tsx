@@ -48,7 +48,7 @@ export function DemoActivityHero({
       />
 
       <div className="relative flex items-baseline justify-between gap-3">
-        <LabelCaps>核心执行总里程</LabelCaps>
+        <LabelCaps>跑步距离</LabelCaps>
         {completionPct != null ? (
           <span className="rounded bg-surface-overlay px-2 py-0.5 font-mono text-caption1 text-accent">
             完成度 {Math.round(completionPct)}%
