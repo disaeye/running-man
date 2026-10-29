@@ -10,7 +10,8 @@ export const CoachRecoverySignalsResponse = zod.object({
   "hrv_trend_direction": zod.enum(['up', 'down', 'stable']),
   "readiness_score": zod.number(),
   "rhr_trend_direction": zod.enum(['up', 'down', 'stable']),
-  "sleep_avg_7d": zod.number()
+  "sleep_avg_7d": zod.number(),
+  "tsb_recovery_days": zod.union([zod.number(),zod.null()]).optional()
 })
 
 export type CoachRecoverySignalsResponse = zod.input<typeof CoachRecoverySignalsResponse>;

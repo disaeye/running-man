@@ -18,6 +18,7 @@ export const athleteMeWeeklyTrainingDaysDefault = 5;
 export const AthleteMe = zod.object({
   "dob": zod.union([zod.iso.date(),zod.null()]).optional(),
   "email": zod.string(),
+  "height_cm": zod.union([zod.number(),zod.null()]).optional(),
   "hr_max": zod.union([zod.number(),zod.null()]).optional(),
   "id": zod.string(),
   "lthr": zod.union([zod.number(),zod.null()]).optional(),

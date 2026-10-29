@@ -17,6 +17,26 @@ export const CoachContextReadinessResponse = zod.object({
   "level": zod.enum(['high', 'moderate', 'recovery', 'rest']),
   "max_intensity": zod.enum(['high', 'moderate', 'low', 'none']),
   "observed_on": zod.union([zod.iso.date(),zod.null()]).optional(),
+  "readings": zod.object({
+  "hrv": zod.union([zod.object({
+  "baseline": zod.union([zod.number(),zod.null()]).optional(),
+  "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "unit": zod.string(),
+  "value": zod.number()
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional(),
+  "resting_hr": zod.union([zod.object({
+  "baseline": zod.union([zod.number(),zod.null()]).optional(),
+  "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "unit": zod.string(),
+  "value": zod.number()
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional(),
+  "sleep_secs": zod.union([zod.object({
+  "baseline": zod.union([zod.number(),zod.null()]).optional(),
+  "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "unit": zod.string(),
+  "value": zod.number()
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional()
+}).optional().describe('The day\'s wellness readings, each with the athlete\'s own baseline.\n\nThe three readings the page shows are named fields rather than a map, so\nthe contract states exactly which ones exist and what their units are.'),
   "recommendation": zod.string(),
   "score": zod.number()
 }).describe('Readiness as the Today page consumes it.\n\nCarries ``data_sufficient`` so the client can tell an assessed mid-range\nscore from the neutral 50 returned when nothing was measured — the two are\nnumerically identical but mean opposite things.')

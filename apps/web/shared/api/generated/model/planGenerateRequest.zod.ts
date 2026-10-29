@@ -6,6 +6,9 @@
  */
 import { z as zod } from 'zod';
 
+export const planGenerateRequestLongRunDayOneMin = 0;
+export const planGenerateRequestLongRunDayOneMax = 6;
+
 export const planGenerateRequestPreferredDaysOffOneMax = 7;
 
 export const planGenerateRequestRestDaysOneMin = 0;
@@ -17,6 +20,7 @@ export const planGenerateRequestWeeklyTssOneMax = 2000;
 
 export const PlanGenerateRequest = zod.object({
   "goal_id": zod.uuid(),
+  "long_run_day": zod.union([zod.number().min(planGenerateRequestLongRunDayOneMin).max(planGenerateRequestLongRunDayOneMax),zod.null()]).optional(),
   "preferred_days_off": zod.union([zod.array(zod.number()).max(planGenerateRequestPreferredDaysOffOneMax),zod.null()]).optional(),
   "rest_days": zod.union([zod.number().min(planGenerateRequestRestDaysOneMin).max(planGenerateRequestRestDaysOneMax),zod.null()]).optional(),
   "weekly_tss": zod.union([zod.number().gt(planGenerateRequestWeeklyTssOneExclusiveMin).max(planGenerateRequestWeeklyTssOneMax),zod.null()]).optional()

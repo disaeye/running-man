@@ -9,9 +9,11 @@ import { z as zod } from 'zod';
 export const ActivityAnalysisLapResponse = zod.object({
   "avg_hr": zod.union([zod.number(),zod.null()]),
   "avg_power": zod.union([zod.number(),zod.null()]),
+  "avg_speed": zod.union([zod.number(),zod.null()]).optional(),
   "distance_m": zod.number(),
-  "duration_s": zod.number(),
-  "lap_index": zod.number()
+  "duration_s": zod.union([zod.number(),zod.null()]),
+  "lap_index": zod.number(),
+  "pace_s_per_km": zod.union([zod.number(),zod.null()]).optional()
 })
 
 export type ActivityAnalysisLapResponse = zod.input<typeof ActivityAnalysisLapResponse>;

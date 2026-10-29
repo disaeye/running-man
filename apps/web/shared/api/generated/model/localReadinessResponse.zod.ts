@@ -22,6 +22,26 @@ export const LocalReadinessResponse = zod.object({
   "pmc_as_of": zod.union([zod.iso.date(),zod.null()]),
   "wellness_as_of": zod.union([zod.iso.date(),zod.null()])
 }),
+  "readings": zod.object({
+  "hrv": zod.union([zod.object({
+  "baseline": zod.union([zod.number(),zod.null()]).optional(),
+  "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "unit": zod.string(),
+  "value": zod.number()
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional(),
+  "resting_hr": zod.union([zod.object({
+  "baseline": zod.union([zod.number(),zod.null()]).optional(),
+  "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "unit": zod.string(),
+  "value": zod.number()
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional(),
+  "sleep_secs": zod.union([zod.object({
+  "baseline": zod.union([zod.number(),zod.null()]).optional(),
+  "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "unit": zod.string(),
+  "value": zod.number()
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional()
+}).optional().describe('The day\'s wellness readings, each with the athlete\'s own baseline.\n\nThe three readings the page shows are named fields rather than a map, so\nthe contract states exactly which ones exist and what their units are.'),
   "recommendation": zod.string(),
   "score": zod.number()
 }).describe('Locally computed readiness.\n\n``data_sufficient`` is the machine-readable answer to \"was anything\nmeasured\". Without it a client can only infer that from the score — and a\nscore of 50 means both \"assessed as middling\" and \"no data at all\", which\nare opposite messages. The UI previously string-matched the factor details\nto tell them apart, which breaks the moment the wording changes.')

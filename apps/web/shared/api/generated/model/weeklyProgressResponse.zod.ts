@@ -6,14 +6,19 @@
  */
 import { z as zod } from 'zod';
 
+export const weeklyProgressResponseActualElevationMDefault = 0;
+export const weeklyProgressResponseRemainingDistanceMDefault = 0;
 export const WeeklyProgressResponse = zod.object({
   "actual_distance_m": zod.number(),
+  "actual_elevation_m": zod.number().default(weeklyProgressResponseActualElevationMDefault),
   "actual_sessions": zod.number(),
   "actual_tss": zod.number(),
+  "avg_pace_s_per_km": zod.union([zod.number(),zod.null()]).optional(),
   "completion_pct": zod.union([zod.number(),zod.string()]),
   "planned_distance_m": zod.number(),
   "planned_sessions": zod.number(),
   "planned_tss": zod.number(),
+  "remaining_distance_m": zod.number().default(weeklyProgressResponseRemainingDistanceMDefault),
   "week": zod.string()
 })
 

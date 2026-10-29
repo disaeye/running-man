@@ -49,6 +49,7 @@ export const CalendarEventOutput = zod.object({
   "name": zod.union([zod.string(),zod.null()]).optional(),
   "plan_goal_id": zod.union([zod.uuid(),zod.null()]).optional(),
   "plan_source": zod.union([zod.string(),zod.null()]).optional(),
+  "predicted_distance_m": zod.union([zod.number(),zod.null()]).optional(),
   "predicted_tss": zod.union([zod.number(),zod.null()]).optional(),
   "sport_type": zod.union([zod.string(),zod.null()]).optional(),
   "start_time": zod.iso.datetime({"offset":true}),

@@ -9,11 +9,13 @@ import {
   AccountDeleteResponse,
   AccountExportDocument,
   AccountExportManifestResponse,
+  ActivePlanResponse,
   ActivityAnalysisResponse,
   ActivityDetail,
   ActivityStatsResponse,
   ActivityStreamSyncResponse,
   ActivityUploadResponse,
+  AdjustmentListResponse,
   AthleteGradeResponse,
   AthleteMe,
   AthleteResponse,
@@ -25,6 +27,7 @@ import {
   CoachContextResponse,
   DataHealthResponse,
   DataQualityResponse,
+  DecisionResponse,
   ExerciseLibraryItem,
   GoalResponse,
   HealthResponse,
@@ -38,7 +41,9 @@ import {
   NotificationReadAllResponse,
   NotificationReadResponse,
   NotificationScanResponse,
+  PersonalRangeResponse,
   PhysiologyResponse,
+  PlanAdjustmentResponse,
   PlanGenerateResponse,
   PlanQualityResponse,
   PublicActivityResponse,
@@ -80,12 +85,14 @@ import type {
   CalendarEventUpdate,
   ConnectIntegrationRequest,
   DeleteActivitiesBulkApiV1ActivitiesDeleteParams,
+  DetectionRequest,
   DisconnectIntegrationApiV1IntegrationsSourceDisconnectDeleteParams,
   E1rmTrendApiV1StrengthAnalyticsE1rmGetParams,
   E1rmTrendResponse,
   ExportActivityApiV1ActivitiesActivityIdExportGetParams,
   FlaggedActivity,
   GenerateTrainingPlanApiV1PlanGeneratePostParams,
+  GetActivePlanApiV1PlanActiveGetParams,
   GetActivityStatsApiV1ActivitiesStatsGetParams,
   GetCoachContextApiV1InsightsCoachContextGetParams,
   GetHardDaysApiV1InsightsHardDaysGetParams,
@@ -93,6 +100,7 @@ import type {
   GetMetricSeriesApiV1MetricsSeriesGetParams,
   GetMetricSeriesBatchApiV1MetricsSeriesBatchGetParams,
   GetPeriodizationApiV1PlanPeriodizationGetParams,
+  GetPersonalRangeApiV1InsightsPersonalRangeGetParams,
   GetPersonalRecordsApiV1InsightsPersonalRecordsGetParams,
   GetPlanQualityApiV1InsightsPlanQualityGetParams,
   GetPmcApiV1PmcGetParams,
@@ -111,6 +119,7 @@ import type {
   IntensityDistributionResponse,
   LapResponse,
   ListActivitiesApiV1ActivitiesGetParams,
+  ListAdjustmentsApiV1PlanAdjustmentsGetParams,
   ListAthleteNotificationsApiV1NotificationsGetParams,
   ListEventsApiV1CalendarGetParams,
   ListExercisesApiV1StrengthExercisesGetParams,
@@ -3389,6 +3398,68 @@ export const getIntensityDistributionApiV1InsightsIntensityDistributionGet = asy
 
 
 
+export type getPersonalRangeApiV1InsightsPersonalRangeGetResponse200 = {
+  data: PersonalRangeResponse
+  status: 200
+}
+
+export type getPersonalRangeApiV1InsightsPersonalRangeGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getPersonalRangeApiV1InsightsPersonalRangeGetResponseSuccess = (getPersonalRangeApiV1InsightsPersonalRangeGetResponse200) & {
+  headers: Headers;
+};
+export type getPersonalRangeApiV1InsightsPersonalRangeGetResponseError = (getPersonalRangeApiV1InsightsPersonalRangeGetResponse422) & {
+  headers: Headers;
+};
+
+export type getPersonalRangeApiV1InsightsPersonalRangeGetResponse = (getPersonalRangeApiV1InsightsPersonalRangeGetResponseSuccess | getPersonalRangeApiV1InsightsPersonalRangeGetResponseError)
+
+export const getGetPersonalRangeApiV1InsightsPersonalRangeGetUrl = (params?: GetPersonalRangeApiV1InsightsPersonalRangeGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/insights/personal-range?${stringifiedParams}` : `/api/v1/insights/personal-range`
+}
+
+/**
+ * Where today's values sit inside the athlete's own recent range.
+ *
+ * The window ends today on the athlete's calendar, so "recent" means recent
+ * for them rather than for the server.
+ * @summary Get Personal Range
+ */
+export const getPersonalRangeApiV1InsightsPersonalRangeGet = async (params?: GetPersonalRangeApiV1InsightsPersonalRangeGetParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<getPersonalRangeApiV1InsightsPersonalRangeGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getGetPersonalRangeApiV1InsightsPersonalRangeGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PersonalRangeResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as getPersonalRangeApiV1InsightsPersonalRangeGetResponse
+}
+
+
+
 export type getPersonalRecordsApiV1InsightsPersonalRecordsGetResponse200 = {
   data: (RunPersonalRecordResponse | RidePersonalRecordResponse)[]
   status: 200
@@ -4865,6 +4936,288 @@ export const markNotificationReadApiV1NotificationsNotificationIdReadPost = asyn
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? NotificationReadResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as markNotificationReadApiV1NotificationsNotificationIdReadPostResponse
+}
+
+
+
+export type getActivePlanApiV1PlanActiveGetResponse200 = {
+  data: ActivePlanResponse
+  status: 200
+}
+
+export type getActivePlanApiV1PlanActiveGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getActivePlanApiV1PlanActiveGetResponseSuccess = (getActivePlanApiV1PlanActiveGetResponse200) & {
+  headers: Headers;
+};
+export type getActivePlanApiV1PlanActiveGetResponseError = (getActivePlanApiV1PlanActiveGetResponse422) & {
+  headers: Headers;
+};
+
+export type getActivePlanApiV1PlanActiveGetResponse = (getActivePlanApiV1PlanActiveGetResponseSuccess | getActivePlanApiV1PlanActiveGetResponseError)
+
+export const getGetActivePlanApiV1PlanActiveGetUrl = (params?: GetActivePlanApiV1PlanActiveGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/plan/active?${stringifiedParams}` : `/api/v1/plan/active`
+}
+
+/**
+ * The plan in force for this athlete right now.
+ *
+ * Without ``goal_id`` the active goal is used: the one whose target date is
+ * still ahead, and among those the one that closes soonest. A plan that was
+ * never generated is not an error — the response simply carries no plan, and
+ * the page asks for one to be created.
+ * @summary Get Active Plan
+ */
+export const getActivePlanApiV1PlanActiveGet = async (params?: GetActivePlanApiV1PlanActiveGetParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<getActivePlanApiV1PlanActiveGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getGetActivePlanApiV1PlanActiveGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ActivePlanResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as getActivePlanApiV1PlanActiveGetResponse
+}
+
+
+
+export type listAdjustmentsApiV1PlanAdjustmentsGetResponse200 = {
+  data: AdjustmentListResponse
+  status: 200
+}
+
+export type listAdjustmentsApiV1PlanAdjustmentsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listAdjustmentsApiV1PlanAdjustmentsGetResponseSuccess = (listAdjustmentsApiV1PlanAdjustmentsGetResponse200) & {
+  headers: Headers;
+};
+export type listAdjustmentsApiV1PlanAdjustmentsGetResponseError = (listAdjustmentsApiV1PlanAdjustmentsGetResponse422) & {
+  headers: Headers;
+};
+
+export type listAdjustmentsApiV1PlanAdjustmentsGetResponse = (listAdjustmentsApiV1PlanAdjustmentsGetResponseSuccess | listAdjustmentsApiV1PlanAdjustmentsGetResponseError)
+
+export const getListAdjustmentsApiV1PlanAdjustmentsGetUrl = (params?: ListAdjustmentsApiV1PlanAdjustmentsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/plan/adjustments?${stringifiedParams}` : `/api/v1/plan/adjustments`
+}
+
+/**
+ * The athlete's adjustment proposals.
+ * @summary List Adjustments
+ */
+export const listAdjustmentsApiV1PlanAdjustmentsGet = async (params?: ListAdjustmentsApiV1PlanAdjustmentsGetParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<listAdjustmentsApiV1PlanAdjustmentsGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getListAdjustmentsApiV1PlanAdjustmentsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AdjustmentListResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as listAdjustmentsApiV1PlanAdjustmentsGetResponse
+}
+
+
+
+export type detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse200 = {
+  data: PlanAdjustmentResponse
+  status: 200
+}
+
+export type detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponseSuccess = (detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse200) & {
+  headers: Headers;
+};
+export type detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponseError = (detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse422) & {
+  headers: Headers;
+};
+
+export type detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse = (detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponseSuccess | detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponseError)
+
+export const getDetectAdjustmentForEventApiV1PlanAdjustmentsDetectPostUrl = () => {
+
+
+
+
+  return `/api/v1/plan/adjustments/detect`
+}
+
+/**
+ * Check one planned session against the athlete's own data.
+ *
+ * Nothing is written to the calendar here: a proposal is recorded so the
+ * athlete can compare the original and the adjusted session before deciding.
+ * @summary Detect Adjustment For Event
+ */
+export const detectAdjustmentForEventApiV1PlanAdjustmentsDetectPost = async (detectionRequest: DetectionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getDetectAdjustmentForEventApiV1PlanAdjustmentsDetectPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(detectionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PlanAdjustmentResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse
+}
+
+
+
+export type acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponse200 = {
+  data: DecisionResponse
+  status: 200
+}
+
+export type acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponseSuccess = (acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponse200) & {
+  headers: Headers;
+};
+export type acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponseError = (acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponse422) & {
+  headers: Headers;
+};
+
+export type acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponse = (acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponseSuccess | acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponseError)
+
+export const getAcceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostUrl = (adjustmentId: string,) => {
+
+
+
+
+  return `/api/v1/plan/adjustments/${adjustmentId}/accept`
+}
+
+/**
+ * Accept a proposal: the session's prescription is rewritten.
+ * @summary Accept Adjustment
+ */
+export const acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPost = async (adjustmentId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getAcceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostUrl(adjustmentId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DecisionResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as acceptAdjustmentApiV1PlanAdjustmentsAdjustmentIdAcceptPostResponse
+}
+
+
+
+export type keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponse200 = {
+  data: DecisionResponse
+  status: 200
+}
+
+export type keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponseSuccess = (keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponse200) & {
+  headers: Headers;
+};
+export type keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponseError = (keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponse422) & {
+  headers: Headers;
+};
+
+export type keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponse = (keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponseSuccess | keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponseError)
+
+export const getKeepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostUrl = (adjustmentId: string,) => {
+
+
+
+
+  return `/api/v1/plan/adjustments/${adjustmentId}/keep`
+}
+
+/**
+ * Keep the original plan: the proposal is closed without a change.
+ * @summary Keep Adjustment
+ */
+export const keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPost = async (adjustmentId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getKeepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostUrl(adjustmentId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DecisionResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as keepAdjustmentApiV1PlanAdjustmentsAdjustmentIdKeepPostResponse
 }
 
 

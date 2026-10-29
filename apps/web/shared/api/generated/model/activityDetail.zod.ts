@@ -10,12 +10,17 @@ export const activityDetailHasCadenceDefault = false;
 export const activityDetailHasGpsDefault = false;
 export const activityDetailHasHrDefault = false;
 export const activityDetailHasPowerDefault = false;
+export const activityDetailIsBookmarkedDefault = false;
 export const ActivityDetail = zod.object({
   "activity_id": zod.string(),
+  "aerobic_te": zod.union([zod.number(),zod.null()]).optional(),
+  "anaerobic_te": zod.union([zod.number(),zod.null()]).optional(),
   "avg_cadence": zod.union([zod.number(),zod.null()]).optional(),
   "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "avg_lr_balance_pct": zod.union([zod.number(),zod.null()]).optional(),
   "avg_power": zod.union([zod.number(),zod.null()]).optional(),
   "avg_speed": zod.union([zod.number(),zod.null()]).optional(),
+  "avg_stride_length_m": zod.union([zod.number(),zod.null()]).optional(),
   "calories": zod.union([zod.number(),zod.null()]).optional(),
   "device_name": zod.union([zod.string(),zod.null()]).optional(),
   "distance_m": zod.union([zod.number(),zod.null()]).optional(),
@@ -29,13 +34,17 @@ export const ActivityDetail = zod.object({
   "has_power": zod.boolean().default(activityDetailHasPowerDefault),
   "icu_ctl": zod.union([zod.number(),zod.null()]).optional(),
   "intensity_factor": zod.union([zod.number(),zod.null()]).optional(),
+  "is_bookmarked": zod.boolean().default(activityDetailIsBookmarkedDefault),
   "max_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "name": zod.union([zod.string(),zod.null()]).optional(),
   "np": zod.union([zod.number(),zod.null()]).optional(),
   "raw_data": zod.union([zod.union([zod.record(zod.string(), zod.unknown()),zod.array(zod.unknown()),zod.string(),zod.number(),zod.number(),zod.boolean(),zod.null()]),zod.null()]).optional(),
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
   "source": zod.union([zod.string(),zod.null()]).optional(),
   "sport": zod.string(),
   "start_time": zod.iso.datetime({"offset":true}),
   "summary_polyline": zod.union([zod.string(),zod.null()]).optional(),
+  "trimp": zod.union([zod.number(),zod.null()]).optional(),
   "tss": zod.union([zod.number(),zod.null()]).optional(),
   "weather": zod.union([zod.object({
   "avg_temp": zod.union([zod.number(),zod.null()]).optional(),
@@ -50,7 +59,8 @@ export const ActivityDetail = zod.object({
   "wind_deg": zod.union([zod.number(),zod.null()]).optional(),
   "wind_gust": zod.union([zod.number(),zod.null()]).optional(),
   "wind_speed": zod.union([zod.number(),zod.null()]).optional()
-}),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "weather_source": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export type ActivityDetail = zod.input<typeof ActivityDetail>;

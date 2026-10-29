@@ -7,12 +7,17 @@
 import { z as zod } from 'zod';
 
 export const activityUploadResponseHasGpsDefault = false;
+export const activityUploadResponseIsBookmarkedDefault = false;
 export const ActivityUploadResponse = zod.object({
   "activity_id": zod.string(),
+  "aerobic_te": zod.union([zod.number(),zod.null()]).optional(),
+  "anaerobic_te": zod.union([zod.number(),zod.null()]).optional(),
   "avg_cadence": zod.union([zod.number(),zod.null()]).optional(),
   "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "avg_lr_balance_pct": zod.union([zod.number(),zod.null()]).optional(),
   "avg_power": zod.union([zod.number(),zod.null()]).optional(),
   "avg_speed": zod.union([zod.number(),zod.null()]).optional(),
+  "avg_stride_length_m": zod.union([zod.number(),zod.null()]).optional(),
   "calories": zod.union([zod.number(),zod.null()]).optional(),
   "device_name": zod.union([zod.string(),zod.null()]).optional(),
   "distance_m": zod.union([zod.number(),zod.null()]).optional(),
@@ -23,15 +28,20 @@ export const ActivityUploadResponse = zod.object({
   "has_gps": zod.boolean().default(activityUploadResponseHasGpsDefault),
   "icu_ctl": zod.union([zod.number(),zod.null()]).optional(),
   "intensity_factor": zod.union([zod.number(),zod.null()]).optional(),
+  "is_bookmarked": zod.boolean().default(activityUploadResponseIsBookmarkedDefault),
   "max_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "name": zod.union([zod.string(),zod.null()]).optional(),
   "np": zod.union([zod.number(),zod.null()]).optional(),
   "recompute_generation": zod.number(),
   "recompute_status": zod.literal("queued"),
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
   "source": zod.union([zod.string(),zod.null()]).optional(),
   "sport": zod.string(),
   "start_time": zod.iso.datetime({"offset":true}),
   "summary_polyline": zod.union([zod.string(),zod.null()]).optional(),
-  "tss": zod.union([zod.number(),zod.null()]).optional()
+  "trimp": zod.union([zod.number(),zod.null()]).optional(),
+  "tss": zod.union([zod.number(),zod.null()]).optional(),
+  "weather_source": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export type ActivityUploadResponse = zod.input<typeof ActivityUploadResponse>;

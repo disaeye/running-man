@@ -6,7 +6,28 @@
  */
 import { z as zod } from 'zod';
 
+export const activityAnalysisResponseBiomechanicsSampleCountsCadenceDefault = 0;
+export const activityAnalysisResponseBiomechanicsSampleCountsGroundContactTimeDefault = 0;
+export const activityAnalysisResponseBiomechanicsSampleCountsLeftRightBalanceDefault = 0;
+export const activityAnalysisResponseBiomechanicsSampleCountsStrideLengthDefault = 0;
+export const activityAnalysisResponseBiomechanicsSampleCountsVerticalOscillationDefault = 0;
 export const ActivityAnalysisResponse = zod.object({
+  "biomechanics": zod.object({
+  "avg_cadence_spm": zod.union([zod.number(),zod.null()]).optional(),
+  "avg_ground_contact_time_ms": zod.union([zod.number(),zod.null()]).optional(),
+  "avg_lr_balance_pct": zod.union([zod.number(),zod.null()]).optional(),
+  "avg_stride_length_m": zod.union([zod.number(),zod.null()]).optional(),
+  "avg_vertical_oscillation_cm": zod.union([zod.number(),zod.null()]).optional(),
+  "sample_counts": zod.object({
+  "cadence": zod.number().default(activityAnalysisResponseBiomechanicsSampleCountsCadenceDefault),
+  "ground_contact_time": zod.number().default(activityAnalysisResponseBiomechanicsSampleCountsGroundContactTimeDefault),
+  "left_right_balance": zod.number().default(activityAnalysisResponseBiomechanicsSampleCountsLeftRightBalanceDefault),
+  "stride_length": zod.number().default(activityAnalysisResponseBiomechanicsSampleCountsStrideLengthDefault),
+  "vertical_oscillation": zod.number().default(activityAnalysisResponseBiomechanicsSampleCountsVerticalOscillationDefault)
+}).optional().describe('How many samples each biomechanics figure was computed from.\n\nA single-sample average is not a measured average, so the page needs to\nsee the sample count behind every figure it shows.')
+}).optional().describe('The biomechanics matrix the activity detail page shows.\n\nA field is ``None`` when the device did not record that channel; the page\nshows \"未记录\" for those. ``sample_counts`` says how many samples each\nfigure was computed from, so a single-sample average cannot be mistaken\nfor a measured average.'),
+  "dominant_zone": zod.union([zod.number(),zod.null()]).optional(),
+  "fastest_lap_index": zod.union([zod.number(),zod.null()]).optional(),
   "hr_zones": zod.object({
   "z1": zod.number(),
   "z2": zod.number(),
@@ -17,10 +38,13 @@ export const ActivityAnalysisResponse = zod.object({
   "laps": zod.array(zod.object({
   "avg_hr": zod.union([zod.number(),zod.null()]),
   "avg_power": zod.union([zod.number(),zod.null()]),
+  "avg_speed": zod.union([zod.number(),zod.null()]).optional(),
   "distance_m": zod.number(),
-  "duration_s": zod.number(),
-  "lap_index": zod.number()
+  "duration_s": zod.union([zod.number(),zod.null()]),
+  "lap_index": zod.number(),
+  "pace_s_per_km": zod.union([zod.number(),zod.null()]).optional()
 })),
+  "pace_variation_s": zod.union([zod.number(),zod.null()]).optional(),
   "power_curve": zod.array(zod.object({
   "avg_w": zod.number(),
   "duration_s": zod.number()
@@ -30,7 +54,14 @@ export const ActivityAnalysisResponse = zod.object({
   "if": zod.union([zod.number(),zod.null()]),
   "np": zod.union([zod.number(),zod.null()]),
   "tss": zod.union([zod.number(),zod.null()])
-})
+}),
+  "zone_residence": zod.array(zod.object({
+  "max_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "min_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "pct": zod.number(),
+  "seconds": zod.number(),
+  "zone": zod.number()
+}).describe('Time spent in one heart-rate zone, with the boundaries that applied.\n\n``min_bpm``\/``max_bpm`` are the athlete\'s own zone edges for the date of\nthe activity, so the page can print the range next to the time.\n``pct`` is the share of the covered time, and the shares of all five zones\nadd up to 100.')).optional()
 })
 
 export type ActivityAnalysisResponse = zod.input<typeof ActivityAnalysisResponse>;

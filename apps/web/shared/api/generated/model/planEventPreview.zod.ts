@@ -35,6 +35,7 @@ export const PlanEventPreview = zod.object({
   "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
   "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
   "phase": zod.string(),
+  "predicted_distance_m": zod.union([zod.number(),zod.null()]).optional(),
   "predicted_tss": zod.number(),
   "segments": zod.array(zod.object({
   "duration_min": zod.number().gt(planEventPreviewSegmentsItemDurationMinExclusiveMin).max(planEventPreviewSegmentsItemDurationMinMax),
