@@ -1,12 +1,12 @@
 import type { SettingsSectionId } from "@shared/config/canonical-routes";
 
-const PROFILE_TABS: readonly { readonly id: SettingsSectionId; readonly label: string }[] = [
+const SETTINGS_SECTIONS: readonly { readonly id: SettingsSectionId; readonly label: string }[] = [
   { id: "training", label: "生理与区间" },
   { id: "data", label: "数据源与同步" },
   { id: "account", label: "账户与偏好" },
 ];
 
-/** 档案页下半部的设置分区导航。 */
+/** 设置页的设置分类导航。 */
 export function SettingsSectionTabs({
   activeTab,
   onChange,
@@ -18,9 +18,9 @@ export function SettingsSectionTabs({
     <div
       className="grid grid-cols-3 gap-1 rounded-2xl bg-surface-overlay p-1 sm:inline-flex sm:flex-wrap"
       role="group"
-      aria-label="档案分区"
+      aria-label="设置分类"
     >
-      {PROFILE_TABS.map((tab) => {
+      {SETTINGS_SECTIONS.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <button

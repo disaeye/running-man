@@ -22,7 +22,7 @@ interface AppShellProps {
  * and scroll region. Route pages should only render content inside a `.page-stack`
  * (or plain fragment) — no max-w / pb-24 / safe-area / dual-layout of their own.
  *
- * The bar carries the sync state and the account entry while the page's own
+ * The bar carries the sync state and the account settings entry while the page's own
  * title is on screen; once that title scrolls away the bar takes it over.
  */
 export function AppShell({ children, athleteInfo, onAvatarClick }: AppShellProps) {
@@ -170,7 +170,7 @@ function ProfileButton({
       data-testid="profile-button"
       onClick={onClick}
       className="focus-ring flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border-subtle bg-rail text-caption1 font-semibold text-accent-strong transition-transform duration-150 active:scale-95"
-      aria-label="打开个人设置"
+      aria-label="打开设置"
     >
       {initials ? (
         <span aria-hidden="true">{initials}</span>

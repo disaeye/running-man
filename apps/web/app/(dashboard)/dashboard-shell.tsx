@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@shared/layout/AppShell";
 import { SWRProvider } from "@shared/lib/swr-provider";
 import { useCoachContext } from "@features/today/hooks/useCoachContext";
@@ -8,6 +9,7 @@ import { athleteWeekRange, useAthleteTimezone } from "@shared/lib/training-day";
 import { isoWeek } from "@features/calendar/lib/build-week-summary";
 
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const timezone = useAthleteTimezone();
   const coachQuery = useCoachContext();
   const weekRange = useMemo(() => athleteWeekRange(timezone), [timezone]);
@@ -24,9 +26,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         ctl: ctl !== null ? Math.round(ctl) : null,
         tsb: tsb !== null ? Math.round(tsb) : null,
       }}
-      onAvatarClick={() => {
-        window.dispatchEvent(new CustomEvent("navigate-settings"));
-      }}
+      onAvatarClick={() => router.push("/settings?section=account")}
     >
       {children}
     </AppShell>

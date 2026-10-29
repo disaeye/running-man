@@ -44,7 +44,7 @@ export function DemoAnalysisSession() {
           训练的完整回顾。
         </p>
         <Link
-          href="/settings"
+          href="/settings?section=data"
           className="focus-ring mt-3 inline-flex min-h-10 items-center rounded-full bg-surface-overlay px-4 text-caption1 font-medium text-accent transition-colors hover:bg-surface-active"
         >
           去同步数据

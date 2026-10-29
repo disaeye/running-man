@@ -5,7 +5,7 @@ import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { UserProfile } from "@shared/lib/auth";
 
 /**
- * 跑者个人名片（参考稿的档案页头部）。
+ * 跑者个人名片（档案页的身份摘要）。
  *
  * 身份一行：名字、等级徽章、VDOT、PB 摘要。
  * 下面两格：累计总里程、完赛次数。
@@ -63,12 +63,9 @@ export function DemoIdentityCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1
-              data-page-title
-              className="font-display text-title2 uppercase tracking-wide text-text-primary"
-            >
+            <h2 className="font-display text-title2 uppercase tracking-wide text-text-primary">
               {name}
-            </h1>
+            </h2>
             {tierLabel ? (
               <span className="rounded bg-accent/15 px-2 py-0.5 font-mono text-caption1 text-accent">
                 {tierLabel}

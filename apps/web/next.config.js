@@ -67,8 +67,8 @@ const nextConfig = {
         permanent: true,
       },
       { source: "/performance", destination: "/analysis?tab=performance", permanent: true },
-      { source: "/gear", destination: "/settings", permanent: true },
-      { source: "/library", destination: "/settings", permanent: true },
+      { source: "/gear", destination: "/settings?section=account", permanent: true },
+      { source: "/library", destination: "/settings?section=account", permanent: true },
     ];
   },
 };

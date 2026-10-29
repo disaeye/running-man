@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 /**
  * Routes reachable without an access token.
  *
- * PUBLIC_PATHS used to list `/settings`, `/calendar`, `/analysis` and `/goals`
+ * PUBLIC_PATHS used to list `/profile`, `/settings`, `/calendar`, `/analysis` and `/goals`
  * — every dashboard route — so the token check below it was unreachable and an
  * unauthenticated visitor got a 200 on any page. The pages then rendered with
  * failed API calls, which the UI papered over with hard-coded defaults (a fake
@@ -30,6 +30,7 @@ const PROTECTED_PATHS = [
   "/analysis",
   "/calendar",
   "/goals",
+  "/profile",
   "/settings",
   // Developer gallery of primitives. Nothing links to it, and it is part of
   // the platform rather than a public page.
