@@ -94,6 +94,6 @@ verify
 trap - ERR
 # Keep the newest previous build for manual rollback, drop older ones.
 ls -1dt .next-prev-* 2>/dev/null | tail -n +2 | xargs -r rm -rf
-ls -1dt .next-build* 2>/dev/null | xargs -r rm -rf
+find . -maxdepth 1 -type d -name '.next-build*' -exec rm -rf -- {} +
 
 echo "==> deployed. logs: journalctl --user -u $SERVICE -f"
