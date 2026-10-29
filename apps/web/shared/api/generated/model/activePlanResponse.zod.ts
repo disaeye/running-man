@@ -43,7 +43,7 @@ export const ActivePlanResponse = zod.object({
   "label": zod.string(),
   "max_s_per_km": zod.number(),
   "min_s_per_km": zod.number()
-}).describe('One of the five Daniels training paces.\n\nThe ranges come from the athlete\'s own VDOT through the published oxygen\nfractions, so the numbers on the page are the numbers the prescription\ngenerator uses.')).optional(),
+}).describe('One of the five Daniels training paces.')).optional(),
   "vdot": zod.union([zod.number(),zod.null()]).optional(),
   "week_actual_distance_m": zod.union([zod.number(),zod.null()]).optional(),
   "week_actual_tss": zod.union([zod.number(),zod.null()]).optional(),
