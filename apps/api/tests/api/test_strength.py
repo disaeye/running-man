@@ -50,6 +50,19 @@ async def test_strength_workout_set_flow() -> None:
     assert set_response.status_code == 201
     assert set_response.json()["estimated_1rm_kg"] == pytest.approx(116.67)
 
+    incomplete_set = await _post(
+        f"/api/v1/strength/workout-exercises/{exercise.json()['id']}/sets",
+        {"weight_kg": None, "reps": 8, "rpe": 5},
+    )
+    assert incomplete_set.status_code == 422
+
+    completion_response = await _put(
+        f"/api/v1/strength/workout-exercises/{exercise.json()['id']}/sets/{set_response.json()['id']}",
+        {"completed": False},
+    )
+    assert completion_response.status_code == 200
+    assert completion_response.json()["completed"] is False
+
 
 @pytest.mark.no_db
 async def test_strength_set_validation() -> None:
@@ -73,6 +86,12 @@ async def _post(path: str, payload: dict[str, object]) -> Response:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         return await client.post(path, json=payload)
+
+
+async def _put(path: str, payload: dict[str, object]) -> Response:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        return await client.put(path, json=payload)
 
 
 def _use_repo(repo: "FakeStrengthRepo") -> None:
@@ -131,7 +150,17 @@ class FakeStrengthRepo:
         assert athlete_id == ATHLETE.id
         estimated = round(weight_kg * (1 + reps / 30), 2) if 1 <= reps <= 10 else None
         row = _set(workout_exercise_id, weight_kg, reps, rpe, set_type, rest_seconds, estimated)
+        row["id"] = len(self.sets) + 1
         self.sets.append(row)
+        return row
+
+    async def update_set(
+        self, set_id: int, athlete_id: UUID, data: dict[str, object]
+    ) -> dict[str, object] | None:
+        assert athlete_id == ATHLETE.id
+        row = next((item for item in self.sets if item["id"] == set_id), None)
+        if row is not None and "completed" in data:
+            row["completed"] = data["completed"]
         return row
 
 
@@ -167,6 +196,7 @@ def _set(
     set_type: str | None,
     rest_seconds: int | None,
     estimated: float | None,
+    completed: bool = True,
 ) -> dict[str, object]:
     return {
         "id": 1,
@@ -178,7 +208,7 @@ def _set(
         "rpe": rpe,
         "set_type": set_type or "working",
         "rest_seconds": rest_seconds,
-        "completed": True,
+        "completed": completed,
         "estimated_1rm_kg": estimated,
         "created_at": datetime(2026, 6, 22, tzinfo=UTC),
     }
