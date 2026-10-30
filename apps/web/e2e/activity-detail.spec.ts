@@ -85,25 +85,15 @@ test.describe("activity workflow", () => {
     page,
   }) => {
     await page.goto("/activities");
+    await page.waitForURL(/\/calendar\?view=list/);
 
-    // The status region wraps the list's own loading status, so wait for the
-    // list card to settle before following a route.
-    await expect(page.getByTestId("activity-table")).not.toContainText("加载中...", {
-      timeout: 15000,
-    });
+    const activityLink = page.getByRole("link", { name: /日常训练 跑步/ }).first();
+    await expect(activityLink).toBeVisible({ timeout: 15000 });
+    await expect(activityLink).toHaveAttribute("href", /\/activities\//);
+    await activityLink.click();
+    await page.waitForURL(/\/activities\//);
 
-    // Check if there are activity links
-    const activityLinks = page.locator('a[href*="/activities/"]');
-    const count = await activityLinks.count();
-
-    if (count > 0) {
-      await activityLinks.first().click();
-      await page.waitForURL(/\/activities\//);
-
-      // Detail page should show coach debrief
-      await expect(page.getByText("教练摘要")).toBeVisible({ timeout: 10000 });
-    }
-    // If no activities, the empty state renders — test passes structurally
+    await expect(page.getByTestId("demo-activity-report")).toBeVisible({ timeout: 10000 });
   });
 
   test("shows filter controls on activities page", async ({ page }) => {
