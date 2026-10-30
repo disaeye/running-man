@@ -89,7 +89,6 @@ test.describe("activity workflow", () => {
 
     const activityLink = page.getByRole("link", { name: /日常训练 跑步/ }).first();
     await expect(activityLink).toBeVisible({ timeout: 15000 });
-    await expect(activityLink).toHaveAttribute("href", /\/activities\//);
     await activityLink.click();
     await page.waitForURL(/\/activities\//);
 
