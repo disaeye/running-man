@@ -103,7 +103,22 @@ def api_gates() -> list[Gate]:
     # one at runtime, a fixture asserting a hardcoded version, a test that only
     # holds for half the day. A missing DSN now fails here, at conftest import,
     # with the reason `testsupport.test_dsn()` raises.
-    gates.append(Gate("api", "pytest", [python, "-m", "pytest", "-q"], API_DIR, 900))
+    gates.append(
+        Gate(
+            "api",
+            "pytest",
+            [
+                python,
+                "-m",
+                "pytest",
+                "-q",
+                "--basetemp",
+                str(REPO_ROOT / ".pi" / "pytest-temp"),
+            ],
+            API_DIR,
+            900,
+        )
+    )
     return gates
 
 
@@ -129,7 +144,7 @@ def web_gates(fast: bool) -> list[Gate]:
     gates = [
         Gate("web", "eslint", ["npm", "run", "lint", "--", "--max-warnings=0"], WEB_DIR, 600),
         Gate("web", "tsc", ["node", "node_modules/typescript/bin/tsc", "--noEmit"], WEB_DIR),
-        Gate("web", "vitest", ["npm", "run", "test"], WEB_DIR),
+        Gate("web", "vitest", ["npm", "run", "test"], WEB_DIR, env={"NODE_ENV": "test"}),
         Gate("web", "file-size (apps/web)", ["python3", "scripts/lint_file_size.py", "apps/web"], REPO_ROOT),
     ]
     if fast:
