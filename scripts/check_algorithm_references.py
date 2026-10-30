@@ -160,7 +160,6 @@ def _load_adjustment(inputs: dict[str, object]) -> dict[str, float]:
         hrv_baseline=float(inputs["hrv_baseline"])
         if inputs.get("hrv_baseline") is not None
         else None,
-        tsb=float(inputs["tsb"]) if inputs.get("tsb") is not None else None,
         hr_drift_bpm=float(inputs["hr_drift_bpm"])
         if inputs.get("hr_drift_bpm") is not None
         else None,
@@ -207,7 +206,8 @@ EVALUATORS: Final[dict[tuple[str, str], Callable[[dict[str, object]], dict[str, 
     ("recovery_projection", "negative_balance_recovers_in_four_days"): _recovery_projection,
     ("recovery_projection", "severe_fatigue_exceeds_projection_horizon"): _recovery_projection,
     ("load_adjustment", "low_hrv_recommends_ten_percent_reduction"): _load_adjustment,
-    ("load_adjustment", "combined_triggers_respect_reduction_cap"): _load_adjustment,
+    ("load_adjustment", "combined_measured_triggers_respect_reduction_cap"): _load_adjustment,
+    ("load_adjustment", "long_run_drift_requires_long_enough_session"): _load_adjustment,
     ("load_adjustment", "no_recovery_signals_produce_no_adjustment"): _load_adjustment,
 }
 

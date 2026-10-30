@@ -102,7 +102,7 @@ algorithms:
         expect: { reachable: 0 }
         tolerance: 0
   - key: load_adjustment
-    version: 1.0.0
+    version: 2.0.0
     input_window_days: 7
     materialization: derived_on_read
     outputs: [reduction_pct, trigger_count]
@@ -112,27 +112,33 @@ algorithms:
           event_id: reference-session
           hrv_today: 50
           hrv_baseline: 60
-          tsb: 0
           hr_drift_bpm: 0
           long_run_seconds: 3600
         expect: { reduction_pct: 10, trigger_count: 1 }
         tolerance: 0
-      - name: combined_triggers_respect_reduction_cap
+      - name: combined_measured_triggers_respect_reduction_cap
         inputs:
           event_id: reference-session
           hrv_today: 50
           hrv_baseline: 60
-          tsb: -25
           hr_drift_bpm: 10
           long_run_seconds: 3600
-        expect: { reduction_pct: 30, trigger_count: 3 }
+        expect: { reduction_pct: 20, trigger_count: 2 }
+        tolerance: 0
+      - name: long_run_drift_requires_long_enough_session
+        inputs:
+          event_id: reference-session
+          hrv_today: 60
+          hrv_baseline: 60
+          hr_drift_bpm: 10
+          long_run_seconds: 3599
+        expect: { reduction_pct: 0, trigger_count: 0 }
         tolerance: 0
       - name: no_recovery_signals_produce_no_adjustment
         inputs:
           event_id: reference-session
           hrv_today: 60
           hrv_baseline: 60
-          tsb: 0
           hr_drift_bpm: 0
           long_run_seconds: 3600
         expect: { reduction_pct: 0, trigger_count: 0 }

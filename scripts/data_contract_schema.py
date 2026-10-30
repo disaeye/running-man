@@ -42,7 +42,7 @@ EXPECTED_ALGORITHM_VERSIONS: Final = {
     "pmc": "1.0.0",
     "physiology": "1.2.0",
     "recovery_projection": "1.0.0",
-    "load_adjustment": "1.0.0",
+    "load_adjustment": "2.0.0",
 }
 EXPECTED_METRIC_UNITS: Final = {
     "distance_m": "m",
