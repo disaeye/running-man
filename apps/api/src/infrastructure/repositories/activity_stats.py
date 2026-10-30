@@ -47,7 +47,7 @@ class ActivityStatsRepo:
         LEFT JOIN current_activity_facts AS tss
           ON tss.athlete_id = a.athlete_id AND tss.subject_key = a.activity_id
          AND tss.metric_key = 'tss'
-        WHERE {" AND ".join(f'a.{condition}' for condition in conditions)}
+        WHERE {" AND ".join(conditions)}
         GROUP BY a.sport
         ORDER BY a.sport
         """

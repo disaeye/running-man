@@ -1,14 +1,17 @@
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.strength import StrengthRepo
+from presentation.api.strength_dependencies import get_strength_repo
 from presentation.api.workout_schemas import (
     ExerciseLibraryItem,
     SetCreate,
     SetResponse,
     SetUpdate,
+    StrengthActivityResponse,
     WorkoutCreate,
     WorkoutCreateResponse,
     WorkoutExerciseCreate,
@@ -20,8 +23,15 @@ from presentation.auth.deps import get_current_athlete
 router = APIRouter(prefix="/strength", tags=["strength"])
 
 
-def get_strength_repo() -> StrengthRepo:
-    return StrengthRepo()
+@router.get("/workouts", response_model=list[StrengthActivityResponse])
+async def list_strength_activities(
+    athlete: Annotated[Athlete, Depends(get_current_athlete)],
+    repo: Annotated[StrengthRepo, Depends(get_strength_repo)],
+    from_date: date | None = None,
+    to_date: date | None = None,
+) -> list[StrengthActivityResponse]:
+    rows = await repo.list_activities(athlete.id, from_date, to_date)
+    return [StrengthActivityResponse.model_validate(row) for row in rows]
 
 
 @router.get("/exercises", response_model=list[ExerciseLibraryItem])

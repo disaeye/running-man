@@ -20,7 +20,6 @@ class PlanGenerateRequest(BaseModel):
     goal_id: UUID
     rest_days: int | None = Field(default=None, ge=0, le=6)
     preferred_days_off: list[int] | None = Field(default=None, max_length=7)
-    weekly_tss: float | None = Field(default=None, gt=0, le=2000)
     # 运动员指定的长距离日（星期几），不填则由生成器安排。
     long_run_day: int | None = Field(default=None, ge=0, le=WEEKDAY_MAX)
 
@@ -38,7 +37,7 @@ class PlanPhasePreview(BaseModel):
     name: str
     start_date: date
     end_date: date
-    target_weekly_tss: float
+    target_weekly_distance_m: float
 
 
 class PlanEventPreview(BaseModel):
@@ -48,7 +47,6 @@ class PlanEventPreview(BaseModel):
     training_type: str
     category: str = "workout"
     duration_min: int
-    predicted_tss: float
     pace_min_s_km: int | None = None
     pace_max_s_km: int | None = None
     # 目标距离（米）。没有配速可推算时为 None。
@@ -64,7 +62,7 @@ class PlanGenerateResponse(BaseModel):
     phases: list[PlanPhasePreview] | None = None
     events: list[PlanEventPreview] | None = None
     training_paces_available: bool | None = None
-    training_load_available: bool | None = None
+    running_history_weeks: int | None = None
 
 
 class TrainingPhaseResponse(BaseModel):
@@ -73,7 +71,7 @@ class TrainingPhaseResponse(BaseModel):
     name: str
     start_date: date
     end_date: date
-    target_weekly_tss: float | None = None
+    target_weekly_distance_m: float | None = None
 
 
 def get_goals_repo() -> GoalsRepo:
@@ -96,7 +94,6 @@ async def generate_training_plan(
                     dry_run=dry_run,
                     rest_days=payload.rest_days,
                     preferred_days_off=payload.preferred_days_off,
-                    weekly_tss=payload.weekly_tss,
                     long_run_day=payload.long_run_day,
                 ),
             )

@@ -20,7 +20,7 @@ class ActivityReadRepo:
                a.external_id, a.source, a.file_type, a.device_name, a.summary_polyline,
                a.name, a.rpe, a.trimp, a.aerobic_te, a.anaerobic_te,
                a.avg_stride_length_m, a.avg_lr_balance_pct, a.is_bookmarked,
-               a.weather_source,
+               a.is_race, a.weather_source,
                a.has_gps
         FROM activity_summary AS a
         JOIN athletes AS athlete ON athlete.id = a.athlete_id
@@ -51,7 +51,7 @@ class ActivityReadRepo:
                a.has_hr, a.has_power, a.has_cadence, a.raw_data, a.summary_polyline,
                a.name, a.rpe, a.trimp, a.aerobic_te, a.anaerobic_te,
                a.avg_stride_length_m, a.avg_lr_balance_pct, a.is_bookmarked,
-               a.weather_source,
+               a.is_race, a.weather_source,
                a.weather_avg_temp, a.weather_min_temp, a.weather_max_temp,
                a.weather_feels_like, a.weather_wind_speed, a.weather_wind_gust,
                a.weather_wind_deg, a.weather_headwind_pct, a.weather_tailwind_pct,

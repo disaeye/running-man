@@ -17,6 +17,26 @@ def seed_athlete(conn: psycopg.Connection, athlete: Athlete) -> None:
     conn.commit()
 
 
+def seed_run_history(conn: psycopg.Connection, athlete_id: UUID, today: date) -> None:
+    current_monday = today - timedelta(days=today.weekday())
+    with conn.cursor() as cur:
+        for week in range(4, 0, -1):
+            run_day = current_monday - timedelta(weeks=week) + timedelta(days=2)
+            cur.execute(
+                "INSERT INTO activity_summary "
+                "(activity_id, athlete_id, start_time, sport, distance_m, duration_s) "
+                "VALUES (%s, %s, %s, 'Run', %s, %s)",
+                (
+                    f"plan-history:{athlete_id}:{week}",
+                    athlete_id,
+                    datetime.combine(run_day, time(6), tzinfo=UTC),
+                    30000.0 + (4 - week) * 1000,
+                    10800,
+                ),
+            )
+    conn.commit()
+
+
 def seed_goal(conn: psycopg.Connection, athlete_id: UUID, goal_id: UUID, race_date: date) -> None:
     with conn.cursor() as cur:
         cur.execute(
@@ -47,14 +67,15 @@ def seed_existing_events(
             cur.execute(
                 "INSERT INTO training_calendar "
                 "(event_id, athlete_id, start_time, category, sport_type, name, predicted_tss, "
-                "status, done, plan_goal_id, plan_source, athlete_edited) "
-                "VALUES (%s, %s, %s, 'workout', 'run', %s, %s, %s, %s, %s, %s, %s)",
+                "predicted_distance_m, status, done, plan_goal_id, plan_source, athlete_edited) "
+                "VALUES (%s, %s, %s, 'workout', 'run', %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     event_id,
                     athlete_id,
                     datetime.combine(date.fromisoformat(str(event["date"])), time(6), tzinfo=UTC),
                     name,
-                    event["predicted_tss"],
+                    None,
+                    event.get("predicted_distance_m"),
                     status,
                     done,
                     goal_id,

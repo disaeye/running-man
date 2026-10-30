@@ -25,6 +25,7 @@ from tests.integration.plan_generation_helpers import (
     seed_existing_phases,
     seed_goal,
     seed_phase,
+    seed_run_history,
 )
 
 pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.no_db]
@@ -42,6 +43,8 @@ async def test_plan_preview_generation_and_regeneration_preserve_athlete_data(
     other_goal_id = uuid4()
     other_athlete_goal_id = uuid4()
     seed_athlete(db_conn, athlete)
+    _ensure_activity_schema(db_conn)
+    seed_run_history(db_conn, athlete_id, today)
     seed_athlete(
         db_conn,
         Athlete(other_athlete_id, f"other-{other_athlete_id}@example.com", "hash", timezone="UTC"),
@@ -87,7 +90,10 @@ async def test_plan_preview_generation_and_regeneration_preserve_athlete_data(
             assert race_calendar_events[0]["category"] == "workout"
             assert race_calendar_events[0]["training_type"] == "race"
             assert race_calendar_events[0]["name"] == "比赛日 · 目标比赛"
-            assert race_calendar_events[0]["predicted_tss"] == 0.0
+            assert race_calendar_events[0]["predicted_tss"] is None
+            assert race_calendar_events[0]["predicted_distance_m"] == 42195
+            assert all("predicted_tss" not in event for event in preview["events"])
+            assert all(event.get("predicted_distance_m") for event in preview["events"])
             active_count = active_generated_count(db_conn, athlete_id, goal_id)
 
             regenerated = await _generate_plan(client, goal_id)
@@ -106,10 +112,38 @@ async def test_plan_preview_generation_and_regeneration_preserve_athlete_data(
         delete_athlete(db_conn, athlete_id)
         delete_athlete(db_conn, other_athlete_id)
 
+def _ensure_activity_schema(conn: psycopg.Connection) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS "
+            "is_race BOOLEAN NOT NULL DEFAULT false"
+        )
+        cur.execute(
+            "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS "
+            "is_ignored BOOLEAN NOT NULL DEFAULT false"
+        )
+        cur.execute("ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ")
+        cur.execute("ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS ignored_at TIMESTAMPTZ")
+        cur.execute(
+            "INSERT INTO sport_definitions (sport_key, display_name, family) "
+            "VALUES ('run', 'Run', 'running') ON CONFLICT DO NOTHING"
+        )
+        cur.execute(
+            "INSERT INTO sport_definitions (sport_key, display_name, family) "
+            "VALUES ('Run', 'Run', 'running') ON CONFLICT DO NOTHING"
+        )
+        cur.execute("DROP VIEW IF EXISTS activity_compute")
+        cur.execute(
+            "CREATE VIEW activity_compute AS SELECT * FROM activity_summary "
+            "WHERE deleted_at IS NULL AND ignored_at IS NULL"
+        )
+    conn.commit()
+
+
 async def _preview_plan(client: AsyncClient, goal_id: object) -> dict[str, object]:
     response = await client.post(
         "/api/v1/plan/generate?dry_run=true",
-        json={"goal_id": str(goal_id), "weekly_tss": 280},
+        json={"goal_id": str(goal_id)},
     )
     assert response.status_code == 200, response.text
     preview = response.json()
@@ -120,7 +154,7 @@ async def _preview_plan(client: AsyncClient, goal_id: object) -> dict[str, objec
 
 async def _generate_plan(client: AsyncClient, goal_id: object) -> dict[str, object]:
     response = await client.post(
-        "/api/v1/plan/generate", json={"goal_id": str(goal_id), "weekly_tss": 280}
+        "/api/v1/plan/generate", json={"goal_id": str(goal_id)}
     )
     assert response.status_code == 200, response.text
     return response.json()

@@ -85,6 +85,7 @@ _SCHEMA_SQL = (
         source_weighted_power_w DOUBLE PRECISION,
         source_training_load DOUBLE PRECISION,
         raw_data JSONB,
+        is_race BOOLEAN NOT NULL DEFAULT FALSE,
         PRIMARY KEY (activity_id, start_time)
     )
     """,
@@ -94,6 +95,8 @@ _SCHEMA_SQL = (
     "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS source_weighted_power_w DOUBLE PRECISION",
     "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS source_training_load DOUBLE PRECISION",
     "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS raw_data JSONB",
+    "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS is_race BOOLEAN NOT NULL DEFAULT FALSE",
+    "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS is_ignored BOOLEAN NOT NULL DEFAULT FALSE",
     # Mirrors the production migration: derived numbers read this view rather
     # than the table, so that ignored and soft-deleted activities are excluded
     # in one place instead of in every query.

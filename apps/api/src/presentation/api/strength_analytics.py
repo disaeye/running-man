@@ -4,13 +4,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 
 from infrastructure.auth.models import Athlete
-from infrastructure.repositories.strength import StrengthRepo
+from infrastructure.repositories.strength_analytics import StrengthAnalyticsRepo
 from presentation.api.analytics_strength_contracts import (
     E1rmTrendResponse,
     MuscleDistributionResponse,
     MuscleVolumeResponse,
 )
-from presentation.api.strength import get_strength_repo
+from presentation.api.strength_dependencies import get_strength_repo
 from presentation.auth.deps import get_current_athlete
 
 router = APIRouter(prefix="/strength/analytics", tags=["strength"])
@@ -23,7 +23,7 @@ ToDate = Annotated[date | None, Query(alias="to")]
 @router.get("/muscle-volume", response_model=list[MuscleVolumeResponse])
 async def muscle_volume(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
-    repo: Annotated[StrengthRepo, Depends(get_strength_repo)],
+    repo: Annotated[StrengthAnalyticsRepo, Depends(get_strength_repo)],
     from_date: FromDate = None,
     to_date: ToDate = None,
 ) -> list[MuscleVolumeResponse]:
@@ -34,7 +34,7 @@ async def muscle_volume(
 @router.get("/e1rm", response_model=list[E1rmTrendResponse])
 async def e1rm_trend(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
-    repo: Annotated[StrengthRepo, Depends(get_strength_repo)],
+    repo: Annotated[StrengthAnalyticsRepo, Depends(get_strength_repo)],
     from_date: FromDate = None,
     to_date: ToDate = None,
 ) -> list[E1rmTrendResponse]:
@@ -45,7 +45,7 @@ async def e1rm_trend(
 @router.get("/distribution", response_model=list[MuscleDistributionResponse])
 async def muscle_distribution(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
-    repo: Annotated[StrengthRepo, Depends(get_strength_repo)],
+    repo: Annotated[StrengthAnalyticsRepo, Depends(get_strength_repo)],
     from_date: FromDate = None,
     to_date: ToDate = None,
 ) -> list[MuscleDistributionResponse]:

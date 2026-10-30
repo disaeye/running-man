@@ -45,7 +45,7 @@ def event_record(
         "athlete_id": athlete_id,
         "start_time": start_time,
         "name": name,
-        "predicted_tss": round(day.target_tss, 1),
+        "predicted_tss": None,
         "predicted_distance_m": distance_m,
         "sport_type": sport,
         "plan_goal_id": goal_id,
@@ -59,7 +59,6 @@ def event_record(
             "training_type": day.workout_type,
             "category": "workout",
             "duration_min": day.duration_min,
-            "predicted_tss": round(day.target_tss, 1),
             "predicted_distance_m": distance_m,
             "pace_min_s_km": day.pace_min_s_km,
             "pace_max_s_km": day.pace_max_s_km,
@@ -75,6 +74,7 @@ def race_event_record(
     sport: str,
     event_day: date,
     title: str,
+    race_distance_m: float,
     timezone: ZoneInfo,
 ) -> dict[str, object]:
     event_id = f"plan:{goal_id}:{uuid5(PLAN_NAMESPACE, f'{goal_id}:{event_day.isoformat()}')}"
@@ -85,7 +85,8 @@ def race_event_record(
         "athlete_id": athlete_id,
         "start_time": start_time,
         "name": name,
-        "predicted_tss": 0.0,
+        "predicted_tss": None,
+        "predicted_distance_m": race_distance_m,
         "sport_type": sport,
         "category": "workout",
         "plan_goal_id": goal_id,
@@ -99,7 +100,7 @@ def race_event_record(
             "training_type": "race",
             "category": "workout",
             "duration_min": 0,
-            "predicted_tss": 0.0,
+            "predicted_distance_m": race_distance_m,
             "pace_min_s_km": None,
             "pace_max_s_km": None,
             "segments": [],
@@ -113,7 +114,7 @@ def phase_preview(phase: Phase) -> dict[str, object]:
         "name": phase.name,
         "start_date": phase.start_date.isoformat(),
         "end_date": phase.end_date.isoformat(),
-        "target_weekly_tss": round(phase.target_weekly_tss, 1),
+        "target_weekly_distance_m": round(phase.target_weekly_distance_m, 1),
     }
 
 
@@ -165,8 +166,9 @@ async def insert_phases(
 ) -> None:
     query = """
     INSERT INTO training_phases (
-        athlete_id, goal_id, name, start_date, end_date, target_weekly_tss
-    ) VALUES (%s, %s, %s, %s, %s, %s)
+        athlete_id, goal_id, name, start_date, end_date, target_weekly_tss,
+        target_weekly_distance_m
+    ) VALUES (%s, %s, %s, %s, %s, NULL, %s)
     """
     async with db_conn.cursor() as cur:
         for phase in phases:
@@ -180,7 +182,7 @@ async def insert_phases(
                     phase.name,
                     max(phase.start_date, today),
                     phase.end_date,
-                    phase.target_weekly_tss,
+                    phase.target_weekly_distance_m,
                 ),
             )
 
@@ -188,14 +190,16 @@ async def insert_phases(
 async def insert_events(events: list[dict[str, object]], db_conn: AsyncConnection[DictRow]) -> int:
     query = """
     INSERT INTO training_calendar (
-        event_id, athlete_id, start_time, category, sport_type, name, predicted_tss, status, done,
-        plan_goal_id, plan_source, training_type, workout_prescription, athlete_edited
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'planned', false, %s, %s, %s, %s::jsonb, false)
+        event_id, athlete_id, start_time, category, sport_type, name, predicted_tss,
+        predicted_distance_m, status, done, plan_goal_id, plan_source, training_type,
+        workout_prescription, athlete_edited
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'planned', false, %s, %s, %s, %s::jsonb, false)
     ON CONFLICT (event_id) DO UPDATE SET
         start_time = EXCLUDED.start_time,
         sport_type = EXCLUDED.sport_type,
         name = EXCLUDED.name,
         predicted_tss = EXCLUDED.predicted_tss,
+        predicted_distance_m = EXCLUDED.predicted_distance_m,
         category = EXCLUDED.category,
         plan_goal_id = EXCLUDED.plan_goal_id,
         plan_source = EXCLUDED.plan_source,
@@ -223,6 +227,7 @@ async def insert_events(events: list[dict[str, object]], db_conn: AsyncConnectio
                     event["sport_type"],
                     event["name"],
                     event["predicted_tss"],
+                    event.get("predicted_distance_m"),
                     event["plan_goal_id"],
                     event["plan_source"],
                     event["training_type"],

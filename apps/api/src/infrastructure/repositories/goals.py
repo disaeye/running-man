@@ -31,10 +31,10 @@ goal_id, athlete_id, type::text AS type, title, target_value, current_value, uni
 target_date, race_distance_m, race_target_time_s, status::text AS status, created_at, updated_at
 """
 _MILESTONE_FIELDS = """
-milestone_id, goal_id, title, target_date, target_value, achieved, achieved_at
+milestone_id, goal_id, title, target_date, target_value, unit, result_text, achieved, achieved_at
 """
 _PHASE_FIELDS = """
-phase_id, goal_id, name, start_date, end_date, target_weekly_tss
+phase_id, goal_id, name, start_date, end_date, target_weekly_tss, target_weekly_distance_m
 """
 
 
@@ -155,14 +155,19 @@ class GoalsRepo:
 
     async def create_milestone(self, goal_id: UUID, data: dict[str, object]) -> dict[str, object]:
         query = f"""
-        INSERT INTO milestones (goal_id, title, target_date, target_value, achieved, achieved_at)
-        VALUES (%s, %s, %s, %s, COALESCE(%s, false), %s) RETURNING {_MILESTONE_FIELDS}
+        INSERT INTO milestones (
+            goal_id, title, target_date, target_value, unit, result_text, achieved, achieved_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, COALESCE(%s, false), %s)
+        RETURNING {_MILESTONE_FIELDS}
         """
         values = (
             goal_id,
             data["title"],
             data.get("target_date"),
             data.get("target_value"),
+            data.get("unit"),
+            data.get("result_text"),
             data.get("achieved"),
             data.get("achieved_at"),
         )
@@ -179,6 +184,7 @@ class GoalsRepo:
         UPDATE milestones SET title = COALESCE(%s::text, title),
         target_date = COALESCE(%s::date, target_date),
         target_value = COALESCE(%s::double precision, target_value),
+        unit = COALESCE(%s::text, unit), result_text = COALESCE(%s::text, result_text),
         achieved = COALESCE(%s::boolean, achieved),
         achieved_at = COALESCE(%s::timestamptz, achieved_at)
         WHERE goal_id = %s AND milestone_id = %s RETURNING {_MILESTONE_FIELDS}
@@ -187,6 +193,8 @@ class GoalsRepo:
             data.get("title"),
             data.get("target_date"),
             data.get("target_value"),
+            data.get("unit"),
+            data.get("result_text"),
             data.get("achieved"),
             data.get("achieved_at"),
             goal_id,
@@ -213,8 +221,9 @@ class GoalsRepo:
     ) -> dict[str, object]:
         query = f"""
         INSERT INTO training_phases (
-            athlete_id, goal_id, name, start_date, end_date, target_weekly_tss
-        ) VALUES (%s, %s, %s, %s, %s, %s) RETURNING {_PHASE_FIELDS}
+            athlete_id, goal_id, name, start_date, end_date, target_weekly_tss,
+            target_weekly_distance_m
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING {_PHASE_FIELDS}
         """
         values = (
             athlete_id,
@@ -223,6 +232,7 @@ class GoalsRepo:
             data["start_date"],
             data["end_date"],
             data.get("target_weekly_tss"),
+            data.get("target_weekly_distance_m"),
         )
         async with _connect() as conn, conn.cursor() as cur:
             _ = await cur.execute(query, values)

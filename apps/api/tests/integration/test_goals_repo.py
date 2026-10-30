@@ -54,10 +54,15 @@ async def test_goals_repo_milestones_and_training_phases() -> None:
             "start_date": date(2026, 1, 1),
             "end_date": date(2026, 2, 1),
             "target_weekly_tss": 300,
+            "target_weekly_distance_m": 42000,
         },
     )
 
     assert milestone["achieved"] is False
+    assert milestone["unit"] is None
+    assert milestone["result_text"] is None
+    phases = await repo.list_training_phases(athlete_id, goal_id)
+    assert phases[0]["target_weekly_distance_m"] == 42000
     assert [row["milestone_id"] for row in await repo.list_milestones(goal_id)] == [
         milestone["milestone_id"]
     ]
@@ -121,13 +126,17 @@ async def _ensure_schema(cur: Any) -> None:
     CREATE TABLE IF NOT EXISTS milestones (
         milestone_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), goal_id UUID NOT NULL REFERENCES goals(goal_id) ON DELETE CASCADE,
         title TEXT NOT NULL, target_date DATE, target_value DOUBLE PRECISION,
-        achieved BOOLEAN NOT NULL DEFAULT false, achieved_at TIMESTAMPTZ)
+        achieved BOOLEAN NOT NULL DEFAULT false, achieved_at TIMESTAMPTZ,
+        unit TEXT, result_text TEXT)
     """)
+    await cur.execute("ALTER TABLE milestones ADD COLUMN IF NOT EXISTS unit TEXT")
+    await cur.execute("ALTER TABLE milestones ADD COLUMN IF NOT EXISTS result_text TEXT")
     await cur.execute("""
     CREATE TABLE IF NOT EXISTS training_phases (
         phase_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), goal_id UUID NOT NULL REFERENCES goals(goal_id) ON DELETE CASCADE,
         athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-        name VARCHAR NOT NULL, start_date DATE NOT NULL, end_date DATE NOT NULL, target_weekly_tss DOUBLE PRECISION)
+        name VARCHAR NOT NULL, start_date DATE NOT NULL, end_date DATE NOT NULL,
+        target_weekly_tss DOUBLE PRECISION, target_weekly_distance_m DOUBLE PRECISION)
     """)
 
 

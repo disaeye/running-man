@@ -86,7 +86,6 @@ async def test_generate_plan_preview_passes_dry_run_and_returns_dates() -> None:
     assert request.dry_run is True
     assert request.rest_days is None
     assert request.preferred_days_off is None
-    assert request.weekly_tss is None
     assert request.long_run_day is None
 
 
@@ -175,9 +174,9 @@ async def test_get_periodization() -> None:
     """GET /plan/periodization?goal_id=... returns 200 with the phases list."""
     goal_id = uuid4()
     phases = [
-        _phase(goal_id, "Base", date(2026, 6, 1), date(2026, 6, 28), 300.0),
-        _phase(goal_id, "Build", date(2026, 6, 29), date(2026, 7, 19), 350.0),
-        _phase(goal_id, "Peak", date(2026, 7, 20), date(2026, 8, 2), 380.0),
+        _phase(goal_id, "Base", date(2026, 6, 1), date(2026, 6, 28), 24000.0),
+        _phase(goal_id, "Build", date(2026, 6, 29), date(2026, 7, 19), 28000.0),
+        _phase(goal_id, "Peak", date(2026, 7, 20), date(2026, 8, 2), 30400.0),
     ]
     _use_repo(_FakeRepo(get_result=_goal(goal_id), phases=phases))
 
@@ -188,7 +187,8 @@ async def test_get_periodization() -> None:
     assert len(body) == 3
     assert body[0]["name"] == "Base"
     assert body[2]["name"] == "Peak"
-    assert body[0]["target_weekly_tss"] == 300.0
+    assert body[0]["target_weekly_distance_m"] == 24000.0
+    assert "target_weekly_tss" not in body[0]
 
 
 @pytest.mark.no_db
@@ -256,7 +256,7 @@ def _phase(
     name: str,
     start: date,
     end: date,
-    tss: float | None,
+    weekly_distance_m: float,
 ) -> dict[str, object]:
     return {
         "phase_id": uuid4(),
@@ -264,7 +264,7 @@ def _phase(
         "name": name,
         "start_date": start,
         "end_date": end,
-        "target_weekly_tss": tss,
+        "target_weekly_distance_m": weekly_distance_m,
     }
 
 

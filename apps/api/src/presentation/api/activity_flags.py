@@ -16,6 +16,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, ConfigDict
 
 from application.activities.ignore import (
     ActivityNotFoundError,
@@ -29,6 +30,7 @@ from application.computation.orchestration import enqueue_activity_recompute
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.activity import ActivityRepo
 from presentation.api.activities import get_activity_repo
+from presentation.api.schemas import RaceFlagResponse
 from presentation.api.schemas_core import (
     BulkIgnoreRequest,
     BulkIgnoreResult,
@@ -47,6 +49,24 @@ router = APIRouter(prefix="/activities", tags=["activities"])
 router.tags = ["activities"]
 
 
+class RaceFlagUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    is_race: bool
+
+
+@router.patch("/{activity_id}/race", response_model=RaceFlagResponse)
+async def update_race_flag(
+    activity_id: str,
+    payload: RaceFlagUpdate,
+    athlete: Annotated[Athlete, Depends(get_current_athlete)],
+    repo: Annotated[ActivityRepo, Depends(get_activity_repo)],
+) -> RaceFlagResponse:
+    updated = await repo.set_race(athlete.id, activity_id, payload.is_race)
+    if not updated:
+        raise NotFoundError("activity not found")
+    return RaceFlagResponse(activity_id=activity_id, is_race=payload.is_race)
+
+
 @router.get("/ignored", response_model=list[FlaggedActivity])
 async def get_ignored_activities(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
@@ -60,9 +80,7 @@ async def get_trashed_activities(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
 ) -> list[FlaggedActivity]:
     """Soft-deleted activities, restorable."""
-    return [
-        FlaggedActivity.model_validate(row) for row in await list_trashed(athlete.id)
-    ]
+    return [FlaggedActivity.model_validate(row) for row in await list_trashed(athlete.id)]
 
 
 @router.delete("/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -139,9 +157,7 @@ async def ignore_activities_bulk(
     or commutes together, and clearing them one at a time is tedious.
     """
     updated = await set_ignored_bulk(athlete.id, payload.activity_ids, payload.ignored)
-    generation = (
-        await enqueue_activity_recompute(athlete.id, "ignore:bulk") if updated else None
-    )
+    generation = await enqueue_activity_recompute(athlete.id, "ignore:bulk") if updated else None
     return BulkIgnoreResult(
         updated=updated,
         ignored=payload.ignored,
@@ -150,9 +166,7 @@ async def ignore_activities_bulk(
     )
 
 
-async def _set_ignored(
-    athlete_id: UUID, activity_id: str, ignored: bool
-) -> IgnoreResult:
+async def _set_ignored(athlete_id: UUID, activity_id: str, ignored: bool) -> IgnoreResult:
     try:
         value = await set_ignored(athlete_id, activity_id, ignored)
     except ActivityNotFoundError as error:

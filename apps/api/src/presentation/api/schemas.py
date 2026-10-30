@@ -17,6 +17,14 @@ class NotificationPrefs(BaseModel):
     plan_deviation_alert: bool = False
 
 
+class ThresholdHistoryEntry(BaseModel):
+    effective_from: date
+    hr_max: int | None = None
+    resting_hr: int | None = None
+    lthr: int | None = None
+    threshold_pace: float | None = None
+
+
 class AthleteMe(BaseModel):
     id: str
     email: str
@@ -105,8 +113,17 @@ class ActivitySummary(BaseModel):
     avg_lr_balance_pct: float | None = None
     # 收藏标记。
     is_bookmarked: bool = False
+    # 比赛活动标记。
+    is_race: bool = False
     # 天气来源：intervals_icu 或 open_meteo_best_match。
     weather_source: str | None = None
+
+
+class RaceFlagResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    activity_id: str
+    is_race: bool
 
 
 class ActivityUploadResponse(ActivitySummary):
@@ -240,6 +257,8 @@ class MilestoneCreate(BaseModel):
     title: str
     target_date: date | None = None
     target_value: float | None = None
+    unit: str | None = None
+    result_text: str | None = None
     achieved: bool | None = None
     achieved_at: datetime | None = None
 
@@ -250,6 +269,8 @@ class MilestoneResponse(BaseModel):
     title: str
     target_date: date | None = None
     target_value: float | None = None
+    unit: str | None = None
+    result_text: str | None = None
     achieved: bool
     achieved_at: datetime | None = None
 

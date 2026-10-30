@@ -105,6 +105,7 @@ def ensure_activity_summary(db_conn: psycopg.Connection) -> None:
              is_bookmarked BOOLEAN NOT NULL DEFAULT FALSE,
              weather_source TEXT,
              weather_fetched_at TIMESTAMPTZ,
+             is_race BOOLEAN NOT NULL DEFAULT FALSE,
              PRIMARY KEY (activity_id, start_time)
             )
             """

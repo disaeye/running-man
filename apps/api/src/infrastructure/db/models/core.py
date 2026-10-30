@@ -121,6 +121,7 @@ class ActivitySummary(Base):
     aerobic_te = Column(Double, nullable=True)
     anaerobic_te = Column(Double, nullable=True)
     is_bookmarked = Column(Boolean, nullable=False, server_default=text("false"))
+    is_race = Column(Boolean, nullable=False, server_default=text("false"))
     external_id = Column(Text, nullable=True)
     source = Column(Text, nullable=True)
     file_type = Column(Text, nullable=True)

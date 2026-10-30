@@ -1,18 +1,7 @@
-"""Plan adjustment proposals: what the data suggests, and what the athlete decides.
+"""Review measured session-adjustment proposals before changing the plan.
 
-The endpoints here implement the "suggestion first, change only on acceptance"
-flow:
-
-* ``GET /plan/adjustments`` lists the athlete's proposals.
-* ``POST /plan/adjustments`` detects a session that the athlete's own data
-  argues against and records a proposal. The calendar is not touched.
-* ``POST /plan/adjustments/{id}/accept`` rewrites the session's prescription
-  and marks the proposal applied.
-* ``POST /plan/adjustments/{id}/keep`` marks the proposal reverted, leaving the
-  original plan in place.
-
-The detection itself is in ``domain.insights.load_adjustment``; this module
-gathers the measured inputs and applies the reduction.
+The endpoints list pending proposals, record measured trigger details, and
+apply or keep the original prescription only after the athlete chooses.
 """
 
 from __future__ import annotations
@@ -73,11 +62,7 @@ async def detect_adjustment_for_event(
     body: DetectionRequest,
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
 ) -> PlanAdjustmentResponse:
-    """Check one planned session against the athlete's own data.
-
-    Nothing is written to the calendar here: a proposal is recorded so the
-    athlete can compare the original and the adjusted session before deciding.
-    """
+    """Check a planned session and record a proposal for review."""
     today = today_in_zone(athlete.timezone)
     await open_pool()
     async with get_pool().connection() as conn:
@@ -90,7 +75,6 @@ async def detect_adjustment_for_event(
         event_id=body.event_id,
         hrv_today=inputs.hrv_today,
         hrv_baseline=inputs.hrv_baseline,
-        tsb=inputs.tsb,
         hr_drift_bpm=inputs.hr_drift_bpm,
         long_run_seconds=inputs.long_run_seconds,
     )

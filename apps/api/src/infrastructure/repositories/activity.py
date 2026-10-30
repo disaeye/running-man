@@ -67,6 +67,14 @@ class ActivityRepo:
     async def get_by_id(self, athlete_id: UUID, activity_id: str) -> dict[str, object] | None:
         return await ActivityReadRepo().get_by_id(athlete_id, activity_id)
 
+    async def set_race(self, athlete_id: UUID, activity_id: str, is_race: bool) -> bool:
+        async with _connect() as conn, conn.cursor() as cur:
+            _ = await cur.execute(
+                "UPDATE activity_summary SET is_race = %s WHERE athlete_id = %s AND activity_id = %s RETURNING activity_id",
+                (is_race, athlete_id, activity_id),
+            )
+            return await cur.fetchone() is not None
+
     async def exists(self, activity_id: str) -> bool:
         async with _connect() as conn, conn.cursor() as cur:
             _ = await cur.execute(

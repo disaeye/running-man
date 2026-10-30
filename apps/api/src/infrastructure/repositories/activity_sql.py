@@ -45,6 +45,7 @@ def _summary_params(athlete_id: UUID, summary: dict[str, object]) -> tuple[objec
         canonical.get("summary_polyline"),
         canonical.get("avg_stride_length_m"),
         canonical.get("avg_lr_balance_pct"),
+        str(canonical.get("race", "false")).lower() == "true",
     )
 
 
@@ -78,7 +79,8 @@ WITH input AS (
             %s::integer AS calories, %s AS external_id, %s AS source, %s AS file_type,
             %s AS device_name, %s::jsonb AS raw_data, %s AS source_hash, %s AS summary_polyline,
             %s::double precision AS avg_stride_length_m,
-            %s::double precision AS avg_lr_balance_pct
+            %s::double precision AS avg_lr_balance_pct,
+            %s::boolean AS is_race
 ), locked AS (
     SELECT pg_advisory_xact_lock(hashtextextended(athlete_id::text || '|' || source_hash::text, 0))
     FROM input
@@ -117,8 +119,16 @@ WITH input AS (
         source_hash = i.source_hash,
         summary_polyline = i.summary_polyline,
         avg_stride_length_m = COALESCE(i.avg_stride_length_m, a.avg_stride_length_m),
-        avg_lr_balance_pct = COALESCE(i.avg_lr_balance_pct, a.avg_lr_balance_pct)
-    FROM existing, input i
+        avg_lr_balance_pct = COALESCE(i.avg_lr_balance_pct, a.avg_lr_balance_pct),
+         is_race = CASE
+             WHEN a.source = 'intervals_icu' AND i.source = 'intervals_icu' THEN a.is_race
+             WHEN i.source = 'intervals_icu'
+                  AND EXISTS (SELECT 1 FROM race_results r
+                              WHERE r.athlete_id = i.athlete_id
+                                AND r.activity_id = a.activity_id) THEN true
+             ELSE i.is_race
+         END
+     FROM existing, input i
     WHERE a.activity_id = existing.activity_id AND a.start_time = existing.start_time
     RETURNING a.activity_id, a.start_time, a.sport, a.distance_m, a.duration_s,
               a.avg_hr, a.max_hr, a.avg_power, NULL::double precision AS np,
@@ -131,11 +141,11 @@ WITH input AS (
      (activity_id, athlete_id, start_time, sport, distance_m, duration_s,
       avg_hr, max_hr, avg_power, avg_cadence, avg_speed, elevation_gain_m,
       calories, external_id, source, file_type, device_name, raw_data, source_hash, summary_polyline,
-      avg_stride_length_m, avg_lr_balance_pct)
+      avg_stride_length_m, avg_lr_balance_pct, is_race)
     SELECT activity_id, athlete_id, start_time, sport, distance_m, duration_s,
            avg_hr, max_hr, avg_power, avg_cadence, avg_speed, elevation_gain_m,
            calories, external_id, source, file_type, device_name, raw_data, source_hash, summary_polyline,
-           avg_stride_length_m, avg_lr_balance_pct
+           avg_stride_length_m, avg_lr_balance_pct, is_race
     FROM input
     WHERE NOT EXISTS (SELECT 1 FROM updated)
 ON CONFLICT (activity_id, start_time) DO UPDATE SET
@@ -158,7 +168,12 @@ ON CONFLICT (activity_id, start_time) DO UPDATE SET
      source_hash = EXCLUDED.source_hash,
      summary_polyline = EXCLUDED.summary_polyline,
      avg_stride_length_m = COALESCE(EXCLUDED.avg_stride_length_m, activity_summary.avg_stride_length_m),
-     avg_lr_balance_pct = COALESCE(EXCLUDED.avg_lr_balance_pct, activity_summary.avg_lr_balance_pct)
+     avg_lr_balance_pct = COALESCE(EXCLUDED.avg_lr_balance_pct, activity_summary.avg_lr_balance_pct),
+     is_race = CASE
+         WHEN activity_summary.source = 'intervals_icu'
+              AND EXCLUDED.source = 'intervals_icu' THEN activity_summary.is_race
+         ELSE EXCLUDED.is_race
+     END
 RETURNING activity_id, start_time, sport, distance_m, duration_s, avg_hr, max_hr,
           avg_power, NULL::double precision AS np, icu_ctl,
           NULL::double precision AS intensity_factor, NULL::double precision AS tss,

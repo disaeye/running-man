@@ -24,7 +24,7 @@ from domain.time import today_in_zone
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.athlete_profiles import AthleteProfileRepo
 from infrastructure.repositories.thresholds import ThresholdRepo
-from presentation.api.schemas import AthleteMe
+from presentation.api.schemas import AthleteMe, ThresholdHistoryEntry
 from presentation.api.schemas_core import AthleteProfileUpdate
 from presentation.auth.deps import get_current_athlete
 
@@ -47,6 +47,14 @@ _THRESHOLD_COLS: tuple[ThresholdField, ...] = (
     "lthr",
     "threshold_pace",
 )
+
+
+@router.get("/me/thresholds", response_model=list[ThresholdHistoryEntry])
+async def threshold_history(
+    athlete: Annotated[Athlete, Depends(get_current_athlete)],
+) -> list[ThresholdHistoryEntry]:
+    history = await ThresholdRepo().history(athlete.id)
+    return [ThresholdHistoryEntry.model_validate(step) for step in history]
 
 
 @router.get("/me", response_model=AthleteMe)

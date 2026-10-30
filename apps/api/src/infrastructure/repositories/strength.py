@@ -1,20 +1,17 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
 from datetime import date
 from typing import cast
 from uuid import UUID, uuid4
 
-from infrastructure.db.pool import ConnectionContext, get_pool
-
-
-def _connect() -> ConnectionContext:
-    return get_pool().connection()
-
-
-def _row(row: object) -> dict[str, object]:
-    return dict(cast(Mapping[str, object], row))
+from infrastructure.repositories.strength_analytics import StrengthAnalyticsRepo
+from infrastructure.repositories.strength_repository_helpers import (
+    connect as _connect,
+)
+from infrastructure.repositories.strength_repository_helpers import (
+    row_dict as _row,
+)
 
 
 def _e1rm(weight_kg: float | None, reps: int | None) -> float | None:
@@ -22,13 +19,36 @@ def _e1rm(weight_kg: float | None, reps: int | None) -> float | None:
         return None
     return round(float(weight_kg) * (1 + reps / 30), 2)
 
+
 _EXERCISE_FIELDS = """id, name_cn, name_en, category, primary_muscles,
 secondary_muscles, equipment, movement_pattern, instructions, common_mistakes, difficulty"""
 _SET_FIELDS = """id, workout_exercise_id, athlete_id, set_number, weight_kg, reps,
 rpe, set_type, rest_seconds, completed, estimated_1rm_kg, created_at"""
 
 
-class StrengthRepo:
+class StrengthRepo(StrengthAnalyticsRepo):
+    async def list_activities(
+        self, athlete_id: UUID, from_date: date | None, to_date: date | None
+    ) -> list[dict[str, object]]:
+        query = """
+        SELECT a.activity_id, a.start_time, a.name,
+               a.duration_s, (COUNT(DISTINCT we.id) > 0 OR COUNT(ws.id) > 0) AS has_training_content,
+               COUNT(DISTINCT we.id)::int AS exercise_count, COUNT(ws.id)::int AS set_count
+        FROM activity_summary a
+        LEFT JOIN workout_exercises we
+          ON we.activity_id = a.activity_id AND we.athlete_id = a.athlete_id
+        LEFT JOIN workout_sets ws
+          ON ws.workout_exercise_id = we.id AND ws.athlete_id = a.athlete_id
+        WHERE a.athlete_id = %s AND a.sport = 'weight_training'
+          AND (%s::date IS NULL OR a.start_time::date >= %s::date)
+          AND (%s::date IS NULL OR a.start_time::date <= %s::date)
+        GROUP BY a.activity_id, a.start_time, a.name, a.duration_s
+        ORDER BY a.start_time DESC
+        """
+        async with _connect() as conn, conn.cursor() as cur:
+            _ = await cur.execute(query, (athlete_id, from_date, from_date, to_date, to_date))
+            return [_row(row) for row in await cur.fetchall()]
+
     async def list_exercises(
         self, category: str | None = None, query: str | None = None
     ) -> list[dict[str, object]]:
@@ -211,56 +231,6 @@ class StrengthRepo:
                 (activity_id, athlete_id),
             )
             return cur.rowcount > 0
-
-    async def muscle_volume(
-        self, athlete_id: UUID, from_date: date | None, to_date: date | None
-    ) -> list[dict[str, object]]:
-        query = """
-        SELECT el.category AS muscle_group, SUM(ws.weight_kg * ws.reps)::float AS volume_kg
-        FROM workout_sets ws JOIN workout_exercises we ON we.id = ws.workout_exercise_id
-        JOIN exercise_library el ON el.id = we.exercise_id
-        WHERE ws.athlete_id = %s AND ws.set_type = 'working' AND ws.completed = true
-          AND (%s::date IS NULL OR ws.created_at::date >= %s::date)
-          AND (%s::date IS NULL OR ws.created_at::date <= %s::date)
-        GROUP BY el.category ORDER BY el.category
-        """
-        async with _connect() as conn, conn.cursor() as cur:
-            _ = await cur.execute(query, (athlete_id, from_date, from_date, to_date, to_date))
-            return [_row(row) for row in await cur.fetchall()]
-
-    async def e1rm_trend(
-        self, athlete_id: UUID, from_date: date | None, to_date: date | None
-    ) -> list[dict[str, object]]:
-        query = """
-        SELECT DISTINCT ON (we.exercise_id) we.exercise_id, el.name_cn,
-               ws.estimated_1rm_kg::float AS max_estimated_1rm_kg, ws.created_at::date AS date
-        FROM workout_sets ws JOIN workout_exercises we ON we.id = ws.workout_exercise_id
-        JOIN exercise_library el ON el.id = we.exercise_id
-        WHERE ws.athlete_id = %s AND ws.set_type = 'working' AND ws.completed = true
-          AND ws.reps BETWEEN 1 AND 10 AND ws.estimated_1rm_kg IS NOT NULL
-          AND (%s::date IS NULL OR ws.created_at::date >= %s::date)
-          AND (%s::date IS NULL OR ws.created_at::date <= %s::date)
-        ORDER BY we.exercise_id, ws.estimated_1rm_kg DESC, ws.created_at::date DESC
-        """
-        async with _connect() as conn, conn.cursor() as cur:
-            _ = await cur.execute(query, (athlete_id, from_date, from_date, to_date, to_date))
-            return [_row(row) for row in await cur.fetchall()]
-
-    async def muscle_distribution(
-        self, athlete_id: UUID, from_date: date | None, to_date: date | None
-    ) -> list[dict[str, object]]:
-        query = """
-        SELECT el.category AS category, COUNT(*)::int AS set_count, SUM(ws.weight_kg * ws.reps)::float AS volume_kg
-        FROM workout_sets ws JOIN workout_exercises we ON we.id = ws.workout_exercise_id
-        JOIN exercise_library el ON el.id = we.exercise_id
-        WHERE ws.athlete_id = %s AND ws.set_type = 'working' AND ws.completed = true
-          AND (%s::date IS NULL OR ws.created_at::date >= %s::date)
-          AND (%s::date IS NULL OR ws.created_at::date <= %s::date)
-        GROUP BY el.category ORDER BY el.category
-        """
-        async with _connect() as conn, conn.cursor() as cur:
-            _ = await cur.execute(query, (athlete_id, from_date, from_date, to_date, to_date))
-            return [_row(row) for row in await cur.fetchall()]
 
     async def owns_workout_exercise(self, workout_exercise_id: int, athlete_id: UUID) -> bool:
         async with _connect() as conn, conn.cursor() as cur:

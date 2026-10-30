@@ -162,6 +162,8 @@ class MilestoneUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1)
     target_date: date | None = None
     target_value: float | None = None
+    unit: str | None = None
+    result_text: str | None = None
     achieved: bool | None = None
     achieved_at: datetime | None = None
 

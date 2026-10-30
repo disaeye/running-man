@@ -14,6 +14,16 @@ import pytest
 
 from infrastructure.auth.models import Athlete
 from main import app
+from tests.api.activities_endpoint_helpers import (
+    _delete,
+    _FakeIntegrations,
+    _FakeRepo,
+    _get,
+    _patch,
+    _post_files,
+    _RecordingRepo,
+    _use_repo,
+)
 from tests.factories.fit_generator import generate_fit_stream
 
 ATHLETE_A = Athlete(uuid4(), "a@example.com", "hash")
@@ -187,6 +197,34 @@ async def test_delete_activity_forbidden_when_owned_by_other() -> None:
 
 
 # ---------------------------------------------------------------------------
+# PATCH /activities/{activity_id}/race
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.no_db
+async def test_update_activity_race_flag() -> None:
+    repo = _FakeRepo(owner_id=ATHLETE_A.id)
+    repo.set_race = AsyncMock(return_value=True)
+    _use_repo(ATHLETE_A, repo)
+
+    response = await _patch("/api/v1/activities/run-1/race", {"is_race": True})
+
+    assert response.status_code == 200
+    assert response.json() == {"activity_id": "run-1", "is_race": True}
+    repo.set_race.assert_awaited_once_with(ATHLETE_A.id, "run-1", True)
+
+
+@pytest.mark.no_db
+async def test_update_activity_race_flag_not_found() -> None:
+    repo = _FakeRepo(owner_id=ATHLETE_A.id)
+    repo.set_race = AsyncMock(return_value=False)
+    _use_repo(ATHLETE_A, repo)
+
+    response = await _patch("/api/v1/activities/missing/race", {"is_race": True})
+
+    assert response.status_code == 404
+
+
 # DELETE /activities (bulk)
 # ---------------------------------------------------------------------------
 
@@ -248,18 +286,3 @@ async def test_delete_activities_by_source_bulk() -> None:
         (ATHLETE_A.id, "tcx"),
     ]
     assert repo.delete_all_calls == []
-
-
-# ---------------------------------------------------------------------------
-# helpers (test doubles live in activities_endpoint_helpers)
-# ---------------------------------------------------------------------------
-
-from tests.api.activities_endpoint_helpers import (  # noqa: E402
-    _delete,
-    _FakeIntegrations,
-    _FakeRepo,
-    _get,
-    _post_files,
-    _RecordingRepo,
-    _use_repo,
-)

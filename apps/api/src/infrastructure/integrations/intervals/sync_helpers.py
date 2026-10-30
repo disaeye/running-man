@@ -99,6 +99,8 @@ def activity_params(athlete_id: int | str, activity: Mapping[str, object]) -> tu
             or activity.get("average_wind_speed") is not None
         )
         else None,
+        # 只采纳来源明确提供的赛事标记；缺失时按普通训练处理。
+        str(activity.get("race", "false")).lower() == "true",
     )
 
 

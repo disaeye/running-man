@@ -6,9 +6,9 @@ cover today, the sessions scheduled this week, the load the week is planned
 for, and the pace targets the athlete's own paces imply.
 
 Everything here is derived from data that already exists: the phases in
-``training_phases``, the sessions in ``training_calendar``, the load facts in
-``current_daily_facts``, and the athlete's own thresholds. The arithmetic
-lives in ``plan_state_rules``; this module is the reading and the assembly.
+``training_phases``, the sessions in ``training_calendar``, the running distance
+planned for the week, and the athlete's own thresholds. The arithmetic lives
+in ``plan_state_rules``; this module is the reading and the assembly.
 """
 
 from __future__ import annotations

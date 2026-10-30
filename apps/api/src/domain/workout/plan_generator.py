@@ -10,34 +10,12 @@ from domain.workout.prescription import (
     REST,
     TEMPO,
     description,
-    duration_min,
+    session_distance_m,
     workout_segments,
 )
 
 HARD_WORKOUTS: Final[set[str]] = {LONG, TEMPO, INTERVALS}
-TSS_WEIGHTS: Final[dict[str, float]] = {LONG: 0.35, INTERVALS: 0.20, TEMPO: 0.20}
-# Average intensity factor of each session type. Load per minute follows from
-# it — TSS = hours x IF^2 x 100 — so the duration a TSS target implies is
-# derived rather than stored as a second, independently edited table.
-SESSION_IF: Final[dict[str, float]] = {
-    REST: 0.0,
-    EASY: 0.68,
-    LONG: 0.72,
-    TEMPO: 0.88,
-    INTERVALS: 0.92,
-    RECOVERY: 0.60,
-}
-
-
-def tss_per_minute(workout_type: str) -> float:
-    """TSS one minute of ``workout_type`` is worth at its typical IF."""
-    intensity = SESSION_IF[workout_type]
-    return intensity * intensity * 100.0 / 60.0
-
-
-TSS_PER_MINUTE: Final[dict[str, float]] = {
-    workout_type: tss_per_minute(workout_type) for workout_type in SESSION_IF
-}
+DISTANCE_WEIGHTS: Final[dict[str, float]] = {LONG: 0.35, INTERVALS: 0.20, TEMPO: 0.20}
 MAX_WEEKDAY = 6
 
 
@@ -45,7 +23,7 @@ MAX_WEEKDAY = 6
 class PlannedDay:
     day_offset: int
     workout_type: str
-    target_tss: float
+    target_distance_m: float | None
     duration_min: int
     description: str
     workout_segments: tuple[dict[str, object], ...] = ()
@@ -55,11 +33,7 @@ class PlannedDay:
 
 @dataclass(frozen=True)
 class WeekPlanOptions:
-    """The shape of one generated week.
-
-    Grouped into one object because the generator's parameters had grown past
-    the point where a caller could tell them apart by position.
-    """
+    """一周训练安排所需的休息日、配速和时间限制。"""
 
     sport: str = "Run"
     rest_days: int = 1
@@ -72,64 +46,60 @@ class WeekPlanOptions:
 
 
 def generate_weekly_plan(
-    target_weekly_tss: float,
+    target_weekly_distance_m: float,
     options: WeekPlanOptions | None = None,
 ) -> list[PlannedDay]:
-    """The seven days of one week of training.
-
-    The shape of the week comes from ``options``; a caller that only wants
-    the default week passes nothing.
-    """
+    """按真实周跑量与实际配速安排七天的跑步训练。"""
+    if target_weekly_distance_m <= 0:
+        raise ValueError("目标周跑量必须大于零")
     settings = options or WeekPlanOptions()
-    sport = settings.sport
     rest_count = min(max(settings.rest_days, 0), 6)
     preferred = _valid_days(settings.preferred_days_off)
-    training_paces = settings.training_paces
-    week_number = settings.week_number
-    progression_weeks = settings.progression_weeks
     max_session_duration_min = min(max(settings.max_session_duration_min, 1), 600)
-    long_run_day = settings.long_run_day
-    target = max(target_weekly_tss, 0.0)
-    if target == 0.0:
-        return [_planned_day(day, REST, 0.0, sport) for day in range(7)]
+    long_day = settings.long_run_day
 
-    long_day, rest_before_long = _weekend_structure(preferred, rest_count)
+    if long_day is None or long_day not in range(7):
+        long_day, rest_before_long = _weekend_structure(preferred, rest_count)
+    else:
+        rest_before_long = (long_day - 1) % 7
+
     rest_day_set = _rest_days(preferred, rest_count, long_day, rest_before_long)
     if long_day in rest_day_set:
         long_day = 5 if 5 not in rest_day_set else 6
-    if long_run_day is not None and 0 <= long_run_day <= MAX_WEEKDAY:
-        # 运动员可以指定长距离日。指定之后，那一天固定为长距离，
-        # 原本落在长距离日的休息日回到休息日集合里。
-        long_day = long_run_day
+    if settings.long_run_day is not None and 0 <= settings.long_run_day <= MAX_WEEKDAY:
+        long_day = settings.long_run_day
         rest_day_set = _rest_days(preferred, rest_count, long_day, rest_before_long)
         rest_day_set.discard(long_day)
+
     workout_types: dict[int, str] = {day: REST for day in rest_day_set}
     workout_types[long_day] = LONG
-
     interval_day = _available_day([1, 2, 0, 3, 4], workout_types)
     if interval_day is not None:
         workout_types[interval_day] = INTERVALS
     tempo_day = _available_day([3, 2, 4, 0, 1], workout_types)
     if tempo_day is not None:
         workout_types[tempo_day] = TEMPO
-
     easy_toggle = True
     for day in range(7):
         if day not in workout_types:
             workout_types[day] = EASY if easy_toggle else RECOVERY
             easy_toggle = not easy_toggle
 
-    progression_index = week_number % max(progression_weeks + 1, 1)
-    progressed = target * min(1.0 + 0.025 * progression_index, 1.2)
-    is_recovery_week = progression_weeks > 0 and (week_number + 1) % (progression_weeks + 1) == 0
-    tss_by_day = _target_tss_by_day(workout_types, progressed * (0.7 if is_recovery_week else 1.0))
+    progression_index = settings.week_number % max(settings.progression_weeks + 1, 1)
+    recovery_week = (
+        settings.progression_weeks > 0
+        and settings.week_number > 0
+        and progression_index == settings.progression_weeks
+    )
+    progressed = target_weekly_distance_m * min(1.0 + 0.025 * progression_index, 1.2)
+    target = progressed * (0.7 if recovery_week else 1.0)
+    distance_by_day = _target_distance_by_day(workout_types, target)
     return [
         _planned_day(
             day,
             workout_types[day],
-            min(tss_by_day[day], max_session_duration_min * TSS_PER_MINUTE[workout_types[day]]),
-            sport,
-            training_paces,
+            distance_by_day[day],
+            settings,
             max_session_duration_min,
         )
         for day in range(7)
@@ -162,8 +132,7 @@ def _rest_days(
     remaining_rest = [
         day for day in fallback_rest_days if day != long_day and day not in preferred_rest
     ][: max(rest_count - len(preferred_rest), 0)]
-    rest = preferred_rest + remaining_rest
-    return set(rest[:rest_count])
+    return set((preferred_rest + remaining_rest)[:rest_count])
 
 
 def _available_day(candidates: list[int], workout_types: dict[int, str]) -> int | None:
@@ -182,15 +151,17 @@ def _has_hard_neighbor(day: int, workout_types: dict[int, str]) -> bool:
     return any(workout_types.get(neighbor) in HARD_WORKOUTS for neighbor in [day - 1, day + 1])
 
 
-def _target_tss_by_day(workout_types: dict[int, str], target_weekly_tss: float) -> dict[int, float]:
-    tss_by_day = {day: 0.0 for day in range(7)}
+def _target_distance_by_day(
+    workout_types: dict[int, str], target_weekly_distance_m: float
+) -> dict[int, float]:
+    distances = {day: 0.0 for day in range(7)}
     weights: dict[int, float] = {}
     flexible_days: list[int] = []
     for day, workout_type in workout_types.items():
         if workout_type == REST:
             continue
-        if workout_type in TSS_WEIGHTS:
-            weights[day] = TSS_WEIGHTS[workout_type]
+        if workout_type in DISTANCE_WEIGHTS:
+            weights[day] = DISTANCE_WEIGHTS[workout_type]
         else:
             flexible_days.append(day)
     fixed_weight = sum(weights.values())
@@ -200,48 +171,56 @@ def _target_tss_by_day(workout_types: dict[int, str], target_weekly_tss: float) 
     elif fixed_weight > 0:
         weights = {day: weight / fixed_weight for day, weight in weights.items()}
     for day, weight in weights.items():
-        tss_by_day[day] = target_weekly_tss * weight
-    _cap_flexible_days(tss_by_day, workout_types, target_weekly_tss)
-    return tss_by_day
+        distances[day] = target_weekly_distance_m * weight
+    _cap_flexible_days(distances, workout_types, target_weekly_distance_m)
+    return distances
 
 
 def _cap_flexible_days(
-    tss_by_day: dict[int, float], workout_types: dict[int, str], target_weekly_tss: float
+    distances: dict[int, float], workout_types: dict[int, str], target_weekly_distance_m: float
 ) -> None:
-    threshold = target_weekly_tss / 7 * 0.8
+    threshold = target_weekly_distance_m / 7 * 0.8
     surplus = 0.0
     for day, workout_type in workout_types.items():
-        if workout_type not in (EASY, RECOVERY) or tss_by_day[day] <= threshold:
+        if workout_type not in (EASY, RECOVERY) or distances[day] <= threshold:
             continue
-        surplus += tss_by_day[day] - threshold
-        tss_by_day[day] = threshold
-    hard_days = [day for day, kind in workout_types.items() if kind in HARD_WORKOUTS]
-    hard_tss = sum(tss_by_day[day] for day in hard_days)
-    if surplus and hard_tss:
-        for day in hard_days:
-            tss_by_day[day] += surplus * (tss_by_day[day] / hard_tss)
+        surplus += distances[day] - threshold
+        distances[day] = threshold
+    long_days = [day for day, kind in workout_types.items() if kind == LONG]
+    if surplus and long_days:
+        distances[long_days[0]] += surplus
 
 
 def _planned_day(
     day: int,
     workout_type: str,
-    target_tss: float,
-    sport: str,
-    training_paces: dict[str, dict[str, float]] | None = None,
-    max_session_duration_min: int = 180,
+    target_distance_m: float,
+    options: WeekPlanOptions,
+    max_session_duration_min: int,
 ) -> PlannedDay:
-    duration = min(duration_min(workout_type, target_tss, TSS_PER_MINUTE), max_session_duration_min)
+    if workout_type == REST:
+        return PlannedDay(day, REST, None, 0, description(REST, options.sport))
+
     pace_key = PACE_KEYS.get(workout_type)
-    pace = training_paces.get(pace_key) if training_paces and pace_key else None
+    pace = options.training_paces.get(pace_key) if options.training_paces and pace_key else None
     pace_min = round(pace["min"]) if pace else None
     pace_max = round(pace["max"]) if pace else None
+    if pace_min is None or pace_max is None or pace_min <= 0 or pace_max < pace_min:
+        raise ValueError("缺少有效跑步配速，无法生成有距离目标的训练计划")
+
+    duration = round(target_distance_m / 1000 * ((pace_min + pace_max) / 2) / 60)
+    if duration > max_session_duration_min:
+        raise ValueError("计划中的单次跑步时长超过运动员设置的上限")
+    duration = max(duration, 1)
+    segments = workout_segments(workout_type, duration, pace_min, pace_max)
+    actual_distance = session_distance_m(segments, pace_min, pace_max)
     return PlannedDay(
         day_offset=day,
         workout_type=workout_type,
-        target_tss=target_tss,
+        target_distance_m=actual_distance,
         duration_min=duration,
-        description=description(workout_type, sport),
-        workout_segments=workout_segments(workout_type, duration, pace_min, pace_max),
+        description=description(workout_type, options.sport),
+        workout_segments=segments,
         pace_min_s_km=pace_min,
         pace_max_s_km=pace_max,
     )

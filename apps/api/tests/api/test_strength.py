@@ -8,7 +8,7 @@ from httpx import ASGITransport, AsyncClient, Response
 
 from infrastructure.auth.models import Athlete
 from main import app
-from presentation.api.strength import get_strength_repo
+from presentation.api.strength_dependencies import get_strength_repo
 from presentation.auth.deps import get_current_athlete
 
 ATHLETE = Athlete(uuid4(), "strength@example.com", "hash")
@@ -29,6 +29,19 @@ async def test_list_strength_exercises() -> None:
     all_response = await _get("/api/v1/strength/exercises")
     all_payload = cast(list[dict[str, object]], all_response.json())
     assert len(all_payload) == 20
+
+
+@pytest.mark.no_db
+async def test_list_strength_activities_includes_empty_and_logged_workouts() -> None:
+    _use_repo(FakeStrengthRepo())
+
+    response = await _get("/api/v1/strength/workouts")
+    payload = cast(list[dict[str, object]], response.json())
+
+    assert response.status_code == 200
+    assert [item["has_training_content"] for item in payload] == [True, False]
+    assert payload[0]["exercise_count"] == 2
+    assert payload[1]["set_count"] == 0
 
 
 @pytest.mark.no_db
@@ -103,6 +116,33 @@ def _use_repo(repo: "FakeStrengthRepo") -> None:
 @dataclass
 class FakeStrengthRepo:
     sets: list[dict[str, object]] = field(default_factory=list)
+
+    async def list_activities(
+        self, athlete_id: UUID, from_date: date | None, to_date: date | None
+    ) -> list[dict[str, object]]:
+        assert athlete_id == ATHLETE.id
+        assert from_date is None and to_date is None
+        base = datetime(2026, 6, 22, tzinfo=UTC)
+        return [
+            {
+                "activity_id": "strength-with-content",
+                "start_time": base,
+                "name": "力量训练",
+                "duration_s": 3600,
+                "has_training_content": True,
+                "exercise_count": 2,
+                "set_count": 4,
+            },
+            {
+                "activity_id": "strength-empty",
+                "start_time": base,
+                "name": None,
+                "duration_s": 1800,
+                "has_training_content": False,
+                "exercise_count": 0,
+                "set_count": 0,
+            },
+        ]
 
     async def list_exercises(
         self, category: str | None = None, query: str | None = None

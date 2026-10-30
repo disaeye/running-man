@@ -26,7 +26,7 @@ class PlanAdjustmentResponse(BaseModel):
     event_date: date | None = None
     trigger_type: str
     trigger_summary: str
-    load_delta_pct: float
+    adjustment_pct: float
     status: str
     created_at: str
     triggers: list[AdjustmentTriggerResponse] = Field(default_factory=list)
@@ -53,7 +53,7 @@ def response(row: dict[str, object]) -> PlanAdjustmentResponse:
         for key, detail in _split_summary(summary)
     ]
     delta = row.get("load_delta_pct")
-    load_delta_pct = float(delta) if isinstance(delta, int | float) else 0.0
+    adjustment_pct = float(delta) if isinstance(delta, int | float) else 0.0
     event_date = row.get("event_date")
     return PlanAdjustmentResponse(
         adjustment_id=str(row.get("adjustment_id")),
@@ -62,7 +62,7 @@ def response(row: dict[str, object]) -> PlanAdjustmentResponse:
         event_date=event_date if isinstance(event_date, date) else None,
         trigger_type=str(row.get("trigger_type") or ""),
         trigger_summary=summary,
-        load_delta_pct=load_delta_pct,
+        adjustment_pct=adjustment_pct,
         status=str(row.get("status") or PENDING),
         created_at=str(row.get("created_at") or ""),
         triggers=triggers,

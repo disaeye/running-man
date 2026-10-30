@@ -34,8 +34,6 @@ class WorkoutPredictionPoint(BaseModel):
 class WorkoutTemplateSegment(BaseModel):
     segment_type: str
     duration_s: int
-    power_low: float
-    power_high: float
 
 
 class WorkoutTemplateCreate(BaseModel):
@@ -87,6 +85,16 @@ class WorkoutCreate(BaseModel):
 
 class WorkoutCreateResponse(BaseModel):
     activity_id: str
+
+
+class StrengthActivityResponse(BaseModel):
+    activity_id: str
+    start_time: datetime
+    name: str | None = None
+    duration_s: int | None = None
+    has_training_content: bool
+    exercise_count: int
+    set_count: int
 
 
 class WorkoutExerciseCreate(BaseModel):

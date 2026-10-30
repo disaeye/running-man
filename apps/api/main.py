@@ -38,13 +38,13 @@ from presentation.api import (
     race_results,
     share,
     strength,
-    strength_analytics,
     sync_runs,
     weight,
     wellness,
     workouts,
 )
 from presentation.api.notifications import router as notifications_router
+from presentation.api.strength_analytics import router as strength_analytics_router
 from presentation.api.zones import router as zones_router
 from presentation.auth.routes import router as auth_router
 from presentation.errors import register_error_handlers
@@ -124,7 +124,7 @@ app.include_router(metrics.router, prefix=API_V1_PREFIX)
 app.include_router(notifications_router, prefix=API_V1_PREFIX)
 app.include_router(workouts.router, prefix=API_V1_PREFIX)
 app.include_router(strength.router, prefix=API_V1_PREFIX)
-app.include_router(strength_analytics.router, prefix=API_V1_PREFIX)
+app.include_router(strength_analytics_router, prefix=API_V1_PREFIX)
 app.include_router(wellness.router, prefix=API_V1_PREFIX)
 app.include_router(weight.router, prefix=API_V1_PREFIX)
 app.include_router(export.router, prefix=API_V1_PREFIX)

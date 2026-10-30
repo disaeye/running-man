@@ -123,6 +123,7 @@ def _ensure_schema(db_conn: psycopg.Connection) -> None:
                 avg_stride_length_m DOUBLE PRECISION,
                 avg_lr_balance_pct DOUBLE PRECISION,
                 weather_source TEXT,
+                is_race BOOLEAN NOT NULL DEFAULT FALSE,
                 PRIMARY KEY (activity_id, start_time)
             )
             """
@@ -141,6 +142,7 @@ def _ensure_schema(db_conn: psycopg.Connection) -> None:
             "ADD COLUMN IF NOT EXISTS has_cadence BOOLEAN DEFAULT FALSE"
         )
         cur.execute("ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS summary_polyline TEXT")
+        cur.execute("ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS is_race BOOLEAN NOT NULL DEFAULT FALSE")
         cur.execute(
             """
             CREATE OR REPLACE FUNCTION _has_gps(raw_data jsonb)

@@ -25,7 +25,8 @@ WITH input AS (
            %s AS name, %s::smallint AS rpe, %s::double precision AS trimp,
            %s::double precision AS avg_stride_length_m,
            %s::double precision AS avg_lr_balance_pct,
-           %s AS weather_source
+           %s AS weather_source,
+           %s::boolean AS is_race
 ), locked AS (
     SELECT pg_advisory_xact_lock(hashtextextended(athlete_id::text || '|' || source_hash::text, 0))
     FROM input
@@ -79,7 +80,15 @@ WITH input AS (
         rpe = COALESCE(i.rpe, a.rpe),
         trimp = COALESCE(i.trimp, a.trimp),
         avg_stride_length_m = COALESCE(i.avg_stride_length_m, a.avg_stride_length_m),
-        avg_lr_balance_pct = COALESCE(i.avg_lr_balance_pct, a.avg_lr_balance_pct)
+        avg_lr_balance_pct = COALESCE(i.avg_lr_balance_pct, a.avg_lr_balance_pct),
+        is_race = CASE
+            WHEN a.source = 'intervals_icu' AND i.source = 'intervals_icu' THEN a.is_race
+            WHEN i.source = 'intervals_icu'
+                 AND EXISTS (SELECT 1 FROM race_results r
+                             WHERE r.athlete_id = i.athlete_id
+                               AND r.activity_id = a.activity_id) THEN true
+            ELSE i.is_race
+        END
     FROM existing, input i
     WHERE a.activity_id = existing.activity_id AND a.start_time = existing.start_time
     RETURNING TRUE AS deduplicated
@@ -93,7 +102,7 @@ WITH input AS (
       weather_avg_temp, weather_min_temp, weather_max_temp, weather_feels_like,
       weather_wind_speed, weather_wind_gust, weather_wind_deg, weather_headwind_pct,
       weather_tailwind_pct, weather_clouds_pct, weather_max_rain, weather_max_snow,
-      name, rpe, trimp, avg_stride_length_m, avg_lr_balance_pct, weather_source)
+      name, rpe, trimp, avg_stride_length_m, avg_lr_balance_pct, weather_source, is_race)
     SELECT activity_id, athlete_id, start_time, sport, distance_m, duration_s,
            avg_hr, max_hr, avg_power, source_weighted_power_w, icu_ctl, source_training_load,
            avg_cadence, avg_speed, elevation_gain_m, calories, device_name,
@@ -103,7 +112,7 @@ WITH input AS (
            weather_avg_temp, weather_min_temp, weather_max_temp, weather_feels_like,
            weather_wind_speed, weather_wind_gust, weather_wind_deg, weather_headwind_pct,
            weather_tailwind_pct, weather_clouds_pct, weather_max_rain, weather_max_snow,
-           name, rpe, trimp, avg_stride_length_m, avg_lr_balance_pct, weather_source
+           name, rpe, trimp, avg_stride_length_m, avg_lr_balance_pct, weather_source, is_race
     FROM input
     WHERE NOT EXISTS (SELECT 1 FROM updated)
     ON CONFLICT (activity_id, start_time) DO UPDATE SET
@@ -161,7 +170,12 @@ WITH input AS (
         avg_stride_length_m = COALESCE(
             EXCLUDED.avg_stride_length_m, activity_summary.avg_stride_length_m),
         avg_lr_balance_pct = COALESCE(
-            EXCLUDED.avg_lr_balance_pct, activity_summary.avg_lr_balance_pct)
+            EXCLUDED.avg_lr_balance_pct, activity_summary.avg_lr_balance_pct),
+        is_race = CASE
+            WHEN activity_summary.source = 'intervals_icu'
+                 AND EXCLUDED.source = 'intervals_icu' THEN activity_summary.is_race
+            ELSE EXCLUDED.is_race
+        END
     RETURNING FALSE AS deduplicated
 )
 SELECT deduplicated FROM updated

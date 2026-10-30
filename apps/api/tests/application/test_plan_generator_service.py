@@ -28,8 +28,8 @@ async def test_generate_plan_dry_run_does_not_write_to_db() -> None:
     assert result["affected_dates"]
     assert conn.write_queries == []
     assert conn.commits == 0
-    assert result["training_load_available"] is True
-    assert result["training_paces_available"] is False
+    assert result["running_history_weeks"] == 4
+    assert result["training_paces_available"] is True
     assert len(events) == events_created
     event_dates = [event["date"] for event in events]
     assert len(event_dates) == len(set(event_dates))
@@ -39,8 +39,13 @@ async def test_generate_plan_dry_run_does_not_write_to_db() -> None:
     assert race_events[0]["name"] == "比赛日 · 目标比赛"
     assert race_events[0]["category"] == "workout"
     assert race_events[0]["duration_min"] == 0
-    assert race_events[0]["predicted_tss"] == 0.0
+    assert race_events[0]["predicted_distance_m"] == 42195
     assert race_events[0]["segments"] == []
+    training_events = [event for event in events if event["training_type"] != "race"]
+    assert all(event.get("predicted_tss") is None for event in training_events)
+    assert all(isinstance(event.get("predicted_distance_m"), int | float) for event in training_events)
+    assert all("predicted_tss" not in cast(dict[str, object], event["preview"]) for event in training_events)
+    assert all(event["duration_min"] <= 120 for event in training_events)
 
 
 class FakeConnection:
@@ -80,17 +85,23 @@ class FakeCursor:
                 "type": "event",
                 "title": "目标比赛",
                 "target_date": date(2026, 10, 18),
+                "race_distance_m": 42195,
+                "race_target_time_s": 14400,
+                "unit": "s",
             }
         elif "FROM ATHLETES" in normalized:
             self.row = {
                 "timezone": "UTC",
                 "weekly_training_days": 5,
                 "max_session_duration_min": 120,
+                "preferred_sport": "Run",
             }
-        elif "FROM CURRENT_DAILY_FACTS" in normalized:
+        elif "FROM ACTIVITY_COMPUTE" in normalized:
             self.rows = [
-                {"day": date(2026, 1, 1), "value": 42.0, "metric_key": "ctl"},
-                {"day": date(2026, 1, 1), "value": 50.0, "metric_key": "atl"},
+                {"local_day": date(2025, 12, 1), "distance_m": 30000.0},
+                {"local_day": date(2025, 12, 8), "distance_m": 35000.0},
+                {"local_day": date(2025, 12, 15), "distance_m": 40000.0},
+                {"local_day": date(2025, 12, 22), "distance_m": 45000.0},
             ]
         elif "FROM ATHLETE_THRESHOLDS" in normalized:
             self.row = None

@@ -156,6 +156,12 @@ async def _get(path: str) -> Response:
         return await client.get(path)
 
 
+async def _patch(path: str, payload: dict[str, object]) -> Response:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        return await client.patch(path, json=payload)
+
+
 async def _delete(path: str) -> Response:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

@@ -61,20 +61,31 @@ def test_two_hours_of_intervals_is_still_flagged() -> None:
     assert score < INTENSITY_DISTRIBUTION_WEIGHT
 
 
-def test_the_generators_own_week_passes_the_scorecard() -> None:
-    """The default weekly template must not fail its own quality check."""
-    days = generate_weekly_plan(target_weekly_tss=420.0, options=WeekPlanOptions(rest_days=1))
+def test_generator_week_has_a_distance_for_each_running_session() -> None:
+    """Every generated running session carries a distance derived from pace."""
+    days = generate_weekly_plan(
+        target_weekly_distance_m=42000.0,
+        options=WeekPlanOptions(
+            rest_days=1,
+            training_paces={
+                "easy": {"min": 340.0, "max": 390.0},
+                "threshold": {"min": 270.0, "max": 285.0},
+                "interval": {"min": 245.0, "max": 260.0},
+            },
+        ),
+    )
     trained = [day for day in days if day.workout_type != REST]
     types = [day.workout_type for day in trained]
     minutes = [float(day.duration_min) for day in trained]
-    tss = [day.target_tss for day in trained]
+    distance_m = [float(day.target_distance_m or 0) for day in trained]
 
     high_minutes = sum(
         minute for workout_type, minute in zip(types, minutes) if workout_type in (INTERVALS, TEMPO)
     )
     assert high_minutes / sum(minutes) < MAX_HIGH_INTENSITY_TIME_SHARE
 
-    assert _intensity_score(types, minutes, tss) == INTENSITY_DISTRIBUTION_WEIGHT
+    assert len(distance_m) == len(trained)
+    assert all(distance > 0 for distance in distance_m)
 
 
 def test_mostly_hard_week_scores_worse_than_mostly_easy() -> None:

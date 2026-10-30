@@ -8,7 +8,7 @@ from httpx import ASGITransport, AsyncClient, Response
 
 from infrastructure.auth.models import Athlete
 from main import app
-from presentation.api.strength import get_strength_repo
+from presentation.api.strength_dependencies import get_strength_repo
 from presentation.auth.deps import get_current_athlete
 
 ATHLETE = Athlete(uuid4(), "strength-analytics@example.com", "hash")
@@ -20,7 +20,9 @@ async def test_strength_analytics_filters_completed_working_sets() -> None:
 
     volume = await _get("/api/v1/strength/analytics/muscle-volume?from=2026-06-01&to=2026-06-30")
     e1rm = await _get("/api/v1/strength/analytics/e1rm?from=2026-06-01&to=2026-06-30")
-    distribution = await _get("/api/v1/strength/analytics/distribution?from=2026-06-01&to=2026-06-30")
+    distribution = await _get(
+        "/api/v1/strength/analytics/distribution?from=2026-06-01&to=2026-06-30"
+    )
 
     assert volume.status_code == 200
     assert volume.json() == [{"muscle_group": "腿", "volume_kg": 1340.0}]

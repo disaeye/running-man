@@ -145,13 +145,6 @@ def _midpoint_pace(
     return None
 
 
-def duration_min(workout_type: str, target_tss: float, rates: dict[str, float]) -> int:
-    rate = rates[workout_type]
-    if rate == 0 or target_tss <= 0:
-        return 0
-    return max(15, round(target_tss / rate))
-
-
 def description(workout_type: str, sport: str) -> str:
     sport_name = sport.strip().lower()
     if sport_name in {"run", "trail_run", "trailrun", "virtual_run", "virtualrun"}:

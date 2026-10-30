@@ -1,9 +1,4 @@
-"""The measured inputs the plan-adjustment detection reads.
-
-Each value here is a measurement or ``None``. A missing input is not a zero:
-a zero would trigger a rule that the data never met, so an athlete with no
-heart-rate readings gets no suggestion rather than a wrong one.
-"""
+"""Measured inputs used to review a planned running session."""
 
 from __future__ import annotations
 
@@ -31,7 +26,6 @@ class DetectionInputs:
 
     hrv_today: float | None
     hrv_baseline: float | None
-    tsb: float | None
     hr_drift_bpm: float | None
     long_run_seconds: int | None
 
@@ -39,7 +33,7 @@ class DetectionInputs:
 async def detection_inputs(
     conn: AsyncConnection[DictRow], athlete_id: UUID, today: date
 ) -> DetectionInputs:
-    """Gather the inputs from the athlete's own records."""
+    """Gather health and running-session measurements."""
     baseline_start = today - timedelta(days=BASELINE_DAYS - 1)
     drift_start = today - timedelta(days=DRIFT_LOOKBACK_DAYS)
 
@@ -65,24 +59,10 @@ async def detection_inputs(
         row = await cur.fetchone()
         hrv_baseline = _number(row, "baseline")
 
-    tsb: float | None = None
-    async with conn.cursor() as cur:
-        _ = await cur.execute(
-            """
-            SELECT value FROM current_daily_facts
-            WHERE athlete_id = %s AND day = %s AND metric_key = 'tsb'
-            ORDER BY day DESC LIMIT 1
-            """,
-            (athlete_id, today),
-        )
-        row = await cur.fetchone()
-        tsb = _number(row, "value")
-
     drift, long_seconds = await hr_drift(conn, athlete_id, drift_start, today)
     return DetectionInputs(
         hrv_today=hrv_today,
         hrv_baseline=hrv_baseline,
-        tsb=tsb,
         hr_drift_bpm=drift,
         long_run_seconds=long_seconds,
     )
