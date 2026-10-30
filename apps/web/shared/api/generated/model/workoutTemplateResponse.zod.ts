@@ -14,8 +14,6 @@ export const WorkoutTemplateResponse = zod.object({
   "predicted_tss": zod.union([zod.number(),zod.null()]).optional(),
   "segments": zod.union([zod.array(zod.object({
   "duration_s": zod.number(),
-  "power_high": zod.number(),
-  "power_low": zod.number(),
   "segment_type": zod.string()
 })),zod.null()]).optional(),
   "source": zod.string(),

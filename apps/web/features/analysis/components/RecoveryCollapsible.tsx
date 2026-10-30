@@ -8,7 +8,7 @@ type RecoveryCollapsibleProps = {
 };
 
 /**
- * Browse/Analysis density: recovery charts stay off the first fold of 负荷.
+ * Recovery charts stay collapsed until requested.
  */
 export function RecoveryCollapsible({ children }: RecoveryCollapsibleProps) {
   const [open, setOpen] = useState(false);
@@ -27,7 +27,7 @@ export function RecoveryCollapsible({ children }: RecoveryCollapsibleProps) {
             恢复趋势
           </span>
           <span className="mt-0.5 block text-caption1 text-text-muted">
-            睡眠 · 静息心率 · 最大摄氧量 · 负荷相关
+            睡眠 · 静息心率 · 心率变异 · 最大摄氧量
           </span>
         </div>
         <span className="flex items-center gap-1 text-caption1 text-text-muted">

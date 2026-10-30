@@ -26,7 +26,7 @@ export function WeeklyGroup({
 
   const count = activities.length;
   const totalDistance = activities.reduce((s, a) => s + (a.distance_m ?? 0), 0);
-  const totalTss = activities.reduce((s, a) => s + (a.tss ?? 0), 0);
+  const totalDuration = activities.reduce((sum, activity) => sum + (activity.duration_s ?? 0), 0);
 
   return (
     <section className="overflow-hidden rounded-lg border border-border-subtle bg-surface-raised">
@@ -48,7 +48,7 @@ export function WeeklyGroup({
           <span className="ml-auto flex items-center gap-3 font-mono text-caption1 text-text-secondary">
             <span>{count} 次</span>
             <span>{formatDistance(totalDistance)}</span>
-            <span>TSS {Math.round(totalTss)}</span>
+            <span>{Math.round(totalDuration / 60)} 分钟</span>
           </span>
         </button>
         {action && <div className="flex shrink-0 items-center pr-2">{action}</div>}

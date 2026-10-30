@@ -108,6 +108,7 @@ export function CalendarListView() {
     from: "",
     to: "",
     sport: "all",
+    race: "all",
     intensity: "all",
     gpsOnly: false,
     source: "all",

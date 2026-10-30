@@ -75,7 +75,7 @@ test.describe("training workflow", () => {
   test.describe("mobile progressive forecast", () => {
     test.use({ viewport: MOBILE });
 
-    test("forecast opens on demand from the plan-analysis row", async ({ page }) => {
+    test("forecast opens on demand from the training overview row", async ({ page }) => {
       await page.goto("/calendar");
       const toggle = page.getByTestId("calendar-insights-toggle");
       await expect(toggle).toBeVisible({ timeout: 10000 });
@@ -85,19 +85,17 @@ test.describe("training workflow", () => {
       await expect(summary).toBeHidden();
       await toggle.click();
       await expect(summary).toBeVisible();
-      const desktopChart = page.getByTestId("plan-forecast-chart");
-      // The chart container is `lg:block` and invisible at 390px viewport.
-      await expect(desktopChart).toBeHidden();
+      await expect(page.getByTestId("plan-forecast-chart")).toHaveCount(0);
     });
   });
 
   test.describe("desktop forecast", () => {
     test.use({ viewport: DESKTOP });
 
-    test("renders the full chart frame on desktop", async ({ page }) => {
+    test("renders the run-distance summary on desktop", async ({ page }) => {
       await page.goto("/calendar");
-      const chart = page.getByTestId("plan-forecast-chart");
-      await expect(chart).toBeVisible();
+      await expect(page.locator('[data-testid^="plan-forecast-summary"]')).toBeVisible();
+      await expect(page.getByTestId("plan-forecast-chart")).toHaveCount(0);
     });
   });
 

@@ -15,6 +15,7 @@ import { groupStreams } from "@shared/types/activity";
 import { computeAvailability, extractId } from "@features/activity/lib/activity-detail";
 import { ShareDialog } from "@features/activity/components/ShareDialog";
 import { ActivityFlagActions } from "@features/activity/components/ActivityFlagActions";
+import { ActivityRaceToggle } from "@features/activity/components/ActivityRaceToggle";
 import { DataAvailabilityCard } from "@features/activity/components/DataAvailabilityCard";
 import { DemoSessionSwitcher } from "@features/activity/components/DemoSessionSwitcher";
 import { DemoActivityReport } from "@features/activity/components/DemoActivityReport";
@@ -104,6 +105,7 @@ export default function ActivityDetailPage() {
             <Share2 className="size-3.5" aria-hidden="true" />
             分享
           </button>
+          <ActivityRaceToggle activityId={id} isRace={activity.is_race ?? false} onDone={activityQuery.reload} />
           <ActivityFlagActions activityId={id} onDone={activityQuery.reload} />
         </div>
       </div>
@@ -126,7 +128,6 @@ export default function ActivityDetailPage() {
               rows={[
                 { label: "GPS 轨迹", ok: availability.hasGps },
                 { label: "心率流", ok: activity.has_hr ?? false },
-                { label: "功率流", ok: activity.has_power ?? false },
                 { label: "步频/踏频", ok: activity.has_cadence ?? false },
                 { label: "天气", ok: activity.weather != null },
               ]}

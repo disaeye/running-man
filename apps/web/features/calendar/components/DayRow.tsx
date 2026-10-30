@@ -59,8 +59,8 @@ export function DayRow({
   const primary = events[0] ?? null;
   const match = primary ? matches?.get(primary.event_id) : undefined;
   const status = primary ? (match?.status ?? (isPast ? "missed" : null)) : null;
-  const plannedTss = events.reduce((sum, event) => sum + (event.predicted_tss ?? 0), 0);
-  const actualTss = activities.reduce((sum, activity) => sum + (activity.tss ?? 0), 0);
+  const plannedDuration = events.reduce((sum, event) => sum + (event.workout_prescription?.duration_min ?? 0), 0);
+  const actualDuration = activities.reduce((sum, activity) => sum + (activity.duration_s ?? 0), 0);
   const prescription = primary?.workout_prescription ?? null;
   const prescriptionPace =
     prescription?.pace_min_s_km != null && prescription?.pace_max_s_km != null
@@ -75,9 +75,9 @@ export function DayRow({
 
   const meta = primary
     ? [
-        plannedTss > 0 ? `预计 ${Math.round(plannedTss)} TSS` : null,
+        plannedDuration > 0 ? `计划 ${Math.round(plannedDuration)} 分钟` : null,
         prescription ? `${prescription.duration_min} 分钟` : null,
-        activities.length > 0 ? `实际 ${actualTss > 0 ? `${Math.round(actualTss)} TSS` : "已记录"}` : null,
+        activities.length > 0 ? `实际 ${Math.round(actualDuration / 60)} 分钟` : null,
       ]
         .filter(Boolean)
         .join(" · ")
@@ -148,7 +148,7 @@ export function DayRow({
                 <p className="text-caption1 text-text-muted">
                   {[
                     event.workout_prescription?.type,
-                    event.predicted_tss != null ? `${Math.round(event.predicted_tss)} TSS` : null,
+                    event.workout_prescription?.duration_min != null ? `${event.workout_prescription.duration_min} 分钟` : null,
                     event.workout_prescription
                       ? `${event.workout_prescription.duration_min} 分钟`
                       : null,

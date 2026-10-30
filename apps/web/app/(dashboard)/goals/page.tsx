@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { useGoals, useGoal } from "@features/goals/hooks/useGoals";
 import { useActivePlan } from "@features/goals/hooks/useActivePlan";
-import { usePlanAdjustments } from "@features/goals/hooks/usePlanAdjustments";
 import type { Goal } from "@shared/types/goals";
 import { Button } from "@shared/ui/button";
 import { PageHeader } from "@shared/ui/PageHeader";
@@ -18,7 +17,6 @@ import { GoalsErrorBanner } from "@features/goals/components/GoalsErrorBanner";
 import { GoalDetail } from "@features/goals/components/GoalDetail";
 import { PlanGenerateDialog } from "@features/plan/components/PlanGenerateDialog";
 import { DemoActivePlanCard } from "@features/goals/components/DemoActivePlanCard";
-import { DemoAdjustmentBanner } from "@features/goals/components/DemoAdjustmentBanner";
 import { DemoWeekFlow } from "@features/goals/components/DemoWeekFlow";
 import { DemoPlanLab } from "@features/goals/components/DemoPlanLab";
 import { SampleBadge } from "@shared/dev/SampleBadge";
@@ -28,16 +26,8 @@ import { useGoalsPageHandlers } from "@features/goals/hooks/useGoalsPageHandlers
 import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
 
 /**
- * 目标与训练计划（按 stich_demo 的 goal.html 重排）。
- *
- * 顺序与参考稿一致：
- *   1. 动态负荷干预横幅（有建议时才出现）
- *   2. 当前激活计划卡
- *   3. 本周微周期训练流
- *   4. 智能定制新计划工作台
- *
- * 目标本身的里程碑与达成进度放在最后：计划是每天要看的东西，目标不是。
- * 每个目标仍然可以通过顶部切换器访问，已达成的目标也在列表里。
+ * 目标页组合实际目标、里程碑和训练安排。
+ * 每个目标由顶部选择器切换，赛事资料以用户填写的真实信息为准。
  */
 export default function GoalsPage() {
   const { goals, loading, error, refresh } = useGoals();
@@ -62,16 +52,17 @@ export default function GoalsPage() {
     milestones,
     loading: milestoneLoading,
     error: goalError,
+    refresh: refreshGoal,
+    refreshMilestones,
   } = useGoal(effectiveGoalId);
 
   const plan = useActivePlan(effectiveGoalId);
-  const adjustments = usePlanAdjustments();
-
   const handlers = useGoalsPageHandlers({
     refresh,
     editingGoal,
     effectiveGoalId,
     milestones,
+    refreshMilestones,
     setSelectedGoalId,
     setEditingGoal,
     setShowForm,
@@ -95,10 +86,11 @@ export default function GoalsPage() {
       <PageHeader
         title={
           <span className="inline-flex items-center gap-2">
-            <span id="goals-title">目标与计划</span>
+            <span id="goals-title">目标</span>
             {showingSamples ? <SampleBadge /> : null}
           </span>
         }
+        description="管理赛事目标、训练阶段与里程碑。"
         action={
           goals.length > 0 || showingSamples ? (
             <Button onClick={handlers.handleOpenCreate} size="sm" className="gap-1.5 rounded-full">
@@ -145,72 +137,101 @@ export default function GoalsPage() {
           </Card>
         )
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {orderableGoals.length > 1 ? (
-            <Card padding="sm">
+            <section aria-label="选择目标" className="space-y-2">
+              <h2 className="text-caption1 font-medium text-text-secondary">你的目标</h2>
               <GoalSelector
                 goals={orderableGoals}
                 selectedId={effectiveGoalId}
                 onSelect={setSelectedGoalId}
               />
-            </Card>
+            </section>
           ) : null}
 
-          {/* 1. 动态负荷干预横幅：有建议才出现 */}
-          <DemoAdjustmentBanner
-            adjustments={adjustments.data}
-            onDecided={adjustments.reload}
-          />
-
-          {hasPlan && plan.data ? (
-            <>
-              {/* 2. 当前激活计划卡 */}
-              <DemoActivePlanCard plan={plan.data} />
-
-              <div className="grid min-w-0 gap-4 lg:grid-cols-12 lg:items-start">
-                <div className="min-w-0 space-y-4 lg:col-span-5">
-                  {/* 4. 智能定制新计划工作台 */}
-                  <DemoPlanLab
-                    plan={plan.data}
-                    onGenerate={() => setGenerateOpen(true)}
-                  />
-                </div>
-                <div className="min-w-0 space-y-4 lg:col-span-7">
-                  {/* 3. 本周微周期训练流 */}
-                  <DemoWeekFlow plan={plan.data} todayIso={todayIso} />
-                </div>
-              </div>
-            </>
+          {currentGoal ? (
+            <GoalDetail
+              goal={currentGoal}
+              milestones={milestones}
+              milestoneLoading={milestoneLoading}
+              goalError={goalError}
+              onEdit={handlers.handleEdit}
+              onAbandon={handlers.handleAbandon}
+              onAchieve={handlers.handleAchieve}
+              onToggleMilestone={handlers.handleToggleMilestone}
+              onSaveMilestone={handlers.handleSaveMilestone}
+            />
+          ) : goalError ? (
+            <GoalsErrorBanner
+              error={null}
+              goalError={goalError}
+              effectiveGoalId={effectiveGoalId}
+              currentGoal={currentGoal}
+            />
           ) : (
-            <Card padding="lg">
-              <EmptyState
-                icon={<FlagIcon />}
-                title="这个目标还没有训练计划"
-                description="生成一份计划后，这里会显示当前阶段、本周课表与配速区间。"
-                action={
-                  <Button
-                    onClick={() => setGenerateOpen(true)}
-                    className="mt-4 gap-1.5 rounded-full"
-                  >
-                    <Plus className="size-4" aria-hidden="true" />
-                    <span>生成训练计划</span>
-                  </Button>
-                }
-              />
-            </Card>
+            <div className="h-40 animate-pulse rounded-xl bg-surface-raised" aria-label="正在读取目标资料" />
           )}
 
-          {/* 目标的里程碑与达成进度 */}
-          <GoalDetail
-            goal={currentGoal}
-            milestones={milestones}
-            milestoneLoading={milestoneLoading}
-            goalError={goalError}
-            onEdit={handlers.handleEdit}
-            onAbandon={handlers.handleAbandon}
-            onAchieve={handlers.handleAchieve}
-            onToggleMilestone={handlers.handleToggleMilestone}
-          />
+          <section aria-labelledby="goal-plan-title" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 id="goal-plan-title" className="text-title2 font-semibold text-text-primary">训练安排</h2>
+                <p className="mt-1 text-caption1 text-text-muted">查看当前阶段、本周课表与训练配速。</p>
+              </div>
+              {hasPlan && plan.data ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setGenerateOpen(true)}
+                  disabled={!currentGoal?.target_date || currentGoal.status !== "active"}
+                  title={!currentGoal?.target_date ? "请先填写目标日期" : undefined}
+                >
+                  调整训练计划
+                </Button>
+              ) : null}
+            </div>
+
+            {hasPlan && plan.data ? (
+              <>
+                <DemoActivePlanCard plan={plan.data} />
+                <div className="grid min-w-0 gap-4 lg:grid-cols-12 lg:items-start">
+                  <div className="min-w-0 space-y-4 lg:col-span-7">
+                    <DemoWeekFlow plan={plan.data} todayIso={todayIso} />
+                  </div>
+                  <div className="min-w-0 space-y-4 lg:col-span-5">
+                    <DemoPlanLab
+                      plan={plan.data}
+                      onGenerate={() => setGenerateOpen(true)}
+                      canGenerate={Boolean(currentGoal?.target_date && currentGoal.status === "active")}
+                      onEditGoal={() => currentGoal && handlers.handleEdit(currentGoal)}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <Card padding="lg">
+                <EmptyState
+                  icon={<FlagIcon />}
+                  title="尚无训练计划"
+                  description={currentGoal?.target_date
+                    ? "生成计划后，这里会显示训练阶段、本周课表和配速安排。"
+                    : "填写目标日期后，才能根据赛事时间安排训练阶段。"}
+                  action={currentGoal?.target_date ? (
+                    <Button
+                      onClick={() => setGenerateOpen(true)}
+                      className="mt-4 gap-1.5 rounded-full"
+                    >
+                      <Plus className="size-4" aria-hidden="true" />
+                      <span>生成训练计划</span>
+                    </Button>
+                  ) : currentGoal ? (
+                    <Button onClick={() => handlers.handleEdit(currentGoal)} className="mt-4">
+                      填写目标日期
+                    </Button>
+                  ) : null}
+                />
+              </Card>
+            )}
+          </section>
         </div>
       )}
 
@@ -225,6 +246,7 @@ export default function GoalsPage() {
         onClose={() => setGenerateOpen(false)}
         onGenerated={() => {
           void refresh();
+          void refreshGoal();
           plan.reload();
         }}
       />

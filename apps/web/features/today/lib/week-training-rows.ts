@@ -72,13 +72,13 @@ export function buildWeekTrainingRows(input: WeekTrainingInput): WeekTrainingRow
 
     if (activities.length > 0) {
       const primary = activities[0]!;
-      const totalTss = activities.reduce((sum, a) => sum + (a.tss ?? 0), 0);
-      const tssRounded = Math.round(totalTss);
+      const totalDuration = activities.reduce((sum, activity) => sum + (activity.duration_s ?? 0), 0);
+      const durationMinutes = Math.round(totalDuration / 60);
       rows.push({
         dayKey,
         dayLabel,
         title: activityTitle(primary),
-        metric: isToday ? `今天 · ${tssRounded}` : `${tssRounded} TSS`,
+        metric: durationMinutes > 0 ? `${isToday ? "今天 · " : ""}${durationMinutes} 分钟` : "已完成",
         isToday,
         isDone: true,
       });
@@ -87,13 +87,14 @@ export function buildWeekTrainingRows(input: WeekTrainingInput): WeekTrainingRow
 
     if (dayEvents.length > 0) {
       const primary = dayEvents[0]!;
-      const tss = primary.predicted_tss != null ? Math.round(primary.predicted_tss) : null;
-      const tssText = tss != null ? `${tss} TSS` : "计划中";
+      const durationMinutes = primary.workout_prescription?.duration_min;
       rows.push({
         dayKey,
         dayLabel,
         title: eventTitle(primary),
-        metric: isToday ? `今天 · ${tss != null ? tss : ""}`.trim() : tssText,
+        metric: durationMinutes != null
+          ? `${isToday ? "今天 · " : ""}${Math.round(durationMinutes)} 分钟`
+          : isToday ? "今天 · 计划中" : "计划中",
         isToday,
         isDone: false,
       });

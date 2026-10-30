@@ -72,7 +72,7 @@ export function DisconnectConfirmDialog({
                   断开并清空该来源全部数据
                 </span>
                 <span className="text-caption1 text-text-muted block mt-0.5">
-                  物理删除所有来自 Intervals.icu 的活动摘要、时序流与健康日志，并重新计算负荷。
+                  物理删除所有来自 Intervals.icu 的活动摘要、时序流与健康日志，并更新相关训练统计。
                 </span>
               </div>
             </label>

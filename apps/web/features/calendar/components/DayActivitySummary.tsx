@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@shared/ui/Badge";
 import {
   formatDistance,
   formatDuration,
@@ -36,21 +35,10 @@ export function DayActivitySummary({ activity }: Props) {
           <p className="mt-1 font-mono text-title3 font-bold text-text-primary">{formatDuration(activity.duration_s)}</p>
         </div>
         <div>
-          <p className="text-caption2 font-semibold text-text-secondary">TSS</p>
-          <p className="mt-1 font-mono text-title3 font-bold text-text-primary">
-            {activity.tss != null ? Math.round(activity.tss) : "--"}
-          </p>
-        </div>
-        <div>
           <p className="text-caption1 font-semibold text-text-secondary">平均心率</p>
           <p className="mt-1 font-mono text-title3 font-bold text-text-primary">{formatHeartRate(activity.avg_hr)}</p>
         </div>
       </div>
-      {activity.tss != null && (
-        <Badge variant={activity.tss >= 100 ? "error" : activity.tss >= 50 ? "warning" : "success"}>
-          {activity.tss >= 100 ? "高强度" : activity.tss >= 50 ? "中等强度" : "低强度"}
-        </Badge>
-      )}
       <Link
         href={`/activities/${activity.activity_id}`}
         className="focus-ring inline-flex items-center gap-1 self-start rounded-full bg-accent px-4 py-2 text-subheadline font-semibold text-accent-foreground transition-colors hover:bg-accent/90"

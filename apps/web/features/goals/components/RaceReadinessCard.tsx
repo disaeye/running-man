@@ -4,7 +4,6 @@ import { type ComponentType, useEffect, useState } from "react";
 import { Activity, Flower2, Leaf, Mountain, Sprout, Wrench } from "lucide-react";
 import { Card } from "@shared/ui/Card";
 import { CardHeader } from "@shared/ui/CardHeader";
-import { MetricStrip } from "@shared/ui/MetricStrip";
 import { Badge } from "@shared/ui/Badge";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import { getReadinessApiV1InsightsReadinessGet } from "@shared/api/generated/clients";
@@ -38,7 +37,7 @@ const PHASE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
 /**
  * 比赛准备度：比赛窗口（90 天内、进行中）才渲染。
  *
- * 两格读数（倒计时、预计完赛）+ 一句就绪建议 + 一行减量建议。
+ * 比赛倒计时、就绪建议和阶段训练提示。
  * 就绪状态的徽章去卡头右侧，因为它是「这张卡当前处于什么状态」；身体里不再
  * 摆第三格 TSB——接口不提供数值型 TSB，拿展示句反推就是拿字符串猜数，
  * 而一个没有数据源的格子不该占版面。
@@ -84,7 +83,6 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
   }
 
   const currentPhase = estimateCurrentPhase(goal);
-  const predictedFinish = formatPredictedFinish(goal);
   const taperAdvice = getTaperAdvice(currentPhase, days);
   const readiness = projection?.local_readiness ?? null;
   // 样本不够时不把分数、徽章当结论：接口的 `data_sufficient` 就是回答这个问题的字段。
@@ -103,13 +101,12 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
         }
       />
 
-      <MetricStrip
-        columns={2}
-        items={[
-          { label: "距比赛", value: String(days), unit: "天" },
-          { label: "预计完赛", value: predictedFinish, unit: goal.unit ?? undefined },
-        ]}
-      />
+      <dl className="mt-3">
+        <dt className="text-caption1 text-text-muted">距比赛</dt>
+        <dd className="mt-1 font-mono text-title2 font-semibold tabular-nums text-text-primary">
+          {days} <span className="font-sans text-caption1 font-normal text-text-muted">天</span>
+        </dd>
+      </dl>
 
       {error && !loading ? (
         <p className="mt-3 text-caption1 text-error">{error}</p>
@@ -135,19 +132,6 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
 function PhaseIcon({ phase }: { readonly phase: string }) {
   const Icon = PHASE_ICONS[phase] ?? Activity;
   return <Icon className="size-3.5" />;
-}
-
-/** Estimate finish time from current progress and target value */
-function formatPredictedFinish(goal: Goal): string {
-  if (!goal.target_value || goal.target_value <= 0) return "--";
-  const progress = goal.current_value / goal.target_value;
-  if (progress >= 1) return "可达成";
-  if (progress < 0.1) return "数据不足";
-
-  // Linear extrapolation: current rate → projected finish
-  const remainRatio = 1 - progress;
-  const pctStr = (progress * 100).toFixed(0);
-  return `${pctStr}% · 预计${remainRatio <= 0.15 ? "即将" : "可控"}`;
 }
 
 /** Taper advice based on current phase and remaining days */

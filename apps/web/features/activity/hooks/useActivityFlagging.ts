@@ -6,6 +6,7 @@ import { callOrval } from "@shared/api/orval-adapter";
 import { apiErrorMessage } from "@shared/lib/api";
 import {
   deleteActivityApiV1ActivitiesActivityIdDelete,
+  updateRaceFlagApiV1ActivitiesActivityIdRacePatch,
   ignoreActivitiesBulkApiV1ActivitiesIgnorePost,
   ignoreActivityApiV1ActivitiesActivityIdIgnorePost,
   restoreActivityApiV1ActivitiesActivityIdRestorePost,
@@ -13,22 +14,14 @@ import {
 } from "@shared/api/generated/clients";
 
 /**
- * Ignore, un-ignore, delete and restore activities.
- *
- * Ignoring keeps an activity visible but out of the numbers (load, PMC,
- * records, zone statistics). Deletion hides it and stops the sync from
- * bringing it back. Both are reversible, so neither is behind a confirmation
- * dialog beyond what the row already communicates.
- *
- * Every mutation invalidates the same cache keys: the server recomputes
- * derived facts, so anything reading load or PMC is now stale.
+ * 活动标记操作会更新活动列表、跑步统计、最佳成绩和心率区间分析。
+ * 忽略会保留活动记录，删除会将活动移入回收站，之后都可以恢复。
+ * 每次操作都会清理相关缓存，让页面读取最新统计。
  */
 
-/** Cache keys that go stale when an activity stops counting. */
+/** 活动标记更新后需要重新读取的数据。 */
 const AFFECTED_KEYS = [
   "/activities",
-  "/pmc",
-  "/insights/coach-context",
   "/insights/zones",
   "/data/health",
   "/data/quality",
@@ -44,6 +37,7 @@ export interface UseActivityFlaggingResult {
   remove: (activityId: string) => Promise<boolean>;
   restore: (activityId: string) => Promise<boolean>;
   ignoreMany: (activityIds: string[], ignored: boolean) => Promise<boolean>;
+  setRace: (activityId: string, isRace: boolean) => Promise<boolean>;
 }
 
 export function useActivityFlagging(): UseActivityFlaggingResult {
@@ -52,8 +46,7 @@ export function useActivityFlagging(): UseActivityFlaggingResult {
   const [error, setError] = useState<string | null>(null);
 
   const invalidate = useCallback(async () => {
-    // Prefix match so every parameterised variant is refreshed ("/activities?
-    // from=…&to=…" as well as "/activities").
+    // 清理与路径前缀匹配的缓存，包括带有日期参数的活动列表。
     await Promise.all(
       AFFECTED_KEYS.map((key) =>
         mutate(
@@ -110,6 +103,11 @@ export function useActivityFlagging(): UseActivityFlaggingResult {
       run(
         () => callOrval((f) => restoreActivityApiV1ActivitiesActivityIdRestorePost(id, {}, f)),
         "恢复失败",
+      ),
+    setRace: (id, isRace) =>
+      run(
+        () => callOrval((f) => updateRaceFlagApiV1ActivitiesActivityIdRacePatch(id, { is_race: isRace }, {}, f)),
+        "更新活动分类失败",
       ),
     ignoreMany: (ids, ignored) =>
       run(

@@ -11,6 +11,7 @@ export const activityDetailHasGpsDefault = false;
 export const activityDetailHasHrDefault = false;
 export const activityDetailHasPowerDefault = false;
 export const activityDetailIsBookmarkedDefault = false;
+export const activityDetailIsRaceDefault = false;
 export const ActivityDetail = zod.object({
   "activity_id": zod.string(),
   "aerobic_te": zod.union([zod.number(),zod.null()]).optional(),
@@ -35,6 +36,7 @@ export const ActivityDetail = zod.object({
   "icu_ctl": zod.union([zod.number(),zod.null()]).optional(),
   "intensity_factor": zod.union([zod.number(),zod.null()]).optional(),
   "is_bookmarked": zod.boolean().default(activityDetailIsBookmarkedDefault),
+  "is_race": zod.boolean().default(activityDetailIsRaceDefault),
   "max_hr": zod.union([zod.number(),zod.null()]).optional(),
   "name": zod.union([zod.string(),zod.null()]).optional(),
   "np": zod.union([zod.number(),zod.null()]).optional(),

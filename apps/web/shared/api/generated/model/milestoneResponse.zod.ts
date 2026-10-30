@@ -11,9 +11,11 @@ export const MilestoneResponse = zod.object({
   "achieved_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "goal_id": zod.string(),
   "milestone_id": zod.string(),
+  "result_text": zod.union([zod.string(),zod.null()]).optional(),
   "target_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "target_value": zod.union([zod.number(),zod.null()]).optional(),
-  "title": zod.string()
+  "title": zod.string(),
+  "unit": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export type MilestoneResponse = zod.input<typeof MilestoneResponse>;

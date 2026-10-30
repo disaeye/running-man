@@ -37,7 +37,7 @@ const RECENT_DAYS = 30;
  *   2. 今日推荐训练（焦点行动卡）
  *   3. 本周训练里程进度环
  *   4. 最近一次训练
- *   5. 跑力生理负荷
+ *   5. 跑步能力摘要
  *
  * 取数只发生在这一层，卡片组件全部是纯展示：同一个 readiness 不会在两张卡
  * 上各请求一次然后各说各话。
@@ -114,7 +114,6 @@ export function HomePortrait() {
     asOf,
     activityCount: recent.data.length,
     wellnessCount: 0,
-    pmcCount: weekly.currentWeek ? 1 : 0,
   });
 
   const firstName = profileQuery.profile?.name?.split(/\s+/)[0] ?? "";
@@ -141,13 +140,9 @@ export function HomePortrait() {
     <div className="page-stack" data-testid="home-portrait">
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-x-2 text-caption1 text-text-muted">
-          <span>
-            {dateLabel}
-            {firstName ? ` · ${firstName}` : ""}
-          </span>
-          <span className="text-border-subtle" aria-hidden="true">
-            ·
-          </span>
+          <h1 data-page-title className="text-title1 font-semibold text-text-primary">今天</h1>
+          <span>{dateLabel}{firstName ? ` · ${firstName}` : ""}</span>
+          <span className="text-border-subtle" aria-hidden="true">·</span>
           <span>{caption}</span>
         </div>
       </header>
@@ -177,8 +172,9 @@ export function HomePortrait() {
         />
       ) : (
         <>
-          {/* 1. 今日就绪度与恢复评分 */}
-          <DemoReadinessCard
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            {/* 1. 今日就绪度与恢复评分 */}
+            <DemoReadinessCard
             conclusionTestId="home-decision"
             readingsTestId="home-readings"
             score={assessment.available ? readiness?.score ?? null : null}
@@ -190,17 +186,19 @@ export function HomePortrait() {
               sleep_secs: readings?.sleep_secs ?? null,
               hrv: readings?.hrv ?? null,
             }}
-          />
+            />
 
-          {/* 2. 今日推荐训练（焦点行动卡） */}
-          <DemoTodayWorkoutCard
+            {/* 2. 今日推荐训练（焦点行动卡） */}
+            <DemoTodayWorkoutCard
             testId="home-workout"
             decision={decision}
             prescription={todayEvent?.workout_prescription ?? null}
             todayLabel={dateLabel}
             linkedActivityId={todayEvent?.linked_activity_id ?? null}
-          />
+            />
+          </div>
 
+          <div className="grid gap-4 lg:grid-cols-2">
           {/* 3. 本周训练里程进度环 */}
           <DemoWeekVolumeCard
             actualDistanceM={week?.actual_distance_m ?? null}
@@ -219,13 +217,14 @@ export function HomePortrait() {
             relativeLabel={recentActivity ? formatRelative(recentActivity.start_time) : ""}
           />
 
-          {/* 5. 跑力生理负荷 */}
+          {/* 5. 跑步能力摘要 */}
           <DemoAbilityCard
             vdot={ability.data?.vdot ?? null}
             thresholdPaceSPerKm={ability.data?.threshold_pace_s_per_km ?? null}
             figures={personalRange.data?.figures ?? []}
             windowDays={personalRange.data?.window_days ?? 90}
           />
+          </div>
         </>
       )}
     </div>

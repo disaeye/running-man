@@ -17,21 +17,22 @@ export function DataHealthSummary() {
   if (loading) {
     return <DataHealthSummarySkeleton />;
   }
-  const safeHealth = health || {
-    activities: { total: 0, with_hr: 0, with_gps: 0, with_power: 0, with_streams: 0, data_as_of: null },
-    wellness: { total: 0, with_hrv: 0, with_sleep: 0, with_rhr: 0, data_as_of: null },
-    training_load: { total: 0, with_tss: 0, with_trimp: 0, data_as_of: null },
-    gaps: [],
+  const activities = health?.activities ?? {
+    total: 0,
+    with_hr: 0,
+    with_gps: 0,
+    with_streams: 0,
+    data_as_of: null,
   };
-  const { activities, wellness, training_load, gaps } = safeHealth;
+  const wellness = health?.wellness ?? { data_as_of: null };
+  const gaps = health?.gaps ?? [];
 
   const hrPct = activities.total > 0 ? Math.round((activities.with_hr / activities.total) * 100) : 0;
   const gpsPct = activities.total > 0 ? Math.round((activities.with_gps / activities.total) * 100) : 0;
-  const powerPct = activities.total > 0 ? Math.round((activities.with_power / activities.total) * 100) : 0;
-  const streamsPct = activities.total > 0 ? Math.round(((activities.with_streams ?? 0) / activities.total) * 100) : 0;
-  const overallPct = Math.round((hrPct + gpsPct + powerPct + streamsPct) / 4);
+  const streamsPct = activities.total > 0 ? Math.round((activities.with_streams / activities.total) * 100) : 0;
+  const overallPct = Math.round((hrPct + gpsPct + streamsPct) / 3);
 
-  const dates = [activities.data_as_of, wellness.data_as_of, training_load.data_as_of].filter(
+  const dates = [activities.data_as_of, wellness.data_as_of].filter(
     (value): value is string => Boolean(value),
   );
   const latestDate = dates.length > 0 ? dates.sort().reverse()[0] : null;
@@ -46,7 +47,7 @@ export function DataHealthSummary() {
           value={latestDate ? formatRelativeTime(latestDate) : "暂无"}
           unit="最新"
           color="text-accent-strong"
-          tooltip={`活动 ${activities.data_as_of ? formatDate(activities.data_as_of) : "暂无"} · 健康 ${wellness.data_as_of ? formatDate(wellness.data_as_of) : "暂无"} · 负荷 ${training_load.data_as_of ? formatDate(training_load.data_as_of) : "暂无"}`}
+          tooltip={`活动 ${activities.data_as_of ? formatDate(activities.data_as_of) : "暂无"} · 健康 ${wellness.data_as_of ? formatDate(wellness.data_as_of) : "暂无"}`}
         />
 
         <KpiCard
@@ -55,7 +56,7 @@ export function DataHealthSummary() {
           unit={`${activities.total} 条`}
           trend={overallPct >= 80 ? "up" : overallPct >= 50 ? "stable" : "down"}
           color={overallPct >= 80 ? "text-success" : overallPct >= 50 ? "text-warning" : "text-error"}
-          tooltip={`心率 ${hrPct}% · GPS ${gpsPct}% · 功率 ${powerPct}% · 流数据 ${streamsPct}%`}
+          tooltip={`心率 ${hrPct}% · GPS ${gpsPct}% · 流数据 ${streamsPct}%`}
         />
         <KpiCard
           label="数据缺口"

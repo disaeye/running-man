@@ -14,11 +14,10 @@ import {
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import { createEventApiV1CalendarPost, updateEventApiV1CalendarEventIdPut } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
-import { WarningBadge } from "@features/calendar/components/WarningBadge";
 import { useWorkoutTemplates } from "@features/plan/hooks/useWorkoutTemplates";
 import {
   type WorkoutSegment, type CalendarEventDTO, type SegmentType, type TrainingGoal,
-  SEGMENT_TYPES, SEGMENT_TYPE_LABEL, TRAINING_GOALS, totalTSS, riskFlags,
+  SEGMENT_TYPES, SEGMENT_TYPE_LABEL, TRAINING_GOALS, totalDurationMinutes,
 } from "@features/calendar/components/types";
 
 interface Props {
@@ -37,7 +36,7 @@ function parseSegs(xml?: string): WorkoutSegment[] {
 
 interface TemplateItem {
   name: string;
-  segs: { segment_type: SegmentType; duration_s: number; power_low: number; power_high: number }[];
+  segs: { segment_type: SegmentType; duration_s: number }[];
 }
 
 export function WorkoutBuilderV2({ date, event, onSave, onClose }: Props) {
@@ -46,9 +45,8 @@ export function WorkoutBuilderV2({ date, event, onSave, onClose }: Props) {
   const [goal, setGoal] = useState<TrainingGoal>("aerobic-base");
   const [segType, setSegType] = useState<SegmentType>("Warmup");
   const [dur, setDur] = useState("");
-  const [pLow, setPLow] = useState("");
-  const [pHigh, setPHigh] = useState("");
-  const [cad, setCad] = useState("");
+  const [paceMin, setPaceMin] = useState("");
+  const [paceMax, setPaceMax] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -62,30 +60,27 @@ export function WorkoutBuilderV2({ date, event, onSave, onClose }: Props) {
         segs: (t.segments ?? []).map((s) => ({
           segment_type: s.segment_type as SegmentType,
           duration_s: s.duration_s,
-          power_low: s.power_low,
-          power_high: s.power_high,
         })),
       })),
     [templates, goal],
   );
 
-  const tss = totalTSS(segs);
-  const risk = riskFlags(tss);
-
+  const durationMinutes = totalDurationMinutes(segs);
   const applyTemplate = useCallback((tpl: TemplateItem) => {
     setName(tpl.name);
-    setSegs(tpl.segs.map((s) => ({ ...s, id: `t${Date.now()}_${nextId++}` })));
+    setSegs(tpl.segs.map((segment) => ({ ...segment, id: `t${Date.now()}_${nextId++}` })));
   }, []);
 
   const addSeg = useCallback((e: FormEvent) => {
     e.preventDefault();
-    const d = Number(dur), lo = Number(pLow), hi = Number(pHigh);
-    if (!d || !lo || !hi) return;
-    const seg: WorkoutSegment = { id: `s${Date.now()}_${nextId++}`, segment_type: segType, duration_s: d, power_low: lo, power_high: hi };
-    if (cad) seg.cadence = Number(cad);
-    setSegs((p) => [...p, seg]);
-    setDur(""); setPLow(""); setPHigh(""); setCad("");
-  }, [segType, dur, pLow, pHigh, cad]);
+    const duration = Number(dur);
+    if (!duration) return;
+    const segment: WorkoutSegment = { id: `s${Date.now()}_${nextId++}`, segment_type: segType, duration_s: duration };
+    if (paceMin) segment.pace_min_s_km = Number(paceMin);
+    if (paceMax) segment.pace_max_s_km = Number(paceMax);
+    setSegs((previous) => [...previous, segment]);
+    setDur(""); setPaceMin(""); setPaceMax("");
+  }, [segType, dur, paceMin, paceMax]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -96,7 +91,7 @@ export function WorkoutBuilderV2({ date, event, onSave, onClose }: Props) {
         category: "workout",
         name: name || `训练 ${date}`,
         workout_xml: JSON.stringify(segs),
-        predicted_tss: tss,
+        predicted_tss: null,
         sport_type: "Run",
       };
       if (event) {
@@ -116,7 +111,7 @@ export function WorkoutBuilderV2({ date, event, onSave, onClose }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [date, event, name, segs, tss, onSave]);
+  }, [date, event, name, segs, onSave]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -172,9 +167,8 @@ export function WorkoutBuilderV2({ date, event, onSave, onClose }: Props) {
             </Select>
           </label>
           <label className="flex flex-col gap-1"><span className="text-caption1 text-text-muted">时长 (秒)</span><Input id="wb-dur" type="number" min={1} value={dur} onChange={(e) => setDur(e.target.value)} /></label>
-          <label className="flex flex-col gap-1"><span className="text-caption1 text-text-muted">功率下限 (FTP)</span><Input id="wb-plow" type="number" step={0.01} min={0} max={3} value={pLow} onChange={(e) => setPLow(e.target.value)} /></label>
-          <label className="flex flex-col gap-1"><span className="text-caption1 text-text-muted">功率上限 (FTP)</span><Input id="wb-phigh" type="number" step={0.01} min={0} max={3} value={pHigh} onChange={(e) => setPHigh(e.target.value)} /></label>
-          <label className="flex flex-col gap-1"><span className="text-caption1 text-text-muted">踏频 (rpm)</span><Input id="wb-cad" type="number" min={0} value={cad} onChange={(e) => setCad(e.target.value)} /></label>
+          <label className="flex flex-col gap-1"><span className="text-caption1 text-text-muted">目标配速下限 (秒/公里)</span><Input id="wb-pace-min" type="number" min={120} max={1800} value={paceMin} onChange={(e) => setPaceMin(e.target.value)} /></label>
+          <label className="flex flex-col gap-1"><span className="text-caption1 text-text-muted">目标配速上限 (秒/公里)</span><Input id="wb-pace-max" type="number" min={120} max={1800} value={paceMax} onChange={(e) => setPaceMax(e.target.value)} /></label>
         </div>
         <Button type="submit" variant="secondary">添加段落</Button>
       </form>
@@ -185,7 +179,7 @@ export function WorkoutBuilderV2({ date, event, onSave, onClose }: Props) {
             <div key={s.id} className="flex items-center justify-between rounded-lg border border-border-default bg-surface-card px-3 py-2 text-subheadline transition-colors duration-fast">
               <span className="text-text-primary">
                 <span className="font-medium text-accent-strong">{SEGMENT_TYPE_LABEL[s.segment_type]}</span>
-                {" · "}{s.duration_s}秒 · {s.power_low}–{s.power_high} FTP{s.cadence ? ` · ${s.cadence}rpm` : ""}
+                {" · "}{s.duration_s}秒{s.pace_min_s_km != null ? ` · ${s.pace_min_s_km}–${s.pace_max_s_km ?? s.pace_min_s_km} 秒/公里` : ""}
               </span>
               <button type="button" onClick={() => setSegs((p) => p.filter((x) => x.id !== s.id))}
                 className="focus-ring flex size-11 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:text-error" aria-label={`移除 ${SEGMENT_TYPE_LABEL[s.segment_type]} 段落`}>
@@ -202,8 +196,7 @@ export function WorkoutBuilderV2({ date, event, onSave, onClose }: Props) {
 
       <div className="flex items-center justify-between border-t border-border-default pt-3">
         <div className="flex items-center gap-3">
-          <span className="text-subheadline text-text-secondary">预计 TSS: <strong className="text-text-primary tabular-nums">{tss}</strong></span>
-          {tss > 0 && <WarningBadge isOvertrainingRisk={risk.isOvertrainingRisk} isHighLoadRisk={risk.isHighLoadRisk} isFresh={risk.isFresh} />}
+          <span className="text-subheadline text-text-secondary">训练时长: <strong className="text-text-primary tabular-nums">{durationMinutes} 分钟</strong></span>
         </div>
         <div className="flex gap-2">
           {onClose && <Button variant="ghost" onClick={onClose}>取消</Button>}

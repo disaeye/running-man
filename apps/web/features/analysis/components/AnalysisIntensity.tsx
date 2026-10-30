@@ -11,16 +11,13 @@ import type { IntensityPoint } from "@features/performance/components/Performanc
 import { Card } from "@shared/ui/Card";
 import { CardHeader } from "@shared/ui/CardHeader";
 import { EmptyState } from "@shared/ui/EmptyState";
-import { Badge } from "@shared/ui/Badge";
 import { ChartShell } from "@shared/ui/ChartShell";
 import { IntensityDistributionChart } from "@features/trends/components/IntensityDistributionChart";
 import { PerformanceConsistency } from "@features/performance/components/PerformanceConsistency";
 import {
   EMPTY_INTENSITY_GUIDANCE,
   buildZoneShares,
-  classifyIntensity,
   summarizeIntensityDistribution,
-  type IntensityClassification,
 } from "@features/analysis/lib/intensity-analysis-copy";
 import { useAnalysisRange } from "../lib/analysis-range";
 
@@ -29,23 +26,6 @@ type ZoneShare = {
   readonly value: number;
   readonly minutes: number;
 };
-
-function classificationBadgeVariant(
-  type: IntensityClassification,
-): "success" | "warning" | "error" | "info" | "neutral" {
-  switch (type) {
-    case "polarized":
-      return "success";
-    case "pyramidal":
-      return "info";
-    case "threshold":
-      return "warning";
-    case "high-volume":
-      return "error";
-    default:
-      return "neutral";
-  }
-}
 
 function IntensitySummary({
   from,
@@ -56,23 +36,10 @@ function IntensitySummary({
 }) {
   const { data } = useIntensityDistribution(from, to);
   const text = useMemo(() => summarizeIntensityDistribution(data), [data]);
-  const classification = useMemo(() => classifyIntensity(data), [data]);
   const shares = useMemo(() => buildZoneShares(data), [data]);
   return (
     <Card padding="md" data-testid="analysis-intensity-summary-card">
-      <CardHeader
-        title="强度结构"
-        trailing={
-          classification ? (
-            <Badge
-              variant={classificationBadgeVariant(classification.type)}
-              data-testid="intensity-classification-badge"
-            >
-              {classification.label}
-            </Badge>
-          ) : null
-        }
-      />
+      <CardHeader title="强度结构" />
       {shares.length > 0 && (
         <div className="flex h-3 overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
           {shares.map((zone, index) => (
@@ -106,7 +73,7 @@ function IntensitySummary({
       )}
       {/* 强度结构的一句话结论，来自合同区间与实测分布；无数据时说明原因 */}
       <p className="mt-3 text-caption1 leading-relaxed text-text-secondary" data-testid="analysis-intensity-summary">
-        {text ?? "暂无强度分布数据。补齐心率、配速或功率记录后会显示各区间占比。"}
+        {text ?? "暂无强度分布数据。补齐心率或配速记录后会显示各区间占比。"}
       </p>
     </Card>
   );

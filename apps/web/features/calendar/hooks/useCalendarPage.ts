@@ -105,6 +105,7 @@ export function useCalendarPage(): UseCalendarPageReturn {
   const activityMap = useMemo(() => {
     const map = new Map<string, ActivitySummary[]>();
     for (const a of activities) {
+      if (["Ride", "VirtualRide", "Bike"].includes(a.sport)) continue;
       const day = activityLocalDay(a.start_time, timezone);
       const bucket = map.get(day);
       if (bucket) bucket.push(a);

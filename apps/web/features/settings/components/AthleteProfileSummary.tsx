@@ -47,7 +47,7 @@ export function AthleteProfileSummary({ profile, loading, showThresholdHint }: P
       <p className="text-caption1 text-text-secondary">{identity.join(" · ")}</p>
       {recorded < 4 && showThresholdHint && (
         <p className="text-caption1 text-text-muted">
-          缺 {4 - recorded} 项阈值，对应的分区与负荷不可用。
+          缺少 {4 - recorded} 项阈值设置，对应的心率和配速区间无法计算。
           <Link href="/settings?section=training" className="ml-1 font-medium text-accent-strong hover:underline">
             去填写
           </Link>

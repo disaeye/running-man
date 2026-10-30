@@ -149,8 +149,7 @@ function PlanActualRow({
  * 右列却报当天总量（跑步加力量），「计划 40 分钟」对着「实际 1h30」比的
  * 就不是同一件事了。
  *
- * 有氧解耦不在这个块里算：它要从活动流（成对的功率或心率）现算，活动摘要
- * 里没有这个字段，所以那一格写「未记录」并说明缺的是解耦本身。
+ * 跑步距离汇总只采用现有活动记录；缺少记录时明确标注未记录。
  */
 export function DayPlanActual({ event, activities }: DayPlanActualProps) {
   if (!event || activities.length === 0) return null;
@@ -181,7 +180,6 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
       : null;
   const avgHr = weightedRecorded(compared, (activity) => activity.avg_hr);
   const cadence = weightedRecorded(compared, (activity) => activity.avg_cadence);
-  const tss = sumRecorded(compared, (activity) => activity.tss);
 
   const note = othersLine(
     others,
@@ -190,16 +188,6 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
   );
 
   const stripItems: MetricStripItem[] = [
-    {
-      label: "TSS",
-      value: tss == null ? UNRECORDED : String(Math.round(tss)),
-      note: tss == null ? "缺功率或心率数据" : undefined,
-    },
-    {
-      label: "有氧解耦",
-      value: UNRECORDED,
-      note: "活动摘要不含解耦",
-    },
     {
       label: "RPE",
       value: event.completed_rpe == null ? UNRECORDED : String(event.completed_rpe),
@@ -225,15 +213,6 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
                 label="配速区间"
                 value={planPace}
                 note="课表没有配速区间"
-              />
-              <PlanActualRow
-                label="预计 TSS"
-                value={
-                  event.predicted_tss == null
-                    ? null
-                    : String(Math.round(event.predicted_tss))
-                }
-                note="事件没有预计 TSS"
               />
               <PlanActualRow
                 label="时长"

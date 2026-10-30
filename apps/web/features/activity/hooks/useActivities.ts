@@ -93,6 +93,7 @@ function mapActivitySummary(
     avg_stride_length_m: nn(row.avg_stride_length_m),
     avg_lr_balance_pct: nn(row.avg_lr_balance_pct),
     is_bookmarked: row.is_bookmarked ?? false,
+    is_race: row.is_race ?? false,
     weather_source: nn(row.weather_source),
   };
 }

@@ -38,6 +38,8 @@ export interface ActivitySummary {
   avg_lr_balance_pct?: number | null;
   /** 收藏标记。 */
   is_bookmarked?: boolean;
+  /** 赛事活动标记。 */
+  is_race?: boolean;
   /** 天气来源：intervals_icu 或 open_meteo_best_match。 */
   weather_source?: string | null;
 }

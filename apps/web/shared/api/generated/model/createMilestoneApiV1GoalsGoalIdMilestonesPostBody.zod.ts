@@ -9,9 +9,11 @@ import { z as zod } from 'zod';
 export const CreateMilestoneApiV1GoalsGoalIdMilestonesPostBody = zod.object({
   "achieved": zod.union([zod.boolean(),zod.null()]).optional(),
   "achieved_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
+  "result_text": zod.union([zod.string(),zod.null()]).optional(),
   "target_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "target_value": zod.union([zod.number(),zod.null()]).optional(),
-  "title": zod.string()
+  "title": zod.string(),
+  "unit": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export type CreateMilestoneApiV1GoalsGoalIdMilestonesPostBody = zod.input<typeof CreateMilestoneApiV1GoalsGoalIdMilestonesPostBody>;

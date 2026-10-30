@@ -51,12 +51,12 @@ const TOGGLES: {
   {
     key: "today_reminder",
     label: "每日训练建议推送",
-    description: "每天早上根据昨夜恢复与当前负荷状态生成当日课目建议",
+    description: "每天早上根据昨夜睡眠和近期健康记录生成当日课目建议",
   },
   {
     key: "recovery_risk_alert",
-    label: "过度训练与疲劳预警",
-    description: "当连续高负荷导致 HRV 骤降或静息心率异常升高时触发保护提醒",
+    label: "恢复指标提醒",
+    description: "当 HRV 或静息心率出现明显变化时发送提醒",
   },
   {
     key: "sync_failure_alert",

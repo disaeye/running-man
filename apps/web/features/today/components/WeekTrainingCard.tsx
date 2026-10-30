@@ -24,7 +24,7 @@ interface Props extends WeekTrainingInput {
  * 本周训练面板：参考稿右侧第二块面板。
  *
  * 按行罗列本周从周一到周日的安排或实际完成，今天所在的那一行加高亮点并
- * 标出「今天 · TSS」。卡片底部是一个前往日历的胶囊按钮。
+ * 标出今天所在的行。卡片底部提供前往日历的入口。
  */
 export function WeekTrainingCard({
   events,

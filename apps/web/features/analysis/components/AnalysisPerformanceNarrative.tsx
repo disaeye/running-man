@@ -3,11 +3,10 @@
 import { useMemo } from "react";
 import { Section } from "@shared/ui/Section";
 import { usePersonalRecords } from "@features/performance/hooks/usePersonalRecords";
-import { useProfile, useZones } from "@features/settings/hooks/useProfile";
+import { useProfile } from "@features/settings/hooks/useProfile";
 import { useWellness } from "@features/health/hooks/useWellness";
 import { computeRange, toISODate } from "@shared/lib/format";
 import { HEART_RATE_UNIT } from "@shared/config/terms";
-import { getAnalysisSportFamily } from "@features/analysis/lib/analysis-metric-taxonomy";
 
 type WellnessSample = {
   readonly day: string;
@@ -26,30 +25,23 @@ export function AnalysisPerformanceNarrative() {
     return toISODate(d);
   }, []);
   const { profile } = useProfile();
-  const { zones } = useZones();
   const { data: wellness } = useWellness(range.from, range.to);
   const { data: records } = usePersonalRecords();
   const vo2 = latestVo2(wellness, monthAgo);
-  const sportFamily = getAnalysisSportFamily(profile?.preferred_sport ?? null);
   const physiology = buildPhysiologyLine({
     lthr: profile?.lthr ?? null,
     thresholdPace: profile?.threshold_pace ?? null,
     vo2max: vo2.current,
   });
   const changeText = vo2ChangeText(vo2);
-  const prText = personalRecordText(records.length, sportFamily);
-  const narrativeCopy = performanceNarrativeCopy({
-    ftp: zones?.ftp ?? null,
-    sportFamily,
-    physiology,
-  });
+  const prText = personalRecordText(records.length);
 
   return (
-    <Section title={narrativeCopy.title} testId="analysis-performance-narrative">
+    <Section title="跑步能力" testId="analysis-performance-narrative">
       <div className="p-5">
       {/* Compact metric chips — numbers first, no essay body */}
       <div className="flex flex-wrap gap-2" data-testid="analysis-performance-metrics">
-        {narrativeCopy.chips.map((chip) => (
+        {[...physiology, "比赛预测", "最佳成绩"].map((chip) => (
           <span
             key={chip}
             className="rounded-full bg-surface-overlay/70 px-2.5 py-1 font-mono text-caption1 tabular-nums text-text-primary"
@@ -59,7 +51,9 @@ export function AnalysisPerformanceNarrative() {
         ))}
       </div>
 
-      <p className="mt-3 text-caption1 leading-relaxed text-text-secondary">{narrativeCopy.body}</p>
+      <p className="mt-3 text-caption1 leading-relaxed text-text-secondary">
+        阈值配速、体能指标与比赛成绩共同反映当前跑步能力。
+      </p>
 
       <div className="mt-4 grid grid-cols-1 gap-px overflow-hidden rounded-lg bg-border-subtle sm:grid-cols-2">
         <div className="bg-surface-card px-3 py-2.5">
@@ -97,39 +91,6 @@ function buildPhysiologyLine(values: {
   ];
 }
 
-function cyclingChips(ftp: number | null): string[] {
-  return [
-    ftp != null ? `功能性阈值功率 ${Math.round(ftp)} W` : "缺少功能性阈值功率",
-    "功率曲线",
-    "TSS",
-  ];
-}
-
-function performanceNarrativeCopy({
-  ftp,
-  sportFamily,
-  physiology,
-}: {
-  readonly ftp: number | null;
-  readonly sportFamily: ReturnType<typeof getAnalysisSportFamily>;
-  readonly physiology: readonly string[];
-}): { title: string; body: string; chips: string[] } {
-  if (sportFamily === "cycling") {
-    const chips = cyclingChips(ftp);
-    return {
-      title: "骑行功率主线",
-      // Contract phrases kept in sr-only body — not the visual lead.
-      body: `${chips.join(" · ")}。功率曲线和训练负荷用于判断爬坡、节奏和间歇输出是否稳定。`,
-      chips,
-    };
-  }
-  return {
-    title: "跑步能力",
-    body: `${physiology.join(" · ")}。比赛预测与最佳成绩共同反映当前能力。`,
-    chips: [...physiology, "比赛预测", "最佳成绩"],
-  };
-}
-
 function vo2ChangeText(vo2: {
   readonly current: number | null;
   readonly prior: number | null;
@@ -141,13 +102,9 @@ function vo2ChangeText(vo2: {
   return `${vo2.current.toFixed(1)} (${formatSigned(change)})`;
 }
 
-function personalRecordText(
-  recordCount: number,
-  sportFamily: ReturnType<typeof getAnalysisSportFamily>,
-): string {
-  if (recordCount > 0) return `${recordCount} 条`;
-  return sportFamily === "cycling"
-    ? "缺少最佳成绩记录：同步包含功率曲线或爬坡输出的骑行活动后会生成趋势。"
+function personalRecordText(recordCount: number): string {
+  return recordCount > 0
+    ? `${recordCount} 条`
     : "缺少最佳成绩记录：同步包含 GPS 或比赛结果的跑步活动后会生成趋势。";
 }
 

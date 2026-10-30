@@ -55,7 +55,6 @@ export function DemoTodayWorkoutCard({
   const isRest = decision?.action === "rest";
   const durationMin = decision?.duration_min ?? prescription?.duration_min ?? null;
   const workoutType = decision?.workout_type ?? prescription?.type ?? null;
-  const targetTss = decision?.target_tss ?? null;
 
   const title = isRest
     ? "今天休息"
@@ -122,17 +121,6 @@ export function DemoTodayWorkoutCard({
               </span>
               {durationMin != null ? (
                 <span className="text-caption1 text-text-muted">MIN</span>
-              ) : null}
-            </p>
-          </div>
-          <div>
-            <p className="text-caption1 text-text-muted">训练冲量 (TSS)</p>
-            <p className="mt-0.5 flex items-baseline gap-1">
-              <span className="font-mono text-title2 font-bold tabular-nums text-accent">
-                {targetTss != null ? Math.round(targetTss) : UNRECORDED}
-              </span>
-              {targetTss != null ? (
-                <span className="text-caption1 text-text-muted">PTS</span>
               ) : null}
             </p>
           </div>

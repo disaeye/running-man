@@ -44,7 +44,8 @@ export async function mockDashboard(page: Page, options: { readonly includeStren
     const setUpdateMatch = pathname.match(/^\/api\/v1\/strength\/workout-exercises\/(\d+)\/sets\/(\d+)$/);
     const exerciseId = pathname.match(/^\/api\/v1\/strength\/workouts\/([^/]+)\/exercises$/)?.[1];
     const activity = activityFixture(pathname);
-    let body = dashboardFixture(pathname) ?? activity;
+    const fixture = dashboardFixture(pathname);
+    let body = fixture === undefined ? activity : fixture;
     const activityId = pathname.match(/^\/api\/v1\/activities\/([^/]+)$/)?.[1];
     if (activityId?.startsWith("activity-strength")) body = activity;
     if (pathname === "/api/v1/activities" && options.includeStrengthActivities) body = [STRENGTH_ACTIVITY];

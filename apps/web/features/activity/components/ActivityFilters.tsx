@@ -5,12 +5,13 @@ import { DateRangePicker } from "@shared/ui/DateRangePicker";
 import { getSportConfig, SPORT_CONFIG } from "@shared/config/sport-config";
 import type { ActivitySummary } from "@shared/types/activity";
 
-type Intensity = "all" | "easy" | "moderate" | "hard";
+type Intensity = "all" | "easy" | "moderate" | "hard" | "unknown";
 
 export interface ActivityFilterState {
   from: string;
   to: string;
   sport: string;
+  race?: "all" | "race" | "training";
   intensity: Intensity;
   gpsOnly: boolean;
   source: string;
@@ -27,30 +28,29 @@ const INTENSITY_OPTIONS: { value: Intensity; label: string }[] = [
   { value: "easy", label: "轻松" },
   { value: "moderate", label: "中等" },
   { value: "hard", label: "高强度" },
+  { value: "unknown", label: "强度未知" },
 ];
 
-function classifyIntensity(tss: number | null): string {
-  if (tss == null) return "easy";
-  if (tss < 50) return "easy";
-  if (tss < 100) return "moderate";
-  return "hard";
-}
-
 export function ActivityFilters({ filters, onChange, activities }: ActivityFiltersProps) {
+  const availableActivities = useMemo(
+    () => activities.filter((activity) => !["Ride", "VirtualRide", "Bike"].includes(activity.sport)),
+    [activities],
+  );
+
   const sportOptions = useMemo(() => {
-    const sports = new Set(activities.map((a) => a.sport));
+    const sports = new Set(availableActivities.map((a) => a.sport));
     return Array.from(sports).sort().map((s) => ({
       value: s,
       label: getSportConfig(s).label,
     }));
-  }, [activities]);
+  }, [availableActivities]);
 
   const sourceOptions = useMemo(() => {
     const sources = new Set(
-      activities.map((a) => a.source).filter((s): s is string => s != null),
+      availableActivities.map((a) => a.source).filter((s): s is string => s != null),
     );
     return Array.from(sources).sort();
-  }, [activities]);
+  }, [availableActivities]);
 
   const set = (patch: Partial<ActivityFilterState>) =>
     onChange({ ...filters, ...patch });
@@ -71,6 +71,17 @@ export function ActivityFilters({ filters, onChange, activities }: ActivityFilte
             {Object.prototype.hasOwnProperty.call(SPORT_CONFIG, s.value) ? s.label : s.value}
           </option>
         ))}
+      </select>
+
+      <select
+        aria-label="活动分类"
+        value={filters.race ?? "all"}
+        onChange={(e) => set({ race: e.target.value as ActivityFilterState["race"] })}
+        className="focus-ring min-h-[44px] rounded-lg border border-border-default bg-surface-card px-3 py-2 text-subheadline text-text-primary"
+      >
+        <option value="all">全部训练</option>
+        <option value="training">日常训练</option>
+        <option value="race">比赛</option>
       </select>
 
       <select
@@ -116,5 +127,3 @@ export function ActivityFilters({ filters, onChange, activities }: ActivityFilte
     </div>
   );
 }
-
-export { classifyIntensity };

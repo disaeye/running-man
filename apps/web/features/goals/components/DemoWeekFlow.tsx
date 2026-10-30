@@ -1,20 +1,18 @@
 "use client";
 
 import { Card } from "@shared/ui/Card";
-import { LabelCaps } from "@shared/ui/LabelCaps";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 import { formatPaceFromSeconds } from "@shared/lib/format";
 import type { ActivePlan, PlanSession } from "@features/goals/hooks/useActivePlan";
 
 /**
- * 本周微周期训练流（参考稿的七日课表）。
+ * 展示本周七天的计划训练与完成状态。
  *
  * 每天一行：星期与日期、训练名称、类型标签、具体说明、右侧的距离与状态。
  *
- * 类型标签用课表上的训练类型：长距离、间歇、阈值、恢复、轻松、休息。
- * 没有类型标签时写「课表」，不猜。
+ * 类型标签使用课表记录的训练类型；未知类型不添加标签。
  *
- * 完成的训练打勾；今天的行高亮。
+ * 每行显示日期、课程内容和完成状态。
  */
 
 interface Props {
@@ -27,12 +25,12 @@ const WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六
 
 /** 课表上的训练类型 → 标签与样式。 */
 const TYPE_TAG: Record<string, { label: string; className: string }> = {
-  long: { label: "KEY WORKOUT", className: "bg-accent text-on-primary" },
-  intervals: { label: "T-ZONE", className: "bg-secondary-container text-on-secondary" },
-  tempo: { label: "T-ZONE", className: "bg-secondary-container text-on-secondary" },
-  recovery: { label: "RECOVERY", className: "bg-tertiary-dim/20 text-tertiary" },
-  easy: { label: "EASY", className: "bg-surface-overlay text-text-secondary" },
-  rest: { label: "REST", className: "bg-surface-overlay text-text-muted" },
+  long: { label: "长距离", className: "bg-accent text-on-primary" },
+  intervals: { label: "间歇", className: "bg-secondary-container text-on-secondary" },
+  tempo: { label: "节奏", className: "bg-secondary-container text-on-secondary" },
+  recovery: { label: "恢复", className: "bg-tertiary-dim/20 text-tertiary" },
+  easy: { label: "轻松", className: "bg-surface-overlay text-text-secondary" },
+  rest: { label: "休息", className: "bg-surface-overlay text-text-muted" },
 };
 
 export function DemoWeekFlow({
@@ -61,9 +59,8 @@ export function DemoWeekFlow({
     <Card data-testid={testId ?? "demo-week-flow"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <LabelCaps>MICROCYCLE · 本周微周期训练流</LabelCaps>
-          <h2 className="mt-1 font-display text-title3 uppercase tracking-wide text-text-primary">
-            本周课表
+          <h2 className="font-display text-title3 font-semibold text-text-primary">
+            本周训练安排
           </h2>
           <p className="mt-0.5 text-caption1 text-text-muted">
             {plan.week_start && plan.week_end
@@ -75,7 +72,7 @@ export function DemoWeekFlow({
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-surface-overlay px-2.5 py-1 font-mono text-caption1 text-text-secondary">
-          {sessionCount} 练 {restCount} 休 {longCount} 长距离
+          {sessionCount} 次训练 · {restCount} 天休息 · {longCount} 次长距离
         </span>
       </div>
 
@@ -114,7 +111,7 @@ export function DemoWeekFlow({
                     </span>
                     {tag ? (
                       <span
-                        className={`rounded px-1.5 py-0.5 font-mono text-caption2 ${tag.className}`}
+                        className={`rounded px-1.5 py-0.5 text-caption2 ${tag.className}`}
                       >
                         {tag.label}
                       </span>
@@ -160,9 +157,6 @@ function sessionDetail(session: PlanSession): string {
   }
   if (session.duration_min != null) {
     return `${session.duration_min} 分钟`;
-  }
-  if (session.predicted_tss != null) {
-    return `预计 ${Math.round(session.predicted_tss)} TSS`;
   }
   return "课表已安排";
 }

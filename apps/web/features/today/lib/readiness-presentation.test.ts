@@ -165,18 +165,16 @@ describe("decisionTitle", () => {
     expect(decisionTitle(null, NOT_ASSESSED)).toBe("还没有可分析的训练数据");
   });
 
-  it("names the missing recovery input when load history exists", () => {
-    // The load chart can be full while every recovery signal is absent. Saying
-    // "no data to analyse" there contradicts the chart beside it.
+  it("names the missing recovery input when running history exists", () => {
     expect(decisionTitle(null, NOT_ASSESSED, { hasLoadHistory: true })).toBe(
-      "有训练负荷，缺睡眠、静息心率，今天无法判断恢复",
+      "已有跑步记录，缺少睡眠、静息心率，当前无法查看恢复状态",
     );
   });
 
   it("falls back to a generic recovery name when no input is listed", () => {
     expect(
       decisionTitle(null, { ...NOT_ASSESSED, missing: [] }, { hasLoadHistory: true }),
-    ).toBe("有训练负荷，缺恢复信号，今天无法判断恢复");
+    ).toBe("已有跑步记录，缺少恢复信号，当前无法查看恢复状态");
   });
 
   it("reports no scheduled session when data exists but nothing is planned", () => {

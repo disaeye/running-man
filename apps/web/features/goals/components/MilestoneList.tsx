@@ -1,69 +1,139 @@
 "use client";
 
-import { Check, Circle } from "lucide-react";
-import { Section } from "@shared/ui/Section";
+import { useState } from "react";
+import { Check, Circle, Pencil, Plus } from "lucide-react";
 import { Badge } from "@shared/ui/Badge";
-import type { Milestone } from "@shared/types/goals";
+import { Button } from "@shared/ui/button";
+import { Section } from "@shared/ui/Section";
 import { formatDate } from "@shared/lib/format";
+import type { Milestone } from "@shared/types/goals";
+import type { MilestoneDraft } from "@features/goals/hooks/useGoals";
+import { MilestoneEditor } from "@features/goals/components/MilestoneEditor";
 
 interface MilestoneListProps {
   milestones: Milestone[];
-  onToggle?: (milestoneId: string) => void;
+  onToggle: (milestoneId: string) => Promise<void>;
+  onSave: (milestoneId: string | null, draft: MilestoneDraft) => Promise<void>;
   goalUnit?: string | null;
 }
 
 export function MilestoneList({
   milestones,
   onToggle,
+  onSave,
   goalUnit,
 }: MilestoneListProps) {
-  if (milestones.length === 0) return null;
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const upcoming = milestones.filter((m) => !m.achieved);
-  const achieved = milestones.filter((m) => m.achieved);
+  const save = async (milestoneId: string | null, draft: MilestoneDraft) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(milestoneId, draft);
+      setEditingId(null);
+      setCreating(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "保存里程碑失败");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggle = async (milestoneId: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onToggle(milestoneId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "更新里程碑状态失败");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const upcoming = milestones.filter((milestone) => !milestone.achieved);
+  const achieved = milestones.filter((milestone) => milestone.achieved);
 
   return (
-    <Section title="里程碑">
-      <div className="p-5">
-
-      {/* Upcoming milestones */}
-      {upcoming.length > 0 && (
-        <ul className="relative flex flex-col gap-0">
-          {/* Timeline line */}
-          <div className="absolute left-[13.5px] top-2 bottom-2 w-px bg-border-subtle" aria-hidden="true" />
-          {upcoming.map((ms, idx) => (
-            <MilestoneRow
-              key={ms.milestone_id}
-              milestone={ms}
-              unit={goalUnit}
-              onToggle={onToggle}
-              first={idx === 0}
-            />
-          ))}
-        </ul>
+    <Section
+      title="里程碑"
+      action={(
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={saving}
+          onClick={() => {
+            setCreating(true);
+            setEditingId(null);
+            setError(null);
+          }}
+        >
+          <Plus aria-hidden="true" className="size-4" /> 添加里程碑
+        </Button>
       )}
-
-      {/* Achieved milestones */}
-      {achieved.length > 0 && (
-        <div className="mt-4 border-t border-border-subtle pt-4">
-          <div className="mb-2 text-caption1 font-medium text-text-muted">
-            已完成
-          </div>
-          <ul className="relative flex flex-col gap-0">
-            {/* Timeline line */}
-            <div className="absolute left-[13.5px] top-2 bottom-2 w-px bg-border-subtle" aria-hidden="true" />
-            {achieved.map((ms, idx) => (
+    >
+      <div className="space-y-4 p-5">
+        {error ? <p role="alert" className="text-caption1 text-error">{error}</p> : null}
+        {milestones.length === 0 && !creating ? (
+          <p className="text-caption1 text-text-muted">还没有里程碑</p>
+        ) : null}
+        {creating ? (
+          <MilestoneEditor
+            initial={null}
+            goalUnit={goalUnit}
+            saving={saving}
+            onCancel={() => setCreating(false)}
+            onSave={(draft) => save(null, draft)}
+          />
+        ) : null}
+        {upcoming.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {upcoming.map((milestone) => (
               <MilestoneRow
-                key={ms.milestone_id}
-                milestone={ms}
-                unit={goalUnit}
-                onToggle={onToggle}
-                first={idx === 0}
+                key={milestone.milestone_id}
+                milestone={milestone}
+                goalUnit={goalUnit}
+                saving={saving}
+                editing={editingId === milestone.milestone_id}
+                onToggle={() => toggle(milestone.milestone_id)}
+                onEdit={() => {
+                  setCreating(false);
+                  setEditingId(milestone.milestone_id);
+                  setError(null);
+                }}
+                onCancelEdit={() => setEditingId(null)}
+                onSaveEdit={(draft) => save(milestone.milestone_id, draft)}
               />
             ))}
           </ul>
-        </div>
-      )}
+        ) : null}
+        {achieved.length > 0 ? (
+          <div className="space-y-2 border-t border-border-subtle pt-4">
+            <h3 className="text-caption1 font-medium text-text-muted">已完成</h3>
+            <ul className="flex flex-col gap-2">
+              {achieved.map((milestone) => (
+                <MilestoneRow
+                  key={milestone.milestone_id}
+                  milestone={milestone}
+                  goalUnit={goalUnit}
+                  saving={saving}
+                  editing={editingId === milestone.milestone_id}
+                  onToggle={() => toggle(milestone.milestone_id)}
+                  onEdit={() => {
+                    setCreating(false);
+                    setEditingId(milestone.milestone_id);
+                    setError(null);
+                  }}
+                  onCancelEdit={() => setEditingId(null)}
+                  onSaveEdit={(draft) => save(milestone.milestone_id, draft)}
+                />
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </Section>
   );
@@ -71,87 +141,67 @@ export function MilestoneList({
 
 function MilestoneRow({
   milestone,
-  unit,
+  goalUnit,
+  saving,
+  editing,
   onToggle,
-  first,
+  onEdit,
+  onCancelEdit,
+  onSaveEdit,
 }: {
   milestone: Milestone;
-  unit?: string | null;
-  onToggle?: (id: string) => void;
-  first?: boolean;
+  goalUnit?: string | null;
+  saving: boolean;
+  editing: boolean;
+  onToggle: () => Promise<void>;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (draft: MilestoneDraft) => Promise<void>;
 }) {
-  const isDone = milestone.achieved;
+  if (editing) {
+    return (
+      <li>
+        <MilestoneEditor
+          initial={milestone}
+          goalUnit={goalUnit}
+          saving={saving}
+          onCancel={onCancelEdit}
+          onSave={onSaveEdit}
+        />
+      </li>
+    );
+  }
 
+  const displayUnit = milestone.unit || goalUnit;
   return (
-    <li
-      className={`
-        relative flex items-center gap-3 rounded-md px-3
-        ${first ? "pt-2 pb-2.5" : "py-2.5"}
-        ${isDone ? "bg-surface-sunken opacity-60" : "bg-surface-overlay"}
-      `.trim()}
-    >
-      {/* Timeline dot */}
-      <div
-        className={`
-          relative z-10 flex h-[13px] w-[13px] shrink-0 items-center justify-center
-          rounded-full border-2
-          ${isDone
-            ? "border-success bg-success"
-            : "border-border-default bg-surface-raised"
-          }
-        `.trim()}
-      >
-        {isDone && (
-          <svg className="h-[7px] w-[7px] text-text-inverse" viewBox="0 0 12 12" fill="none">
-            <path
-              d="M2 6l3 3 5-5"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        )}
-        {!isDone && <Circle className="h-1.5 w-1.5 text-border-default" aria-hidden />}
-      </div>
-
-      {/* Title */}
-      <span
-        className={`flex-1 text-subheadline ${
-          isDone ? "text-text-muted line-through" : "text-text-primary"
-        }`}
-      >
-        {milestone.title}
-      </span>
-
-      {/* Target value */}
-      {milestone.target_value != null && (
-        <span className="font-mono tabular-nums text-caption1 text-text-secondary">
-          {milestone.target_value}{unit ? ` ${unit}` : ""}
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-surface-sunken px-4 py-3">
+      {milestone.achieved ? (
+        <Check aria-hidden="true" className="size-4 text-success" />
+      ) : (
+        <Circle aria-hidden="true" className="size-4 text-text-muted" />
+      )}
+      <span className="min-w-0 flex-1 text-subheadline text-text-primary">{milestone.title}</span>
+      {milestone.target_value != null ? (
+        <span className="font-mono text-caption1 text-text-secondary">
+          {milestone.target_value}{displayUnit ? ` ${displayUnit}` : ""}
         </span>
+      ) : null}
+      {milestone.target_date ? (
+        <span className="text-caption1 text-text-muted">{formatDate(milestone.target_date)}</span>
+      ) : null}
+      {milestone.result_text ? (
+        <span className="text-caption1 text-text-secondary">结果：{milestone.result_text}</span>
+      ) : null}
+      {!milestone.achieved ? (
+        <Button variant="outline" size="sm" disabled={saving} onClick={() => void onToggle()}>
+          标记完成
+        </Button>
+      ) : (
+        <Badge variant="success">已完成</Badge>
       )}
-
-      {/* Date */}
-      {milestone.target_date && (
-        <span className="text-caption1 text-text-muted">
-          {formatDate(milestone.target_date)}
-        </span>
-      )}
-
-      {/* Toggle button — hidden for achieved, visible for upcoming */}
-      {!isDone && onToggle && (
-        <button
-          type="button"
-          onClick={() => onToggle(milestone.milestone_id)}
-          className="shrink-0 text-caption1 font-medium text-accent-strong hover:underline"
-          aria-label="标记为已完成"
-        >
-          完成
-        </button>
-      )}
-
-      {/* Status badge */}
-      {isDone && <Badge variant="success"><Check className="h-3 w-3" aria-hidden /></Badge>}
+      <Button variant="ghost" size="icon" aria-label={`编辑${milestone.title}`} onClick={onEdit}>
+        <Pencil aria-hidden="true" className="size-4" />
+      </Button>
     </li>
   );
 }

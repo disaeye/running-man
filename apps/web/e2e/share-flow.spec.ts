@@ -4,10 +4,8 @@ test.describe("Share Flow", () => {
   test("share button exists on activity page", async ({ page }) => {
     await page.goto("/activities");
 
-    // Wait for activities to load
-    await expect(page.getByText("加载中...")).not.toBeVisible({
-      timeout: 15000,
-    });
+    // Wait for the activity list to leave its loading state.
+    await expect(page.getByRole("status")).not.toBeVisible({ timeout: 15000 });
 
     // Check if there is at least one activity to navigate into
     const activityLinks = page.locator('a[href*="/activities/"]');
@@ -25,9 +23,7 @@ test.describe("Share Flow", () => {
   test("share dialog opens and shows share options", async ({ page }) => {
     await page.goto("/activities");
 
-    await expect(page.getByText("加载中...")).not.toBeVisible({
-      timeout: 15000,
-    });
+    await expect(page.getByRole("status")).not.toBeVisible({ timeout: 15000 });
 
     const activityLinks = page.locator('a[href*="/activities/"]');
     const count = await activityLinks.count();

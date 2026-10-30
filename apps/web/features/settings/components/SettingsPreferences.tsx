@@ -23,7 +23,7 @@ interface Props {
 
 const SPORT_OPTIONS = [
   { value: "Run", label: getSportConfig("Run").label },
-  { value: "Ride", label: getSportConfig("Ride").label },
+  { value: "TrailRun", label: getSportConfig("TrailRun").label },
 ];
 
 const PREFS_KEY = "settings_prefs";
@@ -37,7 +37,9 @@ function loadPrefs(): NotificationPrefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
     if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
+  } catch (error) {
+    throw new Error("读取训练偏好失败", { cause: error });
+  }
   return { allowConsecutiveHighIntensity: true, recoveryDayPreference: "active" };
 }
 
@@ -87,7 +89,7 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
     <Card padding="md" className="space-y-6">
       <div>
         <h2 className="text-caption1 font-semibold text-text-secondary">训练习惯与偏好</h2>
-        <p className="mt-0.5 text-caption1 text-text-muted">设置日常运动规划的基准偏好与负荷分配限制</p>
+        <p className="mt-0.5 text-caption1 text-text-muted">设置跑步训练计划的基础偏好</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <label className="flex flex-col gap-1.5">
@@ -128,7 +130,7 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
             <SelectContent>
               <SelectItem value="active">积极恢复 (低强度交叉/散步/拉伸)</SelectItem>
               <SelectItem value="full">完全休息 (不安排任何训练课目)</SelectItem>
-              <SelectItem value="flexible">灵活自适应 (依据疲劳值建议)</SelectItem>
+              <SelectItem value="flexible">灵活安排（结合训练计划）</SelectItem>
             </SelectContent>
           </Select>
           <span className="text-caption1 text-text-muted">决定训练建议中休息日的课目性质</span>
@@ -151,7 +153,7 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
               }}
               className="w-24"
             />
-            <span className="text-caption1 text-text-muted">合理范围: 2 ~ 6 天</span>
+            <span className="text-caption1 text-text-muted">建议范围：2～6 天</span>
           </div>
         </label>
 
@@ -173,15 +175,15 @@ export function SettingsPreferences({ profile, onSaved }: Props) {
               }}
               className="w-24"
             />
-            <span className="text-caption1 text-text-muted">超过此时长时提示负荷预警</span>
+            <span className="text-caption1 text-text-muted">超过此时长时提示训练时间较长</span>
           </div>
         </label>
 
         <div className="md:col-span-2 pt-2 border-t border-border-subtle">
           <label className="flex items-center justify-between p-3 rounded-lg border border-border-subtle bg-surface-subtle/50 hover:bg-surface-subtle cursor-pointer transition-colors">
             <div className="flex flex-col">
-              <span className="text-subheadline font-medium text-text-primary">允许连续高强度训练</span>
-              <span className="text-caption1 text-text-muted">开启后不会在连续两天安排无氧或阈值课目时触发强提醒</span>
+              <span className="text-subheadline font-medium text-text-primary">允许连续安排高强度训练</span>
+              <span className="text-caption1 text-text-muted">开启后可连续两天安排无氧或阈值训练</span>
             </div>
             <Checkbox
               checked={prefs.allowConsecutiveHighIntensity}

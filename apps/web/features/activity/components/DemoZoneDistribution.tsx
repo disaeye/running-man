@@ -48,9 +48,9 @@ export function DemoZoneDistribution({
     <Card data-testid={testId ?? "demo-zone-distribution"}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <LabelCaps>ZONE DISTRIBUTION · 生理负荷监测</LabelCaps>
+          <LabelCaps>ZONE DISTRIBUTION · 心率训练分析</LabelCaps>
           <h2 className="mt-1 text-title3 font-semibold text-text-primary">
-            心率五区间能量分配
+            心率区间分布
           </h2>
         </div>
         <div className="shrink-0 text-right">

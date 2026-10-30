@@ -18,7 +18,6 @@ import { DemoBiomechanicsGrid } from "@features/activity/components/DemoBiomecha
 import { DemoZoneDistribution } from "@features/activity/components/DemoZoneDistribution";
 import { DemoEffectivenessCard } from "@features/activity/components/DemoEffectivenessCard";
 import { DemoSplitTable } from "@features/activity/components/DemoSplitTable";
-import { useCoachContext } from "@features/today/hooks/useCoachContext";
 
 /** 单次训练详情：力量训练与耐力运动分别呈现适用的读数和分析内容。 */
 export function DemoActivityReport({ activityId }: { readonly activityId: string }) {
@@ -73,7 +72,6 @@ function EnduranceActivityReport({
 }) {
   const streamsQuery = useActivityStreams(activityId);
   const analysisQuery = useActivityAnalysis(activityId);
-  const coachQuery = useCoachContext();
   const [activeMetric, setActiveMetric] = useState<string | null>(null);
   const streamMap = groupStreams(streamsQuery.data);
   const analysis = analysisQuery.data;
@@ -107,11 +105,8 @@ function EnduranceActivityReport({
       <DemoEffectivenessCard
         decouplingPct={analysis?.summary?.decoupling_pct ?? null}
         trimp={activity.trimp ?? null}
-        tss={activity.tss}
         aerobicTe={activity.aerobic_te ?? null}
         anaerobicTe={activity.anaerobic_te ?? null}
-        tsbRecoveryDays={coachQuery.data?.recovery_signals.tsb_recovery_days ?? null}
-        tsb={coachQuery.data?.recent_load.current_tsb ?? null}
       />
       <DemoSplitTable
         laps={analysis?.laps ?? []}

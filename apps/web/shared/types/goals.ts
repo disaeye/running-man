@@ -29,6 +29,8 @@ export interface Milestone {
   title: string;
   target_date: string | null;
   target_value: number | null;
+  unit: string | null;
+  result_text: string | null;
   achieved: boolean;
   achieved_at: string | null;
 }

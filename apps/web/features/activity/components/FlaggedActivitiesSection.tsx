@@ -59,7 +59,7 @@ export function FlaggedActivitiesSection() {
     <div className="space-y-6" data-testid="flagged-activities">
       <FlaggedList
         title="已忽略的训练"
-        description="保留在记录中，但不计入训练负荷、PMC、最佳成绩与心率区间统计。"
+        description="保留在活动记录中，但不计入跑步统计、个人最佳成绩与心率区间分析。"
         rows={ignored.data}
         loading={ignored.isLoading}
         mode="ignored"

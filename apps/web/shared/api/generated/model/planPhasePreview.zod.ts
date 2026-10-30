@@ -10,7 +10,7 @@ export const PlanPhasePreview = zod.object({
   "end_date": zod.iso.date(),
   "name": zod.string(),
   "start_date": zod.iso.date(),
-  "target_weekly_tss": zod.number()
+  "target_weekly_distance_m": zod.number()
 })
 
 export type PlanPhasePreview = zod.input<typeof PlanPhasePreview>;

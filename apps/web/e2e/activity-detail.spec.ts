@@ -77,10 +77,8 @@ test.describe("activity workflow", () => {
     await expect(page.getByRole("button", { name: "全部" })).toBeVisible();
     await expect(page.getByRole("button", { name: "力量训练", exact: true })).toBeVisible();
 
-    // Wait for loading to finish (activities data or empty state)
-    await expect(page.getByText("加载中...")).not.toBeVisible({
-      timeout: 15000,
-    });
+    // Wait for the activity list to leave its loading state.
+    await expect(page.getByRole("status")).not.toBeVisible({ timeout: 15000 });
   });
 
   test("navigates to activity detail when clicking an activity", async ({
@@ -88,8 +86,9 @@ test.describe("activity workflow", () => {
   }) => {
     await page.goto("/activities");
 
-    // Wait for data to load
-    await expect(page.getByText("加载中...")).not.toBeVisible({
+    // The status region wraps the list's own loading status, so wait for the
+    // list card to settle before following a route.
+    await expect(page.getByTestId("activity-table")).not.toContainText("加载中...", {
       timeout: 15000,
     });
 
@@ -110,7 +109,7 @@ test.describe("activity workflow", () => {
   test("shows filter controls on activities page", async ({ page }) => {
     await page.goto("/activities");
 
-    await expect(page.getByText("加载中...")).not.toBeVisible({
+    await expect(page.getByRole("status")).not.toBeVisible({
       timeout: 15000,
     });
 

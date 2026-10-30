@@ -7,6 +7,7 @@ import { AUTH_FILE } from "./auth";
 const execFileAsync = promisify(execFile);
 
 type StorageCookie = {
+  readonly domain: string;
   readonly name: string;
   readonly value: string;
 };
@@ -29,8 +30,10 @@ setup("bootstraps read-only QA authentication", async ({ request }) => {
   const rawState = await readFile(AUTH_FILE, "utf8");
   const state = JSON.parse(rawState) as StorageState;
   const accessToken = accessTokenFromStorageState(state);
+  const cookie = state.cookies[0];
   const response = await request.get("/api/v1/athletes/me", {
     headers: { cookie: `access_token=${accessToken}` },
   });
+  expect(new URL(response.url()).hostname).toBe(cookie?.domain);
   expect(response.status()).toBe(200);
 });

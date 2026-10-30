@@ -10,8 +10,7 @@ export interface DataHealthActivities {
   total: number;
   with_hr: number;
   with_gps: number;
-  with_power: number;
-  with_streams?: number;
+  with_streams: number;
 }
 
 export interface DataHealthWellness {
@@ -23,14 +22,6 @@ export interface DataHealthWellness {
 export interface DataHealthTrainingLoad {
   data_as_of: string | null;
 }
-export interface DataHealthCompleteness {
-  activities: {
-    with_hr: number;
-    with_gps: number;
-    with_power: number;
-  };
-}
-
 export interface DataHealthGap {
   from: string;
   to: string;
@@ -40,7 +31,6 @@ export interface DataHealth {
   activities: DataHealthActivities;
   wellness: DataHealthWellness;
   training_load: DataHealthTrainingLoad;
-  completeness: DataHealthCompleteness;
   gaps: DataHealthGap[];
 }
 
@@ -51,8 +41,7 @@ function mapDataHealth(raw: Generated.DataHealthResponseOutput): DataHealth {
       total: raw.activities.total,
       with_hr: raw.activities.with_hr,
       with_gps: raw.activities.with_gps,
-      with_power: raw.activities.with_power,
-      with_streams: raw.activities.with_streams ?? 0,
+      with_streams: raw.activities.with_streams,
     },
     wellness: {
       data_as_of: raw.wellness.data_as_of ?? null,
@@ -62,7 +51,6 @@ function mapDataHealth(raw: Generated.DataHealthResponseOutput): DataHealth {
     training_load: {
       data_as_of: raw.training_load.data_as_of ?? null,
     },
-    completeness: raw.completeness,
     gaps: raw.gaps,
   };
 }

@@ -5,18 +5,14 @@ import { EyeOff, Eye, Trash2, RotateCcw } from "lucide-react";
 import { useActivityFlagging } from "@features/activity/hooks/useActivityFlagging";
 
 /**
- * Ignore / delete controls for a single activity.
+ * 单条活动的忽略和删除操作。
  *
- * Two distinct operations, presented as such because they answer different
- * questions and an athlete who confuses them loses data or keeps bad data:
+ * 忽略和删除的作用不同，操作前会说明各自的结果：
  *
- * - 忽略 keeps the activity visible but removes it from load, PMC, records and
- *   zone statistics. Reversible at any time.
- * - 删除 moves it to the trash: hidden from lists, and the sync will not bring
- *   it back. Also reversible, from the trash view.
+ * - 忽略会保留活动记录，但不计入跑步统计、最佳成绩与心率区间分析。
+ * - 删除会将活动移入回收站并从列表隐藏；后续同步不会重新导入，之后可以恢复。
  *
- * Both explain the effect in the button's title so the consequence is legible
- * before the click.
+ * 按钮标题会说明操作结果。
  */
 export function ActivityFlagActions({
   activityId,
@@ -37,7 +33,7 @@ export function ActivityFlagActions({
       <button
         type="button"
         disabled={pending}
-        title="不计入训练负荷、PMC、纪录与心率区间统计，但保留在列表中"
+        title="保留在活动列表中，但不计入跑步统计、最佳成绩与心率区间分析"
         onClick={() => void ignore(activityId).then(after)}
         className="inline-flex h-10 items-center gap-1.5 rounded-2xl border border-border/70 bg-card/60 px-3 text-caption1 font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground disabled:opacity-50"
       >

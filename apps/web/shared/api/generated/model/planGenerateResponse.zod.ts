@@ -38,7 +38,6 @@ export const PlanGenerateResponse = zod.object({
   "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
   "phase": zod.string(),
   "predicted_distance_m": zod.union([zod.number(),zod.null()]).optional(),
-  "predicted_tss": zod.number(),
   "segments": zod.array(zod.object({
   "duration_min": zod.number().gt(planGenerateResponseEventsOneItemSegmentsItemDurationMinExclusiveMin).max(planGenerateResponseEventsOneItemSegmentsItemDurationMinMax),
   "pace_max_s_km": zod.union([zod.number().gt(planGenerateResponseEventsOneItemSegmentsItemPaceMaxSKmOneExclusiveMin).max(planGenerateResponseEventsOneItemSegmentsItemPaceMaxSKmOneMax),zod.null()]).optional(),
@@ -56,10 +55,10 @@ export const PlanGenerateResponse = zod.object({
   "end_date": zod.iso.date(),
   "name": zod.string(),
   "start_date": zod.iso.date(),
-  "target_weekly_tss": zod.number()
+  "target_weekly_distance_m": zod.number()
 })),zod.null()]).optional(),
   "phases_created": zod.number(),
-  "training_load_available": zod.union([zod.boolean(),zod.null()]).optional(),
+  "running_history_weeks": zod.union([zod.number(),zod.null()]).optional(),
   "training_paces_available": zod.union([zod.boolean(),zod.null()]).optional()
 })
 

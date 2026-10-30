@@ -36,7 +36,7 @@ export function usePlanMatch(
     let count = 0;
     for (const [eventId, match] of matches) {
       const ev = events.find((e) => e.event_id === eventId);
-      if (!ev || ev.predicted_tss == null || ev.predicted_tss <= 0) continue;
+      if (!ev || ev.workout_prescription == null) continue;
       count++;
       if (match.status === "completed") done++;
     }

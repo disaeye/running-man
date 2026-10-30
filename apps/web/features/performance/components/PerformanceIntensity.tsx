@@ -108,7 +108,7 @@ export function PerformanceIntensity() {
         {!loading && !error && data.length === 0 && (
           <EmptyState
             title={EMPTY_LABEL}
-            description="需要活动心率/功率数据，以及最大心率或 FTP 才能计算区间分布"
+            description="需要跑步心率数据及已设置的心率区间，才能计算区间分布"
           />
         )}
         {!loading && !error && data.length > 0 && (

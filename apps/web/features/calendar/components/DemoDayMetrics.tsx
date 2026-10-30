@@ -4,7 +4,7 @@ import { getSportConfig } from "@shared/config/sport-config";
 import type { ActivitySummary } from "@shared/types/activity";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 
-/** 计划栏：目标距离、配速区间与预计负荷。 */
+/** 计划栏：目标距离、配速区间与时长。 */
 export function DemoPlanColumn({ event }: { readonly event: CalendarEventDTO | undefined }) {
   const prescription = event?.workout_prescription ?? null;
   const pace =
@@ -31,10 +31,9 @@ export function DemoPlanColumn({ event }: { readonly event: CalendarEventDTO | u
           note={pace == null ? "课表没有配速区间" : undefined}
         />
         <Field
-          label="预计负荷"
-          value={event?.predicted_tss != null ? `${Math.round(event.predicted_tss)}` : NO_VALUE}
-          unit="TSS"
-          note={event?.predicted_tss == null ? "课表没有预计负荷" : undefined}
+          label="训练时长"
+          value={prescription ? `${prescription.duration_min} 分钟` : NO_VALUE}
+          note={!prescription ? "课表没有时长" : undefined}
         />
       </div>
     </div>

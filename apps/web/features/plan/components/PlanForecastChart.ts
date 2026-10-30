@@ -1,9 +1,9 @@
 import type { EChartsCoreOption } from "echarts/core";
 import type { ChartConfig } from "@shared/hooks/useChartConfig";
 import { getTsbBands, type TsbBandTone } from "@features/pmc/lib/pmc-bands";
-import type { WorkoutPredictionPoint } from "@features/calendar/components/types";
+import type { WorkoutPredictionPoint } from "@shared/api/generated/model/workoutPredictionPoint.zod";
 
-export const FORECAST_SERIES = ["实际 TSS", "计划TSS", "预测TSS", "CTL", "ATL", "TSB"] as const;
+export const FORECAST_SERIES = ["训练负荷", "计划负荷", "预测负荷", "CTL", "ATL", "TSB"] as const;
 
 interface ForecastOptionParams {
   readonly chartConfig: ChartConfig;
@@ -85,9 +85,9 @@ export function buildForecastOption({ chartConfig, chartPoints, historical, plan
       },
     ],
     series: [
-      { name: "实际 TSS", type: "bar", data: days.map((day) => historical[day] ?? null), itemStyle: { color: colors.textMuted, opacity: 0.42 } },
-      { name: "计划TSS", type: "bar", data: days.map((day) => planned[day] ?? null), itemStyle: { color: colors.accent, opacity: 0.38 } },
-      { name: "预测TSS", type: "line", data: days.map((day) => projectedValue(pointsByDay, day, "projected_tss")), smooth: true, showSymbol: false, lineStyle: { width: 1.5, color: colors.success, type: "dashed" }, itemStyle: { color: colors.success } },
+      { name: "训练负荷", type: "bar", data: days.map((day) => historical[day] ?? null), itemStyle: { color: colors.textMuted, opacity: 0.42 } },
+      { name: "计划负荷", type: "bar", data: days.map((day) => planned[day] ?? null), itemStyle: { color: colors.accent, opacity: 0.38 } },
+      { name: "预测负荷", type: "line", data: days.map((day) => projectedValue(pointsByDay, day, "projected_tss")), smooth: true, showSymbol: false, lineStyle: { width: 1.5, color: colors.success, type: "dashed" }, itemStyle: { color: colors.success } },
       { name: "CTL", type: "line", data: days.map((day) => projectedValue(pointsByDay, day, "projected_ctl")), smooth: true, showSymbol: false, lineStyle: { width: 2, color: colors.ctl }, itemStyle: { color: colors.ctl } },
       { name: "ATL", type: "line", data: days.map((day) => projectedValue(pointsByDay, day, "projected_atl")), smooth: true, showSymbol: false, lineStyle: { width: 2, color: colors.atl }, itemStyle: { color: colors.atl } },
       {

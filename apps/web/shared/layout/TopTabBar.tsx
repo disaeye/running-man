@@ -13,7 +13,7 @@ const CSS_VAR = "--mobile-nav-height";
 /**
  * Bottom tab bar for mobile (< 768px).
  *
- * 5 tabs: 首页 / 日历 / 分析 / 目标 / 档案.
+ * 五个入口对应今天、训练、分析、目标和我的。
  * Measures its own height and publishes it as a CSS custom property
  * so the main scroll region can compute bottom padding dynamically.
  */

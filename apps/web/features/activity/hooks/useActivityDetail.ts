@@ -67,6 +67,7 @@ function mapActivityDetail(raw: Generated.ActivityDetailOutput): ActivityDetail 
     avg_stride_length_m: nn(raw.avg_stride_length_m),
     avg_lr_balance_pct: nn(raw.avg_lr_balance_pct),
     is_bookmarked: raw.is_bookmarked ?? false,
+    is_race: raw.is_race ?? false,
     weather_source: nn(raw.weather_source),
     raw_data: raw.raw_data ?? null,
     has_gps: raw.has_gps ?? false,

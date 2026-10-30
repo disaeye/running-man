@@ -4,27 +4,25 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@shared/layout/AppShell";
 import { SWRProvider } from "@shared/lib/swr-provider";
-import { useCoachContext } from "@features/today/hooks/useCoachContext";
 import { athleteWeekRange, useAthleteTimezone } from "@shared/lib/training-day";
 import { isoWeek } from "@features/calendar/lib/build-week-summary";
+import { useWeeklyProgress } from "@features/today/hooks/useWeeklyProgress";
 
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const timezone = useAthleteTimezone();
-  const coachQuery = useCoachContext();
   const weekRange = useMemo(() => athleteWeekRange(timezone), [timezone]);
   const weekStart = useMemo(() => new Date(`${weekRange.from}T00:00:00`), [weekRange.from]);
   const weekNumber = isoWeek(weekStart).week;
-
-  const ctl = coachQuery.data?.recent_load?.current_ctl ?? null;
-  const tsb = coachQuery.data?.recent_load?.current_tsb ?? null;
+  const weeklyProgress = useWeeklyProgress(weekRange.from, weekRange.to).currentWeek;
 
   return (
     <AppShell
       athleteInfo={{
         weekLabel: `第 ${weekNumber} 周`,
-        ctl: ctl !== null ? Math.round(ctl) : null,
-        tsb: tsb !== null ? Math.round(tsb) : null,
+        weeklyDistanceKm:
+          weeklyProgress === null ? null : Math.round(weeklyProgress.actual_distance_m / 100) / 10,
+        weeklyRunCount: weeklyProgress?.actual_sessions ?? null,
       }}
       onAvatarClick={() => router.push("/settings?section=account")}
     >

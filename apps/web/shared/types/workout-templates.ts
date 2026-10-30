@@ -2,8 +2,9 @@
 export interface WorkoutTemplateSegment {
   segment_type: string;
   duration_s: number;
-  power_low: number;
-  power_high: number;
+  pace_min_s_km?: number | null;
+  pace_max_s_km?: number | null;
+  repetitions?: number | null;
 }
 
 /** Full workout template response from the API. */
@@ -39,5 +40,4 @@ import { getSportConfig } from "@shared/config/sport-config";
 
 export const SPORT_OPTIONS: { value: string; label: string }[] = [
   { value: "Run", label: getSportConfig("Run").label },
-  { value: "Bike", label: getSportConfig("Bike").label },
 ];

@@ -75,13 +75,6 @@ export function PlanQuality({ from, to }: PlanQualityProps) {
 
         <dl className="flex gap-6">
           <div>
-            <dt className="text-caption1 text-text-muted">本周 TSS</dt>
-            <dd className="font-mono text-subheadline font-semibold tabular-nums text-text-primary">
-              {Math.round(data.weekly_tss)}
-              <span className="text-caption1 font-normal text-text-muted">/{Math.round(data.target_tss)}</span>
-            </dd>
-          </div>
-          <div>
             <dt className="text-caption1 text-text-muted">关键训练</dt>
             <dd className="font-mono text-subheadline font-semibold tabular-nums text-text-primary">
               {data.key_sessions_completed}/{data.key_sessions_total}

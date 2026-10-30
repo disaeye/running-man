@@ -8,11 +8,11 @@ import type { ActivePlan } from "@features/goals/hooks/useActivePlan";
 /**
  * 当前激活计划卡（参考稿的激活计划卡）。
  *
- * 四块信息：状态与阶段、计划名称与目标、三格指标、周期进度条。
+ * 卡片汇总当前训练计划的阶段、周跑量、比赛配速和周期进度。
  *
  * 三格指标是阶段周次、周目标跑量、目标比赛配速。每格的数都来自计划
- * 本身：阶段周次是这周在阶段里的第几周，周目标跑量是这一周课表里
- * 计划距离的合计，目标比赛配速是目标比赛按 Daniels 配速表折算出来的。
+ * 本身：阶段周次来自计划阶段，周目标跑量来自本周课表，比赛配速
+ * 由目标距离和目标用时计算。
  *
  * 周期进度条把三个阶段排在一条线上，当前阶段的位置用实心块标出。
  */
@@ -41,7 +41,7 @@ export function DemoActivePlanCard({ plan, testId }: Props) {
       <div className="relative flex items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded bg-accent px-2 py-0.5 text-caption1 font-bold text-on-primary">
-            ACTIVE IN-PROGRESS
+            进行中的计划
           </span>
           {phase ? (
             <span className="font-mono text-caption1 text-text-muted">
@@ -57,7 +57,7 @@ export function DemoActivePlanCard({ plan, testId }: Props) {
       </div>
 
       <div className="relative mt-3">
-        <h2 className="font-display text-title2 uppercase leading-tight tracking-wide text-text-primary">
+        <h2 className="font-display text-title2 leading-tight tracking-wide text-text-primary">
           {plan.goal_title ?? "还没有训练计划"}
         </h2>
         <p className="mt-0.5 text-caption1 text-text-muted">
@@ -67,7 +67,7 @@ export function DemoActivePlanCard({ plan, testId }: Props) {
         </p>
       </div>
 
-      <div className="relative mt-4 grid grid-cols-3 gap-3">
+      <div className="relative mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Metric
           label="阶段周次"
           value={
@@ -91,19 +91,23 @@ export function DemoActivePlanCard({ plan, testId }: Props) {
         />
       </div>
 
-      <div className="relative mt-4 space-y-1.5">
-        <div className="flex justify-between items-center font-mono text-caption1">
-          {plan.phases.map((item) => (
-            <span
-              key={item.name}
-              className={item.is_current ? "text-accent" : "text-text-muted"}
-            >
-              {item.label}
-            </span>
-          ))}
+      {plan.phases.length > 0 ? (
+        <div className="relative mt-4 space-y-1.5">
+          <div className="flex items-center justify-between font-mono text-caption1">
+            {plan.phases.map((item) => (
+              <span
+                key={item.name}
+                className={item.is_current ? "text-accent" : "text-text-muted"}
+              >
+                {item.label}
+              </span>
+            ))}
+          </div>
+          <PhaseBar phases={plan.phases} />
         </div>
-        <PhaseBar phases={plan.phases} />
-      </div>
+      ) : (
+        <p className="mt-4 text-caption1 text-text-muted">尚未排定训练阶段</p>
+      )}
     </Card>
   );
 }
@@ -152,7 +156,7 @@ function PhaseBar({
   }[];
 }) {
   if (phases.length === 0) {
-    return <div className="h-2 w-full rounded-full bg-surface-active" aria-hidden />;
+    return null;
   }
   const totalDays = phases.reduce((sum, phase) => {
     const start = Date.parse(phase.start_date);

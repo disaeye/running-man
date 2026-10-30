@@ -2,9 +2,8 @@
 // navigation cards. Single source of truth for tab id ↔ display label ↔
 // accessible name ↔ call-to-action wording.
 //
-// `ctaLabel` exists because two pillars share the `load` tab: the recovery
-// card used to render `analysisTabLabel(tabId)` and read 负荷适应, so a card
-// titled 恢复趋势 told the reader it led somewhere else.
+// `ctaLabel` lets the recovery card name its destination while both analysis
+// cards open the same tab.
 
 import type { AnalysisPageTab } from "@shared/config/canonical-routes";
 
@@ -21,9 +20,9 @@ export const ANALYSIS_PILLAR_META: readonly AnalysisPillarMeta[] = [
   {
     pillarId: "load",
     tabId: "load",
-    title: "负荷适应",
-    description: "用 CTL / ATL / TSB 和 ACWR 看训练刺激是否被身体吸收。",
-    ctaLabel: "看负荷适应",
+    title: "跑量与训练安排",
+    description: "查看近期跑步距离、训练次数与计划安排。",
+    ctaLabel: "看跑量与训练安排",
   },
   {
     pillarId: "performance",
@@ -42,9 +41,9 @@ export const ANALYSIS_PILLAR_META: readonly AnalysisPillarMeta[] = [
   {
     pillarId: "recovery",
     tabId: "load",
-    title: "恢复趋势",
-    description: "睡眠、静息心率、心率变异和最近负荷的关系。",
-    ctaLabel: "看恢复趋势",
+    title: "恢复记录",
+    description: "查看睡眠、静息心率和心率变异记录。",
+    ctaLabel: "看恢复记录",
   },
 ];
 
@@ -54,7 +53,7 @@ export const ANALYSIS_TAB_LABELS: Readonly<
   session: "跑步战报",
   strength: "力量训练",
   overview: "总览",
-  load: "负荷适应",
+  load: "跑量与恢复",
   performance: "表现能力",
   intensity: "强度结构",
 };

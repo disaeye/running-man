@@ -1,5 +1,3 @@
-import { Input } from "@shared/ui/input";
-
 const WEEKDAYS = [
   { value: 0, label: "一" },
   { value: 1, label: "二" },
@@ -13,19 +11,15 @@ const WEEKDAYS = [
 interface Props {
   restDays: number;
   preferredDaysOff: number[];
-  weeklyTss: string;
   onRestDaysChange: (value: number) => void;
   onToggleDayOff: (value: number) => void;
-  onWeeklyTssChange: (value: string) => void;
 }
 
 export function PlanGenerationSettings({
   restDays,
   preferredDaysOff,
-  weeklyTss,
   onRestDaysChange,
   onToggleDayOff,
-  onWeeklyTssChange,
 }: Props) {
   return (
     <section className="flex flex-col gap-3" aria-label="训练安排设置">
@@ -59,19 +53,6 @@ export function PlanGenerationSettings({
           </button>
         ))}
       </div>
-      <label className="flex items-center justify-between gap-3">
-        <span className="text-subheadline text-text-secondary">每周目标 TSS（可选）</span>
-        <Input
-          aria-label="每周目标 TSS"
-          type="number"
-          min={1}
-          max={2000}
-          value={weeklyTss}
-          onChange={(event) => onWeeklyTssChange(event.target.value)}
-          className="max-w-32"
-          placeholder="依据近期负荷"
-        />
-      </label>
     </section>
   );
 }

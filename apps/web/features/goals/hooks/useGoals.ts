@@ -7,6 +7,7 @@ import {
   listGoalsApiV1GoalsGet,
   getGoalApiV1GoalsGoalIdGet,
   listMilestonesApiV1GoalsGoalIdMilestonesGet,
+  createMilestoneApiV1GoalsGoalIdMilestonesPost,
   createGoalApiV1GoalsPost,
   updateGoalApiV1GoalsGoalIdPut,
   deleteGoalApiV1GoalsGoalIdDelete,
@@ -55,6 +56,8 @@ function mapMilestone(raw: Generated.MilestoneResponseOutput): Milestone {
     title: raw.title,
     target_date: raw.target_date ?? null,
     target_value: raw.target_value ?? null,
+    unit: raw.unit ?? null,
+    result_text: raw.result_text ?? null,
     achieved: raw.achieved,
     achieved_at: raw.achieved_at ?? null,
   };
@@ -100,6 +103,9 @@ export function useGoal(goalId: string | null) {
   const refresh = useCallback(async () => {
     await Promise.all([goalResult.mutate(), milestonesResult.mutate()]);
   }, [goalResult, milestonesResult]);
+  const refreshMilestones = useCallback(async () => {
+    await milestonesResult.mutate();
+  }, [milestonesResult]);
 
   return {
     goal: goalResult.data ?? null,
@@ -107,6 +113,7 @@ export function useGoal(goalId: string | null) {
     loading: goalResult.isLoading || milestonesResult.isLoading,
     error: goalResult.error?.message ?? milestonesResult.error?.message ?? null,
     refresh,
+    refreshMilestones,
   };
 }
 
@@ -153,6 +160,32 @@ export async function updateGoal(
 
 export async function deleteGoal(goalId: string): Promise<void> {
   await callOrval((f) => deleteGoalApiV1GoalsGoalIdDelete(goalId, {}, f));
+}
+
+export interface MilestoneDraft {
+  title: string;
+  target_date: string | null;
+  target_value: number | null;
+  unit: string | null;
+  result_text: string | null;
+}
+
+export async function createMilestone(goalId: string, draft: MilestoneDraft): Promise<Milestone> {
+  return callOrvalValidated(
+    (f) => createMilestoneApiV1GoalsGoalIdMilestonesPost(goalId, draft, {}, f),
+    Generated.MilestoneResponse,
+  ).then(mapMilestone);
+}
+
+export async function updateMilestone(
+  goalId: string,
+  milestoneId: string,
+  draft: MilestoneDraft,
+): Promise<Milestone> {
+  return callOrvalValidated(
+    (f) => updateMilestoneApiV1GoalsGoalIdMilestonesMilestoneIdPut(goalId, milestoneId, draft, {}, f),
+    Generated.MilestoneResponse,
+  ).then(mapMilestone);
 }
 
 export async function toggleMilestone(

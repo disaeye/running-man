@@ -1,5 +1,3 @@
-import { describeAtl, describeTsb } from "@features/pmc/components/pmcSemantics";
-import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
 import type { LocalReadiness } from "@features/today/hooks/useReadiness";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 import { HEART_RATE_UNIT } from "@shared/config/terms";
@@ -23,48 +21,19 @@ type WellnessNumericKey = "resting_hr" | "hrv" | "sleep_secs" | "vo2max";
 
 export function buildRecoveryDiagnosis(
   readiness: LocalReadiness | null,
-  latestLoad: PmcPoint | null,
   sampleCount: number,
 ): Diagnosis {
-  if (hasLoadConflict(readiness, latestLoad)) return loadConflictDiagnosis(readiness, latestLoad);
-  if (isStableReadiness(readiness)) return stableDiagnosis(readiness, sampleCount);
+  if (readiness != null && readiness.data_sufficient && readiness.score >= 70) {
+    return stableDiagnosis(readiness, sampleCount);
+  }
   return pendingDiagnosis(sampleCount);
-}
-
-function hasLoadConflict(readiness: LocalReadiness | null, latestLoad: PmcPoint | null): readiness is LocalReadiness {
-  return readiness != null && latestLoad != null && isReadinessLow(readiness) && isLoadHigh(latestLoad);
-}
-
-function isReadinessLow(readiness: LocalReadiness): boolean {
-  return readiness.score < 50 || readiness.level === "rest" || readiness.level === "recovery";
-}
-
-function isLoadHigh(latestLoad: PmcPoint): boolean {
-  const atlZone = describeAtl(latestLoad.atl);
-  const tsbZone = describeTsb(latestLoad.tsb);
-  return atlZone?.tone === "danger" || tsbZone?.tone === "danger" || tsbZone?.tone === "caution";
-}
-
-function isStableReadiness(readiness: LocalReadiness | null): readiness is LocalReadiness {
-  return readiness != null && readiness.score >= 70;
-}
-
-function loadConflictDiagnosis(readiness: LocalReadiness, latestLoad: PmcPoint | null): Diagnosis {
-  const load = latestLoad ?? { atl: 0, tsb: 0 };
-  return {
-    title: "恢复-负荷冲突",
-    detail: `恢复评分 ${readiness.score} · 疲劳 ${Math.round(load.atl)} · 状态 ${Math.round(load.tsb)}`,
-    badge: "负荷压制",
-    variant: "error",
-    tone: "text-recovery-poor",
-  };
 }
 
 function stableDiagnosis(readiness: LocalReadiness, sampleCount: number): Diagnosis {
   return {
-    title: "恢复趋势稳定",
-    detail: `恢复评分 ${readiness.score} · ${sampleCount} 天样本`,
-    badge: "稳定",
+    title: "当前恢复评分",
+    detail: `恢复评分 ${readiness.score} · ${sampleCount} 天健康记录`,
+    badge: "已计算",
     variant: "success",
     tone: "text-recovery-good",
   };
@@ -72,9 +41,9 @@ function stableDiagnosis(readiness: LocalReadiness, sampleCount: number): Diagno
 
 function pendingDiagnosis(sampleCount: number): Diagnosis {
   return {
-    title: "恢复信号待确认",
-    detail: `${sampleCount} 天样本`,
-    badge: "样本不足",
+    title: "恢复记录",
+    detail: `${sampleCount} 天有健康数据` ,
+    badge: sampleCount > 0 ? "持续观察" : "暂无记录",
     variant: "neutral",
     tone: "text-text-primary",
   };

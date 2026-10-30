@@ -3,21 +3,18 @@
 // Recovery charts for the load tab (collapsed by default at page shell).
 // Range from page-level provider only — no second range control.
 
-import { useMemo } from "react";
 import { Card } from "@shared/ui/Card";
 import { ChartShell } from "@shared/ui/ChartShell";
 import { SleepAnalysis } from "@features/health/components/SleepAnalysis";
 import { RestingHRTrend } from "@features/health/components/RestingHRTrend";
 import { VO2maxTrend } from "@features/health/components/VO2maxTrend";
 import { HealthChart } from "@features/health/components/HealthChart";
-import { TrainingRecoveryCorrelation } from "@features/health/components/TrainingRecoveryCorrelation";
 import { WellnessMetricChart } from "@features/health/components/WellnessMetricChart";
 import { BloodPressureChart } from "@features/health/components/BloodPressureChart";
 import { NutritionChart } from "@features/health/components/NutritionChart";
 import { SubjectiveRatingsChart } from "@features/health/components/SubjectiveRatingsChart";
 import { MenstrualPhaseStrip } from "@features/health/components/MenstrualPhaseStrip";
 import { useWellness } from "@features/health/hooks/useWellness";
-import { usePmcData, type PmcPoint } from "@features/pmc/hooks/usePmcData";
 import { useReadiness } from "@features/today/hooks/useReadiness";
 import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
 import { HEART_RATE_UNIT } from "@shared/config/terms";
@@ -32,10 +29,8 @@ export function AnalysisRecovery() {
   const { range } = useAnalysisRange();
   const today = athleteToday(useAthleteTimezone());
   const { data: wellness, loading, error } = useWellness(range.from, range.to);
-  const { data: loads } = usePmcData(range.from, range.to);
   const { data: readiness } = useReadiness(today);
 
-  const latestLoad = useMemo(() => latestByDay(loads), [loads]);
   const bodyState = recoveryBodyState({
     error,
     loading,
@@ -58,11 +53,7 @@ export function AnalysisRecovery() {
 
       {bodyState === "ready" && (
         <>
-          <RecoveryDiagnosisCard
-            wellness={wellness}
-            latestLoad={latestLoad}
-            readiness={readiness?.local_readiness ?? null}
-          />
+          <RecoveryDiagnosisCard wellness={wellness} />
           {readiness && (
             <ReadinessDriverHistory readiness={readiness.local_readiness} />
           )}
@@ -83,12 +74,9 @@ export function AnalysisRecovery() {
               <RestingHRTrend data={wellness} />
             </ChartShell>
           </div>
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <ChartShell title="最大摄氧量" subtitle="ml/kg/min">
-              <VO2maxTrend data={wellness} />
-            </ChartShell>
-            <TrainingRecoveryCorrelation wellness={wellness} loads={loads} />
-          </div>
+          <ChartShell title="最大摄氧量" subtitle="ml/kg/min">
+            <VO2maxTrend data={wellness} />
+          </ChartShell>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <ChartShell title="血氧" subtitle="%">
@@ -170,10 +158,6 @@ function recoveryBodyState({
 }): "error" | "sparse" | "ready" {
   if (error) return "error";
   return sampleCount >= 3 || loading ? "ready" : "sparse";
-}
-
-function latestByDay(points: PmcPoint[]): PmcPoint | null {
-  return [...points].sort((a, b) => a.day.localeCompare(b.day)).at(-1) ?? null;
 }
 
 export { LinkButton } from "./AnalysisLink";

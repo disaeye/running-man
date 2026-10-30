@@ -17,7 +17,7 @@ export function RecomputeStatusCard() {
   return (
     <section
       className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface-card px-4 py-3"
-      aria-label="训练负荷计算状态"
+      aria-label="训练数据计算状态"
       data-testid="recompute-status"
     >
       <div className="flex items-center gap-2">

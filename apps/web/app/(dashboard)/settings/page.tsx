@@ -67,7 +67,7 @@ function SettingsPageContent() {
           <Button asChild variant="outline">
             <Link href="/profile">
               <ArrowLeft aria-hidden="true" />
-              档案
+              我的
             </Link>
           </Button>
         }

@@ -6,14 +6,13 @@
  */
 import { z as zod } from 'zod';
 
-export const planAdjustmentResponseTriggersDefault = [];
 export const PlanAdjustmentResponse = zod.object({
   "adjustment_id": zod.string(),
+  "adjustment_pct": zod.number(),
   "created_at": zod.string(),
   "event_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "event_id": zod.string(),
   "event_title": zod.union([zod.string(),zod.null()]).optional(),
-  "load_delta_pct": zod.number(),
   "status": zod.string(),
   "trigger_summary": zod.string(),
   "trigger_type": zod.string(),
@@ -21,7 +20,7 @@ export const PlanAdjustmentResponse = zod.object({
   "detail": zod.string(),
   "key": zod.string(),
   "label": zod.string()
-})).default(planAdjustmentResponseTriggersDefault)
+})).optional()
 })
 
 export type PlanAdjustmentResponse = zod.input<typeof PlanAdjustmentResponse>;

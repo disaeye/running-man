@@ -26,7 +26,6 @@ interface TotalsSummary {
   readonly count: number;
   readonly distance: string;
   readonly duration: string;
-  readonly tss: string;
   readonly stats: readonly TotalStat[];
 }
 
@@ -36,12 +35,10 @@ function buildSummary(activities: ActivitySummary[]): TotalsSummary {
       count: 0,
       distance: "--",
       duration: "--",
-      tss: "--",
       stats: [
         { label: "活动数", value: "0" },
         { label: "总距离", value: "--" },
         { label: "总时长", value: "--" },
-        { label: "总训练压力", value: "--" },
         { label: "平均心率", value: "--" },
         { label: "平均配速", value: "--" },
         { label: "累计爬升", value: "--" },
@@ -52,7 +49,6 @@ function buildSummary(activities: ActivitySummary[]): TotalsSummary {
 
   const totalDistance = activities.reduce((s, a) => s + (a.distance_m ?? 0), 0);
   const totalDuration = activities.reduce((s, a) => s + (a.duration_s ?? 0), 0);
-  const totalTss = activities.reduce((s, a) => s + (a.tss ?? 0), 0);
   const totalElev = activities.reduce(
     (s, a) => s + (a.elevation_gain_m ?? 0),
     0,
@@ -73,18 +69,15 @@ function buildSummary(activities: ActivitySummary[]): TotalsSummary {
       ? paceItems.reduce((s, a) => s + (a.avg_speed ?? 0), 0) / paceItems.length
       : null;
 
-  const tssLabel = totalTss > 0 ? `${Math.round(totalTss)}` : "--";
 
   return {
     count: activities.length,
     distance: formatDistance(totalDistance),
     duration: formatDuration(totalDuration),
-    tss: tssLabel,
     stats: [
       { label: "活动数", value: `${activities.length}` },
       { label: "总距离", value: formatDistance(totalDistance) },
       { label: "总时长", value: formatDuration(totalDuration) },
-      { label: "总训练压力", value: tssLabel },
       { label: "平均心率", value: formatHeartRate(avgHr) },
       { label: "平均配速", value: formatPace(avgPace) },
       {
@@ -131,11 +124,6 @@ export function ActivityTotals({ activities }: ActivityTotalsProps) {
             <span className="mx-2 text-text-muted">·</span>
             <span className="font-mono tabular-nums text-text-primary">
               {summary.duration}
-            </span>
-            <span className="mx-2 text-text-muted">·</span>
-            <span className="text-text-muted">TSS </span>
-            <span className="font-mono tabular-nums text-text-primary">
-              {summary.tss}
             </span>
           </p>
         </div>

@@ -24,31 +24,10 @@ export function ActivityNullSemantics({
 }: ActivityNullSemanticsProps) {
   const notes: Note[] = [];
   const hasHrStream = Boolean(streamMap.heart_rate?.length);
-  const hasPowerStream = Boolean(streamMap.power?.length);
   const hasSpeed = Boolean(streamMap.speed?.length || streamMap.distance?.length);
-  const tss = activity.tss ?? analysis?.summary?.tss ?? null;
   const sport = activity.sport ?? "";
 
-  if (tss == null) {
-    if (!hasPowerStream && !hasHrStream && !hasSpeed) {
-      notes.push({
-        key: "tss-no-streams",
-        text: "TSS 缺失 · 无功率/心率/配速流",
-      });
-    } else if (!hasPowerStream && !hasHrStream && hasSpeed) {
-      notes.push({
-        key: "tss-no-threshold",
-        text: "rTSS 缺失 · 需阈值配速",
-      });
-    } else if (hasHrStream && activity.avg_hr == null) {
-      notes.push({
-        key: "tss-hr-summary",
-        text: "负荷不完整 · 缺平均心率",
-      });
-    }
-  }
-
-  if (!hasHrStream && (sport === "Run" || sport === "Ride" || sport === "VirtualRun")) {
+  if (!hasHrStream && (sport === "Run" || sport === "TrailRun" || sport === "VirtualRun")) {
     notes.push({
       key: "no-hr",
       text: "无心率 · 区间/解耦不可用",
@@ -57,7 +36,7 @@ export function ActivityNullSemantics({
     hasHrStream &&
     analysis?.summary != null &&
     analysis.summary.decoupling_pct == null &&
-    (hasPowerStream || hasSpeed)
+    hasSpeed
   ) {
     notes.push({
       key: "no-decoupling",

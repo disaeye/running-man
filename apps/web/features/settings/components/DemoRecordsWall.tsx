@@ -1,7 +1,6 @@
 "use client";
 
 import { Card } from "@shared/ui/Card";
-import { LabelCaps } from "@shared/ui/LabelCaps";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 import { formatPaceFromSeconds } from "@shared/lib/format";
 
@@ -50,9 +49,7 @@ export function DemoRecordsWall({
 }: Props) {
   return (
     <Card data-testid={testId ?? "demo-records-wall"}>
-      <div className="flex items-center justify-between gap-3">
-        <LabelCaps icon={<span>◆</span>}>PERSONAL BESTS · 生涯个人最好成绩</LabelCaps>
-      </div>
+      <h2 className="text-title3 font-semibold text-text-primary">个人最好成绩</h2>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         {DISTANCE_CELLS.map((cell) => {

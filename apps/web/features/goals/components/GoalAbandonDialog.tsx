@@ -12,6 +12,7 @@ interface GoalAbandonDialogProps {
   open: boolean;
   goalTitle: string;
   abandoning: boolean;
+  error: string | null;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -26,6 +27,7 @@ export function GoalAbandonDialog({
   open,
   goalTitle,
   abandoning,
+  error,
   onCancel,
   onConfirm,
 }: GoalAbandonDialogProps) {
@@ -42,8 +44,9 @@ export function GoalAbandonDialog({
           <DialogTitle>放弃这个目标？</DialogTitle>
         </DialogHeader>
         <p className="text-subheadline text-text-secondary">
-          目标 “{goalTitle}” 将被删除，历史进度与里程碑也会一并清除。此操作不可撤销。
+          目标“{goalTitle}”及其历史进度和里程碑将被删除。此操作不可撤销。
         </p>
+        {error ? <p role="alert" className="text-caption1 text-error">{error}</p> : null}
         <div className="flex justify-end gap-3">
           <Button
             type="button"

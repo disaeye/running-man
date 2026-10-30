@@ -57,7 +57,7 @@ export function BackfillDialog({
         </DialogHeader>
         <div className="flex flex-col gap-4 text-caption1">
           <p className="text-text-secondary leading-relaxed">
-            默认同步仅拉取最近 30 天数据。如需查看更早的训练负荷趋势（PMC）与个人里程碑，请选择历史导入起始日期。系统将按日历月分批拉取，中途可随时查看进度。
+            默认同步仅拉取最近 30 天数据。如需查看更早的跑步活动和相关记录，请选择历史导入起始日期。系统将按日历月分批拉取，中途可随时查看进度。
           </p>
 
           <div className="rounded-xl border border-border-default bg-surface-sunken/60 p-3 space-y-1">

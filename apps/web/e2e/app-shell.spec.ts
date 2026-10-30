@@ -159,24 +159,24 @@ test.describe("app shell", () => {
     });
 
     test("profile and settings show distinct page titles while sharing the profile tab", async ({ page }) => {
-      for (const [route, title] of [["/profile", "档案"], ["/settings?section=account", "设置"]] as const) {
+      for (const [route, title] of [["/profile", "我的"], ["/settings?section=account", "设置"]] as const) {
         await page.goto(route);
         await expect(page.locator('[data-shell-region="main"] h1')).toHaveText(title);
         const profileTab = page
           .locator('[data-layout-token="mobile-nav"] a')
-          .filter({ hasText: "档案" });
+          .filter({ hasText: "我的" });
         await expect(profileTab).toHaveAttribute("aria-current", "page");
       }
     });
 
-    test("alias active state: /activities maps to calendar tab", async ({
+    test("alias active state: /activities maps to training tab", async ({
       page,
     }) => {
       await page.goto("/activities");
-      const calendarTab = page
+      const trainingTab = page
         .locator('[data-layout-token="mobile-nav"] a')
-        .filter({ hasText: "日历" });
-      await expect(calendarTab).toHaveAttribute("aria-current", "page");
+        .filter({ hasText: "训练" });
+      await expect(trainingTab).toHaveAttribute("aria-current", "page");
     });
 
     test("focus order: skip link → header controls → main content", async ({

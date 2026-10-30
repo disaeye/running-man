@@ -4,15 +4,13 @@ import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@shared/ui/Card";
 import { Button } from "@shared/ui/button";
 import { Badge } from "@shared/ui/Badge";
-import { WarningBadge } from "@features/calendar/components/WarningBadge";
 import { EventMatchStatus } from "@features/calendar/components/EventMatchStatus";
 import { computeWeekMatches } from "@features/calendar/lib/match";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 import type { ActivitySummary } from "@shared/types/activity";
 import { toISODate, formatDistance } from "@shared/lib/format";
 import { getSportConfig } from "@shared/config/sport-config";
-import { riskFlags } from "@features/calendar/components/types";
-import { tssBg } from "@features/plan/lib/tss-bg";
+
 import { activityLocalDay, athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
 
 const DAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
@@ -25,8 +23,8 @@ interface PlanWeekViewProps {
   completedActivities?: Map<string, ActivitySummary[]>;
 }
 
-function parseSegs(xml?: string): { segment_type: string }[] {
-  try { const p = JSON.parse(xml ?? ""); return Array.isArray(p) ? p : []; }
+function parseSegs(xml?: string): { segment_type: string; duration_s: number }[] {
+  try { const p: unknown = JSON.parse(xml ?? ""); return Array.isArray(p) ? p as { segment_type: string; duration_s: number }[] : []; }
   catch { return []; }
 }
 
@@ -34,24 +32,9 @@ function dayIndex(day: Date): number {
   return day.getDay() === 0 ? 6 : day.getDay() - 1;
 }
 
-function TssCompare({ planned, actual }: { planned: number; actual: number | null }) {
+function DurationCompare({ planned, actual }: { planned: number; actual: number | null }) {
   if (planned <= 0 && (actual == null || actual <= 0)) return null;
-  return (
-    <div className="flex items-center gap-1.5 text-caption2 font-mono">
-      {planned > 0 && (
-        <span className="inline-flex items-center gap-0.5 text-accent-strong">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
-          {Math.round(planned)}
-        </span>
-      )}
-      {actual != null && actual > 0 && (
-        <span className="inline-flex items-center gap-0.5 text-text-primary">
-          <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
-          {Math.round(actual)}
-        </span>
-      )}
-    </div>
-  );
+  return <span className="font-mono text-caption1 text-text-secondary">{Math.round(planned || actual || 0)} 分钟</span>;
 }
 
 export function PlanWeekView({
@@ -109,11 +92,11 @@ export function PlanWeekView({
           const isFuture = iso > today;
           const dayEvents = eventsByDate.get(iso) ?? [];
           const dayActivities = completedActivities?.get(iso) ?? [];
-          const plannedTss = dayEvents.reduce((s, e) => s + (e.predicted_tss ?? 0), 0);
-          const actualTss = dayActivities.reduce((s, a) => s + (a.tss ?? 0), 0);
+          const plannedMinutes = dayEvents.reduce((sum, event) => sum + (event.workout_prescription?.duration_min ?? 0), 0);
+          const actualMinutes = dayActivities.reduce((sum, activity) => sum + (activity.duration_s ?? 0), 0) / 60;
           const hasActual = dayActivities.length > 0;
           const showAsFuture = isFuture && !hasActual && dayEvents.length > 0;
-          const bg = tssBg(Math.max(plannedTss, actualTss), showAsFuture);
+          const bg = showAsFuture ? "bg-accent/5" : "";
           const hasPlanned = dayEvents.length > 0;
           const allDone = hasPlanned && dayEvents.every((e) => e.done);
           const complianceDot = (allDone || (hasPlanned && hasActual));
@@ -123,7 +106,7 @@ export function PlanWeekView({
               key={iso}
               type="button"
               onClick={() => onSelectDate(iso)}
-              aria-label={`${DAY_NAMES[dayIndex(day)]} ${day.getDate()}日${hasPlanned ? ` 计划 ${Math.round(plannedTss)} TSS` : ""}${hasActual ? ` 实际 ${Math.round(actualTss)} TSS` : ""}${complianceDot ? " 已按计划完成" : ""}`}
+              aria-label={`${DAY_NAMES[dayIndex(day)]} ${day.getDate()}日${hasPlanned && plannedMinutes > 0 ? ` 计划 ${Math.round(plannedMinutes)} 分钟` : ""}${hasActual ? ` 实际 ${Math.round(actualMinutes)} 分钟` : ""}${complianceDot ? " 已按计划完成" : ""}`}
               className={`focus-ring relative flex flex-col gap-1 rounded-lg border bg-surface-card p-2 text-left transition-colors hover:bg-surface-overlay ${bg} ${
                 isToday ? "border-accent" : hasPlanned ? "border-accent/40" : "border-border-default"
               }`}
@@ -143,7 +126,7 @@ export function PlanWeekView({
                 )}
               </div>
 
-              <TssCompare planned={plannedTss} actual={hasActual ? actualTss : null} />
+              <DurationCompare planned={plannedMinutes} actual={hasActual ? actualMinutes : null} />
 
               {hasActual && (
                 <div className="flex flex-col gap-0.5">
@@ -167,7 +150,6 @@ export function PlanWeekView({
                 <div className="flex flex-col gap-0.5">
                   {dayEvents.map((ev) => {
                     const segCount = parseSegs(ev.workout_xml).length;
-                    const risk = riskFlags(ev.predicted_tss ?? 0);
                     return (
                       <div key={ev.event_id} className="flex flex-col gap-0.5">
                         <span className="line-clamp-2 text-caption1 text-text-primary">{ev.name ?? "训练"}</span>
@@ -182,13 +164,6 @@ export function PlanWeekView({
                             <EventMatchStatus status={matches.get(ev.event_id)!.status} />
                           )}
                         </div>
-                        {ev.predicted_tss != null && ev.predicted_tss > 0 && (
-                          <WarningBadge
-                            isOvertrainingRisk={risk.isOvertrainingRisk}
-                            isHighLoadRisk={risk.isHighLoadRisk}
-                            isFresh={risk.isFresh}
-                          />
-                        )}
                       </div>
                     );
                   })}

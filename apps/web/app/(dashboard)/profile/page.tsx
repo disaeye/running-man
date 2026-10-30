@@ -12,7 +12,6 @@ import { useLifetimeTotals } from "@features/today/hooks/useLifetimeTotals";
 import { useAthleteGrade } from "@features/today/hooks/useAthleteGrade";
 import { usePersonalRange } from "@features/today/hooks/usePersonalRange";
 import { useWellness } from "@features/health/hooks/useWellness";
-import { useActivities } from "@features/activity/hooks/useActivities";
 import { useReadiness } from "@features/today/hooks/useReadiness";
 import { athleteRange, useAthleteTimezone } from "@shared/lib/training-day";
 import { Button } from "@shared/ui/button";
@@ -22,6 +21,9 @@ import { DemoPhysiologyCard } from "@features/settings/components/DemoPhysiology
 import { DemoRecordsWall } from "@features/settings/components/DemoRecordsWall";
 import { DemoLoadRiskCard } from "@features/settings/components/DemoLoadRiskCard";
 import { DemoDevicesCard } from "@features/settings/components/DemoDevicesCard";
+import { SettingsZones } from "@features/settings/components/SettingsZones";
+import { ShoeManager } from "@features/settings/components/ShoeManager";
+import { ThresholdHistoryChart } from "@features/settings/components/ThresholdHistoryChart";
 import { bestSummary } from "@features/settings/lib/profile-summary";
 
 const WINDOW_DAYS = 42;
@@ -36,7 +38,15 @@ export default function ProfilePage() {
 
 function ProfilePageContent() {
   const { profile } = useProfile();
-  const { zones } = useZoneOverrides();
+  const {
+    zones,
+    loading: zonesLoading,
+    saving: zonesSaving,
+    error: zonesError,
+    saveOverrides,
+    resetZones,
+    selectScheme,
+  } = useZoneOverrides();
   const raceResults = useRaceResults();
   const personalRecords = usePersonalRecords();
   const ability = useAbility();
@@ -46,15 +56,11 @@ function ProfilePageContent() {
   const timezone = useAthleteTimezone();
   const range = useMemo(() => athleteRange(WINDOW_DAYS, timezone), [timezone]);
   const wellness = useWellness(range.from, range.to);
-  const activities = useActivities(range.from, range.to);
+
   const readiness = useReadiness();
 
   const latestWellness = wellness.data.at(-1) ?? null;
   const figures = personalRange.data?.figures ?? [];
-  const latestBalance =
-    [...activities.data]
-      .reverse()
-      .find((activity) => activity.avg_lr_balance_pct != null)?.avg_lr_balance_pct ?? null;
   const local = readiness.data?.local_readiness ?? null;
   const recoveryIndex =
     local !== null && local.data_sufficient ? Math.round(local.score) : null;
@@ -62,8 +68,8 @@ function ProfilePageContent() {
   return (
     <div className="page-stack" data-testid="athlete-profile-page">
       <PageHeader
-        title="档案"
-        description="查看个人成绩、生理指标与近期训练状态。"
+        title="我的"
+        description="个人资料、跑步生理指标、训练区间与跑鞋记录。"
         action={
           <Button asChild variant="outline">
             <Link href="/settings">
@@ -85,16 +91,17 @@ function ProfilePageContent() {
 
       <DemoPhysiologyCard
         vo2max={latestWellness?.vo2max ?? null}
-        vo2maxSource={latestWellness?.vo2max != null ? "设备同步" : null}
+        vo2maxSource={latestWellness?.vo2max != null ? "Intervals.icu 同步" : null}
         restingHr={zones?.resting_hr ?? profile?.resting_hr ?? null}
         lthr={zones?.lthr ?? profile?.lthr ?? null}
         thresholdPaceSPerKm={zones?.threshold_pace ?? profile?.threshold_pace ?? null}
         weightKg={latestWellness?.weight ?? null}
         heightCm={profile?.height_cm ?? null}
         bodyFatPct={latestWellness?.body_fat_pct ?? null}
-        figures={figures}
         windowDays={personalRange.data?.window_days ?? 90}
       />
+
+      <ThresholdHistoryChart />
 
       <DemoRecordsWall
         raceResults={raceResults.data.map((row) => ({
@@ -110,12 +117,42 @@ function ProfilePageContent() {
         }))}
       />
 
-      <DemoLoadRiskCard
-        figures={figures}
-        lrBalancePct={latestBalance}
-        recoveryIndex={recoveryIndex}
-      />
+      <section aria-labelledby="profile-zones-title" className="space-y-3">
+        <div>
+          <h2 id="profile-zones-title" className="text-title3 font-semibold text-text-primary">训练区间</h2>
+          <p className="mt-1 text-caption1 text-text-muted">心率区间与阈值配速由当前个人阈值计算。</p>
+        </div>
+        {zones ? (
+          <SettingsZones
+            hrZones={zones.hr_zones}
+            paceZones={zones.pace_zones}
+            thresholdPace={zones.threshold_pace}
+            hrScheme={zones.hr_scheme}
+            hrSchemeOptions={zones.hr_scheme_options}
+            hrSchemeCitation={zones.hr_scheme_citation}
+            unavailableRequirements={zones.unavailable_requirements}
+            hrMax={zones.hr_max}
+            hrMaxEstimated={zones.hr_max_estimated}
+            lthr={zones.lthr}
+            restingHr={zones.resting_hr}
+            hasOverrides={zones.has_overrides}
+            loading={zonesLoading}
+            saving={zonesSaving}
+            onSave={saveOverrides}
+            onReset={resetZones}
+            onSelectScheme={selectScheme}
+          />
+        ) : zonesLoading ? (
+          <p className="text-caption1 text-text-muted">正在读取训练区间…</p>
+        ) : zonesError ? (
+          <p role="alert" className="text-caption1 text-error">{zonesError}</p>
+        ) : (
+          <p className="text-caption1 text-text-muted">当前没有可用的训练区间。</p>
+        )}
+      </section>
 
+      <ShoeManager />
+      <DemoLoadRiskCard figures={figures} recoveryIndex={recoveryIndex} />
       <DemoDevicesCard />
     </div>
   );

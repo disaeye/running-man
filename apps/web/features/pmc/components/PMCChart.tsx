@@ -17,7 +17,6 @@ import type { EChartsCoreOption } from "echarts/core";
 import { useChartConfig, type ChartConfig } from "@shared/hooks/useChartConfig";
 import { useECharts } from "@shared/hooks/useECharts";
 import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
-import { formatTss } from "@shared/lib/chart-preset";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { getTsbBands, type TsbBandTone } from "@features/pmc/lib/pmc-bands";
@@ -101,7 +100,6 @@ function buildOption(
           `<span style="color:${c.ctl}">●</span> 体能(CTL): ${point.ctl.toFixed(1)}`,
           `<br/><span style="color:${c.atl}">●</span> 疲劳(ATL): ${point.atl.toFixed(1)}`,
           `<br/><span style="color:${c.tsb}">●</span> 状态(TSB): ${point.tsb.toFixed(1)}`,
-          `<br/><span style="color:${c.textMuted}">TSS: ${formatTss(point.tss)}</span>`,
           point.acwr != null
             ? `<br/><span style="color:${c.textMuted}">负荷比(ACWR): ${point.acwr.toFixed(2)}</span>`
             : "",

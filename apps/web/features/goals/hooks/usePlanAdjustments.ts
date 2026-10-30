@@ -12,8 +12,6 @@ export interface PlanAdjustment {
   readonly event_id: string;
   readonly trigger_type: string;
   readonly trigger_summary: string;
-  /** 负荷变化（百分比）。负数表示削减。 */
-  readonly load_delta_pct: number;
   readonly status: "pending" | "applied" | "reverted";
   readonly created_at: string;
   readonly triggers: readonly {
@@ -50,7 +48,7 @@ export function usePlanAdjustments(): {
     event_id: item.event_id,
     trigger_type: item.trigger_type,
     trigger_summary: item.trigger_summary,
-    load_delta_pct: item.load_delta_pct ?? 0,
+    adjustment_pct: item.adjustment_pct,
     status: (item.status ?? "pending") as PlanAdjustment["status"],
     created_at: item.created_at ?? "",
     triggers: (item.triggers ?? []).map((trigger) => ({

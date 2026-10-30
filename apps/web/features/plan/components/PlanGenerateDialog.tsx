@@ -53,7 +53,6 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
   const [preview, setPreview] = useState<GeneratePreview | null>(null);
   const [restDays, setRestDays] = useState(() => Math.max(0, 7 - trainingDays));
   const [preferredDaysOff, setPreferredDaysOff] = useState<number[]>([]);
-  const [weeklyTss, setWeeklyTss] = useState("");
   const [state, setState] = useState<DialogState>({ kind: "loading-goals" });
 
   useEffect(() => {
@@ -63,11 +62,14 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
       .then((rows) => {
         if (cancelled) return;
         const active = rows.filter((goal) => goal.status === "active");
-        setGoals(active);
+        const eligible = active.filter(
+          (goal) => goal.target_date !== null && goal.race_distance_m !== null,
+        );
+        setGoals(eligible);
         setSelectedGoal((current) =>
-          active.some((goal) => goal.goal_id === current)
+          eligible.some((goal) => goal.goal_id === current)
             ? current
-            : (active[0]?.goal_id ?? ""),
+            : (eligible[0]?.goal_id ?? ""),
         );
         setState({ kind: "ready" });
       })
@@ -91,7 +93,6 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
     goal_id: selectedGoal,
     rest_days: restDays,
     preferred_days_off: preferredDaysOff,
-    weekly_tss: weeklyTss ? Number(weeklyTss) : null,
   });
 
   const toggleDayOff = (day: number) => {
@@ -152,11 +153,11 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
           {state.kind === "goals-error" ? (
             <StatusPanel title="目标加载失败" body={state.message} tone="error" />
           ) : state.kind === "loading-goals" ? (
-            <StatusPanel title="正在加载目标" body="读取可用于生成计划的进行中目标。" />
+            <StatusPanel title="正在加载目标" body="读取日期与距离齐全的进行中比赛目标。" />
           ) : goals.length === 0 ? (
             <StatusPanel
-              title="还没有可用目标"
-              body="先创建一个进行中的比赛或训练目标，再回来生成计划。"
+              title="没有资料完整的比赛目标"
+              body="请为目标填写比赛日期和距离，再生成训练计划。"
               action={<Link href="/goals" className="font-medium text-accent-strong hover:underline">前往目标</Link>}
             />
           ) : (
@@ -199,10 +200,8 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
             <PlanGenerationSettings
               restDays={restDays}
               preferredDaysOff={preferredDaysOff}
-              weeklyTss={weeklyTss}
               onRestDaysChange={(value) => { setRestDays(value); setPreview(null); }}
               onToggleDayOff={toggleDayOff}
-              onWeeklyTssChange={(value) => { setWeeklyTss(value); setPreview(null); }}
             />
           )}
 

@@ -6,7 +6,6 @@ import {
   formatDuration,
   formatPace,
   formatHeartRate,
-  formatPower,
   formatElevation,
 } from "@shared/lib/format";
 import type { ActivitySummary } from "@shared/types/activity";
@@ -15,7 +14,6 @@ import {
   type StatField,
   type SportConfig,
 } from "@shared/config/sport-config";
-import { termLabel } from "@shared/config/terms";
 
 interface Stat {
   label: string;
@@ -74,22 +72,6 @@ const statRenderers: Record<StatField, StatRenderer> = {
       a.avg_speed != null && a.avg_speed > 0
         ? clampPct((a.avg_speed / 5) * 100)
         : null,
-  },
-  avgPower: {
-    label: "平均功率",
-    render: (a) => formatPower(a.avg_power),
-    fill: (a) =>
-      a.avg_power != null ? clampPct((a.avg_power / 350) * 100) : null,
-  },
-  np: {
-    label: termLabel("NP"),
-    render: (a) => formatPower(a.np),
-    fill: (a) => (a.np != null ? clampPct((a.np / 350) * 100) : null),
-  },
-  tss: {
-    label: "TSS",
-    render: (a) => fmtNum(a.tss, ""),
-    fill: (a) => (a.tss != null ? clampPct((a.tss / 250) * 100) : null),
   },
   cadence: {
     label: (c) => c.cadenceLabel,

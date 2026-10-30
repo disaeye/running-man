@@ -15,17 +15,15 @@ import { CalendarHeaderActions } from "@features/calendar/components/CalendarHea
 import { CalendarInsights } from "@features/calendar/components/CalendarInsights";
 import { Card } from "@shared/ui/Card";
 import { MetricStrip } from "@shared/ui/MetricStrip";
-import { PlanForecast } from "@features/plan/components/PlanForecast";
-import { PlanQuality } from "@features/plan/components/PlanQuality";
 import { DemoMonthGrid } from "@features/calendar/components/DemoMonthGrid";
 import { DemoMonthSummary } from "@features/calendar/components/DemoMonthSummary";
 import { DemoWeekStrip } from "@features/calendar/components/DemoWeekStrip";
 import { DemoDayPanel } from "@features/calendar/components/DemoDayPanel";
+import { PlanForecast } from "@features/plan/components/PlanForecast";
 import { useCalendarPage } from "@features/calendar/hooks/useCalendarPage";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { buildWeekSummary, isoWeek } from "@features/calendar/lib/build-week-summary";
 import { weekSummaryMetrics } from "@features/calendar/lib/week-summary-metrics";
-import { qualityRange } from "@features/calendar/lib/calendar-page-view";
 import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
 import { activityLocalDay } from "@shared/lib/training-day";
 import { DemoLegend, monthTotalsFor } from "@features/calendar/components/DemoCalendarSummary";
@@ -93,15 +91,11 @@ function CalendarPageContent() {
     return `${year} 年 · 第 ${week} 周`;
   }, [view, weekStart, monthDate]);
 
-  const planRange = useMemo(
-    () => qualityRange(view, weekStart, monthDate),
-    [view, weekStart, monthDate],
-  );
-
-  const weekSummaryItems = useMemo(
-    () => weekSummaryMetrics(buildWeekSummary({ events, activityMap, weekStart, timezone })),
+  const weekSummary = useMemo(
+    () => buildWeekSummary({ events, activityMap, weekStart, timezone }),
     [events, activityMap, weekStart, timezone],
   );
+  const weekSummaryItems = useMemo(() => weekSummaryMetrics(weekSummary), [weekSummary]);
 
   // 月度三格摘要：跑量、课次、爬升，都按当前月份算。
   const monthTotals = useMemo(
@@ -236,11 +230,15 @@ function CalendarPageContent() {
                 onAdd={() => handleSelectDate(activeDate)}
               />
               <CalendarInsights>
-                <Card padding="md" data-testid="calendar-plan-quality">
-                  <PlanQuality from={planRange?.from} to={planRange?.to} />
-                </Card>
-                <Card padding="md" data-testid="calendar-load-forecast">
-                  <PlanForecast events={events} />
+                <PlanForecast events={events} />
+                <Card padding="md" data-testid="calendar-plan-progress">
+                  <h2 className="text-title3 font-semibold text-text-primary">本周训练进度</h2>
+                  <p className="mt-2 text-subheadline text-text-secondary">
+                    已完成 {weekSummary.completed}/{weekSummary.total} 次训练
+                  </p>
+                  <p className="mt-1 text-caption1 text-text-muted">
+                    计划时长 {Math.round(weekSummary.plannedMinutes)} 分钟 · 实际时长 {Math.round(weekSummary.actualMinutes)} 分钟
+                  </p>
                 </Card>
               </CalendarInsights>
             </aside>

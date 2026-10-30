@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, User } from "lucide-react";
 import { cn } from "@shared/lib/utils";
 import { NAV_ENTRIES, activeNavFromPath } from "@shared/config/nav-config";
-import { NO_VALUE } from "@shared/lib/use-data-state";
 
 const STORAGE_KEY = "rm.sidebar.collapsed";
 const EXPANDED_WIDTH = "w-[250px]";
@@ -14,8 +13,8 @@ const COLLAPSED_WIDTH = "w-[4.25rem]";
 
 export interface SidebarAthleteInfo {
   weekLabel?: string;
-  ctl?: number | null;
-  tsb?: number | null;
+  weeklyDistanceKm?: number | null;
+  weeklyRunCount?: number | null;
 }
 
 function initialsOf(name: string | undefined): string {
@@ -97,7 +96,7 @@ export function Sidebar({
               <span className="block size-2 rounded-full bg-on-primary" />
             </span>
             <span className="shell-title truncate text-body font-semibold text-text-primary">
-              Running Man
+              步迹
             </span>
           </Link>
         )}
@@ -166,13 +165,12 @@ export function Sidebar({
               </p>
               <p className="font-mono text-caption1 text-text-muted leading-tight mt-0.5">
                 {athleteInfo?.weekLabel ?? "本周"}
-                <br />
-                体能 {athleteInfo?.ctl ?? NO_VALUE} · 状态{" "}
-                {athleteInfo?.tsb !== null && athleteInfo?.tsb !== undefined
-                  ? athleteInfo.tsb > 0
-                    ? `+${athleteInfo.tsb}`
-                    : athleteInfo.tsb
-                  : NO_VALUE}
+                {athleteInfo?.weeklyDistanceKm !== null && athleteInfo?.weeklyDistanceKm !== undefined ? (
+                  <>
+                    <br />
+                    {athleteInfo.weeklyDistanceKm.toFixed(1)} km · {athleteInfo.weeklyRunCount ?? 0} 次跑步
+                  </>
+                ) : null}
               </p>
             </div>
           )}

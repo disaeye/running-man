@@ -121,7 +121,7 @@ export function ThresholdFields({ draft, onChange, resting }: Props) {
           onChange={(event) => onChange({ lthr: numberOrNull(event.target.value) })}
           placeholder="例如: 165"
         />
-        <span className="text-caption1 text-text-muted">心率区间的中间锚点，也用于心率负荷</span>
+        <span className="text-caption1 text-text-muted">心率区间的中间参考值</span>
       </label>
 
       <div>

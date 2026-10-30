@@ -2,19 +2,13 @@
 
 import { usePersonalRecords } from "@features/performance/hooks/usePersonalRecords";
 import { formatDate } from "@shared/lib/format";
-import { getAnalysisSportFamily } from "@features/analysis/lib/analysis-metric-taxonomy";
 
-type PersonalRecordsListProps = {
-  readonly sport?: string | null;
-};
-
-export function PersonalRecordsList({ sport = null }: PersonalRecordsListProps) {
+export function PersonalRecordsList() {
   const { data, loading, error } = usePersonalRecords();
-  const sportFamily = getAnalysisSportFamily(sport);
 
   if (loading) return <Message>加载中...</Message>;
   if (error) return <Message className="text-error">{error}</Message>;
-  if (data.length === 0) return <Message>{emptyGuidance(sportFamily)}</Message>;
+  if (data.length === 0) return <Message>{emptyGuidance()}</Message>;
 
   return (
     <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -36,10 +30,8 @@ export function PersonalRecordsList({ sport = null }: PersonalRecordsListProps) 
   );
 }
 
-function emptyGuidance(sportFamily: ReturnType<typeof getAnalysisSportFamily>): string {
-  return sportFamily === "cycling"
-    ? "暂无最佳成绩记录：同步包含功率曲线或爬坡输出的骑行活动后会生成。"
-    : "暂无最佳成绩记录：同步包含 GPS 或比赛结果的跑步活动后会生成。";
+function emptyGuidance(): string {
+  return "暂无最佳成绩记录：同步包含 GPS 或比赛结果的跑步活动后会生成。";
 }
 
 function Message({

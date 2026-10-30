@@ -35,12 +35,11 @@ export function buildLoadDiagnosis(
   const latest = data.at(-1) ?? null;
   if (latest == null) return null;
   const rampCard = buildRampCard(data, latest);
-  const tssCard = buildTssTrendCard(data);
   const acwrCard = buildAcwrCard(latest.acwr);
   const tsbCard = buildTsbCard(latest.tsb);
   return {
-    headline: `${rampCard.value} · ${tssCard.value} · ${acwrCard.value} · ${tsbCard.value}`,
-    cards: [rampCard, tssCard, acwrCard, tsbCard],
+    headline: `${rampCard.value} · ${acwrCard.value} · ${tsbCard.value}`,
+    cards: [rampCard, acwrCard, tsbCard],
     plannedActual: buildPlannedActualCard(weeks),
   };
 }
@@ -71,38 +70,6 @@ function buildRampCard(data: readonly PmcPoint[], latest: PmcPoint): LoadDiagnos
     label: "体能斜率",
     value: "CTL 基本持平",
     detail: "CTL→",
-    tone: "accent",
-  };
-}
-
-function buildTssTrendCard(data: readonly PmcPoint[]): LoadDiagnosisCard {
-  const midpoint = Math.max(1, Math.floor(data.length / 2));
-  const previous = averageTss(data.slice(0, midpoint));
-  const recent = averageTss(data.slice(midpoint));
-  const delta = recent - previous;
-  if (delta >= 10) {
-    return {
-      testId: "load-tss-trend-diagnosis",
-      label: "近期 TSS",
-      value: `最近 TSS 走高 ${formatSigned(delta)}`,
-      detail: "TSS↑",
-      tone: "warning",
-    };
-  }
-  if (delta <= -10) {
-    return {
-      testId: "load-tss-trend-diagnosis",
-      label: "近期 TSS",
-      value: `最近 TSS 回落 ${formatSigned(delta)}`,
-      detail: "TSS↓",
-      tone: "success",
-    };
-  }
-  return {
-    testId: "load-tss-trend-diagnosis",
-    label: "近期 TSS",
-    value: "最近 TSS 平稳",
-    detail: "TSS→",
     tone: "accent",
   };
 }
@@ -149,20 +116,15 @@ function buildTsbCard(tsb: number): LoadDiagnosisCard {
 
 function buildPlannedActualCard(weeks: readonly WeekProgress[]): LoadDiagnosisCard {
   const latestWeek = weeks.at(-1) ?? null;
-  if (latestWeek == null || latestWeek.planned_tss <= 0) return EMPTY_WEEK_CARD;
-  const delta = latestWeek.actual_tss - latestWeek.planned_tss;
+  if (latestWeek == null || latestWeek.planned_sessions <= 0) return EMPTY_WEEK_CARD;
+  const delta = latestWeek.actual_sessions - latestWeek.planned_sessions;
   return {
     testId: "load-planned-actual-diagnosis",
-    label: "计划对照",
-    value: `${latestWeek.actual_tss.toFixed(0)} / ${latestWeek.planned_tss.toFixed(0)} TSS`,
-    detail: `Δ ${formatSigned(delta)} TSS`,
-    tone: Math.abs(delta) <= latestWeek.planned_tss * 0.15 ? "success" : "warning",
+    label: "训练次数",
+    value: `${latestWeek.actual_sessions} / ${latestWeek.planned_sessions} 次`,
+    detail: `相差 ${formatSigned(delta)} 次`,
+    tone: Math.abs(delta) <= Math.max(1, latestWeek.planned_sessions * 0.15) ? "success" : "warning",
   };
-}
-
-function averageTss(points: readonly PmcPoint[]): number {
-  if (points.length === 0) return 0;
-  return points.reduce((sum, point) => sum + point.tss, 0) / points.length;
 }
 
 function formatSigned(value: number): string {

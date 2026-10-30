@@ -8,14 +8,7 @@ import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import type { PlanAdjustment } from "@features/goals/hooks/usePlanAdjustments";
 
 /**
- * 动态负荷干预横幅（参考稿的干预提示）。
- *
- * 横幅说的是「建议」，不是「已经改了」：检测到的问题会写进
- * `plan_adjustments` 里等着运动员决定，课表在运动员点「应用调整」之前
- * 一直是原样。这是这一条存在的意义——自动改课表会让运动员不知道
- * 今天练的到底是哪一版。
- *
- * 触发条件写在横幅里，带着具体数字，读者能自己判断这个建议值不值得接受。
+ * 展示训练计划的待确认调整，并由用户选择是否接受。
  */
 
 interface Props {
@@ -65,17 +58,17 @@ export function DemoAdjustmentBanner({ adjustments, onDecided, testId }: Props) 
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <LabelCaps className="text-accent">AI 动态负荷干预</LabelCaps>
+            <LabelCaps className="text-accent">训练计划调整</LabelCaps>
             <span
               aria-hidden="true"
               className="size-1.5 rounded-full bg-accent motion-safe:animate-ping"
             />
           </div>
           <p className="mt-1.5 text-body leading-relaxed text-text-secondary">
-            {first.trigger_summary}
+            {first.triggers.map((trigger) => trigger.detail).join("；") || "现有记录提示可以查看并调整这节训练。"}
           </p>
           <p className="mt-1 text-caption1 text-text-muted">
-            建议把这次训练削减 {Math.abs(first.load_delta_pct)}%。课表现在没有改动。
+            课表当前保持不变，确认后才会应用调整。
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">

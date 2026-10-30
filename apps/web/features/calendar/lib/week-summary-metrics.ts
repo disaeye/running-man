@@ -4,10 +4,6 @@ import type { WeekSummary } from "./build-week-summary";
 /**
  * A week summary as the three cells of the page's `MetricStrip`.
  *
- * Three, not four: `plannedTss` is the denominator of both load and completion,
- * so it rides under 课次 as the note that explains where the numbers came from
- * instead of taking a cell of its own.
- *
  * 完成率 has no honest value before the week plans anything, so it says 未记录
  * rather than 0% — a zero would read as "planned and missed".
  */
@@ -19,15 +15,15 @@ export function weekSummaryMetrics(summary: WeekSummary): MetricStripItem[] {
     {
       label: "课次",
       value: `${summary.completed}/${summary.total}`,
-      note: `计划负荷 ${Math.round(summary.plannedTss)} TSS`,
+      note: `计划时长 ${Math.round(summary.plannedMinutes)} 分钟`,
     },
     {
-      label: "实际负荷",
-      value: String(Math.round(summary.actualTss)),
-      unit: "TSS",
+      label: "实际时长",
+      value: String(Math.round(summary.actualMinutes)),
+      unit: "分钟",
       ratio:
-        summary.plannedTss > 0
-          ? (summary.actualTss / summary.plannedTss) * 100
+        summary.plannedMinutes > 0
+          ? (summary.actualMinutes / summary.plannedMinutes) * 100
           : undefined,
     },
     {

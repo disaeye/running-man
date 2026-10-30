@@ -8,7 +8,7 @@ import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { RangeFigure } from "@features/today/hooks/usePersonalRange";
 
 /**
- * 跑力生理负荷卡片（参考稿第五张卡）。
+ * 跑步能力摘要卡片。
  *
  * 两格大数字在左（VDOT 与阈值配速），右边是本人区间里的位置条。
  *
@@ -38,7 +38,7 @@ export function DemoAbilityCard({
   windowDays,
   testId,
 }: Props) {
-  const ctl = figures.find((figure) => figure.key === "ctl") ?? null;
+  const hrv = figures.find((figure) => figure.key === "hrv") ?? null;
   const cadence = figures.find((figure) => figure.key === "cadence") ?? null;
 
   return (
@@ -49,7 +49,7 @@ export function DemoAbilityCard({
       />
 
       <div className="relative flex items-center justify-between gap-3">
-        <LabelCaps icon={<span>◈</span>}>PHYSIO ENGINE · 跑力生理负荷</LabelCaps>
+        <LabelCaps icon={<span>◈</span>}>RUNNING PROFILE · 跑步能力</LabelCaps>
         <span className="font-mono text-caption1 text-tertiary">相对本人近 {windowDays} 天区间</span>
       </div>
 
@@ -74,7 +74,7 @@ export function DemoAbilityCard({
 
       <div className="relative mt-4 rounded-lg bg-surface-overlay px-3 py-3">
         <div className="space-y-3">
-          <PositionBar figure={ctl} />
+          <PositionBar figure={hrv} />
           <PositionBar figure={cadence} />
         </div>
       </div>

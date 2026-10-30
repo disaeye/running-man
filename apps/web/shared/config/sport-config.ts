@@ -7,9 +7,6 @@ export type StatField =
   | "avgHr"
   | "maxHr"
   | "pace"
-  | "avgPower"
-  | "np"
-  | "tss"
   | "cadence"
   | "elevation";
 
@@ -39,19 +36,17 @@ export interface SportConfig {
   isWater: boolean;
   isIndoor: boolean;
   isStrength: boolean;
-  primaryMetric: "pace" | "power" | "speed";
+  primaryMetric: "pace" | "speed";
   statsConfig: StatField[];
-  zoneType: "hr" | "power" | "pace";
+  zoneType: "hr" | "pace";
   color: string;
 }
 
 const STATS_RUN: StatField[] = [
-  "distance", "duration", "avgHr", "maxHr", "pace", "tss", "cadence", "elevation",
+  "distance", "duration", "avgHr", "maxHr", "pace", "cadence", "elevation",
 ];
 
-const STATS_RIDE: StatField[] = [
-  "distance", "duration", "avgHr", "maxHr", "pace", "avgPower", "np", "tss", "cadence", "elevation",
-];
+const STATS_RIDE: StatField[] = [];
 
 export const SPORT_CONFIG: Record<string, SportConfig> = {
   Run: {
@@ -105,8 +100,8 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
     isWater: false,
     isIndoor: false,
     isStrength: false,
-    primaryMetric: "power",
-    zoneType: "power",
+    primaryMetric: "pace",
+    zoneType: "hr",
     statsConfig: STATS_RIDE,
     color: "var(--color-sport-ride)",
   },
@@ -119,8 +114,8 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
     isWater: false,
     isIndoor: true,
     isStrength: false,
-    primaryMetric: "power",
-    zoneType: "power",
+    primaryMetric: "pace",
+    zoneType: "hr",
     statsConfig: STATS_RIDE,
     color: "var(--color-sport-virtualride)",
   },
@@ -134,8 +129,8 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
     isWater: false,
     isIndoor: false,
     isStrength: false,
-    primaryMetric: "power",
-    zoneType: "power",
+    primaryMetric: "pace",
+    zoneType: "hr",
     statsConfig: STATS_RIDE,
     color: "var(--color-sport-bike)",
   },
@@ -151,7 +146,7 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
     primaryMetric: "pace",
     zoneType: "hr",
     statsConfig: [
-      "distance", "duration", "avgHr", "maxHr", "pace", "tss", "elevation",
+      "distance", "duration", "avgHr", "maxHr", "pace", "elevation",
     ],
     color: "var(--color-sport-swim)",
   },
@@ -167,7 +162,7 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
     primaryMetric: "pace",
     zoneType: "hr",
     statsConfig: [
-      "distance", "duration", "avgHr", "maxHr", "pace", "tss", "elevation",
+      "distance", "duration", "avgHr", "maxHr", "pace", "elevation",
     ],
     color: "var(--color-sport-walk)",
   },
@@ -183,7 +178,7 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
     primaryMetric: "pace",
     zoneType: "hr",
     statsConfig: [
-      "distance", "duration", "avgHr", "maxHr", "pace", "elevation", "tss",
+      "distance", "duration", "avgHr", "maxHr", "pace", "elevation",
     ],
     color: "var(--color-sport-hike)",
   },
@@ -199,7 +194,7 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
     primaryMetric: "speed",
     zoneType: "hr",
     statsConfig: [
-      "distance", "duration", "avgHr", "maxHr", "pace", "elevation", "tss",
+      "distance", "duration", "avgHr", "maxHr", "pace", "elevation",
     ],
     color: "var(--color-sport-alpineski)",
   },
@@ -212,11 +207,9 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
     isWater: false,
     isIndoor: true,
     isStrength: true,
-    primaryMetric: "power",
+    primaryMetric: "pace",
     zoneType: "hr",
-    statsConfig: [
-      "duration", "avgHr", "maxHr", "tss", "elevation", "avgPower", "np",
-    ],
+    statsConfig: ["duration", "avgHr", "maxHr", "elevation"],
     color: "var(--color-sport-workout)",
   },
   WeightTraining: {
@@ -228,9 +221,9 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
     isWater: false,
     isIndoor: true,
     isStrength: true,
-    primaryMetric: "power",
+    primaryMetric: "pace",
     zoneType: "hr",
-    statsConfig: ["duration", "avgHr", "maxHr", "tss", "elevation"],
+    statsConfig: ["duration", "avgHr", "maxHr", "elevation"],
     color: "var(--color-sport-weighttraining)",
   },
 };
@@ -247,7 +240,7 @@ const DEFAULT_CONFIG: SportConfig = {
   primaryMetric: "pace",
   zoneType: "hr",
   statsConfig: [
-    "distance", "duration", "avgHr", "maxHr", "pace", "tss", "cadence", "elevation",
+    "distance", "duration", "avgHr", "maxHr", "pace", "cadence", "elevation",
   ],
   color: "var(--color-text-muted)",
 };

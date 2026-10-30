@@ -104,7 +104,7 @@ export function getGoalRecommendations(goal: Goal): string[] {
   if (status === "on-track") {
     tips.push("按当前进度，预计可在目标日前达成。保持节奏！");
     if (days !== null && days <= 14) {
-      tips.push("距目标日不到两周，进入减量期，避免过度训练。");
+      tips.push("距目标日不到两周，进入减量阶段，按计划减少训练量。");
     }
     if (goal.type === "consistency") {
       tips.push("坚持每日记录，连续性是达成目标的关键。");

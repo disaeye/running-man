@@ -8,13 +8,11 @@ import { useWellness } from "@features/health/hooks/useWellness";
 import {
   getAnalysisMetricTaxonomy,
   type AnalysisMetricDescriptor,
-  type AnalysisSportFamily,
 } from "@features/analysis/lib/analysis-metric-taxonomy";
 import { computeRange, toISODate } from "@shared/lib/format";
 import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 type MetricValues = {
-  readonly family: AnalysisSportFamily;
   readonly lthr: number | null;
   readonly thresholdPace: number | null;
   readonly vo2Latest: number | null;
@@ -51,8 +49,8 @@ export function AbilityMetricsRow() {
     () => buildMetricValues({ profile, weekAgo, wellness }),
     [profile, weekAgo, wellness]);
   const taxonomy = getAnalysisMetricTaxonomy(profile?.preferred_sport ?? null);
-  const values = { ...metricValues, family: taxonomy.family };
-  const cards = taxonomy.primary.map((metric) => ({
+  const values = metricValues;
+  const cards = taxonomy.primary.filter(isVisibleMetric).map((metric) => ({
     key: metric.key,
     testId: `primary-${taxonomy.family}-${metric.key}-card`,
     props: cardProps(metric, values),
@@ -93,22 +91,22 @@ function buildMetricValues({ profile, weekAgo, wellness }: {
   };
 }
 
-const CARD_BUILDERS = {
+type VisibleMetric = AnalysisMetricDescriptor & {
+  readonly key: "thresholdPace" | "lthr" | "vo2max" | "raceSignal";
+};
+
+const CARD_BUILDERS: Record<VisibleMetric["key"], (values: MetricValues) => CardProps> = {
   thresholdPace: thresholdPaceCard,
   lthr: lthrCard,
   vo2max: vo2Card,
   raceSignal: raceSignalCard,
-  // Cycling remains a resolvable sport family — rides are in the data — but
-  // power support has been removed, so there is no FTP and no wattage to show.
-  // These say so instead of printing a number derived from nothing.
-  ftp: () => unavailableMetric("FTP", "功率基准已不再支持。"),
-  power: () => unavailableMetric("功率", "功率数据已不再支持。"),
-  trainingLoad: () => unavailableMetric("训练负荷", "需要训练负荷历史后显示。"),
-  heartRate: () => unavailableMetric("心率", "需要心率历史后显示。"),
-  bodyWeight: () => unavailableMetric("体重", "需要体重记录后显示。"),
 };
 
-function cardProps(metric: AnalysisMetricDescriptor, values: MetricValues): CardProps {
+function isVisibleMetric(metric: AnalysisMetricDescriptor): metric is VisibleMetric {
+  return metric.key in CARD_BUILDERS;
+}
+
+function cardProps(metric: VisibleMetric, values: MetricValues): CardProps {
   return CARD_BUILDERS[metric.key](values);
 }
 
@@ -199,10 +197,6 @@ function buildDeltaDisplay(delta: number | null): { readonly Icon: typeof ArrowU
   if (delta > 0) return { Icon: ArrowUp, tone: "text-success" };
   if (delta < 0) return { Icon: ArrowDown, tone: "text-error" };
   return { Icon: Minus, tone: "text-text-muted" };
-}
-
-function unavailableMetric(label: string, note: string): CardProps {
-  return { label, tooltip: note, value: "--", current: null, prior: null, note };
 }
 
 function formatThresholdPace(seconds: number | null): string {

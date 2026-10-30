@@ -1,13 +1,11 @@
 // Deterministic executive-summary model for the Analysis overview.
 //
-// Combines the existing pure load, recovery, intensity, and physiology summary
-// models into a single verdict / risk / next-step structure. The summary is
-// pure: no fetch, no AI calls, no side effects. All inputs are readonly;
+// Combines running distance, recovery, intensity, and physiology summaries.
+// The summary is pure: no fetch, no AI calls, no side effects. All inputs are readonly;
 // identical inputs always yield identical output. Build helpers (pillar
 // construction, risk aggregation) live in `analysis-summary-pillars.ts` so
 // each file stays within the project's 250 pure-LOC gate.
 
-import type { PmcPoint } from "@features/pmc/hooks/usePmcData";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 import type { LocalReadiness } from "@features/today/hooks/useReadiness";
 import type { WeekProgress } from "@features/today/hooks/useWeeklyProgress";
@@ -15,12 +13,7 @@ import {
   ANALYSIS_FORBIDDEN_PHRASES,
   assertNoForbiddenPhrases,
 } from "./analysis-forbidden-phrases";
-import {
-  buildAllPillars,
-  takeHighestRisk,
-} from "./analysis-summary-pillars";
-
-export type AnalysisRiskLevel = "low" | "medium" | "high";
+import { buildAllPillars } from "./analysis-summary-pillars";
 
 export type AnalysisPillarId = "load" | "performance" | "intensity" | "recovery";
 
@@ -28,13 +21,11 @@ export type AnalysisPillarSummary = {
   readonly pillarId: AnalysisPillarId;
   readonly tabId: "load" | "performance" | "intensity";
   readonly verdict: string;
-  readonly risk: AnalysisRiskLevel;
   readonly nextStep: string;
 };
 
 export type AnalysisExecutiveSummary = {
   readonly verdict: string;
-  readonly risk: AnalysisRiskLevel;
   readonly nextStep: string;
   readonly provenanceLine: string;
   readonly sampleLine: string;
@@ -43,7 +34,6 @@ export type AnalysisExecutiveSummary = {
 
 export interface AnalysisPerformanceSample {
   readonly sport: string | null;
-  readonly ftp: number | null;
   readonly lthr: number | null;
   readonly thresholdPace: number | null;
   readonly vo2max: number | null;
@@ -51,7 +41,6 @@ export interface AnalysisPerformanceSample {
 }
 
 export interface BuildAnalysisExecutiveSummaryInput {
-  readonly pmcPoints: readonly PmcPoint[];
   readonly weeks: readonly WeekProgress[];
   readonly wellness: readonly WellnessPoint[];
   readonly readiness: LocalReadiness | null;
@@ -65,7 +54,6 @@ export function buildAnalysisExecutiveSummary(
   input: BuildAnalysisExecutiveSummaryInput,
 ): AnalysisExecutiveSummary {
   const pillars = buildAllPillars({
-    pmcPoints: input.pmcPoints,
     weeks: input.weeks,
     readiness: input.readiness,
     wellnessCount: input.wellness.length,
@@ -73,28 +61,15 @@ export function buildAnalysisExecutiveSummary(
     performanceSample: input.performanceSample,
   });
 
-  const combinedRisk = takeHighestRisk(pillars.map((p) => p.risk));
+  const runningVolume = pillars.find((pillar) => pillar.pillarId === "load");
+  const verdict = runningVolume?.verdict ?? "当前范围暂无跑步训练汇总";
+  const nextStep = runningVolume?.nextStep ?? "选择日期范围查看跑步训练记录。";
 
-  const verdict =
-    combinedRisk === "high"
-      ? "需要先稳住当前负荷与恢复差距"
-      : combinedRisk === "medium"
-        ? "训练系统处于观察窗口"
-        : "训练整体节奏稳定";
-
-  const nextStep =
-    combinedRisk === "high"
-      ? "看负荷"
-      : combinedRisk === "medium"
-        ? "看表现与强度"
-        : "选板块看证据";
-
-  const provenanceLine = `${input.dateRange.from} → ${input.dateRange.to} · ${input.pmcPoints.length} 天`;
+  const provenanceLine = `${input.dateRange.from} → ${input.dateRange.to}`;
   const sampleLine = sampleLineFromCount(input.sampleCount);
 
   const summary: AnalysisExecutiveSummary = {
     verdict,
-    risk: combinedRisk,
     nextStep,
     provenanceLine,
     sampleLine,

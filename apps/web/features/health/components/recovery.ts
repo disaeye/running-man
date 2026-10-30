@@ -127,7 +127,7 @@ const TIP_RULES: TipRule[] = [
       : null,
   (i) =>
     i.rhrDeviation != null && i.rhrDeviation > RHR_ANOMALY_BPM
-      ? `静息心率较基线偏高${Math.round(i.rhrDeviation)} ${HEART_RATE_UNIT}，提示疲劳累积`
+      ? `静息心率比基线高${Math.round(i.rhrDeviation)} ${HEART_RATE_UNIT}`
       : null,
   (i) =>
     i.sleepDebt7d > 4 * 3600

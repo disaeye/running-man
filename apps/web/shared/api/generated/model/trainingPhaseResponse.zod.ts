@@ -12,7 +12,7 @@ export const TrainingPhaseResponse = zod.object({
   "name": zod.string(),
   "phase_id": zod.uuid(),
   "start_date": zod.iso.date(),
-  "target_weekly_tss": zod.union([zod.number(),zod.null()]).optional()
+  "target_weekly_distance_m": zod.union([zod.number(),zod.null()]).optional()
 })
 
 export type TrainingPhaseResponse = zod.input<typeof TrainingPhaseResponse>;

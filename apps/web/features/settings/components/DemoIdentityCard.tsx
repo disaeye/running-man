@@ -3,6 +3,8 @@
 import { Card } from "@shared/ui/Card";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { UserProfile } from "@shared/lib/auth";
+import { getSportConfig } from "@shared/config/sport-config";
+import { Activity } from "lucide-react";
 
 /**
  * 跑者个人名片（档案页的身份摘要）。
@@ -41,25 +43,18 @@ export function DemoIdentityCard({
   const name = profile?.name?.trim() || "未设置姓名";
   const lifetimeKm =
     lifetimeDistanceM != null ? lifetimeDistanceM / 1000 : null;
+  const sportLabel = profile?.preferred_sport
+    ? getSportConfig(profile.preferred_sport).label
+    : "跑步";
 
   return (
     <Card
       data-testid={testId ?? "demo-identity-card"}
       className="relative"
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl"
-      >
-        <span className="absolute -right-8 -top-8 size-44 rounded-full bg-accent/5 blur-2xl" />
-      </div>
-
-      <div className="relative flex items-center gap-4">
-        <span
-          aria-hidden="true"
-          className="grid size-16 shrink-0 place-items-center rounded-full bg-surface-raised font-display text-title2 text-accent"
-        >
-          {name.slice(0, 1).toUpperCase()}
+      <div className="relative flex items-start gap-4">
+        <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-surface-raised text-accent">
+          <Activity className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -74,11 +69,11 @@ export function DemoIdentityCard({
           </div>
           <p className="mt-1 font-mono text-caption1 text-text-muted">
             {bestSummary ? `${bestSummary} · ` : ""}
-            {vdot != null ? `VDOT ${vdot.toFixed(1)}` : `VDOT ${NO_VALUE}`}
+            {vdot != null ? `VDOT ${vdot.toFixed(1)}` : "VDOT 未记录"}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="rounded bg-surface-overlay px-2 py-0.5 font-mono text-caption1 text-text-secondary">
-              {profile?.preferred_sport ?? "跑步"}
+              {sportLabel}
             </span>
             <span className="rounded bg-surface-overlay px-2 py-0.5 font-mono text-caption1 text-text-secondary">
               每周 {profile?.weekly_training_days ?? NO_VALUE} 练

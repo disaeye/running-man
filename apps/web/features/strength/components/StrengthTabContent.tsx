@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { apiErrorMessage, apiFetch } from "@shared/lib/api";
+import { apiErrorMessage } from "@shared/lib/api";
+import { callOrvalValidated } from "@shared/api/orval-adapter";
+import {
+  listStrengthActivitiesApiV1StrengthWorkoutsGet,
+  listWorkoutExercisesApiV1StrengthWorkoutsActivityIdExercisesGet,
+} from "@shared/api/generated/clients";
+import * as Generated from "@shared/api/generated/model";
+import { z } from "zod";
 import { Card } from "@shared/ui/Card";
 import {
   Dialog,
@@ -11,15 +18,11 @@ import {
 } from "@shared/ui/dialog";
 import { Badge } from "@shared/ui/Badge";
 import { StrengthWorkoutEditor } from "@features/strength/components/StrengthWorkoutEditor";
-import { getSportConfig } from "@shared/config/sport-config";
-import type { ActivitySummary } from "@shared/types/activity";
 import type { WorkoutExercise } from "@shared/types/strength";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 
-const STRENGTH_SPORTS = new Set(["Workout", "WeightTraining"]);
-
 interface WorkoutData {
-  activity: ActivitySummary;
+  activity: Generated.StrengthActivityResponseOutput;
   exercises: WorkoutExercise[];
 }
 
@@ -42,19 +45,20 @@ function StrengthCard({ data }: { data: WorkoutData }) {
   const { activity, exercises } = data;
   const vol = totalVolume(exercises);
   const nSets = exercises.reduce((s, ex) => s + ex.sets.length, 0);
-  const label = getSportConfig(activity.sport).label;
 
   return (
     <Card padding="md" className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-subheadline font-semibold text-text-primary">
-          {isoDate(activity.start_time)}
+          {isoDate(activity.start_time)}{activity.name ? ` · ${activity.name}` : ""}
         </span>
-        <Badge variant="info">{label}</Badge>
+        <Badge variant={activity.has_training_content ? "success" : "neutral"}>
+          {activity.has_training_content ? "已记录训练内容" : "仅活动记录"}
+        </Badge>
       </div>
 
-      {exercises.length === 0 ? (
-        <p className="text-caption1 text-text-muted">暂无数据</p>
+      {!activity.has_training_content ? (
+        <p className="text-caption1 text-text-muted">这条力量活动尚未关联动作与组数。</p>
       ) : (
         <ul className="flex flex-col gap-1">
           {exercises.map((ex) => {
@@ -76,9 +80,12 @@ function StrengthCard({ data }: { data: WorkoutData }) {
         </ul>
       )}
 
-      {(nSets > 0 || vol > 0) && (
+      {activity.duration_s != null ? (
+        <p className="text-caption1 text-text-muted">时长 {Math.round(activity.duration_s / 60)} 分钟</p>
+      ) : null}
+      {(activity.set_count > 0 || nSets > 0 || vol > 0) && (
         <div className="flex gap-3 border-t border-border-subtle pt-2 text-caption1 text-text-muted">
-          {nSets > 0 && <span>{nSets} 组</span>}
+          {(activity.set_count > 0 || nSets > 0) && <span>{activity.set_count || nSets} 组</span>}
           {vol > 0 && <span className="font-mono">{vol.toFixed(0)} kg</span>}
         </div>
       )}
@@ -99,41 +106,41 @@ export function StrengthTabContent() {
     setLoading(true);
     setError(null);
 
-    const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - 60);
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - 60);
 
-    (async () => {
+      (async () => {
       try {
-        const acts = await apiFetch<ActivitySummary[]>("/activities", {
-          params: {
-            from: from.toISOString().slice(0, 10),
-            to: to.toISOString().slice(0, 10),
-          },
-        });
+        const strength = await callOrvalValidated(
+          (fetchFn) => listStrengthActivitiesApiV1StrengthWorkoutsGet(
+            {
+              from_date: from.toISOString().slice(0, 10),
+              to_date: to.toISOString().slice(0, 10),
+            },
+            {},
+            fetchFn,
+          ),
+          z.array(Generated.StrengthActivityResponse),
+        );
         if (cancelled) return;
 
-        const strength = acts
-          .filter((a) => STRENGTH_SPORTS.has(a.sport))
-          .slice(0, 4);
-
-        if (strength.length === 0) {
-          setWorkouts([]);
-        } else {
-          const results = await Promise.all(
-            strength.map(async (act) => {
-              try {
-                const exercises = await apiFetch<WorkoutExercise[]>(
-                  `/strength/workouts/${act.activity_id}/exercises`,
-                );
-                return { activity: act, exercises };
-              } catch {
-                return { activity: act, exercises: [] };
-              }
-            }),
-          );
-          if (!cancelled) setWorkouts(results);
-        }
+        const results = await Promise.all(
+          strength.map(async (activity) => {
+            const exercises = activity.has_training_content
+              ? await callOrvalValidated(
+                  (fetchFn) => listWorkoutExercisesApiV1StrengthWorkoutsActivityIdExercisesGet(
+                    activity.activity_id,
+                    {},
+                    fetchFn,
+                  ),
+                  z.array(Generated.WorkoutExerciseResponse),
+                )
+              : [];
+            return { activity, exercises: exercises as WorkoutExercise[] };
+          }),
+        );
+        if (!cancelled) setWorkouts(results);
       } catch (err: unknown) {
         if (!cancelled) {
           setError(apiErrorMessage(err, "获取数据失败"));
@@ -175,11 +182,14 @@ export function StrengthTabContent() {
           <p>暂无力量训练记录</p>
         </div>
       ) : (
+        <>
+        <p className="text-caption1 text-text-muted">力量活动记录（包含有训练内容与仅有活动记录）</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {workouts.map((w) => (
             <StrengthCard key={w.activity.activity_id} data={w} />
           ))}
         </div>
+        </>
       )}
 
       <div className="flex items-center justify-between border-t border-border-subtle pt-4">

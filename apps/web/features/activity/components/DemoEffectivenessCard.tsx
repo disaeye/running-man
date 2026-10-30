@@ -14,8 +14,7 @@ import { NO_VALUE } from "@shared/lib/use-data-state";
  * 所以这里放能算出来的东西：
  *   · 有氧解耦：同等工作下心率上升的百分比，本系统自己算（`domain.load.decoupling`）
  *   · 心率漂移：长距离后段的配速保持情况，用解耦与分段配速对照
- *   · 训练冲量：来源系统给的 TRIMP 与本系统算的 TSS
- *   · 状态恢复：TSB 何时回到正区间（PMC 投影，`domain.workout.predict`）
+ *   · 训练冲量：来源系统给出的 TRIMP
  *
  * 每一项都写清来源，读者能知道哪个数是谁算的。
  */
@@ -25,26 +24,17 @@ interface Props {
   readonly decouplingPct: number | null;
   /** 来源系统的 TRIMP。 */
   readonly trimp: number | null;
-  /** 本系统算的 TSS。 */
-  readonly tss: number | null;
   /** 设备自己的训练效益（0–5），设备没写就是 null。 */
   readonly aerobicTe: number | null;
   readonly anaerobicTe: number | null;
-  /** TSB 回到正区间的预计天数。 */
-  readonly tsbRecoveryDays: number | null;
-  /** 当日 TSB。 */
-  readonly tsb: number | null;
   readonly testId?: string;
 }
 
 export function DemoEffectivenessCard({
   decouplingPct,
   trimp,
-  tss,
   aerobicTe,
   anaerobicTe,
-  tsbRecoveryDays,
-  tsb,
   testId,
 }: Props) {
   return (
@@ -85,9 +75,9 @@ export function DemoEffectivenessCard({
         />
         <Metric
           label="训练冲量"
-          value={formatLoad(trimp, tss)}
-          unit={trimp != null ? "TRIMP" : "TSS"}
-          note={trimp != null ? "来源系统给的训练冲量" : "本系统按配速算的负荷"}
+          value={trimp == null ? null : String(Math.round(trimp))}
+          unit="TRIMP"
+          note="来源系统给出的训练冲量"
         />
         <Metric
           label="设备训练效益"
@@ -95,16 +85,10 @@ export function DemoEffectivenessCard({
           unit="有氧 TE"
           note={trainingEffectNote(aerobicTe, anaerobicTe)}
         />
-        <Metric
-          label="当前状态"
-          value={formatSigned(tsb, 1)}
-          unit="TSB"
-          note={tsbNote(tsb, tsbRecoveryDays)}
-        />
       </div>
 
       <p className="relative mt-3 text-caption1 text-text-muted">
-        解耦与 TSB 由本系统计算；TRIMP 与训练效益来自设备与来源系统。
+        有氧解耦由本系统计算；TRIMP 与训练效益来自设备与来源系统。
       </p>
     </Card>
   );
@@ -116,12 +100,6 @@ function formatSigned(value: number | null, digits: number): string | null {
   return `${value > 0 ? "+" : ""}${value.toFixed(digits)}`;
 }
 
-/** 训练冲量：优先用来源系统的 TRIMP，没有就用本系统算的 TSS。 */
-function formatLoad(trimp: number | null, tss: number | null): string | null {
-  const value = trimp ?? tss;
-  return value == null ? null : Math.round(value).toString();
-}
-
 /** 设备训练效益的说明行。 */
 function trainingEffectNote(
   aerobicTe: number | null,
@@ -129,13 +107,6 @@ function trainingEffectNote(
 ): string {
   if (aerobicTe == null) return "设备未写入训练效益";
   return `无氧 TE ${anaerobicTe != null ? anaerobicTe.toFixed(1) : NO_VALUE}`;
-}
-
-/** 状态说明行：现在在哪儿，多久回到正区间。 */
-function tsbNote(tsb: number | null, recoveryDays: number | null): string {
-  if (recoveryDays != null) return `约 ${recoveryDays} 天后回到正区间`;
-  if (tsb != null && tsb > 0) return "已在正区间";
-  return "尚需恢复";
 }
 
 /**

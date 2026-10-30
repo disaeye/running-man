@@ -34,7 +34,7 @@ type ManualActivityResponse = {
   recompute_generation: number;
 };
 
-const SPORTS = ["Run", "VirtualRun", "TrailRun", "Ride", "VirtualRide", "Workout", "Swim"];
+const SPORTS = ["Run", "VirtualRun", "TrailRun", "Workout"];
 const LOCAL_TIME_GAP_ERROR = "所选时间不存在于运动员时区，请选择其他时间。";
 
 function localDateTimeValue(timezone: string): string {

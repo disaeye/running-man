@@ -111,6 +111,8 @@ export const DASHBOARD_FIXTURES: Readonly<Record<string, JsonFixture>> = {
   "/api/v1/strength/analytics/e1rm": [],
   "/api/v1/strength/analytics/muscle-volume": [],
   "/api/v1/strength/exercises": [],
+  "/api/v1/strength/workouts": [],
+  "/api/v1/gear/shoes": [],
   "/api/v1/wellness": [],
   "/api/v1/workouts/predict": [],
   "/api/v1/workouts/templates": [],

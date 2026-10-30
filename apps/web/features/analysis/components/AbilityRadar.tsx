@@ -8,12 +8,10 @@ import { useECharts } from "@shared/hooks/useECharts";
 import { Card } from "@shared/ui/Card";
 import { SectionHeader } from "@shared/ui/SectionHeader";
 import { EmptyState } from "@shared/ui/EmptyState";
-import { usePmcData } from "@features/pmc/hooks/usePmcData";
 import { useStrengthAnalytics } from "@features/strength/hooks/useStrengthAnalytics";
 import { useReadiness } from "@features/today/hooks/useReadiness";
 import { useActivities } from "@features/activity/hooks/useActivities";
 import { computeRange } from "@shared/lib/format";
-import { getAnalysisSportFamily, type AnalysisSportFamily } from "@features/analysis/lib/analysis-metric-taxonomy";
 
 type RadarDim = {
   readonly key: keyof AbilityScores;
@@ -28,7 +26,7 @@ const RUNNING_RADAR_DIMS = [
     key: "endurance",
     label: "耐力",
     axisLabel: "耐力",
-    basis: "由长期训练负荷 CTL 换算，CTL 50 计满分。",
+    basis: "暂无独立耐力评分数据。",
   },
   {
     key: "speed",
@@ -46,40 +44,7 @@ const RUNNING_RADAR_DIMS = [
     key: "recovery",
     label: "恢复",
     axisLabel: "恢复",
-    basis: "取当日恢复评分；没有可用的睡眠、心率或负荷输入时不计分。",
-  },
-  {
-    key: "consistency",
-    label: "一致性",
-    axisLabel: "一致性",
-    basis: "按最近 30 天有训练的天数换算，30 天计满分。",
-  },
-] as const satisfies readonly RadarDim[];
-
-const CYCLING_RADAR_DIMS = [
-  {
-    key: "endurance",
-    label: "耐力",
-    axisLabel: "耐力",
-    basis: "由长期训练负荷 CTL 换算，CTL 50 计满分。",
-  },
-  {
-    key: "speed",
-    label: "功率",
-    axisLabel: "功率",
-    basis: "按功率曲线的代表性水平换算；没有功率计时不计分。",
-  },
-  {
-    key: "strength",
-    label: "力量",
-    axisLabel: "力量",
-    basis: "按已记录的力量动作数量换算，13 项计满分。",
-  },
-  {
-    key: "recovery",
-    label: "恢复",
-    axisLabel: "恢复",
-    basis: "取当日恢复评分；没有可用的睡眠、心率或负荷输入时不计分。",
+    basis: "取有充分健康记录时的当日恢复评分。",
   },
   {
     key: "consistency",
@@ -112,21 +77,18 @@ type AbilityRadarProps = {
   readonly dateRange?: { readonly from: string; readonly to: string };
 };
 
-export function AbilityRadar({ sport = null, dateRange }: AbilityRadarProps) {
+export function AbilityRadar({ sport: _sport = null, dateRange }: AbilityRadarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartConfig = useChartConfig();
   const yearAgo = useMemo(() => dateRange ?? computeRange(365), [dateRange]);
-  const sportFamily = getAnalysisSportFamily(sport);
-  const radarDims = radarDimsForSport(sportFamily);
+  const radarDims = RUNNING_RADAR_DIMS;
 
-  const { data: pmc } = usePmcData(yearAgo.from, yearAgo.to);
   const { data: runs } = useActivities(yearAgo.from, yearAgo.to);
   const { e1rm } = useStrengthAnalytics(yearAgo);
   const { data: readiness } = useReadiness();
 
   const scores = useMemo<AbilityScores>(() => {
-    const ctl = pmc.length > 0 ? pmc[pmc.length - 1]?.ctl ?? 0 : 0;
-    const endurance = Math.min(100, Math.max(0, (ctl / 50) * 100));
+    const endurance = 0;
     const speed = deriveSpeedScore(runs);
     const strength = e1rm.length > 0 ? Math.min(100, e1rm.length * 8) : 0;
     const localReadiness = readiness?.local_readiness;
@@ -135,7 +97,7 @@ export function AbilityRadar({ sport = null, dateRange }: AbilityRadarProps) {
     const trainingDays = new Set(runs.map((a) => a.start_time.slice(0, 10)));
     const consistency = Math.min(100, (trainingDays.size / 30) * 100);
     return { endurance, speed, strength, recovery, consistency };
-  }, [pmc, runs, e1rm, readiness]);
+  }, [runs, e1rm, readiness]);
 
   const measured = radarDims.filter((dim) => scores[dim.key] > 0);
   const hasAnySignal = measured.length > 0;
@@ -202,10 +164,6 @@ export function AbilityRadar({ sport = null, dateRange }: AbilityRadarProps) {
       </details>
     </Card>
   );
-}
-
-function radarDimsForSport(sportFamily: AnalysisSportFamily): readonly RadarDim[] {
-  return sportFamily === "cycling" ? CYCLING_RADAR_DIMS : RUNNING_RADAR_DIMS;
 }
 
 /** Score: 100 at ≤3:30/km, 0 at ≥7:00/km, linear in between. */

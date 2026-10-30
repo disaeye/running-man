@@ -107,7 +107,7 @@ function AnalysisPageContent() {
           <StrengthSessionAnalysis />
         </TabsContent>
         <TabsContent value="overview" className="space-y-6" data-testid="analysis-overview">
-          <AnalysisOverview onSelectTab={setTab} rangeLabel={`${range.from} — ${range.to}`} />
+          <AnalysisOverview onSelectTab={setTab} />
         </TabsContent>
         <TabsContent value="load" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-load-adaptation">
           <section aria-label="负荷适应诊断" className="space-y-6">

@@ -4,7 +4,7 @@ import type { ActivityDetail, StreamPoint } from "../shared/types/activity";
 const EVIDENCE_DIR = "../../../.omo/evidence/running-analysis-gps-forecast-v1/visual";
 
 type ForecastFixture = "empty" | "partial" | "valid";
-type SportFixture = "Run" | "Ride";
+type SportFixture = "Run";
 
 type ApiFixture = {
   readonly sport: SportFixture;
@@ -74,7 +74,20 @@ async function screenshot(page: Page, name: string): Promise<void> {
 }
 
 function forecastEvents(fixture: ForecastFixture) {
-  return fixture === "empty" ? [] : [{ event_id: "w1", name: "阈值跑", start_time: "2026-07-08T08:00:00Z", category: "workout", status: "planned", done: false, predicted_tss: fixture === "partial" ? null : 64 }];
+  if (fixture === "empty") return [];
+  const thisWeek = new Date();
+  const day = thisWeek.getDay();
+  thisWeek.setDate(thisWeek.getDate() - ((day + 6) % 7) + 2);
+  thisWeek.setHours(8, 0, 0, 0);
+  return [{
+    event_id: "w1",
+    name: "阈值跑",
+    start_time: thisWeek.toISOString(),
+    category: "workout",
+    status: "planned",
+    done: false,
+    predicted_distance_m: fixture === "partial" ? null : 8000,
+  }];
 }
 
 async function mockApi(page: Page, fixture: ApiFixture): Promise<void> {
@@ -98,7 +111,7 @@ function responseForPath(pathname: string, fixture: ApiFixture): unknown {
     case "/api/v1/athletes/me":
       return { id: "athlete", email: "qa@example.com", preferred_sport: fixture.sport, lthr: 172, threshold_pace: 245, sex: "male" };
     case "/api/v1/insights/zones":
-      return { hr_max: 190, hr_zones: [], power_zones: [] };
+      return { hr_max: 190, hr_zones: [], pace_zones: null };
     case "/api/v1/wellness":
       return [{ day: "2026-06-30", vo2max: 52.4 }];
     case "/api/v1/insights/ability":
@@ -111,44 +124,9 @@ function responseForPath(pathname: string, fixture: ApiFixture): unknown {
       return { zones: [], summary: null };
     case "/api/v1/insights/readiness":
       return { score: 72, factors: [] };
-    case "/api/v1/insights/personal-range":
-      return {
-        window_start: "2026-06-30",
-        window_end: "2026-09-27",
-        window_days: 90,
-        figures: [
-          {
-            key: "ctl",
-            label: "体能 CTL",
-            unit: "points",
-            value: 54,
-            minimum: 38,
-            maximum: 61,
-            median: 50,
-            observations: 49,
-            percent: 76,
-            insufficient: false,
-          },
-        ],
-      };
-    case "/api/v1/insights/plan-quality":
-      return { grade: "B", score: 82, message: "计划负荷可执行", weekly_tss: 310, target_tss: 360, key_sessions_completed: 2, key_sessions_total: 3, concerns: [] };
+
     case "/api/v1/calendar":
       return forecastEvents(fixture.forecast);
-    case "/api/v1/pmc":
-      return Array.from({ length: 10 }, (_, index) => ({ day: `2026-06-${String(20 + index).padStart(2, "0")}`, tss: 45 + index, ctl: 42 + index, atl: 48 + index, tsb: -6 + index }));
-    case "/api/v1/workouts/predict":
-      return Array.from({ length: 28 }, (_, index) => ({
-        day: `2026-07-${String(index + 1).padStart(2, "0")}`,
-        projected_tss: index === 7 ? 64 : 0,
-        projected_ctl: 50 + index * 0.3,
-        projected_atl: 55 - index * 0.1,
-        projected_tsb: -4 + index * 0.2,
-        projected_acwr: 1.1,
-        is_overtraining_risk: false,
-        is_high_load_risk: index === 7,
-        is_fresh: false,
-      }));
     default:
       return [];
   }
@@ -206,8 +184,12 @@ test.describe("Todo 15 deterministic GPS, forecast, and analysis QA", () => {
       await page.setViewportSize({ width: 1280, height: 812 });
       await mockForecast(page, fixture);
       await page.goto("/calendar?view=week");
-      const testId = fixture === "valid" ? "plan-forecast-chart" : `plan-forecast-${fixture}`;
-      await expect(page.getByTestId(testId)).toBeVisible();
+      const summary = page.locator('[data-testid^="plan-forecast-summary"]');
+      await expect(summary).toBeVisible();
+      if (fixture === "valid") await expect(page.getByTestId("plan-forecast-summary")).toContainText("8.0 km");
+      if (fixture === "partial") await expect(page.getByTestId("plan-forecast-summary")).toContainText("待补充距离信息");
+      if (fixture === "empty") await expect(page.getByTestId("plan-forecast-summary-empty")).toBeVisible();
+      await expect(page.getByTestId("plan-forecast-chart")).toHaveCount(0);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow).toBeLessThanOrEqual(0);
       await screenshot(page, `forecast-${fixture}-1280`);
@@ -228,32 +210,13 @@ test.describe("Todo 15 deterministic GPS, forecast, and analysis QA", () => {
     });
   }
 
-  test("power metrics are absent for running and honest for cycling", async ({ page }) => {
-    // Cycling is still a resolvable sport family, so a Ride profile asks for an
-    // FTP card — but power support has been removed and there is no FTP to
-    // show. The card must say that rather than print a number, and it must not
-    // appear for a runner at all. The previous version of this test asserted a
-    // cycle-era contract: that `ftp-history` fed the card and that the running
-    // view never mentioned power.
+  test("running ability view does not show cycling or power fields", async ({ page }) => {
     const assertClean = criticalMonitor(page);
     await mockCommon(page, "Run");
     await page.goto("/analysis?tab=performance");
-    await expect(page.getByTestId("primary-running-ftp-card")).toHaveCount(0);
-    await expect(page.getByTestId("analysis-ability-summary")).not.toContainText("FTP");
-    await screenshot(page, "analysis-running-ftp-semantics-1280");
-
-    await page.unroute(/\/api\/athletes\/me(?:\?.*)?$/);
-    await mockCommon(page, "Ride");
-    await page.goto("/analysis?tab=performance");
-    const cyclingFtp = page.getByTestId("primary-cycling-ftp-card");
-    await expect(cyclingFtp).toContainText("FTP");
-    await expect(cyclingFtp).toContainText("--");
-    // The reason a metric is absent lives in the notes under the grid, so the
-    // cards keep one rhythm and the sentence still appears on the page.
-    const notes = page.getByTestId("analysis-ability-notes");
-    await expect(notes).toContainText("FTP");
-    await expect(notes).toContainText("不再支持");
-    await screenshot(page, "analysis-cycling-ftp-semantics-1280");
+    await expect(page.getByTestId("analysis-performance")).toBeVisible();
+    await expect(page.getByTestId("analysis-ability-summary")).not.toContainText(/FTP|功率|骑行/);
+    await screenshot(page, "analysis-running-ability-1280");
     assertClean();
   });
   });

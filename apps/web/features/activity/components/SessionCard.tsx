@@ -8,7 +8,6 @@ import {
   formatDuration,
   formatDate,
   formatPace,
-  formatPower,
   formatHeartRate,
   formatCalories,
 } from "@shared/lib/format";
@@ -27,15 +26,6 @@ export interface SessionCardProps {
   readonly showRoute?: boolean;
 }
 
-const EFFORT_VARIANT: Readonly<
-  Record<SessionEffort, "success" | "warning" | "error" | "neutral">
-> = {
-  easy: "success",
-  moderate: "warning",
-  hard: "error",
-  unknown: "neutral",
-};
-
 const EFFORT_FILLED: Readonly<Record<SessionEffort, string>> = {
   easy: "bg-success",
   moderate: "bg-warning",
@@ -53,10 +43,6 @@ function effortSegmentClass(
   return segment === current ? EFFORT_FILLED[current] : "bg-surface-overlay";
 }
 
-function tssText(tss: number | null): string {
-  return tss != null ? String(Math.round(tss)) : "--";
-}
-
 function buildMetrics(activity: ActivitySummary): readonly string[] {
   const cfg = getSportConfig(activity.sport);
   if (cfg.isRun) {
@@ -67,35 +53,17 @@ function buildMetrics(activity: ActivitySummary): readonly string[] {
       formatHeartRate(activity.avg_hr),
     ];
   }
-  if (cfg.isRide) {
-    return [
-      formatDistance(activity.distance_m),
-      formatDuration(activity.duration_s),
-      activity.np != null ? formatPower(activity.np) : "--",
-      activity.avg_power != null
-        ? formatPower(activity.avg_power)
-        : formatPace(activity.avg_speed),
-    ];
-  }
-  if (cfg.isWater) {
-    return [
-      formatDistance(activity.distance_m),
-      formatDuration(activity.duration_s),
-      formatPace(activity.avg_speed),
-    ];
-  }
   if (activity.sport === "Workout" || activity.sport === "WeightTraining") {
     return [
       formatDuration(activity.duration_s),
       formatCalories(activity.calories),
-      tssText(activity.tss),
+      formatHeartRate(activity.avg_hr),
     ];
   }
   return [
     activity.distance_m != null ? formatDistance(activity.distance_m) : "--",
     formatDuration(activity.duration_s),
     formatHeartRate(activity.avg_hr),
-    tssText(activity.tss),
   ];
 }
 
@@ -140,6 +108,9 @@ export function SessionCard({
       <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+            <Badge variant={activity.is_race ? "error" : "neutral"}>
+              {activity.is_race ? "比赛" : "日常训练"}
+            </Badge>
             <span
               className="text-sm font-bold text-text-primary group-hover:text-accent-strong truncate"
               data-testid="session-card-label"
@@ -149,11 +120,6 @@ export function SessionCard({
             <span className="font-mono text-xs text-text-muted">
               {formatDate(activity.start_time)}
             </span>
-            {activity.tss != null && (
-              <Badge variant={EFFORT_VARIANT[effort]} className="text-caption1 px-1.5 py-0">
-                TSS {Math.round(activity.tss)}
-              </Badge>
-            )}
           </div>
 
           <div

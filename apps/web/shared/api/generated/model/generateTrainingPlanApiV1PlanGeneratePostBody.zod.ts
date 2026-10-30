@@ -14,16 +14,12 @@ export const generateTrainingPlanApiV1PlanGeneratePostBodyPreferredDaysOffOneMax
 export const generateTrainingPlanApiV1PlanGeneratePostBodyRestDaysOneMin = 0;
 export const generateTrainingPlanApiV1PlanGeneratePostBodyRestDaysOneMax = 6;
 
-export const generateTrainingPlanApiV1PlanGeneratePostBodyWeeklyTssOneExclusiveMin = 0;
-export const generateTrainingPlanApiV1PlanGeneratePostBodyWeeklyTssOneMax = 2000;
-
 
 export const GenerateTrainingPlanApiV1PlanGeneratePostBody = zod.object({
   "goal_id": zod.uuid(),
   "long_run_day": zod.union([zod.number().min(generateTrainingPlanApiV1PlanGeneratePostBodyLongRunDayOneMin).max(generateTrainingPlanApiV1PlanGeneratePostBodyLongRunDayOneMax),zod.null()]).optional(),
   "preferred_days_off": zod.union([zod.array(zod.number()).max(generateTrainingPlanApiV1PlanGeneratePostBodyPreferredDaysOffOneMax),zod.null()]).optional(),
-  "rest_days": zod.union([zod.number().min(generateTrainingPlanApiV1PlanGeneratePostBodyRestDaysOneMin).max(generateTrainingPlanApiV1PlanGeneratePostBodyRestDaysOneMax),zod.null()]).optional(),
-  "weekly_tss": zod.union([zod.number().gt(generateTrainingPlanApiV1PlanGeneratePostBodyWeeklyTssOneExclusiveMin).max(generateTrainingPlanApiV1PlanGeneratePostBodyWeeklyTssOneMax),zod.null()]).optional()
+  "rest_days": zod.union([zod.number().min(generateTrainingPlanApiV1PlanGeneratePostBodyRestDaysOneMin).max(generateTrainingPlanApiV1PlanGeneratePostBodyRestDaysOneMax),zod.null()]).optional()
 })
 
 export type GenerateTrainingPlanApiV1PlanGeneratePostBody = zod.input<typeof GenerateTrainingPlanApiV1PlanGeneratePostBody>;

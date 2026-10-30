@@ -48,10 +48,12 @@ export function GoalCard({ goal, onEdit, onAbandon, onAchieve, readOnly = false 
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [abandonOpen, setAbandonOpen] = useState(false);
   const [abandoning, setAbandoning] = useState(false);
+  const [abandonError, setAbandonError] = useState<string | null>(null);
 
   const displayGoal = localGoal.goal_id === goal.goal_id && goal.updated_at >= localGoal.updated_at ? goal : localGoal;
 
-  const progress = goalProgress(displayGoal);
+  const hasNumericTarget = displayGoal.target_value != null && displayGoal.target_value > 0;
+  const progress = hasNumericTarget ? goalProgress(displayGoal) : null;
   const days = daysRemaining(displayGoal.target_date);
   const status = computeGoalStatus(displayGoal);
   const typeConfig = GOAL_TYPES[displayGoal.type] ?? GOAL_TYPES.event;
@@ -60,6 +62,7 @@ export function GoalCard({ goal, onEdit, onAbandon, onAchieve, readOnly = false 
   const lastUpdated = formatRelativeTime(displayGoal.updated_at);
   const currentReading = goalReading(displayGoal, displayGoal.current_value);
   const targetReading = goalReading(displayGoal, displayGoal.target_value);
+  const hasRaceDetails = displayGoal.race_distance_m != null || displayGoal.race_target_time_s != null;
 
   const handleRefresh = async () => {
     setRefreshError(null);
@@ -74,13 +77,17 @@ export function GoalCard({ goal, onEdit, onAbandon, onAchieve, readOnly = false 
   const cancelAbandon = () => {
     if (abandoning) return;
     setAbandonOpen(false);
+    setAbandonError(null);
   };
 
   const confirmAbandon = async () => {
     setAbandoning(true);
+    setAbandonError(null);
     try {
       await onAbandon(displayGoal);
       setAbandonOpen(false);
+    } catch (cause) {
+      setAbandonError(cause instanceof Error ? cause.message : "放弃目标失败，请重试。");
     } finally {
       setAbandoning(false);
     }
@@ -89,17 +96,20 @@ export function GoalCard({ goal, onEdit, onAbandon, onAchieve, readOnly = false 
   return (
     <Card className="relative overflow-hidden">
       {/* 顶部状态色条：编码目标健康度，不是装饰 */}
-      <div
-        className={`absolute inset-x-0 top-0 h-1 ${
-          isAchieved
-            ? "bg-success"
-            : status === "on-track"
-              ? "bg-goal-on-track"
-              : status === "behind"
-                ? "bg-goal-behind"
-                : "bg-goal-at-risk"
-        }`}
-      />
+      {isAchieved || hasNumericTarget ? (
+        <div
+          aria-hidden="true"
+          className={`absolute inset-x-0 top-0 h-1 ${
+            isAchieved
+              ? "bg-success"
+              : status === "on-track"
+                ? "bg-goal-on-track"
+                : status === "behind"
+                  ? "bg-goal-behind"
+                  : "bg-goal-at-risk"
+          }`}
+        />
+      ) : null}
 
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-3 pt-2">
         {/* 类型图标 */}
@@ -113,7 +123,7 @@ export function GoalCard({ goal, onEdit, onAbandon, onAchieve, readOnly = false 
             <h2 className="truncate text-headline font-semibold text-text-primary">
               {displayGoal.title}
             </h2>
-            {!isAchieved && (
+            {!isAchieved && hasNumericTarget && (
               <Badge variant={statusVariant(status)}>
                 {statusLabel(status)}
               </Badge>
@@ -121,17 +131,23 @@ export function GoalCard({ goal, onEdit, onAbandon, onAchieve, readOnly = false 
             {isAchieved && <Badge variant="success">已达成</Badge>}
           </div>
 
-          {displayGoal.type === "event" && displayGoal.race_distance_m && (
-            <p className="mt-1 text-caption1 text-text-muted">
-              比赛距离 {(displayGoal.race_distance_m / 1000).toFixed(2)} 公里
-              {displayGoal.race_target_time_s
-                ? ` · 目标完赛用时 ${formatClock(displayGoal.race_target_time_s)}`
-                : ""}
-            </p>
-          )}
+          {displayGoal.type === "event" ? (
+            hasRaceDetails ? (
+              <p className="mt-1 text-caption1 text-text-muted">
+                {displayGoal.race_distance_m != null
+                  ? `比赛距离 ${(displayGoal.race_distance_m / 1000).toFixed(2)} 公里`
+                  : "未填写比赛距离"}
+                {displayGoal.race_target_time_s != null
+                  ? ` · 目标完赛用时 ${formatClock(displayGoal.race_target_time_s)}`
+                  : " · 未填写目标用时"}
+              </p>
+            ) : (
+              <p className="mt-1 text-caption1 text-text-muted">尚未填写比赛距离与目标用时。</p>
+            )
+          ) : null}
         </div>
 
-        {/* 主数字：剩余天数 */}
+        {/* 主数字：有目标日期时显示剩余天数 */}
         {days !== null && !isAchieved && (
           <div className="col-start-3 justify-self-end text-right">
             <div className="font-mono text-metric-lg font-semibold tabular-nums text-text-primary">
@@ -143,43 +159,50 @@ export function GoalCard({ goal, onEdit, onAbandon, onAchieve, readOnly = false 
 
         {/* 当前值与目标值：网格的直接子元素，窄屏占满整行，宽屏占第 2 列 */}
         <div className="col-span-3 col-start-1 row-start-2 sm:col-span-2 sm:col-start-2">
-          <NumberPair
-            left={{
-              label: "当前",
-              value: currentReading?.value ?? null,
-              unit: currentReading?.unit,
-            }}
-            right={{
-              label: "目标",
-              value: targetReading?.value ?? null,
-              unit: targetReading?.unit,
-            }}
-          />
+          {displayGoal.type === "event" && !hasNumericTarget ? (
+            <p className="text-caption1 text-text-muted">未填写目标日期。编辑目标后可安排比赛周期。</p>
+          ) : hasNumericTarget ? (
+            <NumberPair
+              left={{
+                label: "当前",
+                value: currentReading?.value ?? null,
+                unit: currentReading?.unit,
+              }}
+              right={{
+                label: "目标",
+                value: targetReading?.value ?? null,
+                unit: targetReading?.unit,
+              }}
+            />
+          ) : (
+            <p className="text-caption1 text-text-muted">还没有填写目标值。编辑目标后可显示进度。</p>
+          )}
         </div>
       </div>
 
-      {/* 进度条：自动追踪 */}
-      <div className="mt-4">
-        <Progress
-          value={progress}
-          max={100}
-          label="自动追踪"
-          showValue
-          size="lg"
-          barClass={
-            isAchieved
-              ? "bg-success"
-              : status === "at-risk"
-                ? "bg-goal-at-risk"
-                : status === "behind"
-                  ? "bg-goal-behind"
-                  : "bg-goal-on-track"
-          }
-        />
-        <p className="mt-1.5 text-caption1 text-text-muted">
-          自动更新于 {lastUpdated}
-        </p>
-      </div>
+      {progress != null ? (
+        <div className="mt-4">
+          <Progress
+            value={progress}
+            max={100}
+            label="自动追踪"
+            showValue
+            size="lg"
+            barClass={
+              isAchieved
+                ? "bg-success"
+                : status === "at-risk"
+                  ? "bg-goal-at-risk"
+                  : status === "behind"
+                    ? "bg-goal-behind"
+                    : "bg-goal-on-track"
+            }
+          />
+          <p className="mt-1.5 text-caption1 text-text-muted">
+            自动更新于 {lastUpdated}
+          </p>
+        </div>
+      ) : null}
 
       {!readOnly && !isAchieved && displayGoal.status === "active" && (
         <GoalCardActions
@@ -196,6 +219,7 @@ export function GoalCard({ goal, onEdit, onAbandon, onAchieve, readOnly = false 
         open={abandonOpen}
         goalTitle={displayGoal.title}
         abandoning={abandoning}
+        error={abandonError}
         onCancel={cancelAbandon}
         onConfirm={() => void confirmAbandon()}
       />

@@ -33,9 +33,11 @@ const STATUS_BAND_COLOR: Record<string, string> = {
 export function GoalProgress({ goal }: GoalProgressProps) {
   if (goal.status === "achieved") return null;
 
-  const pct = goalProgress(goal);
+  const targetValue = goal.target_value;
+  const hasNumericTarget = targetValue != null && targetValue > 0;
+  const pct = hasNumericTarget ? goalProgress(goal) : null;
   const status = computeGoalStatus(goal);
-  const recommendations = getGoalRecommendations(goal);
+  const recommendations = hasNumericTarget ? getGoalRecommendations(goal) : [];
   const ringColor = STATUS_BAND_COLOR[status] ?? "var(--color-accent)";
 
   return (
@@ -43,42 +45,50 @@ export function GoalProgress({ goal }: GoalProgressProps) {
       <CardHeader title="目标进度" />
 
       <div className="flex items-center gap-4">
-        <ScoreRing
-          value={pct}
-          max={100}
-          size={72}
-          strokeWidth={5}
-          color={ringColor}
-          ariaLabel={`目标进度 ${Math.round(pct)}% — ${statusLabel(status)}`}
-        >
-          <span className="font-mono tabular-nums text-callout font-bold text-text-primary">
-            {Math.round(pct)}%
-          </span>
-        </ScoreRing>
+        {pct != null ? (
+          <ScoreRing
+            value={pct}
+            max={100}
+            size={72}
+            strokeWidth={5}
+            color={ringColor}
+            ariaLabel={`目标进度 ${Math.round(pct)}% — ${statusLabel(status)}`}
+          >
+            <span className="font-mono tabular-nums text-callout font-bold text-text-primary">
+              {Math.round(pct)}%
+            </span>
+          </ScoreRing>
+        ) : null}
 
         <div className="flex-1">
-          <p className="text-subheadline font-medium text-text-primary">
-            {statusLabel(status)}
-          </p>
-          {goal.target_value != null && goal.target_value > 0 && (
+          {pct != null ? (
+            <p className="text-subheadline font-medium text-text-primary">
+              {statusLabel(status)}
+            </p>
+          ) : (
+            <p className="text-subheadline font-medium text-text-primary">尚未填写目标数值</p>
+          )}
+          {hasNumericTarget ? (
             <p className="mt-0.5 font-mono tabular-nums text-caption1 text-text-secondary">
-              {goal.current_value.toFixed(1)} / {goal.target_value.toFixed(1)}
+              {goal.current_value.toFixed(1)} / {targetValue?.toFixed(1)}
               {goal.unit ? ` ${goal.unit}` : ""}
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
-      <ul className="mt-4 divide-y divide-border-subtle border-t border-border-subtle">
-        {recommendations.map((tip, i) => (
-          <li key={i} className="flex items-start gap-2 py-2.5">
-            <TipIcon status={status} />
-            <span className="text-subheadline leading-relaxed text-text-secondary">
-              {tip}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {recommendations.length > 0 ? (
+        <ul className="mt-4 divide-y divide-border-subtle border-t border-border-subtle">
+          {recommendations.map((tip, i) => (
+            <li key={i} className="flex items-start gap-2 py-2.5">
+              <TipIcon status={status} />
+              <span className="text-subheadline leading-relaxed text-text-secondary">
+                {tip}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </Card>
   );
 }

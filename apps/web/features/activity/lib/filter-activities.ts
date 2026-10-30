@@ -4,31 +4,20 @@ import {
   sportFamilyLabel,
   type SportFamily,
 } from "@shared/config/sport-config";
-import {
-  type ActivityFilterState,
-  classifyIntensity,
-} from "@features/activity/components/ActivityFilters";
+import type { ActivityFilterState } from "@features/activity/components/ActivityFilters";
+import { classifySession } from "@features/activity/lib/session-classification";
 
-/** Training-project dimension used by the calendar list view's chips. */
-export type ProjectFilter = "all" | "run" | "ride" | "swim" | "strength";
+/** Running and strength project filter used by the training log. */
+export type ProjectFilter = "all" | "run" | "strength";
 
-/**
- * Sport family behind each project bucket. The filter label and the membership
- * test both come from this, so a sport added to `contracts/v1/sports.yaml`
- * joins the right chip without any component change.
- */
 const PROJECT_FAMILY: Readonly<Record<Exclude<ProjectFilter, "all" | "strength">, SportFamily>> = {
   run: "running",
-  ride: "cycling",
-  swim: "swimming",
 };
 
 /** Chip definitions for the project filter, single-sourced here. */
 export const PROJECT_FILTERS: readonly { value: ProjectFilter; label: string }[] = [
   { value: "all", label: "全部" },
   { value: "run", label: sportFamilyLabel("running") },
-  { value: "ride", label: sportFamilyLabel("cycling") },
-  { value: "swim", label: sportFamilyLabel("swimming") },
   // The strength family holds 健身 and 力量训练; the chip names the bucket
   // after the training it represents rather than after one of its two sports.
   { value: "strength", label: getSportConfig("WeightTraining").label },
@@ -36,7 +25,7 @@ export const PROJECT_FILTERS: readonly { value: ProjectFilter; label: string }[]
 
 /** Sport → project bucket. `all` matches everything; unknown sports match nothing. */
 export function matchesProject(sport: string, project: ProjectFilter): boolean {
-  if (project === "all") return true;
+  if (project === "all") return !["Ride", "VirtualRide", "Bike"].includes(sport);
   const cfg = getSportConfig(sport);
   if (project === "strength") return cfg.isStrength;
   return cfg.family === PROJECT_FAMILY[project];
@@ -60,8 +49,11 @@ export function filterActivities(
   if (filters.sport !== "all") {
     result = result.filter((a) => a.sport === filters.sport);
   }
+  if (filters.race && filters.race !== "all") {
+    result = result.filter((activity) => Boolean(activity.is_race) === (filters.race === "race"));
+  }
   if (filters.intensity !== "all") {
-    result = result.filter((a) => classifyIntensity(a.tss) === filters.intensity);
+    result = result.filter((activity) => classifySession(activity).effort === filters.intensity);
   }
   if (filters.gpsOnly) {
     // Filter on whether the activity actually has GPS.

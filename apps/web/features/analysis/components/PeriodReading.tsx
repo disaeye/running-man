@@ -9,7 +9,7 @@ export interface PeriodReadingProps {
   readonly loading: boolean;
   readonly error: string | null;
   /** PMC points inside the active range, oldest first. */
-  readonly points: readonly { readonly ctl: number | null; readonly tsb: number | null; readonly tss: number | null }[];
+  readonly points: readonly { readonly ctl: number | null; readonly tsb: number | null }[];
   readonly pillars: readonly { readonly title: string; readonly verdict: string }[];
   readonly rangeLabel: string;
 }
@@ -90,18 +90,8 @@ function buildDigest(
       `状态收在 ${Math.round(last.tsb)}，${zone ? `${zone.label}：${zone.description}` : "暂无区间"}`,
     );
   }
-  const week = points.slice(-7).reduce((sum, point) => sum + (point.tss ?? 0), 0);
-  if (week > 0) {
-    lines.push(`最近 7 天累计 ${Math.round(week)} TSS，占本期总负荷的 ${shareOfTotal(points, week)}。`);
-  }
   for (const pillar of pillars) {
     lines.push(`${pillar.title}：${pillar.verdict}`);
   }
   return lines;
-}
-
-function shareOfTotal(points: PeriodReadingProps["points"], week: number): string {
-  const total = points.reduce((sum, point) => sum + (point.tss ?? 0), 0);
-  if (total <= 0) return "0%";
-  return `${Math.round((week / total) * 100)}%`;
 }

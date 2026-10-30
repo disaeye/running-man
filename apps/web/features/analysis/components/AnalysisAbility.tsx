@@ -8,7 +8,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { PerformanceAbility } from "@features/performance/components/PerformanceAbility";
 import { PersonalRecordsList } from "@features/trends/components/PersonalRecordsList";
 import { RacePredictor } from "@features/performance/components/RacePredictor";
-import { useProfile, useZones } from "@features/settings/hooks/useProfile";
+import { useProfile } from "@features/settings/hooks/useProfile";
 import { useAbility, formatPaceRange } from "@features/today/hooks/useAbility";
 import { useWellness } from "@features/health/hooks/useWellness";
 import {
@@ -21,19 +21,35 @@ import { AbilityMetricsRow } from "./AnalysisAbilityMetrics";
 import { AnalysisPerformanceNarrative } from "./AnalysisPerformanceNarrative";
 import { Card } from "@shared/ui/Card";
 import { HEART_RATE_UNIT } from "@shared/config/terms";
+import { getSportConfig } from "@shared/config/sport-config";
 
 export function AnalysisAbility() {
-  const [moreOpen, setMoreOpen] = useState(false);
   const { profile } = useProfile();
   const preferredSport = profile?.preferred_sport ?? null;
-  const { data: ability } = useAbility();
+  const showRunAnalysis = preferredSport != null && getSportConfig(preferredSport).isRun;
 
   return (
     <div className="flex flex-col gap-4" data-testid="analysis-ability-root">
-      <AbilitySummary />
-      <AnalysisPerformanceNarrative />
-      <AbilityMetricsRow />
-      {ability?.data_available && ability.trainingPaces && (
+      {showRunAnalysis && <AbilitySummary />}
+      {showRunAnalysis && <AnalysisPerformanceNarrative />}
+      {showRunAnalysis && <AbilityMetricsRow />}
+      {showRunAnalysis && <TrainingPacesCard />}
+      {showRunAnalysis && <PerformanceAbility />}
+      {showRunAnalysis && (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+          <div className="xl:col-span-3"><PersonalRecordsList /></div>
+          <div className="xl:col-span-2"><AbilityRadar sport={preferredSport} /></div>
+        </div>
+      )}
+      {showRunAnalysis && <RacePredictionPanel />}
+    </div>
+  );
+}
+
+function TrainingPacesCard() {
+  const { data: ability } = useAbility();
+  if (!ability?.data_available || !ability.trainingPaces) return null;
+  return (
         <Card padding="md" data-testid="analysis-training-paces">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -72,18 +88,13 @@ export function AnalysisAbility() {
             ))}
           </div>
         </Card>
-      )}
-      <PerformanceAbility />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-        <div className="xl:col-span-3">
-          <PersonalRecordsList sport={preferredSport} />
-        </div>
-        <div className="xl:col-span-2">
-          <AbilityRadar sport={preferredSport} />
-        </div>
-      </div>
+  );
+}
 
-      <div data-testid="ability-more">
+function RacePredictionPanel() {
+  const [moreOpen, setMoreOpen] = useState(false);
+  return (
+    <div data-testid="ability-more">
         <button
           type="button"
           className="row-press focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl bg-surface-card px-4 py-3 text-left hover:bg-surface-overlay"
@@ -114,26 +125,23 @@ export function AnalysisAbility() {
           </div>
         ) : null}
       </div>
-    </div>
   );
 }
 
 function AbilitySummary() {
   const { profile } = useProfile();
-  const { zones } = useZones();
   const { range } = useAnalysisRange();
   const { data: wellness } = useWellness(range.from, range.to);
 
   const text = useMemo(
     () =>
       buildAbilitySummaryText({
-        ftp: zones?.ftp ?? null,
         lthr: profile?.lthr ?? null,
         preferredSport: profile?.preferred_sport ?? null,
         thresholdPace: profile?.threshold_pace ?? null,
         vo2max: latestWellnessValue(wellness, "vo2max"),
       }),
-    [wellness, zones, profile],
+    [wellness, profile],
   );
 
   if (!text) return null;
@@ -164,7 +172,6 @@ function latestWellnessValue(
 }
 
 type SummaryMetricValues = {
-  readonly ftp: number | null;
   readonly lthr: number | null;
   readonly preferredSport: string | null;
   readonly thresholdPace: number | null;
@@ -195,10 +202,6 @@ const SUMMARY_TEXT_BY_METRIC: Record<
       : null,
   raceSignal: (values) =>
     values.thresholdPace != null ? "临界速度信号已建立" : null,
-  ftp: (values) =>
-    values.ftp != null ? `功能性阈值功率 ${Math.round(values.ftp)} W` : null,
-  power: (values) =>
-    values.ftp != null ? `功率基准 ${Math.round(values.ftp)} W` : null,
   trainingLoad: () => null,
   heartRate: () => null,
   bodyWeight: () => null,

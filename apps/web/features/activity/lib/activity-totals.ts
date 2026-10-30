@@ -1,13 +1,17 @@
 import type { Reading } from "@shared/ui/ReadingStrip";
 import { NO_VALUE } from "@shared/lib/use-data-state";
-import { formatDistance, formatDuration } from "@shared/lib/format";
+import { formatDistance, formatDuration, formatHeartRate } from "@shared/lib/format";
 import type { ActivitySummary } from "@shared/types/activity";
+
+function average(values: readonly number[]): number | null {
+  if (values.length === 0) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
 
 /** The four numbers that describe whatever the current filter selects. */
 export function buildActivityTotals(activities: readonly ActivitySummary[]): Reading[] {
   const distance = activities.reduce((sum, item) => sum + (item.distance_m ?? 0), 0);
   const duration = activities.reduce((sum, item) => sum + (item.duration_s ?? 0), 0);
-  const load = activities.reduce((sum, item) => sum + (item.tss ?? 0), 0);
 
   return [
     {
@@ -24,9 +28,10 @@ export function buildActivityTotals(activities: readonly ActivitySummary[]): Rea
       value: activities.length > 0 ? formatDuration(duration) : NO_VALUE,
     },
     {
-      label: "负荷",
-      value: activities.length > 0 ? String(Math.round(load)) : NO_VALUE,
-      unit: "TSS",
+      label: "平均心率",
+      value: activities.length > 0
+        ? formatHeartRate(average(activities.flatMap((item) => item.avg_hr == null ? [] : [item.avg_hr])))
+        : NO_VALUE,
     },
   ];
 }

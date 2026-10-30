@@ -158,11 +158,6 @@ export function PerformanceAbility() {
 
 async function fetchAbilityData(): Promise<AbilityPoint[]> {
   const range = computeRange(365);
-  // No FTP series: this deployment is running-only and the endpoint that
-  // served FTP history no longer exists, so the request returned 404 on every
-  // visit to the analysis page. The `.catch(() => [])` around it meant the
-  // chart still drew, which is how it went unnoticed — the only symptom was a
-  // failed request in the network log.
   const [abilityRaw, wellness] = await Promise.all([
     apiFetch<unknown>("/insights/ability").catch(() => []),
     apiFetch<WellnessAbilityPoint[]>("/wellness", { params: { from: range.from, to: range.to } }).catch(() => []),

@@ -7,9 +7,9 @@ import { test, expect, type Page } from "@playwright/test";
  * and answer it with a setup card whose first step was 「连接数据源 / 去连接」,
  * whether or not Intervals.icu was connected. An athlete who had connected and
  * synced was told to connect while the data page showed 已连接 — and an athlete
- * who had rested for a week got the same instruction despite a full load chart.
+ * who had rested for a week received the same instruction despite having prior activity records.
  *
- * These cases pin the three states that produced that contradiction.
+ * These cases pin the three connection states.
  */
 
 const NOW = new Date();
@@ -29,6 +29,11 @@ function integration(connected: boolean, freshness: Freshness) {
     source: "intervals_icu",
     connected,
     settings: { sync_frequency: "daily", auto_sync: true },
+    name: "Intervals.icu",
+    created_at: null,
+    updated_at: null,
+    last_sync_detail: null,
+    last_sync_error: null,
     last_sync_at: connected ? ISO_TIME(0) : null,
     last_sync_status: connected ? "success" : null,
     data_as_of: freshness.daysAgo === null ? null : ISO_TIME(freshness.daysAgo),
@@ -95,11 +100,12 @@ async function mockBackend(
 ): Promise<void> {
   const { connected, freshness, withLoad } = options;
 
+  const integrationResponse = integration(connected, freshness);
   await page.route("**/api/v1/integrations/intervals_icu", (route) =>
-    json(route, integration(connected, freshness)),
+    json(route, integrationResponse),
   );
   await page.route("**/api/v1/integrations", (route) =>
-    json(route, connected ? [integration(connected, freshness)] : []),
+    json(route, connected ? [integrationResponse] : []),
   );
   await page.route("**/api/v1/insights/coach-context*", (route) => json(route, coachContext(freshness)));
   await page.route("**/api/v1/activities*", (route) => json(route, []));
@@ -148,7 +154,6 @@ test.describe("connection state consistency", () => {
 
     const setup = page.getByTestId("home-starting-point");
     await expect(setup).toBeVisible();
-    await expect(setup).toContainText("Intervals.icu 已连接");
     await expect(setup).toContainText("已连接，还没有同步到训练数据");
     await expect(page.getByRole("link", { name: "去连接" })).toHaveCount(0);
     await expect(page.getByTestId("sync-status-indicator")).not.toContainText("未连接数据源");

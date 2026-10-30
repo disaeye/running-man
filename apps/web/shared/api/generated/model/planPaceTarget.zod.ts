@@ -11,7 +11,7 @@ export const PlanPaceTarget = zod.object({
   "label": zod.string(),
   "max_s_per_km": zod.number(),
   "min_s_per_km": zod.number()
-}).describe('One of the five Daniels training paces.\n\nThe ranges come from the athlete\'s own VDOT through the published oxygen\nfractions, so the numbers on the page are the numbers the prescription\ngenerator uses.')
+}).describe('One of the five Daniels training paces.')
 
 export type PlanPaceTarget = zod.input<typeof PlanPaceTarget>;
 export type PlanPaceTargetOutput = zod.output<typeof PlanPaceTarget>;

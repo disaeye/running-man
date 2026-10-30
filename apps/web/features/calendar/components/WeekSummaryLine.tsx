@@ -19,14 +19,14 @@ export function WeekSummaryLine({ summary }: { readonly summary: WeekSummary }) 
       unit: undefined,
     },
     {
-      label: "实际负荷",
-      value: summary.actualTss > 0 ? String(Math.round(summary.actualTss)) : NO_VALUE,
-      unit: "TSS",
+      label: "实际时长",
+      value: summary.actualMinutes > 0 ? String(Math.round(summary.actualMinutes)) : NO_VALUE,
+      unit: "分钟",
     },
     {
-      label: "计划负荷",
-      value: summary.plannedTss > 0 ? String(Math.round(summary.plannedTss)) : NO_VALUE,
-      unit: "TSS",
+      label: "计划时长",
+      value: summary.plannedMinutes > 0 ? String(Math.round(summary.plannedMinutes)) : NO_VALUE,
+      unit: "分钟",
     },
     {
       label: "完成率",

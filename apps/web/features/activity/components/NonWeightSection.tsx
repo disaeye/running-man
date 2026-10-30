@@ -8,7 +8,6 @@ import { MultiStreamChart } from "@features/activity/components/MultiStreamChart
 import { SegmentAnalysis } from "@features/activity/components/SegmentAnalysis";
 import { LapAnalysis } from "@features/activity/components/LapAnalysis";
 import { HrZoneDistribution } from "@features/activity/components/HrZoneDistribution";
-import { PowerCurveChart } from "@features/activity/components/PowerCurveChart";
 import { GpsSection } from "@features/activity/components/GpsSection";
 import { AerobicDecouplingCard } from "@features/activity/components/AerobicDecouplingCard";
 import { resolveGpsState } from "@features/activity/lib/activity-detail";
@@ -48,7 +47,6 @@ export function NonWeightSection({
       {analysis && (
         <>
           <HrZoneDistribution zones={analysis.hr_zones ?? null} />
-          <PowerCurveChart points={analysis.power_curve ?? []} />
         </>
       )}
     </>

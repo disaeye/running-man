@@ -16,7 +16,6 @@ export interface PreviewEvent {
   training_type: string;
   category?: string;
   duration_min: number;
-  predicted_tss: number;
   pace_min_s_km?: number | null;
   pace_max_s_km?: number | null;
   segments: readonly PreviewSegment[];
@@ -27,7 +26,6 @@ export interface PreviewPhase {
   name: string;
   start_date: string;
   end_date: string;
-  target_weekly_tss: number;
 }
 
 export interface GeneratePreview {
@@ -91,9 +89,6 @@ export function PlanPreview({ preview }: { preview: GeneratePreview }) {
           {firstDate} 至 {lastDate}。历史、已完成和手动修改过的训练会保留。
         </p>
       )}
-      {preview.training_load_available === false && (
-        <p className="mt-2 text-caption1 text-warning">近期训练负荷数据不足，计划负荷采用你提供的每周目标。</p>
-      )}
       {!preview.training_paces_available && (
         <p className="mt-1 text-caption1 text-text-muted">当前没有有效阈值配速；训练强度依据时长和 RPE 安排。</p>
       )}
@@ -101,7 +96,7 @@ export function PlanPreview({ preview }: { preview: GeneratePreview }) {
         <ul className="mt-3 space-y-1 border-t border-border-subtle pt-3">
           {preview.phases.map((phase) => (
             <li key={`${phase.name}-${phase.start_date}`} className="text-caption1 text-text-secondary">
-              {PHASE_LABELS[phase.name] ?? phase.name} · {phase.start_date} 至 {phase.end_date} · {Math.round(phase.target_weekly_tss)} TSS/周
+              {PHASE_LABELS[phase.name] ?? phase.name} · {phase.start_date} 至 {phase.end_date}
             </li>
           ))}
         </ul>
@@ -112,7 +107,6 @@ export function PlanPreview({ preview }: { preview: GeneratePreview }) {
             <li key={event.event_id} className="rounded-lg bg-surface-card/70 p-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-caption1 font-medium text-text-primary">{event.date} · {event.name}</span>
-                <span className="shrink-0 font-mono text-caption2 text-text-muted">{Math.round(event.predicted_tss)} TSS</span>
               </div>
               {event.training_type === "race" ? (
                 <p className="mt-1 text-caption1 font-medium text-accent-strong">比赛日 · 目标比赛</p>

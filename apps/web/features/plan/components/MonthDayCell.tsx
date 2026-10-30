@@ -1,6 +1,5 @@
 "use client";
 
-import { LOAD_TIER_CLASS, loadTier } from "@features/plan/lib/load-tier";
 
 interface MonthDayCellProps {
   day: number;
@@ -9,12 +8,12 @@ interface MonthDayCellProps {
   isRace: boolean;
   isCompleted: boolean;
   hasPlanned: boolean;
-  load: number;
+  durationMinutes: number;
   onSelect: (iso: string) => void;
 }
 
 /**
- * 月历格：左上角日号，右下角当天负荷，底部一条 3px 负荷条。
+ * 月历格显示日期、训练时长和完成状态。
  *
  * 状态标记只有两种形态：比赛是 accent 短标签，完成与否是 6px 圆点。
  * 同一格既有比赛又有完成时比赛优先 —— 一个格子不叠第三种记号。
@@ -28,10 +27,9 @@ export function MonthDayCell({
   isRace,
   isCompleted,
   hasPlanned,
-  load,
+  durationMinutes,
   onSelect,
 }: MonthDayCellProps) {
-  const tier = loadTier(load);
   const pending = hasPlanned && !isCompleted;
 
   return (
@@ -41,10 +39,9 @@ export function MonthDayCell({
       data-testid={`plan-month-day-${iso}`}
       data-today={isToday ? "true" : undefined}
       data-compliance={isCompleted ? "done" : undefined}
-      data-load-tier={tier ?? undefined}
       aria-label={[
         `${day}日`,
-        load > 0 ? `负荷 ${Math.round(load)} TSS` : "",
+        durationMinutes > 0 ? `训练 ${durationMinutes} 分钟` : "",
         isRace ? "比赛日" : "",
         isCompleted ? "已完成" : hasPlanned ? "已计划" : "",
       ]
@@ -72,12 +69,9 @@ export function MonthDayCell({
         ) : null}
       </span>
 
-      {tier ? (
-        <span className="flex flex-col gap-1">
-          <span className="self-end font-mono text-caption2 tabular-nums text-text-secondary">
-            {Math.round(load)}
-          </span>
-          <span className={`h-[3px] w-full rounded-full ${LOAD_TIER_CLASS[tier]}`} aria-hidden />
+      {durationMinutes > 0 ? (
+        <span className="self-end font-mono text-caption1 tabular-nums text-text-secondary">
+          {durationMinutes} 分
         </span>
       ) : null}
     </button>

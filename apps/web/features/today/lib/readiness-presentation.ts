@@ -43,7 +43,6 @@ export interface RecommendationPayload {
   /** `rest` when the readiness band rules out training today. */
   action?: string | null;
   duration_min?: number | null;
-  target_tss?: number | null;
   intensity?: string | null;
 }
 
@@ -70,8 +69,6 @@ const FACTOR_LABEL: Record<string, string> = {
   sleep: "睡眠",
   resting_hr: "静息心率",
   hrv: "HRV",
-  tsb: "负荷平衡",
-  atl_velocity: "疲劳变化",
 };
 
 /**
@@ -157,7 +154,7 @@ export function decisionTitle(
     // a filled load chart; name the input that is actually missing instead.
     if (options.hasLoadHistory) {
       const missing = assessment.missing.length > 0 ? assessment.missing.join("、") : "恢复信号";
-      return `有训练负荷，缺${missing}，今天无法判断恢复`;
+      return `已有跑步记录，缺少${missing}，当前无法查看恢复状态`;
     }
     return "还没有可分析的训练数据";
   }

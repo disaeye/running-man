@@ -6,8 +6,8 @@ import type { CalendarEventDTO } from "@features/calendar/components/types";
 export interface WeekSummary {
   completed: number;
   total: number;
-  plannedTss: number;
-  actualTss: number;
+  plannedMinutes: number;
+  actualMinutes: number;
 }
 
 export interface BuildWeekSummaryArgs {
@@ -18,12 +18,12 @@ export interface BuildWeekSummaryArgs {
   timezone?: string;
 }
 
-function dayTss(activities: ActivitySummary[] | undefined): number {
+function dayDurationMinutes(activities: ActivitySummary[] | undefined): number {
   if (!activities) return 0;
-  return activities.reduce((sum, a) => sum + (a.tss ?? 0), 0);
+  return activities.reduce((sum, activity) => sum + (activity.duration_s ?? 0), 0) / 60;
 }
 
-/** Roll up the current week's planned vs actual load + completion ratio.
+/** Roll up the current week's planned and recorded duration + completion ratio.
  *  A planned event counts as completed when it has a matching activity on the
  *  same day; unplanned activities inflate both sides so the ratio stays honest. */
 export function buildWeekSummary(args: BuildWeekSummaryArgs): WeekSummary {
@@ -38,7 +38,7 @@ export function buildWeekSummary(args: BuildWeekSummaryArgs): WeekSummary {
     if (day >= isoStart && day <= isoEnd) activityDays.add(day);
   }
 
-  let plannedTss = 0;
+  let plannedMinutes = 0;
   let total = 0;
   let completed = 0;
   for (const ev of events) {
@@ -46,7 +46,7 @@ export function buildWeekSummary(args: BuildWeekSummaryArgs): WeekSummary {
     const day = activityLocalDay(ev.start_time, timezone);
     if (day < isoStart || day > isoEnd) continue;
     total += 1;
-    plannedTss += ev.predicted_tss ?? 0;
+    plannedMinutes += ev.workout_prescription?.duration_min ?? 0;
     if (ev.done || activityDays.has(day)) completed += 1;
   }
   // Unplanned activities still count as completed sessions for the week.
@@ -61,12 +61,12 @@ export function buildWeekSummary(args: BuildWeekSummaryArgs): WeekSummary {
     }
   }
 
-  const actualTss = [...activityDays].reduce(
-    (sum, day) => sum + dayTss(activityMap.get(day)),
+  const actualMinutes = [...activityDays].reduce(
+    (sum, day) => sum + dayDurationMinutes(activityMap.get(day)),
     0,
   );
 
-  return { completed, total, plannedTss, actualTss };
+  return { completed, total, plannedMinutes, actualMinutes };
 }
 
 /**

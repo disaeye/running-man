@@ -5,7 +5,7 @@ test.describe("Profile and settings flow", () => {
     await page.goto("/settings");
 
     await expect(page.getByRole("heading", { name: "设置", exact: true })).toBeVisible();
-    const backToProfileLink = page.getByTestId("settings-page").getByRole("link", { name: "档案" });
+    const backToProfileLink = page.getByTestId("settings-page").getByRole("link", { name: "我的" });
     await expect(backToProfileLink).toHaveAttribute("href", "/profile");
 
     // Assert stable section test ids and their visible labels.
@@ -24,19 +24,21 @@ test.describe("Profile and settings flow", () => {
   test("profile page contains read-only information and links to settings", async ({ page }) => {
     await page.goto("/profile");
 
-    await expect(page.getByRole("heading", { name: "档案", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "我的", exact: true })).toBeVisible();
     const settingsLink = page.getByRole("link", { name: "设置" });
     await expect(settingsLink).toHaveAttribute("href", "/settings");
     await expect(page.getByTestId("settings-section-data")).toHaveCount(0);
     await expect(page.getByTestId("demo-identity-card")).toBeVisible();
-    await expect(page.locator("input")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "跑鞋", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "添加跑鞋" })).toBeDisabled();
+    await expect(page.getByLabel("名称")).toBeVisible();
 
     await settingsLink.click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole("heading", { name: "设置", exact: true })).toBeVisible();
-    await page.getByTestId("settings-page").getByRole("link", { name: "档案" }).click();
+    await page.getByTestId("settings-page").getByRole("link", { name: "我的" }).click();
     await expect(page).toHaveURL(/\/profile$/);
-    await expect(page.getByRole("heading", { name: "档案", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "我的", exact: true })).toBeVisible();
   });
 
   test("navigates between setting sections via deep links", async ({ page }) => {

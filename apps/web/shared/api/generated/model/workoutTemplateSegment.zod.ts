@@ -8,8 +8,6 @@ import { z as zod } from 'zod';
 
 export const WorkoutTemplateSegment = zod.object({
   "duration_s": zod.number(),
-  "power_high": zod.number(),
-  "power_low": zod.number(),
   "segment_type": zod.string()
 })
 

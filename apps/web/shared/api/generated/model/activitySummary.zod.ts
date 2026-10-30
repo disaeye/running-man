@@ -8,6 +8,7 @@ import { z as zod } from 'zod';
 
 export const activitySummaryHasGpsDefault = false;
 export const activitySummaryIsBookmarkedDefault = false;
+export const activitySummaryIsRaceDefault = false;
 export const ActivitySummary = zod.object({
   "activity_id": zod.string(),
   "aerobic_te": zod.union([zod.number(),zod.null()]).optional(),
@@ -29,6 +30,7 @@ export const ActivitySummary = zod.object({
   "icu_ctl": zod.union([zod.number(),zod.null()]).optional(),
   "intensity_factor": zod.union([zod.number(),zod.null()]).optional(),
   "is_bookmarked": zod.boolean().default(activitySummaryIsBookmarkedDefault),
+  "is_race": zod.boolean().default(activitySummaryIsRaceDefault),
   "max_hr": zod.union([zod.number(),zod.null()]).optional(),
   "name": zod.union([zod.string(),zod.null()]).optional(),
   "np": zod.union([zod.number(),zod.null()]).optional(),

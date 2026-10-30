@@ -13,8 +13,6 @@ export const CreateTemplateApiV1WorkoutsTemplatesPostBody = zod.object({
   "predicted_tss": zod.union([zod.number(),zod.null()]).optional(),
   "segments": zod.array(zod.object({
   "duration_s": zod.number(),
-  "power_high": zod.number(),
-  "power_low": zod.number(),
   "segment_type": zod.string()
 })),
   "sport": zod.union([zod.string(),zod.null()]).default(createTemplateApiV1WorkoutsTemplatesPostBodySportDefault)

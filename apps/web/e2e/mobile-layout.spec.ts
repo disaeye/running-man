@@ -46,13 +46,39 @@ async function geometry(page: Page): Promise<Geometry> {
       return false;
     };
     const clippedText: string[] = [];
-    for (const el of Array.from(inner.querySelectorAll<HTMLElement>("*"))) {
-      const style = getComputedStyle(el);
-      if (style.display === "none" || scrollAncestor(el)) continue;
-      const clips = style.overflowX === "hidden" || style.overflowX === "clip";
-      if (clips && el.scrollWidth > el.clientWidth + 2 && (el.textContent ?? "").trim()) {
-        clippedText.push((el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 24));
+    const textNodes = document.createTreeWalker(inner, NodeFilter.SHOW_TEXT);
+    while (textNodes.nextNode()) {
+      const textNode = textNodes.currentNode;
+      const text = textNode.textContent?.trim();
+      const parent = textNode.parentElement;
+      if (!text || !parent || getComputedStyle(parent).display === "none" || scrollAncestor(parent)) {
+        continue;
       }
+      const range = document.createRange();
+      range.selectNodeContents(textNode);
+      const textRects = Array.from(range.getClientRects());
+      let isClipped = false;
+      for (let ancestor: HTMLElement | null = parent; ancestor && ancestor !== inner; ) {
+        const style = getComputedStyle(ancestor);
+        if (style.overflowX === "hidden" || style.overflowX === "clip") {
+          const clipRect = ancestor.getBoundingClientRect();
+          const clipLeft = clipRect.left + ancestor.clientLeft;
+          const clipRight = clipLeft + ancestor.clientWidth;
+          if (textRects.some((rect) => rect.left < clipLeft - 2 || rect.right > clipRight + 2)) {
+            isClipped = true;
+            break;
+          }
+          if (
+            style.textOverflow === "ellipsis" &&
+            ancestor.scrollWidth > ancestor.clientWidth + 2
+          ) {
+            isClipped = true;
+            break;
+          }
+        }
+        ancestor = ancestor.parentElement;
+      }
+      if (isClipped) clippedText.push(text.replace(/\s+/g, " ").slice(0, 24));
     }
 
     return {
@@ -80,7 +106,10 @@ for (const path of PAGES) {
 
       expect(result.h1Count, "one page title").toBe(1);
       expect(result.overflowingTabs, "tab strips fit the column").toEqual([]);
-      expect(result.clippedText, "no text clipped by a hidden overflow").toEqual([]);
+      expect(
+        result.clippedText,
+        "no text clipped by a hidden overflow",
+      ).toEqual([]);
       expect(result.documentOverflow).toBeLessThanOrEqual(1);
 
       // Controls under the title, flush to the content edge. Pages whose header

@@ -5,19 +5,17 @@ import { normalizeGpsTrack } from "@features/activity/lib/gps-track";
 
 export type GpsUiState = "empty" | "partial" | "valid";
 
-export type ActivityCapabilityKey = "has_gps" | "has_hr" | "has_power" | "has_cadence";
+export type ActivityCapabilityKey = "has_gps" | "has_hr" | "has_cadence";
 
 export interface ActivityAvailability {
   hasGps: boolean;
   hasHr: boolean;
-  hasPower: boolean;
   hasCadence: boolean;
   hasLaps: boolean;
 }
 
 export function sportSubtitle(config: SportConfig): string {
   if (config.isRun) return "训练 · 有氧节奏";
-  if (config.isRide) return "骑行 · 功率/心率";
   if (config.isWater) return "水域训练";
   return "训练活动";
 }
@@ -68,7 +66,6 @@ export function computeAvailability(
   return {
     hasGps: gpsState === "valid",
     hasHr: checkMetric(activity, streamMap, "has_hr", "heart_rate"),
-    hasPower: checkMetric(activity, streamMap, "has_power", "power"),
     hasCadence: checkMetric(activity, streamMap, "has_cadence", "cadence"),
     hasLaps: countLaps(analysis) > 0,
   };

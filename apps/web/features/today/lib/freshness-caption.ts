@@ -28,19 +28,13 @@ export function freshnessCaption(
 /**
  * 有没有可分析的历史。
  *
- * `current_tsb` 永远是个数字——没有负荷历史时它读 0——所以它不能用来证明历史
- * 存在。PMC 的点、活动流与报告的数据日期可以。
+ * 近期活动、健康记录或数据来源提供的截止日期可以证明历史存在；本周没有训练
+ * 并不意味着此前没有可用记录。
  */
 export function hasHistory(input: {
   readonly asOf: string | null;
   readonly activityCount: number;
   readonly wellnessCount: number;
-  readonly pmcCount: number;
 }): boolean {
-  return (
-    input.asOf != null ||
-    input.activityCount > 0 ||
-    input.wellnessCount > 0 ||
-    input.pmcCount > 0
-  );
+  return input.asOf != null || input.activityCount > 0 || input.wellnessCount > 0;
 }

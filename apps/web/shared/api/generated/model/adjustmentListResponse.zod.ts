@@ -6,15 +6,14 @@
  */
 import { z as zod } from 'zod';
 
-export const adjustmentListResponseAdjustmentsItemTriggersDefault = [];
 export const AdjustmentListResponse = zod.object({
   "adjustments": zod.array(zod.object({
   "adjustment_id": zod.string(),
+  "adjustment_pct": zod.number(),
   "created_at": zod.string(),
   "event_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "event_id": zod.string(),
   "event_title": zod.union([zod.string(),zod.null()]).optional(),
-  "load_delta_pct": zod.number(),
   "status": zod.string(),
   "trigger_summary": zod.string(),
   "trigger_type": zod.string(),
@@ -22,7 +21,7 @@ export const AdjustmentListResponse = zod.object({
   "detail": zod.string(),
   "key": zod.string(),
   "label": zod.string()
-})).default(adjustmentListResponseAdjustmentsItemTriggersDefault)
+})).optional()
 }))
 })
 

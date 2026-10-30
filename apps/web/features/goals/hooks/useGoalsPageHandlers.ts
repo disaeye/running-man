@@ -6,9 +6,12 @@ import {
   createGoal,
   updateGoal,
   deleteGoal,
+  createMilestone,
+  updateMilestone,
   toggleMilestone,
 } from "@features/goals/hooks/useGoals";
 import type { Goal, Milestone } from "@shared/types/goals";
+import type { MilestoneDraft } from "@features/goals/hooks/useGoals";
 import type { GoalFormData } from "@features/goals/components/GoalForm";
 
 export interface UseGoalsPageHandlersDeps {
@@ -16,6 +19,7 @@ export interface UseGoalsPageHandlersDeps {
   editingGoal: Goal | null;
   effectiveGoalId: string | null;
   milestones: Milestone[];
+  refreshMilestones: () => Promise<void>;
   setSelectedGoalId: Dispatch<SetStateAction<string | null>>;
   setEditingGoal: Dispatch<SetStateAction<Goal | null>>;
   setShowForm: Dispatch<SetStateAction<boolean>>;
@@ -28,6 +32,7 @@ export interface UseGoalsPageHandlersResult {
   handleAchieve: (goal: Goal) => Promise<void>;
   handleAbandon: (goal: Goal) => Promise<void>;
   handleToggleMilestone: (milestoneId: string) => Promise<void>;
+  handleSaveMilestone: (milestoneId: string | null, draft: MilestoneDraft) => Promise<void>;
   handleOpenCreate: () => void;
 }
 
@@ -39,6 +44,7 @@ export function useGoalsPageHandlers(deps: UseGoalsPageHandlersDeps): UseGoalsPa
     editingGoal,
     effectiveGoalId,
     milestones,
+    refreshMilestones,
     setSelectedGoalId,
     setEditingGoal,
     setShowForm,
@@ -79,8 +85,18 @@ export function useGoalsPageHandlers(deps: UseGoalsPageHandlersDeps): UseGoalsPa
     const ms = milestones.find((m) => m.milestone_id === milestoneId);
     if (!ms) return;
     await toggleMilestone(effectiveGoalId, milestoneId, !ms.achieved);
-    await refresh();
-  }, [effectiveGoalId, milestones, refresh]);
+    await refreshMilestones();
+  }, [effectiveGoalId, milestones, refreshMilestones]);
+
+  const handleSaveMilestone = useCallback(async (milestoneId: string | null, draft: MilestoneDraft) => {
+    if (!effectiveGoalId) throw new Error("请先选择目标");
+    if (milestoneId) {
+      await updateMilestone(effectiveGoalId, milestoneId, draft);
+    } else {
+      await createMilestone(effectiveGoalId, draft);
+    }
+    await refreshMilestones();
+  }, [effectiveGoalId, refreshMilestones]);
 
   const handleOpenCreate = useCallback(() => {
     setEditingGoal(null);
@@ -94,6 +110,7 @@ export function useGoalsPageHandlers(deps: UseGoalsPageHandlersDeps): UseGoalsPa
     handleAchieve,
     handleAbandon,
     handleToggleMilestone,
+    handleSaveMilestone,
     handleOpenCreate,
   };
 }

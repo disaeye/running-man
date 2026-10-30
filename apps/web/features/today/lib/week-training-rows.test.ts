@@ -79,7 +79,7 @@ describe("buildWeekTrainingRows", () => {
       dayKey: "2026-10-26",
       dayLabel: "周一",
       title: "跑步 40 分钟",
-      metric: "28 TSS",
+      metric: "40 分钟",
       isToday: false,
       isDone: true,
     });
@@ -87,7 +87,7 @@ describe("buildWeekTrainingRows", () => {
       dayKey: "2026-10-27",
       dayLabel: "周二",
       title: "有氧耐力 60 分钟",
-      metric: "今天 · 62",
+      metric: "今天 · 计划中",
       isToday: true,
       isDone: false,
     });
@@ -95,7 +95,7 @@ describe("buildWeekTrainingRows", () => {
       dayKey: "2026-10-29",
       dayLabel: "周四",
       title: "阈值间歇 5×1km",
-      metric: "78 TSS",
+      metric: "计划中",
       isToday: false,
       isDone: false,
     });

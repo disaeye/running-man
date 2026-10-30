@@ -154,26 +154,24 @@ export function DemoWorkoutSteps({
 }
 
 /**
- * 一节课的步骤摘要：步骤列表加下方一行「预估耗时 / 预计负荷」。
+ * 一节课的步骤摘要：步骤列表加下方一行预估耗时。
  */
 export function DemoWorkoutStepsCard({
   segments,
   highlightIndex,
   durationLabel,
-  loadLabel,
   testId,
 }: {
   readonly segments: ReadonlyArray<DemoStep>;
   readonly highlightIndex?: number;
   readonly durationLabel?: string | null;
-  readonly loadLabel?: string | null;
   readonly testId?: string;
 }) {
   if (segments.length === 0) return null;
   return (
     <div data-testid={testId}>
       <DemoWorkoutSteps segments={segments} highlightIndex={highlightIndex} />
-      {durationLabel || loadLabel ? (
+      {durationLabel ? (
         <div className="mt-3 flex items-center gap-5 border-t border-border-subtle pt-3">
           {durationLabel ? (
             <div>
@@ -181,12 +179,6 @@ export function DemoWorkoutStepsCard({
               <p className="font-mono text-title2 tabular-nums text-accent">
                 {durationLabel}
               </p>
-            </div>
-          ) : null}
-          {loadLabel ? (
-            <div>
-              <p className="text-caption1 text-text-muted">预计负荷</p>
-              <p className="font-mono text-title2 tabular-nums text-accent">{loadLabel}</p>
             </div>
           ) : null}
         </div>

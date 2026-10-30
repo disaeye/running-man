@@ -47,6 +47,7 @@ import {
   PlanGenerateResponse,
   PlanQualityResponse,
   PublicActivityResponse,
+  RaceFlagResponse,
   RacePredictionResponse,
   RaceResultResponse,
   ReadinessResponse,
@@ -123,6 +124,7 @@ import type {
   ListAthleteNotificationsApiV1NotificationsGetParams,
   ListEventsApiV1CalendarGetParams,
   ListExercisesApiV1StrengthExercisesGetParams,
+  ListStrengthActivitiesApiV1StrengthWorkoutsGetParams,
   ListSyncRunsApiV1IntegrationsSyncRunsGetParams,
   ListTemplatesApiV1WorkoutsTemplatesGetParams,
   ListWeightApiV1WeightGetParams,
@@ -138,6 +140,7 @@ import type {
   PlanGenerateRequest,
   PmcPointResponse,
   PredictRequest,
+  RaceFlagUpdate,
   RaceResultCreate,
   RecomputeRequest,
   RegisterRequest,
@@ -149,7 +152,9 @@ import type {
   ShoeCreate,
   ShoeUpdate,
   StreamPoint,
+  StrengthActivityResponse,
   SyncRunResponse,
+  ThresholdHistoryEntry,
   TrainingPhaseResponse,
   WebhookPayload,
   WeeklyProgressResponse,
@@ -1017,6 +1022,58 @@ export const getLapsApiV1ActivitiesActivityIdLapsGet = async (activityId: string
 
 
 
+export type updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponse200 = {
+  data: RaceFlagResponse
+  status: 200
+}
+
+export type updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponseSuccess = (updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponse200) & {
+  headers: Headers;
+};
+export type updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponseError = (updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponse422) & {
+  headers: Headers;
+};
+
+export type updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponse = (updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponseSuccess | updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponseError)
+
+export const getUpdateRaceFlagApiV1ActivitiesActivityIdRacePatchUrl = (activityId: string,) => {
+
+
+
+
+  return `/api/v1/activities/${activityId}/race`
+}
+
+/**
+ * @summary Update Race Flag
+ */
+export const updateRaceFlagApiV1ActivitiesActivityIdRacePatch = async (activityId: string,
+    raceFlagUpdate: RaceFlagUpdate, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getUpdateRaceFlagApiV1ActivitiesActivityIdRacePatchUrl(activityId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(raceFlagUpdate)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? RaceFlagResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as updateRaceFlagApiV1ActivitiesActivityIdRacePatchResponse
+}
+
+
+
 export type restoreActivityApiV1ActivitiesActivityIdRestorePostResponse200 = {
   data: RestoreResult
   status: 200
@@ -1454,6 +1511,49 @@ export const physiologyApiV1AthletesMePhysiologyGet = async ( options?: RequestI
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? PhysiologyResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as physiologyApiV1AthletesMePhysiologyGetResponse
+}
+
+
+
+export type thresholdHistoryApiV1AthletesMeThresholdsGetResponse200 = {
+  data: ThresholdHistoryEntry[]
+  status: 200
+}
+
+export type thresholdHistoryApiV1AthletesMeThresholdsGetResponseSuccess = (thresholdHistoryApiV1AthletesMeThresholdsGetResponse200) & {
+  headers: Headers;
+};
+;
+
+export type thresholdHistoryApiV1AthletesMeThresholdsGetResponse = (thresholdHistoryApiV1AthletesMeThresholdsGetResponseSuccess)
+
+export const getThresholdHistoryApiV1AthletesMeThresholdsGetUrl = () => {
+
+
+
+
+  return `/api/v1/athletes/me/thresholds`
+}
+
+/**
+ * @summary Threshold History
+ */
+export const thresholdHistoryApiV1AthletesMeThresholdsGet = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<thresholdHistoryApiV1AthletesMeThresholdsGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getThresholdHistoryApiV1AthletesMeThresholdsGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: thresholdHistoryApiV1AthletesMeThresholdsGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as thresholdHistoryApiV1AthletesMeThresholdsGetResponse
 }
 
 
@@ -5091,10 +5191,7 @@ export const getDetectAdjustmentForEventApiV1PlanAdjustmentsDetectPostUrl = () =
 }
 
 /**
- * Check one planned session against the athlete's own data.
- *
- * Nothing is written to the calendar here: a proposal is recorded so the
- * athlete can compare the original and the adjusted session before deciding.
+ * Check a planned session and record a proposal for review.
  * @summary Detect Adjustment For Event
  */
 export const detectAdjustmentForEventApiV1PlanAdjustmentsDetectPost = async (detectionRequest: DetectionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse> => {
@@ -6222,6 +6319,63 @@ export const updateSetApiV1StrengthWorkoutExercisesWorkoutExerciseIdSetsSetIdPut
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? SetResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as updateSetApiV1StrengthWorkoutExercisesWorkoutExerciseIdSetsSetIdPutResponse
+}
+
+
+
+export type listStrengthActivitiesApiV1StrengthWorkoutsGetResponse200 = {
+  data: StrengthActivityResponse[]
+  status: 200
+}
+
+export type listStrengthActivitiesApiV1StrengthWorkoutsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listStrengthActivitiesApiV1StrengthWorkoutsGetResponseSuccess = (listStrengthActivitiesApiV1StrengthWorkoutsGetResponse200) & {
+  headers: Headers;
+};
+export type listStrengthActivitiesApiV1StrengthWorkoutsGetResponseError = (listStrengthActivitiesApiV1StrengthWorkoutsGetResponse422) & {
+  headers: Headers;
+};
+
+export type listStrengthActivitiesApiV1StrengthWorkoutsGetResponse = (listStrengthActivitiesApiV1StrengthWorkoutsGetResponseSuccess | listStrengthActivitiesApiV1StrengthWorkoutsGetResponseError)
+
+export const getListStrengthActivitiesApiV1StrengthWorkoutsGetUrl = (params?: ListStrengthActivitiesApiV1StrengthWorkoutsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/strength/workouts?${stringifiedParams}` : `/api/v1/strength/workouts`
+}
+
+/**
+ * @summary List Strength Activities
+ */
+export const listStrengthActivitiesApiV1StrengthWorkoutsGet = async (params?: ListStrengthActivitiesApiV1StrengthWorkoutsGetParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<listStrengthActivitiesApiV1StrengthWorkoutsGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getListStrengthActivitiesApiV1StrengthWorkoutsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listStrengthActivitiesApiV1StrengthWorkoutsGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listStrengthActivitiesApiV1StrengthWorkoutsGetResponse
 }
 
 

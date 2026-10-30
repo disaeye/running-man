@@ -10,7 +10,6 @@ export interface PlanPhase {
   readonly label: string;
   readonly start_date: string;
   readonly end_date: string;
-  readonly target_weekly_tss: number | null;
   readonly target_weekly_distance_m: number | null;
   readonly is_current: boolean;
 }
@@ -21,7 +20,6 @@ export interface PlanSession {
   readonly title: string;
   readonly training_type: string | null;
   readonly duration_min: number | null;
-  readonly predicted_tss: number | null;
   readonly predicted_distance_m: number | null;
   readonly pace_min_s_km: number | null;
   readonly pace_max_s_km: number | null;
@@ -47,9 +45,7 @@ export interface ActivePlan {
   readonly week_start: string | null;
   readonly week_end: string | null;
   readonly week_sessions: readonly PlanSession[];
-  readonly week_planned_tss: number | null;
   readonly week_planned_distance_m: number | null;
-  readonly week_actual_tss: number | null;
   readonly week_actual_distance_m: number | null;
   readonly phase_week_number: number | null;
   readonly phase_total_weeks: number | null;
@@ -104,7 +100,6 @@ function mapActivePlan(raw: Generated.ActivePlanResponseOutput): ActivePlan {
       label: phase.label,
       start_date: phase.start_date,
       end_date: phase.end_date,
-      target_weekly_tss: phase.target_weekly_tss ?? null,
       target_weekly_distance_m: phase.target_weekly_distance_m ?? null,
       is_current: phase.is_current,
     })),
@@ -114,7 +109,6 @@ function mapActivePlan(raw: Generated.ActivePlanResponseOutput): ActivePlan {
           label: raw.current_phase.label,
           start_date: raw.current_phase.start_date,
           end_date: raw.current_phase.end_date,
-          target_weekly_tss: raw.current_phase.target_weekly_tss ?? null,
           target_weekly_distance_m: raw.current_phase.target_weekly_distance_m ?? null,
           is_current: raw.current_phase.is_current,
         }
@@ -127,15 +121,12 @@ function mapActivePlan(raw: Generated.ActivePlanResponseOutput): ActivePlan {
       title: session.title,
       training_type: session.training_type ?? null,
       duration_min: session.duration_min ?? null,
-      predicted_tss: session.predicted_tss ?? null,
       predicted_distance_m: session.predicted_distance_m ?? null,
       pace_min_s_km: session.pace_min_s_km ?? null,
       pace_max_s_km: session.pace_max_s_km ?? null,
       is_completed: session.is_completed,
     })),
-    week_planned_tss: raw.week_planned_tss ?? null,
     week_planned_distance_m: raw.week_planned_distance_m ?? null,
-    week_actual_tss: raw.week_actual_tss ?? null,
     week_actual_distance_m: raw.week_actual_distance_m ?? null,
     phase_week_number: raw.phase_week_number ?? null,
     phase_total_weeks: raw.phase_total_weeks ?? null,

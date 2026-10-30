@@ -49,9 +49,6 @@ export function PlanAdherenceCard() {
           {status}
         </span>
       </div>
-      <p className="mt-1 text-footnote text-text-secondary">
-        完成 {Math.round(a.completed_tss_7d)} / 计划 {Math.round(a.planned_tss_7d)} TSS
-      </p>
       {hasPlan && (
         <div
           className="mt-3 h-2 overflow-hidden rounded-full bg-surface-sunken"

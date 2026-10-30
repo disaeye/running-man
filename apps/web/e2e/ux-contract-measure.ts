@@ -30,7 +30,7 @@ export const UTILITY_PREFIXES: readonly string[] = [
 ];
 
 export const MIN_TARGET_HEIGHT = 40;
-export const TARGET_SELECTOR = 'button, [role="button"], [role="combobox"], select, input';
+export const TARGET_SELECTOR = 'button, [role="button"], [role="combobox"], select, input:not([type="checkbox"]):not([type="radio"]), label:has(input[type="checkbox"]), label:has(input[type="radio"])';
 
 /**
  * Charts and SWR revalidations mount after `networkidle`, as in the visual

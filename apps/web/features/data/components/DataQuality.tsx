@@ -51,7 +51,6 @@ export function DataQuality() {
   const metrics = [
     ["心率", activities.with_hr, activities.total_activities],
     ["GPS", activities.with_gps, activities.total_activities],
-    ["功率", activities.with_power, activities.total_activities],
     ["流数据", activities.with_streams, activities.total_activities],
     ["睡眠", coverage.wellness.sleep_days_28d, 28],
     ["静息心率", coverage.wellness.rhr_days_28d, 28],

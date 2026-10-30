@@ -59,19 +59,6 @@ function intensitySignal(activity: ActivitySummary): Signal | null {
   };
 }
 
-function tssSignal(activity: ActivitySummary): Signal | null {
-  const tss = activity.tss;
-  if (tss == null) return null;
-  const fill = Math.min(100, Math.round((tss / 300) * 100));
-  if (tss < 100) {
-    return { id: "tss", label: "负荷", value: `${Math.round(tss)}`, fill, tone: "positive" };
-  }
-  if (tss < 250) {
-    return { id: "tss", label: "负荷", value: `${Math.round(tss)}`, fill, tone: "neutral" };
-  }
-  return { id: "tss", label: "负荷", value: `${Math.round(tss)}`, fill, tone: "warning" };
-}
-
 function durationSignal(activity: ActivitySummary): Signal | null {
   const s = activity.duration_s;
   if (s == null || s <= 0) return null;
@@ -126,7 +113,6 @@ function buildSignals(activity: ActivitySummary, streams: StreamMap): Signal[] {
   const out: Signal[] = [];
   for (const s of [
     intensitySignal(activity),
-    tssSignal(activity),
     durationSignal(activity),
     driftSignal(streams),
   ]) {

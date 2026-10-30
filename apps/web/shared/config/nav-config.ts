@@ -16,14 +16,14 @@ export interface NavEntry {
 
 /**
  * Primary navigation — single source of truth for both PC sidebar and mobile tab bar.
- * 档案是主要入口，账户和配置选项集中在设置页。
+ * 步迹 uses 今天、训练、分析、目标、我的 five-tab navigation.
  */
 export const NAV_ENTRIES: readonly NavEntry[] = [
-  { id: "today",    label: "首页", href: "/",            Icon: LayoutDashboard, mobile: "tab" },
-  { id: "calendar", label: "日历", href: "/calendar",    Icon: Calendar,        mobile: "tab" },
+  { id: "today",    label: "今天", href: "/",            Icon: LayoutDashboard, mobile: "tab" },
+  { id: "calendar", label: "训练", href: "/calendar",    Icon: Calendar,        mobile: "tab" },
   { id: "analysis", label: "分析", href: "/analysis",    Icon: BarChart3,       mobile: "tab" },
   { id: "goals",    label: "目标", href: "/goals",       Icon: Target,          mobile: "tab" },
-  { id: "profile",  label: "档案", href: "/profile",     Icon: User,            mobile: "tab" },
+  { id: "profile",  label: "我的", href: "/profile",     Icon: User,            mobile: "tab" },
 ] as const;
 
 /** Entries shown as bottom tabs on mobile (max 5; iOS "More" pattern handles overflow). */

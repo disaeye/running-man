@@ -7,7 +7,6 @@ import { Button } from "@shared/ui/button";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 import type { ActivitySummary } from "@shared/types/activity";
 import { toISODate } from "@shared/lib/format";
-import { LOAD_TIER_CLASS, LOAD_TIER_LABEL, LOAD_TIERS } from "@features/plan/lib/load-tier";
 import { buildMonthWeeks } from "@features/plan/lib/month-grid";
 import { MonthDayCell } from "@features/plan/components/MonthDayCell";
 import { activityLocalDay, athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
@@ -26,23 +25,7 @@ const MONTH_NAMES = [
   "七月", "八月", "九月", "十月", "十一月", "十二月",
 ];
 
-const sumTss = (events: CalendarEventDTO[] | undefined): number =>
-  (events ?? []).reduce((sum, ev) => sum + (ev.predicted_tss ?? 0), 0);
 
-/** 三档图例：色块与格子里的负荷条共用同一份 token 类名。 */
-function LoadLegend() {
-  return (
-    <span className="inline-flex items-center gap-2" aria-label="负荷密度图例">
-      <span className="text-caption1 text-text-muted">TSS</span>
-      {LOAD_TIERS.map((tier) => (
-        <span key={tier} className="inline-flex items-center gap-1">
-          <span className={`h-2.5 w-4 rounded-sm ${LOAD_TIER_CLASS[tier]}`} aria-hidden />
-          <span className="text-caption1 text-text-muted">{LOAD_TIER_LABEL[tier]}</span>
-        </span>
-      ))}
-    </span>
-  );
-}
 
 export function PlanMonthView({
   events,
@@ -70,7 +53,6 @@ export function PlanMonthView({
         title={`${MONTH_NAMES[month]} ${year}`}
         trailing={
           <>
-            <LoadLegend />
             <Button variant="ghost" onClick={() => onNavMonth(-1)} aria-label="上个月">
               <ChevronLeft className="size-4" aria-hidden />
             </Button>
@@ -101,8 +83,8 @@ export function PlanMonthView({
           }
           const dayEvents = eventsByDate.get(iso) ?? [];
           const dayActivities = completedActivities?.get(iso) ?? [];
-          const plannedTss = sumTss(dayEvents);
-          const actualTss = dayActivities.reduce((sum, a) => sum + (a.tss ?? 0), 0);
+          const plannedMinutes = dayEvents.reduce((sum, event) => sum + (event.workout_prescription?.duration_min ?? 0), 0);
+          const actualMinutes = dayActivities.reduce((sum, activity) => sum + (activity.duration_s ?? 0), 0) / 60;
           const isCompleted = dayActivities.length > 0 || (dayEvents.length > 0 && dayEvents.every((e) => e.done));
           return (
             <MonthDayCell
@@ -113,8 +95,7 @@ export function PlanMonthView({
               isRace={dayEvents.some((event) => event.training_type === "race")}
               isCompleted={isCompleted}
               hasPlanned={dayEvents.length > 0}
-              // 计划与实际都算当天的负荷，取大的那个：负荷条和数字同源。
-              load={Math.max(plannedTss, actualTss)}
+              durationMinutes={Math.round(Math.max(plannedMinutes, actualMinutes))}
               onSelect={onSelectDate}
             />
           );

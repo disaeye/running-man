@@ -116,7 +116,7 @@ export function DataSources() {
                   数据质量与完整度检查
                 </h3>
                 <p className="text-caption1 text-text-muted">
-                  核对心率、配速、功率、高度等关键指标的异常及覆盖率。
+                  核对心率、配速、GPS、高度等关键数据的异常及覆盖率。
                 </p>
               </div>
               <DataQuality />

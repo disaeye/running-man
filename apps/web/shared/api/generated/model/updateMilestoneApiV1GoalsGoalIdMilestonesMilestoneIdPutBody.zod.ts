@@ -11,9 +11,11 @@ import { z as zod } from 'zod';
 export const UpdateMilestoneApiV1GoalsGoalIdMilestonesMilestoneIdPutBody = zod.object({
   "achieved": zod.union([zod.boolean(),zod.null()]).optional(),
   "achieved_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
+  "result_text": zod.union([zod.string(),zod.null()]).optional(),
   "target_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "target_value": zod.union([zod.number(),zod.null()]).optional(),
-  "title": zod.union([zod.string().min(1),zod.null()]).optional()
+  "title": zod.union([zod.string().min(1),zod.null()]).optional(),
+  "unit": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export type UpdateMilestoneApiV1GoalsGoalIdMilestonesMilestoneIdPutBody = zod.input<typeof UpdateMilestoneApiV1GoalsGoalIdMilestonesMilestoneIdPutBody>;

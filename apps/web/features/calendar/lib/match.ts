@@ -2,17 +2,16 @@ import type { CalendarEventDTO } from "../components/types";
 import type { ActivitySummary } from "@shared/types/activity";
 import { activityLocalDay, DEFAULT_TIMEZONE } from "@shared/lib/training-day";
 
-/** Client-side planned-vs-actual match status. Mirrors domain/calendar/match.py. */
+/** 按实际时长与处方时长比较计划完成状态。 */
 export type MatchStatus = "completed" | "partial" | "missed";
 
 export interface EventMatch {
   event_id: string;
   status: MatchStatus;
-  actual_tss: number | null;
   actual_activity_id: string | null;
 }
 
-/** Match a single planned event to nearby activities (±1 day, same sport). */
+/** 将计划活动与前后一天内、运动类型相同的实际活动匹配。 */
 export function matchEventToActivity(
   event: CalendarEventDTO,
   activities: ActivitySummary[],
@@ -21,35 +20,23 @@ export function matchEventToActivity(
 ): EventMatch {
   const plannedDay = activityLocalDay(event.start_time, timezone);
   const plannedSport = event.sport_type ?? "";
-  const plannedTss = event.predicted_tss ?? null;
-
   const candidate = findBestMatch(plannedDay, plannedSport, activities, timezone);
 
   if (!candidate) {
     return {
       event_id: event.event_id,
       status: "missed",
-      actual_tss: null,
       actual_activity_id: null,
     };
   }
 
-  const actualTss = candidate.tss ?? 0;
-  if (plannedTss != null && plannedTss > 0) {
-    const ratio = actualTss / plannedTss;
-    const withinTolerance = Math.abs(1.0 - ratio) <= tolerance;
-    return {
-      event_id: event.event_id,
-      status: withinTolerance ? "completed" : "partial",
-      actual_tss: actualTss,
-      actual_activity_id: candidate.activity_id,
-    };
-  }
-
+  const durationRatio = event.workout_prescription?.duration_min != null && candidate.duration_s != null
+    ? candidate.duration_s / 60 / event.workout_prescription.duration_min
+    : null;
+  const withinTolerance = durationRatio == null || Math.abs(1 - durationRatio) <= tolerance;
   return {
     event_id: event.event_id,
-    status: "completed",
-    actual_tss: actualTss,
+    status: withinTolerance ? "completed" : "partial",
     actual_activity_id: candidate.activity_id,
   };
 }
@@ -85,13 +72,11 @@ function sportMatches(planned: string, actual: string): boolean {
   const actualL = actual.toLowerCase();
   if (plannedL === actualL) return true;
   const runVariants = new Set(["run", "trailrun", "virtualrun"]);
-  const rideVariants = new Set(["ride", "virtualride"]);
   if (runVariants.has(plannedL) && runVariants.has(actualL)) return true;
-  if (rideVariants.has(plannedL) && rideVariants.has(actualL)) return true;
   return false;
 }
 
-/** Compute match status for a list of events against activities. */
+/** 计算一组计划活动与实际活动的匹配状态。 */
 export function computeWeekMatches(
   events: CalendarEventDTO[],
   activities: ActivitySummary[],
@@ -112,13 +97,13 @@ export function computeWeekMatches(
   return result;
 }
 
-/** Check if an event is synced from Intervals.icu. */
+/** 判断计划活动是否来自 Intervals.icu。 */
 export function isIntervalsEvent(event: CalendarEventDTO): boolean {
   return !!event.external_id?.startsWith("intervals:");
 }
 
-/** Whether an event is a planned workout in the past. */
+/** 判断计划活动是否已经过期。 */
 export function isPastPlanned(event: CalendarEventDTO, todayIso: string): boolean {
   const eventDay = event.start_time.slice(0, 10);
-  return eventDay < todayIso && event.predicted_tss != null && event.predicted_tss > 0;
+  return eventDay < todayIso && event.workout_prescription != null;
 }
