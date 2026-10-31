@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { login } from "@shared/lib/auth";
 import { Button } from "@shared/ui/button";
@@ -11,6 +11,7 @@ import { classifyAuthError, type AuthErrorState } from "@features/auth/lib/auth-
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState<AuthErrorState | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -68,19 +69,35 @@ export function LoginForm() {
 
       <label className="flex flex-col gap-1.5">
         <span className="text-caption1 text-text-muted">密码</span>
-        <Input
-          name="password"
-          type="password"
-          placeholder="至少 8 位"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          minLength={8}
-          autoComplete="current-password"
-          aria-invalid={passwordError != null}
-          aria-describedby={passwordError ? "login-password-error" : undefined}
-          data-testid="login-password"
-        />
+        <div className="relative">
+          <Input
+            name="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="至少 8 位"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            minLength={8}
+            autoComplete="current-password"
+            aria-invalid={passwordError != null}
+            aria-describedby={passwordError ? "login-password-error" : undefined}
+            id="login-password"
+            data-testid="login-password"
+            className="pr-12"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={showPassword ? "隐藏密码" : "显示密码"}
+            aria-pressed={showPassword}
+            aria-controls="login-password"
+            onClick={() => setShowPassword((visible) => !visible)}
+            className="absolute right-0 top-0 text-text-muted"
+          >
+            {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+          </Button>
+        </div>
         {passwordError && (
           <span id="login-password-error" className="text-caption1 text-error" role="alert">
             {passwordError.message}

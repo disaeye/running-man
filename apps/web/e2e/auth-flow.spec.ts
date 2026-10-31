@@ -12,6 +12,29 @@ test.describe("auth", () => {
     await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
+  test("login password can be shown and hidden without losing its value", async ({ page }) => {
+    await page.goto("/login");
+    const password = page.locator('input[name="password"]');
+    const toggle = page.getByRole("button", { name: "显示密码" });
+    await password.fill("not-a-real-password");
+
+    await expect(password).toHaveAttribute("type", "password");
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await toggle.click();
+
+    await expect(password).toHaveAttribute("type", "text");
+    await expect(password).toHaveValue("not-a-real-password");
+    await expect(page.getByRole("button", { name: "隐藏密码" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await page.getByRole("button", { name: "隐藏密码" }).focus();
+    await page.keyboard.press("Space");
+    await expect(password).toHaveAttribute("type", "password");
+    await expect(password).toHaveValue("not-a-real-password");
+  });
+
   test("login form POSTs (not GETs) — CDN hydration regression guard", async ({ page }) => {
     let reqMethod = "";
     await page.route("**/api/v1/auth/login", async (route) => {
