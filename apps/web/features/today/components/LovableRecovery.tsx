@@ -20,5 +20,5 @@ export function LovableRecovery({ readiness, score, conclusionTestId, readingsTe
 }
 
 function Chip({ label, reading, value, unit }: { label: string; reading?: { value: number; baseline: number | null } | null; value?: string; unit?: string }) {
-  return <div className="rounded-xl bg-secondary p-2.5"><div className="text-[11px] text-muted-foreground">{label}</div><div className={reading?.value == null && !value ? "text-sm text-muted-foreground" : "num text-xl font-semibold"}>{value ?? (reading?.value != null ? Math.round(reading.value) : "未记录")}{reading?.value != null && unit ? <span className="ml-0.5 text-[10px] text-muted-foreground">{unit}</span> : null}</div>{reading?.baseline != null ? <div className="text-[10px] text-muted-foreground">基线 {reading.baseline}</div> : null}</div>;
+  return <div className="rounded-xl bg-secondary p-2.5"><div className="text-caption1 text-muted-foreground">{label}</div><div className={reading?.value == null && !value ? "text-sm text-muted-foreground" : "num text-xl font-semibold"}>{value ?? (reading?.value != null ? Math.round(reading.value) : "未记录")}{reading?.value != null && unit ? <span className="ml-0.5 text-xs text-muted-foreground">{unit}</span> : null}</div>{reading?.baseline != null ? <div className="text-caption1 text-muted-foreground">基线 {reading.baseline}</div> : null}</div>;
 }

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Check, Circle, Pencil, Plus } from "lucide-react";
 import { Badge } from "@shared/ui/Badge";
 import { Button } from "@shared/ui/button";
-import { Section } from "@shared/ui/Section";
 import { formatDate } from "@shared/lib/format";
 import type { Milestone } from "@shared/types/goals";
 import type { MilestoneDraft } from "@features/goals/hooks/useGoals";
@@ -58,24 +57,9 @@ export function MilestoneList({
   const achieved = milestones.filter((milestone) => milestone.achieved);
 
   return (
-    <Section
-      title="里程碑"
-      action={(
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={saving}
-          onClick={() => {
-            setCreating(true);
-            setEditingId(null);
-            setError(null);
-          }}
-        >
-          <Plus aria-hidden="true" className="size-4" /> 添加里程碑
-        </Button>
-      )}
-    >
-      <div className="space-y-4 p-5">
+    <div>
+      <div className="mb-3 flex items-center justify-between"><h3 className="eyebrow">里程碑</h3><Button variant="ghost" size="sm" disabled={saving} onClick={() => { setCreating(true); setEditingId(null); setError(null); }}><Plus aria-hidden="true" className="size-4" />添加</Button></div>
+      <div className="space-y-3">
         {error ? <p role="alert" className="text-caption1 text-error">{error}</p> : null}
         {milestones.length === 0 && !creating ? (
           <p className="text-caption1 text-text-muted">还没有里程碑</p>
@@ -135,7 +119,7 @@ export function MilestoneList({
           </div>
         ) : null}
       </div>
-    </Section>
+    </div>
   );
 }
 

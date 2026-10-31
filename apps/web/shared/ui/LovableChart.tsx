@@ -20,5 +20,5 @@ export function LovableChart({ lines = [], bars, h = 140, zero = false }: {
 }
 
 export function LovableLegend({ items }: { items: { label: string; cls: string }[] }) {
-  return <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">{items.map((item) => <span key={item.label} className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${item.cls}`} />{item.label}</span>)}</div>;
+  return <div className="mt-2 flex flex-wrap gap-3 text-caption1 text-muted-foreground">{items.map((item) => <span key={item.label} className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${item.cls}`} />{item.label}</span>)}</div>;
 }

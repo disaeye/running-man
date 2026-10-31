@@ -40,12 +40,12 @@ export function Stat({ label, value, unit, sub, tone = "" }: {
   sub?: ReactNode;
   tone?: string;
 }) {
-  return <div className="min-w-0"><div className="text-[11px] text-muted-foreground">{label}</div><div className={`num text-2xl font-semibold leading-tight ${tone}`}>{value}{unit ? <span className="ml-0.5 text-xs font-normal text-muted-foreground">{unit}</span> : null}</div>{sub ? <div className="text-[11px] text-muted-foreground">{sub}</div> : null}</div>;
+  return <div className="min-w-0"><div className="text-caption1 text-muted-foreground">{label}</div><div className={`num text-2xl font-semibold leading-tight ${tone}`}>{value}{unit ? <span className="ml-0.5 text-xs font-normal text-muted-foreground">{unit}</span> : null}</div>{sub ? <div className="text-caption1 text-muted-foreground">{sub}</div> : null}</div>;
 }
 
 export function Tag({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "primary" | "warn" | "bad" | "info" }) {
   const colors = { muted: "bg-secondary text-muted-foreground", primary: "bg-primary/15 text-accent-strong", warn: "bg-warn/15 text-warn", bad: "bg-destructive/15 text-destructive", info: "bg-fitness/15 text-fitness" };
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${colors[tone]}`}>{children}</span>;
+  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption1 font-medium ${colors[tone]}`}>{children}</span>;
 }
 
 export function Segmented<T extends string>({ value, options, onChange }: { value: T; options: readonly (T | { value: T; label: string })[]; onChange: (value: T) => void }) {

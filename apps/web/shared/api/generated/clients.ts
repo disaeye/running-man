@@ -67,6 +67,7 @@ import {
   WeightDeleteResponse,
   WeightEntryResponse,
   WeightListResponse,
+  WellnessEntryResponse,
   WorkoutCreateResponse,
   WorkoutExerciseResponse,
   WorkoutTemplateResponse,
@@ -159,7 +160,7 @@ import type {
   WebhookPayload,
   WeeklyProgressResponse,
   WeightUpsert,
-  WellnessEntryResponse,
+  WellnessRatingUpdate,
   WorkoutCreate,
   WorkoutExerciseCreate,
   WorkoutExerciseUpdate,
@@ -6800,6 +6801,57 @@ export const getWellnessApiV1WellnessGet = async (params: GetWellnessApiV1Wellne
 
   const data: getWellnessApiV1WellnessGetResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getWellnessApiV1WellnessGetResponse
+}
+
+
+
+export type updateWellnessRatingApiV1WellnessRatingsPutResponse200 = {
+  data: WellnessEntryResponse
+  status: 200
+}
+
+export type updateWellnessRatingApiV1WellnessRatingsPutResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateWellnessRatingApiV1WellnessRatingsPutResponseSuccess = (updateWellnessRatingApiV1WellnessRatingsPutResponse200) & {
+  headers: Headers;
+};
+export type updateWellnessRatingApiV1WellnessRatingsPutResponseError = (updateWellnessRatingApiV1WellnessRatingsPutResponse422) & {
+  headers: Headers;
+};
+
+export type updateWellnessRatingApiV1WellnessRatingsPutResponse = (updateWellnessRatingApiV1WellnessRatingsPutResponseSuccess | updateWellnessRatingApiV1WellnessRatingsPutResponseError)
+
+export const getUpdateWellnessRatingApiV1WellnessRatingsPutUrl = () => {
+
+
+
+
+  return `/api/v1/wellness/ratings`
+}
+
+/**
+ * @summary Update Wellness Rating
+ */
+export const updateWellnessRatingApiV1WellnessRatingsPut = async (wellnessRatingUpdate: WellnessRatingUpdate, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<updateWellnessRatingApiV1WellnessRatingsPutResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getUpdateWellnessRatingApiV1WellnessRatingsPutUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wellnessRatingUpdate)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? WellnessEntryResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as updateWellnessRatingApiV1WellnessRatingsPutResponse
 }
 
 

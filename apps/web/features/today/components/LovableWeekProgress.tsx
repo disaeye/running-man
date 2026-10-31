@@ -21,6 +21,6 @@ export function LovableWeekProgress({ week, activities, events, timezone }: {
     const key = day.toISOString().slice(0, 10);
     const done = activities.some((activity) => new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date(activity.start_time)) === key);
     const planned = events.some((event) => new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date(event.start_time)) === key);
-    return <div key={key} className="flex flex-col items-center gap-1 text-[11px] text-muted-foreground"><span className={`h-3 w-3 rounded-full ${done ? "bg-primary" : planned ? "border border-muted-foreground/40" : "bg-secondary"}`} />{"一二三四五六日"[index]}</div>;
+    return <div key={key} className="flex flex-col items-center gap-1 text-caption1 text-muted-foreground"><span className={`h-3 w-3 rounded-full ${done ? "bg-primary" : planned ? "border border-muted-foreground/40" : "bg-secondary"}`} />{"一二三四五六日"[index]}</div>;
   })}</div></PageCard>;
 }

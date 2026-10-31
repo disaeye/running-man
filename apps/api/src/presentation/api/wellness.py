@@ -4,6 +4,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.wellness import WellnessRepo
@@ -17,6 +18,16 @@ from presentation.auth.deps import get_current_athlete
 
 router = APIRouter(prefix="/wellness", tags=["wellness"])
 
+
+def get_wellness_repo() -> WellnessRepo:
+    return WellnessRepo()
+
+
+class WellnessRatingUpdate(BaseModel):
+    day: date
+    soreness: int | None = Field(default=None, ge=0, le=100)
+
+
 SLEEP_TARGET_SECS = 7 * 3600  # 7-hour target per night
 MIN_SAMPLES_FOR_STDEV = 2
 
@@ -29,6 +40,16 @@ async def get_wellness(
 ) -> list[WellnessEntryResponse]:
     rows = await WellnessRepo().list_range(athlete.id, start, end)
     return [WellnessEntryResponse.model_validate(row) for row in rows]
+
+
+@router.put("/ratings", response_model=WellnessEntryResponse)
+async def update_wellness_rating(
+    payload: WellnessRatingUpdate,
+    athlete: Annotated[Athlete, Depends(get_current_athlete)],
+    repo: Annotated[WellnessRepo, Depends(get_wellness_repo)],
+) -> WellnessEntryResponse:
+    row = await repo.update_soreness(athlete.id, payload.day, payload.soreness)
+    return WellnessEntryResponse.model_validate(row)
 
 
 async def _fetch_sleep_data(athlete_id: UUID, start: date, end: date) -> list[dict[str, object]]:

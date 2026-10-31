@@ -10930,6 +10930,33 @@
         "title": "WellnessEntryResponse",
         "type": "object"
       },
+      "WellnessRatingUpdate": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "soreness": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soreness"
+          }
+        },
+        "required": [
+          "day"
+        ],
+        "title": "WellnessRatingUpdate",
+        "type": "object"
+      },
       "WellnessReadingResponse": {
         "description": "One wellness reading of the day, with the athlete's own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"\u672a\u8bb0\u5f55\" instead of showing a zero.",
         "properties": {
@@ -17554,6 +17581,47 @@
           }
         },
         "summary": "Get Wellness",
+        "tags": [
+          "wellness"
+        ]
+      }
+    },
+    "/api/v1/wellness/ratings": {
+      "put": {
+        "operationId": "update_wellness_rating_api_v1_wellness_ratings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WellnessRatingUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WellnessEntryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Wellness Rating",
         "tags": [
           "wellness"
         ]

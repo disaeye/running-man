@@ -253,6 +253,7 @@ export * from './updateSetApiV1StrengthWorkoutExercisesWorkoutExerciseIdSetsSetI
 export * from './updateSettingsApiV1IntegrationsSourceSettingsPutBody.zod';
 export * from './updateShoeApiV1GearShoesShoeIdPutBody.zod';
 export * from './updateTemplateApiV1WorkoutsTemplatesTemplateIdPutBody.zod';
+export * from './updateWellnessRatingApiV1WellnessRatingsPutBody.zod';
 export * from './updateWorkoutExerciseApiV1StrengthWorkoutExercisesWorkoutExerciseIdPutBody.zod';
 export * from './uploadActivityApiV1ActivitiesUploadPostBody.zod';
 export * from './upsertWeightApiV1WeightPostBody.zod';
@@ -266,6 +267,7 @@ export * from './weightListResponse.zod';
 export * from './weightTrendResponse.zod';
 export * from './weightUpsert.zod';
 export * from './wellnessEntryResponse.zod';
+export * from './wellnessRatingUpdate.zod';
 export * from './wellnessReadingResponse.zod';
 export * from './wellnessReadingsResponse.zod';
 export * from './workoutCreate.zod';

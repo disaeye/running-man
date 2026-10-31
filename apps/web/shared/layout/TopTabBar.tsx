@@ -76,7 +76,7 @@ export function MobileTabBar() {
               />
               <span
                 className={cn(
-                  "text-[10px] leading-tight",
+                  "text-caption1 leading-tight",
                   isActive ? "font-semibold" : "font-normal",
                 )}
               >

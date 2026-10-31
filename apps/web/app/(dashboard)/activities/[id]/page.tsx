@@ -1,16 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, RotateCcw, Share2 } from "lucide-react";
-import type { ActivitySummary } from "@shared/types/activity";
 import { Card } from "@shared/ui/Card";
 import { Page } from "@shared/ui/Lovable";
 import { LabelCaps } from "@shared/ui/LabelCaps";
 import { getSportConfig } from "@shared/config/sport-config";
 import { useActivityDetail } from "@features/activity/hooks/useActivityDetail";
-import { useActivities } from "@features/activity/hooks/useActivities";
 import { useActivityStreams } from "@features/activity/hooks/useActivityStreams";
 import { groupStreams } from "@shared/types/activity";
 import { computeAvailability, extractId } from "@features/activity/lib/activity-detail";
@@ -18,17 +16,8 @@ import { ShareDialog } from "@features/activity/components/ShareDialog";
 import { ActivityFlagActions } from "@features/activity/components/ActivityFlagActions";
 import { ActivityRaceToggle } from "@features/activity/components/ActivityRaceToggle";
 import { DataAvailabilityCard } from "@features/activity/components/DataAvailabilityCard";
-import { DemoSessionSwitcher } from "@features/activity/components/DemoSessionSwitcher";
 import { DemoActivityReport } from "@features/activity/components/DemoActivityReport";
-import { athleteRange, useAthleteTimezone } from "@shared/lib/training-day";
 
-/**
- * 单次训练详情页（按 stich_demo 的 analy.html 重排）。
- *
- * 页面本身只负责三件事：场次切换器、导出与分享、数据流状态。
- * 战报主体在 `DemoActivityReport` 里，分析页的「单次战报」模式用的是同一块，
- * 两处显示的内容因此不会各自走样。
- */
 export default function ActivityDetailPage() {
   const params = useParams();
   const id = extractId(params);
@@ -37,10 +26,6 @@ export default function ActivityDetailPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
 
-  // 相邻的训练记录：最近 90 天内按时间排出的前后两个。
-  const timezone = useAthleteTimezone();
-  const range = useMemo(() => athleteRange(90, timezone), [timezone]);
-  const siblings = useActivities(range.from, range.to);
 
   if (activityQuery.loading) {
     return (
@@ -72,8 +57,6 @@ export default function ActivityDetailPage() {
 
   const activity = activityQuery.data;
   const config = getSportConfig(activity.sport);
-  const adjacent = findAdjacent(siblings.data, activity.activity_id);
-  const tags = buildTags(activity);
   const availability = computeAvailability(
     activity,
     groupStreams(streamsQuery.data),
@@ -112,14 +95,6 @@ export default function ActivityDetailPage() {
         </div>
       </div>
 
-      <DemoSessionSwitcher
-        title={activity.name?.trim() || config.label}
-        timeLabel={formatTime(activity.start_time)}
-        tags={tags}
-        previous={adjacent.previous}
-        next={adjacent.next}
-      />
-
       <DemoActivityReport activityId={id} />
 
       {showTechnicalDetails ? (
@@ -153,54 +128,6 @@ export default function ActivityDetailPage() {
     </div>
     </Page>
   );
-}
-
-/**
- * 标签行：天气、步频、爬升。
- *
- * 只有真的有数据的标签才出现。
- */
-function buildTags(activity: {
-  weather?: { avg_temp?: number | null } | null;
-  avg_cadence?: number | null;
-  elevation_gain_m?: number | null;
-}): string[] {
-  const tags: string[] = [];
-  if (activity.weather?.avg_temp != null) {
-    tags.push(`天气 ${Math.round(activity.weather.avg_temp)}°C`);
-  }
-  if (activity.avg_cadence != null) {
-    tags.push(`步频 ${Math.round(activity.avg_cadence)} rpm`);
-  }
-  if (activity.elevation_gain_m != null) {
-    tags.push(`爬升 ${Math.round(activity.elevation_gain_m)} m`);
-  }
-  return tags;
-}
-
-/**
- * 这次训练前后各一次训练记录。
- *
- * 列表按开始时间倒序，所以「上一场」是时间上更早的那一条。
- */
-function findAdjacent(
-  activities: readonly ActivitySummary[],
-  activityId: string,
-): {
-  previous: { activityId: string; label: string } | null;
-  next: { activityId: string; label: string } | null;
-} {
-  const ordered = [...activities].sort((a, b) =>
-    a.start_time < b.start_time ? 1 : a.start_time > b.start_time ? -1 : 0,
-  );
-  const index = ordered.findIndex((entry) => entry.activity_id === activityId);
-  if (index < 0) return { previous: null, next: null };
-  const older = ordered[index + 1] ?? null;
-  const newer = ordered[index - 1] ?? null;
-  return {
-    previous: older ? { activityId: older.activity_id, label: formatTime(older.start_time) } : null,
-    next: newer ? { activityId: newer.activity_id, label: formatTime(newer.start_time) } : null,
-  };
 }
 
 function formatTime(startTime: string): string {

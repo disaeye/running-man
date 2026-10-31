@@ -2,15 +2,12 @@
 
 import { ToastProvider } from "@shared/ui/Toast";
 import { MobileTabBar } from "@shared/layout/TopTabBar";
-import { usePathname } from "next/navigation";
-import { NAV_ENTRIES } from "@shared/config/nav-config";
 
 interface AppShellProps {
   children: React.ReactNode;
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const pathname = usePathname();
   return (
     <ToastProvider>
       <a
@@ -20,12 +17,6 @@ export function AppShell({ children }: AppShellProps) {
         跳到主要内容
       </a>
       <div data-shell="root" className="min-h-dvh bg-surface-sunken text-text-primary">
-        <header data-shell-region="top" data-safe-area="top" className="mx-auto flex w-full max-w-2xl items-center justify-between px-4 pt-5">
-          <span className="font-display text-xl font-bold tracking-wide text-accent">步迹</span>
-          <span className="text-caption1 text-text-muted">
-            {NAV_ENTRIES.find((entry) => entry.href === pathname)?.label ?? "训练记录"}
-          </span>
-        </header>
         <main id="main-content" role="main" data-shell-region="main" className="pb-[calc(var(--mobile-nav-height,64px)+env(safe-area-inset-bottom))]">
           <div className="shell-main-inner">{children}</div>
           <div data-testid="content-end-sentinel" aria-hidden="true" className="h-px w-full" />

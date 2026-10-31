@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
-import { Card } from "@shared/ui/Card";
+import { PageCard, Bar } from "@shared/ui/Lovable";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 
@@ -98,7 +98,7 @@ export function ShoeManager() {
   };
 
   return (
-    <Card padding="md" className="space-y-5">
+    <PageCard className="space-y-5">
       <p className="text-caption1 text-text-muted">记录鞋款与累计跑量；跑量按已关联的跑步活动计算。</p>
       {loading ? <p className="text-caption1 text-text-muted">正在读取跑鞋…</p> : error ? (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-error/30 bg-error/5 p-3 text-error">
@@ -114,7 +114,8 @@ export function ShoeManager() {
               <div>
                 <p className="font-medium text-text-primary">{shoe.name}</p>
                 <p className="text-caption1 text-text-muted">{[shoe.brand, shoe.model].filter(Boolean).join(" · ") || "未填写品牌与型号"}</p>
-                <p className="font-mono text-caption1 text-text-secondary">{(shoe.mileage_m / 1000).toFixed(1)} km{shoe.retirement_alert ? " · 接近建议退役里程" : ""}{shoe.retired_at ? " · 已退役" : ""}</p>
+                <p className="font-mono text-caption1 text-text-secondary">{(shoe.mileage_m / 1000).toFixed(1)} / 800 km{shoe.retired_at ? " · 已退役" : ""}</p>
+                <Bar value={shoe.mileage_m / 1000} max={800} tone={shoe.retirement_alert ? "bg-warn" : "bg-primary"} className="mt-2" />
               </div>
               {!shoe.retired_at && (
                 <Button
@@ -160,6 +161,6 @@ export function ShoeManager() {
           </Button>
         </div>
       </form>
-    </Card>
+    </PageCard>
   );
 }
