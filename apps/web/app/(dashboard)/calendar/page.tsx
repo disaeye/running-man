@@ -1,276 +1,44 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { useState } from "react";
+import { Dumbbell } from "lucide-react";
+import { Page, PageCard, Stat, Segmented } from "@shared/ui/Lovable";
 import { Button } from "@shared/ui/button";
-import { EmptyState } from "@shared/ui/EmptyState";
-import { PageHeader } from "@shared/ui/PageHeader";
-import { Section } from "@shared/ui/Section";
-import { PlanErrorBanner } from "@features/calendar/components/CalendarStates";
-import { PlanGenerateDialog } from "@features/plan/components/PlanGenerateDialog";
-import { CalendarDaySheet } from "@features/calendar/components/CalendarDaySheet";
-import { CalendarWeekSkeleton } from "@features/calendar/components/CalendarWeekSkeleton";
-import { CalendarListView } from "@features/calendar/components/CalendarListView";
+import { useActivities } from "@features/activity/hooks/useActivities";
+import { useCalendarEvents } from "@features/calendar/hooks/useCalendarEvents";
+import { athleteRange, athleteWeekRange, useAthleteTimezone } from "@shared/lib/training-day";
 import { CalendarStrengthView } from "@features/calendar/components/CalendarStrengthView";
-import { CalendarHeaderActions } from "@features/calendar/components/CalendarHeaderActions";
-import { CalendarInsights } from "@features/calendar/components/CalendarInsights";
-import { Card } from "@shared/ui/Card";
-import { MetricStrip } from "@shared/ui/MetricStrip";
-import { DemoMonthGrid } from "@features/calendar/components/DemoMonthGrid";
-import { DemoMonthSummary } from "@features/calendar/components/DemoMonthSummary";
-import { DemoWeekStrip } from "@features/calendar/components/DemoWeekStrip";
-import { DemoDayPanel } from "@features/calendar/components/DemoDayPanel";
-import { PlanForecast } from "@features/plan/components/PlanForecast";
-import { useCalendarPage } from "@features/calendar/hooks/useCalendarPage";
-import { useProfile } from "@features/settings/hooks/useProfile";
-import { buildWeekSummary, isoWeek } from "@features/calendar/lib/build-week-summary";
-import { weekSummaryMetrics } from "@features/calendar/lib/week-summary-metrics";
-import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
-import { activityLocalDay } from "@shared/lib/training-day";
-import { DemoLegend, monthTotalsFor } from "@features/calendar/components/DemoCalendarSummary";
+import { WorkoutBuilderV2 } from "@features/calendar/components/WorkoutBuilderV2";
+import { TrainingSummary } from "@features/calendar/components/TrainingSummary";
+import { TrainingWeekView } from "@features/calendar/components/TrainingWeekView";
+import { TrainingMonthView } from "@features/calendar/components/TrainingMonthView";
+import { TrainingActivityList } from "@features/calendar/components/TrainingActivityList";
 
-/**
- * 训练日历（按 stich_demo 的 cal.html 重排）。
- *
- * 顺序与参考稿一致：
- *   1. 月份与周期导航 + 视图切换
- *   2. 月度遥测三格摘要
- *   3. 图例
- *   4. 月历热力矩阵
- *   5. 本周快览条
- *   6. 选中日期详情面板（计划与实际对照）
- *
- * 桌面端是同一批卡片的两栏排布：左边是月历与周条，右边常驻选中日详情；
- * 点左边任意一天，右边立刻跟着变。
- */
-export default function CalendarPage() {
-  return (
-    <Suspense fallback={<CalendarWeekSkeleton />}>
-      <CalendarPageContent />
-    </Suspense>
-  );
-}
-
-function CalendarPageContent() {
-  const {
-    view,
-    handleSetView,
-    weekStart,
-    monthDate,
-    events,
-    loading,
-    error,
-    activitiesError,
-    selectedDate,
-    setSelectedDate,
-    editingEvent,
-    generateOpen,
-    setGenerateOpen,
-    activityMap,
-    isGridView,
-    navWeek,
-    navMonth,
-    handleSelectDate,
-    handleBuilderSave,
-    handleActivitySaved,
-    summaryActivities,
-    loadEvents,
-  } = useCalendarPage();
-
-  const { profile } = useProfile();
+export function TrainingPageContent() {
+  const [view, setView] = useState<"week" | "month" | "list">("week");
+  const [sport, setSport] = useState("all");
+  const [showLog, setShowLog] = useState(false);
+  const [editingDate, setEditingDate] = useState<string | null>(null);
   const timezone = useAthleteTimezone();
-  const today = athleteToday(timezone);
-
-  // 选中的日期：默认是今天，所以右侧面板一开始就有内容。
-  const activeDate = selectedDate ?? today;
-
-  const periodLabel = useMemo(() => {
-    if (view === "month") {
-      return `${monthDate.getFullYear()} 年 ${monthDate.getMonth() + 1} 月`;
-    }
-    const { week, year } = isoWeek(weekStart);
-    return `${year} 年 · 第 ${week} 周`;
-  }, [view, weekStart, monthDate]);
-
-  const weekSummary = useMemo(
-    () => buildWeekSummary({ events, activityMap, weekStart, timezone }),
-    [events, activityMap, weekStart, timezone],
-  );
-  const weekSummaryItems = useMemo(() => weekSummaryMetrics(weekSummary), [weekSummary]);
-
-  // 月度三格摘要：跑量、课次、爬升，都按当前月份算。
-  const monthTotals = useMemo(
-    () => monthTotalsFor(events, activityMap, monthDate, timezone),
-    [events, activityMap, monthDate, timezone],
-  );
-
-  // 周条的七天：从周一开始。
-  const weekDays = useMemo(
-    () =>
-      Array.from({ length: 7 }, (_, index) => {
-        const date = new Date(weekStart);
-        date.setDate(date.getDate() + index);
-        return {
-          iso: toIso(date),
-          dayLabel: WEEKDAY_NAMES[index] ?? "",
-        };
-      }),
-    [weekStart],
-  );
-
-  const activeEvent = useMemo(
-    () => events.find((event) => activityLocalDay(event.start_time, timezone) === activeDate),
-    [events, timezone, activeDate],
-  );
-  const activeActivities = activityMap.get(activeDate) ?? [];
-
-  return (
-    <div className="page-stack" data-testid="calendar-page">
-      <PageHeader
-        meta={periodLabel}
-        title={<span id="calendar-title">训练日历</span>}
-        action={
-          <CalendarHeaderActions
-            view={view}
-            onChange={handleSetView}
-            onGenerate={() => setGenerateOpen(true)}
-            periodLabel={periodLabel}
-            onNavigate={(delta) => {
-              if (view === "month") navMonth(delta);
-              else navWeek(delta);
-            }}
-          />
-        }
-      />
-
-      {view === "list" ? (
-        <div className="space-y-6">
-          {activitiesError ? (
-            <EmptyState
-              title="活动数据加载失败"
-              description={activitiesError}
-              action={
-                <Button variant="secondary" onClick={loadEvents}>
-                  重新加载
-                </Button>
-              }
-            />
-          ) : (
-            <>
-              <Section title="训练列表">
-                <div className="p-5">
-                  <CalendarListView />
-                </div>
-              </Section>
-              <Section title="训练日志">
-                <div className="p-5">
-                  <CalendarStrengthView />
-                </div>
-              </Section>
-            </>
-          )}
-        </div>
-      ) : error ? (
-        <PlanErrorBanner message={error} onRetry={loadEvents} />
-      ) : (
-        <div className="space-y-4">
-          {view === "month" ? (
-            <>
-              <DemoMonthSummary
-                actualDistanceM={monthTotals.actualDistanceM}
-                plannedDistanceM={monthTotals.plannedDistanceM}
-                completedSessions={monthTotals.completedSessions}
-                plannedSessions={monthTotals.plannedSessions}
-                elevationM={monthTotals.elevationM}
-              />
-              <DemoLegend />
-            </>
-          ) : (
-            <MetricStrip testId="week-summary" items={weekSummaryItems} />
-          )}
-
-          <div className="grid min-w-0 gap-4">
-            <div className="min-w-0 space-y-4">
-              {loading ? (
-                <CalendarWeekSkeleton />
-              ) : view === "month" ? (
-                <DemoMonthGrid
-                  events={events}
-                  monthDate={monthDate}
-                  completedActivities={activityMap}
-                  selectedDate={activeDate}
-                  testId="plan-month-grid"
-                  dayTestIdPrefix="plan-month-day"
-                  onSelectDate={(iso) => {
-                    handleSelectDate(iso);
-                    setSelectedDate(iso);
-                  }}
-                />
-              ) : (
-                <DemoWeekStrip
-                  days={weekDays}
-                  events={events}
-                  activities={activityMap}
-                  selectedDate={activeDate}
-                  testId="plan-week-grid"
-                  dayTestIdPrefix="plan-week-day"
-                  onSelectDate={(iso) => {
-                    handleSelectDate(iso);
-                    setSelectedDate(iso);
-                  }}
-                />
-              )}
-            </div>
-
-            <aside className="min-w-0 space-y-4">
-              <DemoDayPanel
-                date={activeDate}
-                event={activeEvent}
-                activities={activeActivities}
-                onEdit={() => handleSelectDate(activeDate)}
-                onAdd={() => handleSelectDate(activeDate)}
-              />
-              <CalendarInsights>
-                <PlanForecast events={events} />
-                <Card padding="md" data-testid="calendar-plan-progress">
-                  <h2 className="text-title3 font-semibold text-text-primary">本周训练进度</h2>
-                  <p className="mt-2 text-subheadline text-text-secondary">
-                    已完成 {weekSummary.completed}/{weekSummary.total} 次训练
-                  </p>
-                  <p className="mt-1 text-caption1 text-text-muted">
-                    计划时长 {Math.round(weekSummary.plannedMinutes)} 分钟 · 实际时长 {Math.round(weekSummary.actualMinutes)} 分钟
-                  </p>
-                </Card>
-              </CalendarInsights>
-            </aside>
-          </div>
-        </div>
-      )}
-
-      {isGridView && !loading && !error && selectedDate != null && (
-        <CalendarDaySheet
-          selectedDate={selectedDate}
-          activities={summaryActivities}
-          editingEvent={editingEvent}
-          onSave={handleBuilderSave}
-          onActivitySaved={handleActivitySaved}
-          onClose={() => setSelectedDate(null)}
-        />
-      )}
-      <PlanGenerateDialog
-        open={generateOpen}
-        onClose={() => setGenerateOpen(false)}
-        onGenerated={loadEvents}
-        trainingDays={profile?.weekly_training_days ?? 5}
-      />
-    </div>
-  );
+  const range = athleteRange(90, timezone);
+  const week = athleteWeekRange(timezone);
+  const activities = useActivities(range.from, range.to);
+  const events = useCalendarEvents(week.from, range.to);
+  const filtered = activities.data.filter((activity) => sport === "all" || (sport === "strength" ? getFamily(activity.sport) === "strength" : getFamily(activity.sport) === "running" || getFamily(activity.sport) === "trail"));
+  return <Page title="训练" eyebrow="安排与记录">
+    <div className="flex flex-wrap gap-2"><Segmented options={[{ value: "all", label: "全部" }, { value: "run", label: "跑步" }, { value: "trail", label: "越野跑" }, { value: "strength", label: "力量" }]} value={sport} onChange={setSport} /></div>
+    <TrainingSummary activities={filtered} />
+    <PageCard action={<Segmented options={[{ value: "week", label: "周" }, { value: "month", label: "月" }, { value: "list", label: "列表" }]} value={view} onChange={setView} />}>
+      {view === "week" ? <TrainingWeekView activities={filtered} events={events.events} timezone={timezone} onSelectDate={setEditingDate} /> : view === "month" ? <TrainingMonthView activities={filtered} events={events.events} timezone={timezone} onSelectDate={setEditingDate} /> : <TrainingActivityList activities={filtered} timezone={timezone} />}
+    </PageCard>
+    <button type="button" onClick={() => setShowLog(!showLog)} className="surface flex w-full items-center gap-3 p-4 text-left"><Dumbbell className="h-5 w-5 text-accent-strong" /><span className="flex-1 font-medium">力量训练记录</span><Stat label="本范围" value={activities.data.filter((activity) => getFamily(activity.sport) === "strength").length} /><span className="text-xs text-muted-foreground">{showLog ? "收起" : "展开"}</span></button>
+    {showLog ? <CalendarStrengthView /> : null}
+    <div className="surface space-y-3 p-4"><div className="flex items-center justify-between"><span className="eyebrow">训练编辑</span><Button size="sm" onClick={() => setEditingDate(week.from)}>新建训练</Button></div>{editingDate ? <WorkoutBuilderV2 date={editingDate} onClose={() => setEditingDate(null)} onSave={() => { setEditingDate(null); events.reload(); }} /> : <p className="text-sm text-muted-foreground">点击训练日可编辑安排。</p>}</div>
+  </Page>;
 }
 
-const WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
-
-function toIso(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function getFamily(sport: string) {
+  if (sport === "WeightTraining" || sport === "Workout") return "strength";
+  if (sport === "TrailRun") return "trail";
+  return "running";
 }

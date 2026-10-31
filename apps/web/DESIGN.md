@@ -92,21 +92,21 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--color-surface-sunken` | `#111317` | 画布底 |
-| `--color-surface-card` | `#1e2023` | 面板底 |
-| `--color-surface-raised` | `#282a2d` | 顶栏、弹层 |
-| `--color-surface-overlay` | `#1a1c1f` | 卡内分组、胶囊底 |
-| `--color-surface-active` | `#333538` | 按下态、进度条轨道 |
-| `--color-surface-base` | `#0c0e11` | chrome 表面（顶栏、底栏） |
-| `--color-text-primary` | `#e2e2e6` | 正文墨色 |
-| `--color-text-secondary` | `#c5c9ac` | 次要文字 |
-| `--color-text-muted` | `#a3a78c` | 标签、图注、出处 |
-| `--color-accent` | `#caf300` | 强调填充与强调文字 |
-| `--color-primary` | `#caf300` | 主按钮 |
-| `--color-ring` | `#7df4ff` | 焦点环 |
-| `--color-border-subtle` | `#313439` | 发丝边 |
-| `--color-border-default` | `#3f444a` | 控件边 |
-| `--color-border-strong` | `#4d5259` | 强调边 |
+| `--color-surface-sunken` | `oklch(0.16 0.012 250)` | 画布底 |
+| `--color-surface-card` | `oklch(0.205 0.014 250)` | 面板底 |
+| `--color-surface-raised` | `oklch(0.26 0.014 250)` | 顶栏、弹层 |
+| `--color-surface-overlay` | `oklch(0.16 0.012 250 / 40%)` | 卡内分组、胶囊底 |
+| `--color-surface-active` | `oklch(0.30 0.014 250)` | 按下态、进度条轨道 |
+| `--color-surface-base` | `oklch(0.205 0.014 250)` | chrome 表面（顶栏、底栏） |
+| `--color-text-primary` | `oklch(0.95 0.008 250)` | 正文墨色 |
+| `--color-text-secondary` | `oklch(0.80 0.012 250)` | 次要文字 |
+| `--color-text-muted` | `oklch(0.66 0.015 250)` | 标签、图注、出处 |
+| `--color-accent` | `oklch(0.9 0.19 122)` | 强调填充与强调文字 |
+| `--color-primary` | `oklch(0.9 0.19 122)` | 主按钮 |
+| `--color-ring` | `oklch(0.9 0.19 122)` | 焦点环 |
+| `--color-border-subtle` | `oklch(1 0 0 / 9%)` | 发丝边 |
+| `--color-border-default` | `oklch(1 0 0 / 14%)` | 控件边 |
+| `--color-border-strong` | `oklch(1 0 0 / 20%)` | 强调边 |
 
 ### 4.2 数据语义色
 
@@ -114,25 +114,25 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 
 | Token | 值 | 含义 |
 |---|---|---|
-| `--color-ctl` | `#00dbe9` | 体能 CTL |
-| `--color-atl` | `#7df4ff` | 疲劳 ATL |
-| `--color-tsb` | `#ffb59c` | 状态 TSB |
-| `--color-zone-1` | `#8f9378` | Z1 恢复 |
-| `--color-zone-2` | `#00dbe9` | Z2 耐力 |
-| `--color-zone-3` | `#5cb87a` | Z3 节奏 |
-| `--color-zone-4` | `#ffb59c` | Z4 阈值 |
-| `--color-zone-5` | `#ffb4ab` | Z5 无氧 |
-| `--color-recovery-good` | `#5cb87a` | 恢复良好 |
-| `--color-recovery-moderate` | `#ffb59c` | 恢复一般 |
-| `--color-recovery-poor` | `#ffb4ab` | 恢复不足 |
-| `--color-goal-on-track` | `#5cb87a` | 目标在轨 |
-| `--color-goal-behind` | `#ffb59c` | 目标滞后 |
-| `--color-goal-at-risk` | `#ffb4ab` | 目标有风险 |
-| `--color-data-emphasis` | `#00dbe9` | 当前值强调 |
-| `--color-load-heatmap` | `#00dbe9` | 负荷热力图 |
-| `--color-sport-run` | `#ff788f` | 跑步 |
-| `--color-sport-ride` | `#00dbe9` | 骑行 |
-| `--color-sport-workout` | `#ffb59c` | 健身 |
+| `--color-ctl` | `oklch(0.8 0.15 200)` | 体能 CTL |
+| `--color-atl` | `oklch(0.75 0.16 20)` | 疲劳 ATL |
+| `--color-tsb` | `oklch(0.82 0.15 85)` | 状态 TSB |
+| `--color-zone-1` | `oklch(0.75 0.12 220)` | Z1 恢复 |
+| `--color-zone-2` | `oklch(0.8 0.14 160)` | Z2 耐力 |
+| `--color-zone-3` | `oklch(0.85 0.17 100)` | Z3 节奏 |
+| `--color-zone-4` | `oklch(0.78 0.16 60)` | Z4 阈值 |
+| `--color-zone-5` | `oklch(0.7 0.19 20)` | Z5 无氧 |
+| `--color-recovery-good` | `oklch(0.8 0.16 145)` | 恢复良好 |
+| `--color-recovery-moderate` | `oklch(0.82 0.16 80)` | 恢复一般 |
+| `--color-recovery-poor` | `oklch(0.7 0.19 20)` | 恢复不足 |
+| `--color-goal-on-track` | `oklch(0.8 0.16 145)` | 目标在轨 |
+| `--color-goal-behind` | `oklch(0.82 0.16 80)` | 目标滞后 |
+| `--color-goal-at-risk` | `oklch(0.7 0.19 20)` | 目标有风险 |
+| `--color-data-emphasis` | `oklch(0.8 0.15 200)` | 当前值强调 |
+| `--color-load-heatmap` | `oklch(0.8 0.15 200)` | 负荷热力图 |
+| `--color-sport-run` | `oklch(0.78 0.16 10)` | 跑步 |
+| `--color-sport-ride` | `oklch(0.8 0.15 200)` | 骑行 |
+| `--color-sport-workout` | `oklch(0.82 0.16 80)` | 健身 |
 
 运动颜色一律走 `getSportConfig(sport).color`，任何地方都不许自己写一份 sport → 颜色的映射。
 

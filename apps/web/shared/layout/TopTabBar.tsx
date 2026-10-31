@@ -49,9 +49,9 @@ export function MobileTabBar() {
       data-layout-token="mobile-nav"
       data-shell-region="bottom"
       data-safe-area="bottom"
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border-subtle bg-surface-base pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.09] bg-card pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="mx-auto grid h-16 max-w-2xl grid-cols-5">
+      <div className="mx-auto grid h-14 max-w-2xl grid-cols-5">
         {NAV_ENTRIES.map((tab) => {
           const isActive = tab.id === activeId;
           const Icon = tab.Icon;
@@ -61,7 +61,7 @@ export function MobileTabBar() {
               href={tab.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "row-press focus-ring relative flex min-h-[50px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 select-none transition-colors duration-150",
+                "focus-ring relative flex min-w-0 flex-col items-center justify-center gap-1 select-none transition-colors",
                 isActive
                   ? "text-accent-strong"
                   : "text-text-muted hover:text-text-primary",
@@ -70,13 +70,13 @@ export function MobileTabBar() {
               <Icon
                 aria-hidden="true"
                 className={cn(
-                  "size-[22px] transition-transform duration-200",
+                  "size-5",
                   isActive ? "stroke-[2.1]" : "stroke-[1.7]",
                 )}
               />
               <span
                 className={cn(
-                  "text-caption1 leading-tight transition-colors duration-150",
+                  "text-[10px] leading-tight",
                   isActive ? "font-semibold" : "font-normal",
                 )}
               >

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AlertTriangle, RotateCcw, Share2 } from "lucide-react";
 import type { ActivitySummary } from "@shared/types/activity";
 import { Card } from "@shared/ui/Card";
+import { Page } from "@shared/ui/Lovable";
 import { LabelCaps } from "@shared/ui/LabelCaps";
 import { getSportConfig } from "@shared/config/sport-config";
 import { useActivityDetail } from "@features/activity/hooks/useActivityDetail";
@@ -80,7 +81,8 @@ export default function ActivityDetailPage() {
   );
 
   return (
-    <div className="page-stack" data-testid="activity-detail-page">
+    <Page title={activity.name?.trim() || config.label} eyebrow={formatTime(activity.start_time)} back onBack={() => history.back()}>
+    <div data-testid="activity-detail-page" className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <Link
           href="/activities"
@@ -149,6 +151,7 @@ export default function ActivityDetailPage() {
 
       <ShareDialog activityId={id} open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
+    </Page>
   );
 }
 

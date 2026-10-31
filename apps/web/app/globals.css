@@ -16,33 +16,31 @@
  * 而设计闸门会分别读这两个块，两处必须一致。
  */
 :root {
-  /* 画布与容器：明度逐级上升，最深的是画布。 */
-  --color-surface-sunken: #111317;
-  --color-surface-card: #1e2023;
-  --color-surface-raised: #282a2d;
-  --color-surface-overlay: #1a1c1f;
-  --color-surface-active: #333538;
-  --color-surface-base: #0c0e11;
-  --color-surface-subtle: #16181b;
-  --color-rail: #16181b;
+  --color-surface-sunken: oklch(0.16 0.012 250);
+  --color-surface-card: oklch(0.205 0.014 250);
+  --color-surface-raised: oklch(0.26 0.014 250);
+  --color-surface-overlay: oklch(0.16 0.012 250 / 40%);
+  --color-surface-active: oklch(0.30 0.014 250);
+  --color-surface-base: oklch(0.205 0.014 250);
+  --color-surface-subtle: oklch(0.205 0.014 250);
+  --color-rail: oklch(0.205 0.014 250);
 
-  /* 文字：正文与标签。 */
-  --color-text-primary: #e2e2e6;
-  --color-text-secondary: #c5c9ac;
-  --color-text-muted: #a3a78c;
-  --color-text-inverse: #171e00;
-  --color-ink: #e2e2e6;
-  --color-on-primary: #171e00;
-  --color-on-dark: #e2e2e6;
-  --color-on-dark-soft: #8f9378;
+  --color-text-primary: oklch(0.95 0.008 250);
+  --color-text-secondary: oklch(0.80 0.012 250);
+  --color-text-muted: oklch(0.66 0.015 250);
+  --color-text-inverse: oklch(0.18 0.02 122);
+  --color-ink: oklch(0.95 0.008 250);
+  --color-on-primary: oklch(0.18 0.02 122);
+  --color-on-dark: oklch(0.95 0.008 250);
+  --color-on-dark-soft: oklch(0.66 0.015 250);
 
   /* 强调色：荧光黄绿为主，青色为辅，橙色用于警示。 */
-  --color-accent: #caf300;
-  --color-primary: #caf300;
-  --color-accent-strong: #caf300;
-  --color-on-accent: #171e00;
-  --color-chart-accent: #caf300;
-  --color-ring: #7df4ff;
+  --color-accent: oklch(0.9 0.19 122);
+  --color-primary: oklch(0.9 0.19 122);
+  --color-accent-strong: oklch(0.9 0.19 122);
+  --color-on-accent: oklch(0.18 0.02 122);
+  --color-chart-accent: oklch(0.9 0.19 122);
+  --color-ring: oklch(0.9 0.19 122);
   --color-primary-active: #b0d500;
   --color-primary-disabled: #4a4f2a;
   --color-chrome-accent: #caf300;
@@ -55,44 +53,44 @@
   --color-warm-dim: #ff5708;
 
   /* 数据语义色：只用于图表序列、分类标签与状态点。 */
-  --color-ctl: #00dbe9;
-  --color-atl: #7df4ff;
-  --color-tsb: #ffb59c;
+  --color-ctl: oklch(0.8 0.15 200);
+  --color-atl: oklch(0.75 0.16 20);
+  --color-tsb: oklch(0.82 0.15 85);
   --color-ctl-blue: #00dbe9;
   --color-atl-magenta: #7df4ff;
   --color-tsb-gold: #ffb59c;
   --color-hr-rest: #ff788f;
   --color-sleep: #00dbe9;
   --color-weight: #7df4ff;
-  --color-success: #5cb87a;
-  --color-warning: #ffb59c;
-  --color-error: #ffb4ab;
-  --color-info: #00dbe9;
-  --color-recovery-good: #5cb87a;
-  --color-recovery-moderate: #ffb59c;
-  --color-recovery-poor: #ffb4ab;
-  --color-zone-1: #8f9378;
-  --color-zone-2: #00dbe9;
-  --color-zone-3: #5cb87a;
-  --color-zone-4: #ffb59c;
-  --color-zone-5: #ffb4ab;
-  --color-goal-on-track: #5cb87a;
-  --color-goal-behind: #ffb59c;
-  --color-goal-at-risk: #ffb4ab;
-  --color-sport-run: #ff788f;
+  --color-success: oklch(0.8 0.16 145);
+  --color-warning: oklch(0.82 0.16 80);
+  --color-error: oklch(0.7 0.19 20);
+  --color-info: oklch(0.8 0.15 200);
+  --color-recovery-good: oklch(0.8 0.16 145);
+  --color-recovery-moderate: oklch(0.82 0.16 80);
+  --color-recovery-poor: oklch(0.7 0.19 20);
+  --color-zone-1: oklch(0.75 0.12 220);
+  --color-zone-2: oklch(0.8 0.14 160);
+  --color-zone-3: oklch(0.85 0.17 100);
+  --color-zone-4: oklch(0.78 0.16 60);
+  --color-zone-5: oklch(0.7 0.19 20);
+  --color-goal-on-track: oklch(0.8 0.16 145);
+  --color-goal-behind: oklch(0.82 0.16 80);
+  --color-goal-at-risk: oklch(0.7 0.19 20);
+  --color-sport-run: oklch(0.78 0.16 10);
   --color-sport-virtualrun: #b88cff;
   --color-sport-trailrun: #ff8fa4;
-  --color-sport-ride: #00dbe9;
+  --color-sport-ride: oklch(0.8 0.15 200);
   --color-sport-virtualride: #00dbe9;
   --color-sport-bike: #00dbe9;
   --color-sport-swim: #00dbe9;
   --color-sport-walk: #5cb87a;
   --color-sport-hike: #5cb87a;
   --color-sport-alpineski: #00dbe9;
-  --color-sport-workout: #ffb59c;
+  --color-sport-workout: oklch(0.82 0.16 80);
   --color-sport-weighttraining: #ffb59c;
-  --color-data-emphasis: #00dbe9;
-  --color-load-heatmap: #00dbe9;
+  --color-data-emphasis: oklch(0.8 0.15 200);
+  --color-load-heatmap: oklch(0.8 0.15 200);
   --color-calendar-today: #caf300;
   --color-active-phase: #caf300;
   --color-gps-map-bg: #0c0e11;
@@ -100,12 +98,11 @@
   --color-insight-bg: #16181b;
   --color-insight-border: rgba(226, 226, 230, 0.12);
 
-  /* 边线：只有三档，密度靠明度差。 */
-  --color-border-subtle: #313439;
-  --color-border-default: #3f444a;
-  --color-border-strong: #4d5259;
-  --color-outline: #a3a78c;
-  --color-outline-variant: #444932;
+  --color-border-subtle: oklch(1 0 0 / 9%);
+  --color-border-default: oklch(1 0 0 / 14%);
+  --color-border-strong: oklch(1 0 0 / 20%);
+  --color-outline: oklch(0.66 0.015 250);
+  --color-outline-variant: oklch(1 0 0 / 9%);
 
   /* 玻璃只在导航与顶栏这类 chrome 上使用。 */
   --glass-bg: #1e2023;
@@ -123,22 +120,31 @@
   --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.45);
 
   /* Tailwind 语义别名。 */
-  --color-background: #111317;
-  --color-foreground: #e2e2e6;
-  --color-card: #1e2023;
-  --color-card-foreground: #e2e2e6;
-  --color-popover: #282a2d;
-  --color-popover-foreground: #e2e2e6;
-  --color-primary-foreground: #171e00;
-  --color-secondary: #282a2d;
-  --color-secondary-foreground: #e2e2e6;
-  --color-muted: #16181b;
-  --color-muted-foreground: #a3a78c;
-  --color-accent-foreground: #171e00;
-  --color-destructive: #ffb4ab;
-  --color-destructive-foreground: #171e00;
-  --color-border: #313439;
-  --color-input: #3f444a;
+  --color-background: oklch(0.16 0.012 250);
+  --color-foreground: oklch(0.95 0.008 250);
+  --color-card: oklch(0.205 0.014 250);
+  --color-card-foreground: oklch(0.95 0.008 250);
+  --color-popover: oklch(0.26 0.014 250);
+  --color-popover-foreground: oklch(0.95 0.008 250);
+  --color-primary-foreground: oklch(0.18 0.02 122);
+  --color-secondary: oklch(0.26 0.014 250);
+  --color-secondary-foreground: oklch(0.95 0.008 250);
+  --color-muted: oklch(0.205 0.014 250);
+  --color-muted-foreground: oklch(0.66 0.015 250);
+  --color-accent-foreground: oklch(0.18 0.02 122);
+  --color-destructive: oklch(0.7 0.19 20);
+  --color-destructive-foreground: oklch(0.95 0.008 250);
+  --color-border: oklch(1 0 0 / 9%);
+  --color-input: oklch(1 0 0 / 14%);
+  --color-fitness: oklch(0.8 0.15 200);
+  --color-fatigue: oklch(0.75 0.16 20);
+  --color-form: oklch(0.82 0.15 85);
+  --color-warn: oklch(0.82 0.16 80);
+  --color-z1: var(--color-zone-1);
+  --color-z2: var(--color-zone-2);
+  --color-z3: var(--color-zone-3);
+  --color-z4: var(--color-zone-4);
+  --color-z5: var(--color-zone-5);
 
   /*
    * 字体：窄体（Barlow Condensed）做标题与标签，等宽（JetBrains Mono）做
@@ -150,13 +156,13 @@
   --font-display: "Barlow Condensed", var(--font-barlow-condensed), "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-serif: var(--font-sans);
 
-  --shell-pad-x: clamp(1rem, 3vw, 3.5rem);
-  --shell-pad-x-end: max(var(--shell-pad-x), env(safe-area-inset-right, 0px));
-  --shell-pad-y: clamp(1.25rem, 4vw, 3.25rem);
-  --shell-header-h: 3.5rem;
+  --shell-pad-x: 1rem;
+  --shell-pad-x-end: max(1rem, env(safe-area-inset-right, 0px));
+  --shell-pad-y: 1.25rem;
+  --shell-header-h: 0rem;
   --shell-content-max: 42rem;
-  --shell-gap: clamp(1rem, 1.6vw, 1.5rem);
-  --mobile-nav-height: 4.5rem;
+  --shell-gap: 1rem;
+  --mobile-nav-height: 3.5rem;
   --duration-instant: 100ms;
   --duration-fast: 180ms;
   --duration-normal: 300ms;
@@ -164,6 +170,43 @@
   --ease-default: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+}
+
+.dark {
+  --color-surface-sunken: oklch(0.16 0.012 250);
+  --color-surface-card: oklch(0.205 0.014 250);
+  --color-surface-raised: oklch(0.26 0.014 250);
+  --color-surface-overlay: oklch(0.16 0.012 250 / 40%);
+  --color-surface-active: oklch(0.30 0.014 250);
+  --color-surface-base: oklch(0.205 0.014 250);
+  --color-text-primary: oklch(0.95 0.008 250);
+  --color-text-secondary: oklch(0.80 0.012 250);
+  --color-text-muted: oklch(0.66 0.015 250);
+  --color-accent: oklch(0.9 0.19 122);
+  --color-primary: oklch(0.9 0.19 122);
+  --color-ring: oklch(0.9 0.19 122);
+  --color-border-subtle: oklch(1 0 0 / 9%);
+  --color-border-default: oklch(1 0 0 / 14%);
+  --color-border-strong: oklch(1 0 0 / 20%);
+  --color-ctl: oklch(0.8 0.15 200);
+  --color-atl: oklch(0.75 0.16 20);
+  --color-tsb: oklch(0.82 0.15 85);
+  --color-zone-1: oklch(0.75 0.12 220);
+  --color-zone-2: oklch(0.8 0.14 160);
+  --color-zone-3: oklch(0.85 0.17 100);
+  --color-zone-4: oklch(0.78 0.16 60);
+  --color-zone-5: oklch(0.7 0.19 20);
+  --color-recovery-good: oklch(0.8 0.16 145);
+  --color-recovery-moderate: oklch(0.82 0.16 80);
+  --color-recovery-poor: oklch(0.7 0.19 20);
+  --color-goal-on-track: oklch(0.8 0.16 145);
+  --color-goal-behind: oklch(0.82 0.16 80);
+  --color-goal-at-risk: oklch(0.7 0.19 20);
+  --color-data-emphasis: oklch(0.8 0.15 200);
+  --color-load-heatmap: oklch(0.8 0.15 200);
+  --color-sport-run: oklch(0.78 0.16 10);
+  --color-sport-ride: oklch(0.8 0.15 200);
+  --color-sport-workout: oklch(0.82 0.16 80);
 }
 
 @theme inline {
@@ -269,6 +312,15 @@
   --color-destructive-foreground: var(--color-destructive-foreground);
   --color-border: var(--color-border);
   --color-input: var(--color-input);
+  --color-fitness: var(--color-fitness);
+  --color-fatigue: var(--color-fatigue);
+  --color-form: var(--color-form);
+  --color-warn: var(--color-warn);
+  --color-z1: var(--color-z1);
+  --color-z2: var(--color-z2);
+  --color-z3: var(--color-z3);
+  --color-z4: var(--color-z4);
+  --color-z5: var(--color-z5);
 
   /* 指标两级大数：48px 一屏一处，24px 次大。 */
   --text-metric-xl: 3rem;
@@ -377,14 +429,32 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
 .shell-header-inner, .shell-main-inner { width: 100%; max-width: var(--shell-content-max); margin-inline: auto; box-sizing: border-box; }
 .shell-main { padding: 1.25rem 1rem calc(7rem + env(safe-area-inset-bottom)); }
 .page-stack { gap: 1rem; }
-.shell-header-inner { display: flex; height: var(--shell-header-h); align-items: center; gap: .75rem; padding-inline: var(--shell-pad-x); }
-.shell-main { min-height: 0; flex: 1 1 auto; overflow-x: hidden; overflow-y: auto; padding: var(--shell-pad-y) var(--shell-pad-x-end) var(--shell-pad-y) var(--shell-pad-x); -webkit-overflow-scrolling: touch; background-color: var(--color-surface-sunken); }
+.shell-header-inner { display: none; }
+.shell-main { min-height: 0; flex: 1 1 auto; overflow-x: hidden; overflow-y: auto; padding: var(--shell-pad-y) var(--shell-pad-x-end) calc(7rem + env(safe-area-inset-bottom)) var(--shell-pad-x); -webkit-overflow-scrolling: touch; background-color: var(--color-surface-sunken); }
 .shell-main-inner { min-width: 0; }
 /* A chart that sizes itself before its container settles must never widen the page. */
 .shell-main-inner canvas, .shell-main-inner svg, .shell-main-inner img, .shell-main-inner video { max-width: 100%; }
 .page-stack { display: flex; flex-direction: column; gap: var(--shell-gap); width: 100%; min-width: 0; }
 
-/* 卡片没有边线，交互反馈只靠位移和底色，不再改 border-color。 */
+@utility surface {
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-card);
+}
+@utility surface-hero {
+  border: 1px solid oklch(0.9 0.19 122 / 25%);
+  border-radius: 18px;
+  background: radial-gradient(120% 120% at 0% 0%, oklch(0.9 0.19 122 / 10%), transparent 55%), var(--color-card);
+}
+@utility eyebrow {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--color-muted-foreground);
+  font-weight: 500;
+}
+.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+
+
 .card-interactive { cursor: pointer; transition: background-color var(--duration-fast) var(--ease-default), transform var(--duration-fast) var(--ease-default); }
 .card-interactive:hover { transform: translateY(-2px); }
 .card-interactive:active { transform: translateY(0) scale(.99); }
