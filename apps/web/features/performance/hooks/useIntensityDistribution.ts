@@ -14,7 +14,7 @@ interface UseIntensityDistributionResult {
 }
 
 function mapToPoint(row: Generated.IntensityDistributionResponseOutput): IntensityPoint {
-  return { bucket: row.bucket, zoneSeconds: row.zone_seconds };
+  return { bucket: row.bucket, zoneSeconds: row.zone_seconds, byZone: row.by_zone, distributionType: row.distribution_type };
 }
 
 export function useIntensityDistribution(

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Dumbbell, ChevronRight, Plus, Upload } from "lucide-react";
-import { Page, Segmented } from "@shared/ui/Lovable";
+import { Page } from "@shared/ui/Lovable";
 import { Button } from "@shared/ui/button";
 import { useActivities } from "@features/activity/hooks/useActivities";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shared/ui/dialog";
@@ -36,17 +36,17 @@ export default function TrainingPageContent() {
   const todayEvent = events.events.find((event) => activityLocalDay(event.start_time, timezone) === today) ?? null;
   const filtered = activities.data.filter((activity) => sport === "all" || getFamily(activity.sport) === sport);
   return <Page title="训练" eyebrow={`${week.from} – ${week.to}`} right={<div className="flex gap-2"><button type="button" onClick={() => setImportOpen(true)} className="rounded-full bg-secondary p-2" aria-label="导入文件"><Upload className="h-4 w-4" /></button><button type="button" onClick={() => setManualOpen(true)} className="rounded-full bg-primary p-2 text-primary-foreground" aria-label="手动添加"><Plus className="h-4 w-4" /></button></div>}>
-    <div className="flex flex-wrap gap-2"><Segmented options={[{ value: "all", label: "全部" }, { value: "running", label: "跑步" }, { value: "trail", label: "越野跑" }, { value: "strength", label: "力量" }]} value={sport} onChange={setSport} /></div>
+    <div className="flex flex-wrap gap-2">{[["all", "全部"], ["running", "跑步"], ["trail", "越野跑"], ["strength", "力量"]].map(([value, label]) => <button type="button" key={value} onClick={() => setSport(value ?? "all")} aria-pressed={sport === value} className={`rounded-full border px-3 py-1.5 text-xs ${sport === value ? "border-primary bg-primary/15 text-accent-strong" : "text-muted-foreground"}`}>{label}</button>)}</div>
     <TrainingSummary activities={filtered} />
-    <Segmented options={[{ value: "week", label: "周" }, { value: "month", label: "月" }, { value: "list", label: "列表" }]} value={view} onChange={setView} />
-    <div>
+    <div className="flex rounded-full bg-secondary p-1">{[["week", "周"], ["month", "月"], ["list", "列表"]].map(([value, label]) => <button type="button" key={value} onClick={() => setView(value as typeof view)} aria-pressed={view === value} className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium ${view === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{label}</button>)}</div>
+    <div className="surface p-2">
       {view === "week" ? <TrainingWeekView activities={filtered} events={events.events} timezone={timezone} onSelectDate={setEditingDate} /> : view === "month" ? <TrainingMonthView activities={filtered} events={events.events} timezone={timezone} onSelectDate={setEditingDate} /> : <TrainingActivityList activities={filtered} timezone={timezone} />}
     </div>
-    <TrainingSubjective event={todayEvent} wellness={wellness.data[0] ?? null} day={today} onSaved={() => { events.reload(); wellness.reload(); }} />
     <Link href="/strength" className="surface flex items-center gap-3 p-4"><Dumbbell className="h-6 w-6 text-accent-strong" /><div className="flex-1"><div className="font-semibold">力量训练</div><div className="text-xs text-muted-foreground">日志、动作库、肌群负荷与 e1RM 趋势</div></div><ChevronRight className="h-5 w-5 text-muted-foreground" /></Link>
+    <TrainingSubjective event={todayEvent} wellness={wellness.data[0] ?? null} day={today} onSaved={() => { events.reload(); wellness.reload(); }} />
     <Dialog open={importOpen} onOpenChange={setImportOpen}><DialogContent><DialogHeader><DialogTitle>导入训练文件</DialogTitle></DialogHeader><ImportPanel /></DialogContent></Dialog>
     <Dialog open={manualOpen} onOpenChange={setManualOpen}><DialogContent><DialogHeader><DialogTitle>手动记录训练</DialogTitle></DialogHeader><ManualActivityForm onSaved={() => { setManualOpen(false); activities.reload(); }} /></DialogContent></Dialog>
-    <div className="surface space-y-3 p-4"><div className="flex items-center justify-between"><span className="eyebrow">训练编辑</span><Button size="sm" onClick={() => setEditingDate(week.from)}>新建训练</Button></div>{editingDate ? <WorkoutBuilderV2 date={editingDate} onClose={() => setEditingDate(null)} onSave={() => { setEditingDate(null); events.reload(); }} /> : <p className="text-sm text-muted-foreground">点击训练日可编辑安排。</p>}</div>
+    {editingDate ? <div className="surface space-y-3 p-4"><div className="flex items-center justify-between"><span className="eyebrow">训练编辑</span><Button size="sm" onClick={() => setEditingDate(null)}>关闭</Button></div><WorkoutBuilderV2 date={editingDate} onClose={() => setEditingDate(null)} onSave={() => { setEditingDate(null); events.reload(); }} /></div> : null}
   </Page>;
 }
 

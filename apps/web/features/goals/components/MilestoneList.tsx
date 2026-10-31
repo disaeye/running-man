@@ -58,7 +58,7 @@ export function MilestoneList({
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between"><h3 className="eyebrow">里程碑</h3><Button variant="ghost" size="sm" disabled={saving} onClick={() => { setCreating(true); setEditingId(null); setError(null); }}><Plus aria-hidden="true" className="size-4" />添加</Button></div>
+      <div className="mb-3 flex items-center justify-end"><Button variant="ghost" size="sm" disabled={saving} onClick={() => { setCreating(true); setEditingId(null); setError(null); }}><Plus aria-hidden="true" className="size-4" />添加</Button></div>
       <div className="space-y-3">
         {error ? <p role="alert" className="text-caption1 text-error">{error}</p> : null}
         {milestones.length === 0 && !creating ? (

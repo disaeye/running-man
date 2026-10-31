@@ -31,6 +31,8 @@ export interface IntensityPoint {
   bucket: string;
   /** Seconds spent in each zone (indices 0..4) */
   zoneSeconds: [number, number, number, number, number];
+  byZone: Record<string, number>;
+  distributionType: string;
 }
 
 function toMinutes(seconds: number): number {
