@@ -55,8 +55,6 @@ const nextConfig = {
       { source: "/trends", destination: "/analysis?tab=load", permanent: true },
       { source: "/data", destination: "/settings?section=data", permanent: true },
       { source: "/export", destination: "/settings?section=data", permanent: true },
-      { source: "/strength", destination: "/calendar?view=list", permanent: true },
-      { source: "/strength/analytics", destination: "/calendar?view=list", permanent: true },
       // `?view=strength` was a fourth calendar tab with no view of its own — it
       // highlighted and then rendered the week grid. Strength content lives in
       // the log view, so the old URL normalises there.
