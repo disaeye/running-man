@@ -193,11 +193,11 @@ export default function GoalsPage() {
             {hasPlan && plan.data ? (
               <>
                 <DemoActivePlanCard plan={plan.data} />
-                <div className="grid min-w-0 gap-4 lg:grid-cols-12 lg:items-start">
-                  <div className="min-w-0 space-y-4 lg:col-span-7">
+                <div className="grid min-w-0 gap-4">
+                  <div className="min-w-0 space-y-4">
                     <DemoWeekFlow plan={plan.data} todayIso={todayIso} />
                   </div>
-                  <div className="min-w-0 space-y-4 lg:col-span-5">
+                  <div className="min-w-0 space-y-4">
                     <DemoPlanLab
                       plan={plan.data}
                       onGenerate={() => setGenerateOpen(true)}

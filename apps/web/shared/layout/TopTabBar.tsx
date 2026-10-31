@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { cn } from "@shared/lib/utils";
-import { MOBILE_TAB_ENTRIES, activeNavFromPath } from "@shared/config/nav-config";
+import { NAV_ENTRIES, activeNavFromPath } from "@shared/config/nav-config";
 
 export { activeNavFromPath as activeTabFromPath } from "@shared/config/nav-config";
 
@@ -49,10 +49,10 @@ export function MobileTabBar() {
       data-layout-token="mobile-nav"
       data-shell-region="bottom"
       data-safe-area="bottom"
-      className="fixed bottom-0 left-[max(0px,env(safe-area-inset-left))] right-[max(0px,env(safe-area-inset-right))] z-40 border-t border-border-subtle bg-surface-base px-3 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border-subtle bg-surface-base pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="grid grid-cols-5">
-        {MOBILE_TAB_ENTRIES.map((tab) => {
+      <div className="mx-auto grid h-16 max-w-2xl grid-cols-5">
+        {NAV_ENTRIES.map((tab) => {
           const isActive = tab.id === activeId;
           const Icon = tab.Icon;
           return (

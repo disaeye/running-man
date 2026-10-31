@@ -45,7 +45,7 @@ export function Card({
 }: CardProps) {
   return (
     <div
-      className={`min-w-0 rounded-2xl bg-surface-card text-text-primary ${PADDING[padding]} ${VARIANT[variant]} ${className}`.trim()}
+      className={`min-w-0 rounded-[18px] border border-border-subtle bg-surface-card text-text-primary ${PADDING[padding]} ${VARIANT[variant]} ${className}`.trim()}
       {...props}
     >
       {children}

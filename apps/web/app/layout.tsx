@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Barlow_Condensed, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Barlow_Condensed, JetBrains_Mono, Noto_Sans_SC, Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -13,6 +13,11 @@ import { Providers } from "./providers";
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-space-grotesk",
+  display: "swap",
+});
+
+const notoSansSc = Noto_Sans_SC({
+  variable: "--font-noto-sans-sc",
   display: "swap",
 });
 
@@ -51,7 +56,7 @@ export default function RootLayout({
     <html
       lang="zh"
       suppressHydrationWarning
-      className={`h-full antialiased ${spaceGrotesk.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable}`}
+      className={`h-full antialiased ${spaceGrotesk.variable} ${notoSansSc.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         {process.env.NODE_ENV === "development" && (

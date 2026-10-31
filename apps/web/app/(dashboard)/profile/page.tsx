@@ -1,215 +1,118 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { Settings2 } from "lucide-react";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { useZoneOverrides } from "@features/settings/hooks/useZoneOverrides";
-import { useRaceResults } from "@features/settings/hooks/useRaceResults";
-import { usePersonalRecords } from "@features/performance/hooks/usePersonalRecords";
 import { useAbility } from "@features/today/hooks/useAbility";
-import { useLifetimeTotals } from "@features/today/hooks/useLifetimeTotals";
-import { useAthleteGrade } from "@features/today/hooks/useAthleteGrade";
-import { usePersonalRange } from "@features/today/hooks/usePersonalRange";
-import { useWellness } from "@features/health/hooks/useWellness";
-import { useReadiness } from "@features/today/hooks/useReadiness";
 import { useSyncDetail } from "@features/data/hooks/useSyncDetail";
 import { Card } from "@shared/ui/Card";
-import { athleteRange, useAthleteTimezone } from "@shared/lib/training-day";
 import { Button } from "@shared/ui/button";
 import { PageHeader } from "@shared/ui/PageHeader";
-import { DemoIdentityCard } from "@features/settings/components/DemoIdentityCard";
-import { DemoPhysiologyCard } from "@features/settings/components/DemoPhysiologyCard";
-import { DemoRecordsWall } from "@features/settings/components/DemoRecordsWall";
-import { DemoLoadRiskCard } from "@features/settings/components/DemoLoadRiskCard";
-import { DemoDevicesCard } from "@features/settings/components/DemoDevicesCard";
 import { DataHealthSummary } from "@features/data/components/DataHealthSummary";
-import { SettingsZones } from "@features/settings/components/SettingsZones";
 import { ShoeManager } from "@features/settings/components/ShoeManager";
 import { ThresholdHistoryChart } from "@features/settings/components/ThresholdHistoryChart";
-import { bestSummary } from "@features/settings/lib/profile-summary";
-
-const WINDOW_DAYS = 42;
+import { formatPaceFromSeconds } from "@shared/lib/format";
+import { NO_VALUE } from "@shared/lib/use-data-state";
+import { getSportConfig } from "@shared/config/sport-config";
 
 export default function ProfilePage() {
-  return (
-    <Suspense fallback={null}>
-      <ProfilePageContent />
-    </Suspense>
-  );
+  return <Suspense fallback={null}><ProfileContent /></Suspense>;
 }
 
-function ProfilePageContent() {
+function ProfileContent() {
   const { profile } = useProfile();
-  const {
-    zones,
-    loading: zonesLoading,
-    saving: zonesSaving,
-    error: zonesError,
-    saveOverrides,
-    resetZones,
-    selectScheme,
-  } = useZoneOverrides();
-  const raceResults = useRaceResults();
-  const personalRecords = usePersonalRecords();
+  const { zones } = useZoneOverrides();
   const ability = useAbility();
-  const lifetime = useLifetimeTotals();
-  const grade = useAthleteGrade();
-  const personalRange = usePersonalRange();
-  const timezone = useAthleteTimezone();
-  const range = useMemo(() => athleteRange(WINDOW_DAYS, timezone), [timezone]);
-  const wellness = useWellness(range.from, range.to);
-
-  const readiness = useReadiness();
-  const intervalSync = useSyncDetail("intervals_icu");
-
-  const latestWellness = wellness.data.at(-1) ?? null;
-  const figures = personalRange.data?.figures ?? [];
-  const local = readiness.data?.local_readiness ?? null;
-  const recoveryIndex =
-    local !== null && local.data_sufficient ? Math.round(local.score) : null;
+  const sync = useSyncDetail("intervals_icu");
+  const sport = profile?.preferred_sport ? getSportConfig(profile.preferred_sport).label : "跑步";
 
   return (
     <div className="page-stack" data-testid="athlete-profile-page">
       <PageHeader
         title="我的"
-        description="个人资料、跑步生理指标、训练区间与跑鞋记录。"
-        action={
-          <Button asChild variant="outline">
-            <Link href="/settings">
-              <Settings2 aria-hidden="true" />
-              设置
-            </Link>
-          </Button>
-        }
+        action={<Button asChild variant="ghost" size="icon"><Link href="/settings" aria-label="设置"><Settings2 /></Link></Button>}
       />
 
-      <section aria-label="跑者资料" className="space-y-4">
-        <DemoIdentityCard
-          profile={profile}
-          lifetimeDistanceM={lifetime.distance_m}
-          raceCount={raceResults.data.length > 0 ? raceResults.data.length : null}
-          vdot={ability.data?.vdot ?? null}
-          tierLabel={grade.data?.grade?.tier ?? null}
-          bestSummary={bestSummary(raceResults.data)}
-        />
-      </section>
-
-      <DemoPhysiologyCard
-        vo2max={latestWellness?.vo2max ?? null}
-        vo2maxSource={latestWellness?.vo2max != null ? "Intervals.icu 同步" : null}
-        restingHr={zones?.resting_hr ?? profile?.resting_hr ?? null}
-        lthr={zones?.lthr ?? profile?.lthr ?? null}
-        thresholdPaceSPerKm={zones?.threshold_pace ?? profile?.threshold_pace ?? null}
-        weightKg={latestWellness?.weight ?? null}
-        heightCm={profile?.height_cm ?? null}
-        bodyFatPct={latestWellness?.body_fat_pct ?? null}
-        windowDays={personalRange.data?.window_days ?? 90}
-      />
-
-      <ThresholdHistoryChart />
-
-      <section aria-labelledby="profile-records-title" className="space-y-3">
-        <div className="space-y-1">
-          <h2 id="profile-records-title" className="font-display text-display-sm font-semibold text-text-primary">个人最好成绩</h2>
-          <p className="text-caption1 text-text-muted">实际比赛成绩与训练中记录的最佳表现分别展示。</p>
+      <Card className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-2xl font-bold">{profile?.name?.trim() || "未设置姓名"}</h2>
+          <span className="rounded-full bg-surface-overlay px-2 py-1 text-caption1 text-text-secondary">{sport}</span>
         </div>
-        <DemoRecordsWall
-          raceResults={raceResults.data.map((row) => ({
-            event_name: row.event_name,
-            distance_category: row.distance_category,
-            time_s: row.time_s,
-            race_date: row.race_date,
-          }))}
-          personalRecords={personalRecords.data.map((row) => ({
-            type: row.type,
-            value_formatted: row.value_formatted,
-            date: row.date,
-          }))}
-        />
-      </section>
-
-      <section aria-labelledby="profile-zones-title" className="space-y-3">
-        <div>
-          <h2 id="profile-zones-title" className="text-title3 font-semibold text-text-primary">训练区间</h2>
-          <p className="mt-1 text-caption1 text-text-muted">心率区间与阈值配速由当前个人阈值计算。</p>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-caption1 text-text-muted">
+          <span>每周训练 {profile?.weekly_training_days ?? NO_VALUE} 天</span>
+          <span>时区 {profile?.timezone ?? NO_VALUE}</span>
+          <span>VDOT {ability.data?.vdot?.toFixed(1) ?? NO_VALUE}</span>
         </div>
-        {zones ? (
-          <SettingsZones
-            hrZones={zones.hr_zones}
-            paceZones={zones.pace_zones}
-            thresholdPace={zones.threshold_pace}
-            hrScheme={zones.hr_scheme}
-            hrSchemeOptions={zones.hr_scheme_options}
-            hrSchemeCitation={zones.hr_scheme_citation}
-            unavailableRequirements={zones.unavailable_requirements}
-            hrMax={zones.hr_max}
-            hrMaxEstimated={zones.hr_max_estimated}
-            lthr={zones.lthr}
-            restingHr={zones.resting_hr}
-            hasOverrides={zones.has_overrides}
-            loading={zonesLoading}
-            saving={zonesSaving}
-            onSave={saveOverrides}
-            onReset={resetZones}
-            onSelectScheme={selectScheme}
-          />
-        ) : zonesLoading ? (
-          <p className="text-caption1 text-text-muted">正在读取训练区间…</p>
-        ) : zonesError ? (
-          <p role="alert" className="text-caption1 text-error">{zonesError}</p>
-        ) : (
-          <p className="text-caption1 text-text-muted">当前没有可用的训练区间。</p>
-        )}
-      </section>
+      </Card>
 
-      <section aria-label="跑鞋管理" className="space-y-3">
-        <div className="space-y-1">
-          <h2 className="font-display text-display-sm font-semibold text-text-primary">跑鞋</h2>
-          <p className="text-caption1 text-text-muted">查看跑鞋累计里程，管理个人鞋款。</p>
+      <Card>
+        <CardTitle title="生理参数" />
+        <div className="mt-3 divide-y divide-border-subtle">
+          <Parameter label="最大摄氧量" value={ability.data?.vdot?.toFixed(1) ?? null} source="估算" />
+          <Parameter label="乳酸阈心率 LTHR" value={zones?.lthr != null ? `${Math.round(zones.lthr)} bpm` : null} source="估算" />
+          <Parameter label="阈值配速" value={zones?.threshold_pace != null ? `${formatPaceFromSeconds(Math.round(zones.threshold_pace))}/km` : null} source="估算" />
+          <Parameter label="最大心率 HRmax" value={zones?.hr_max != null ? `${Math.round(zones.hr_max)} bpm` : null} source="设置" />
+          <Parameter label="静息心率" value={zones?.resting_hr != null ? `${Math.round(zones.resting_hr)} bpm` : null} source="设备" />
         </div>
+      </Card>
+
+      <Card>
+        <CardTitle title="心率区间" />
+        <div className="mt-3 space-y-2">
+          {(zones?.hr_zones ?? []).map((zone) => (
+            <div key={zone.zone} className="flex items-center gap-3 text-caption1">
+              <span className="w-14 text-text-secondary">Z{zone.zone} {zone.name}</span>
+              <span className="flex-1 font-mono text-text-primary">{zone.min_value}–{zone.max_value ?? "∞"} bpm</span>
+            </div>
+          ))}
+          {!zones ? <p className="text-caption1 text-text-muted">正在读取训练区间…</p> : null}
+        </div>
+        <Button asChild variant="link" className="mt-3 px-0"><Link href="/settings?section=zones">调整训练区间</Link></Button>
+      </Card>
+
+      <section aria-label="跑鞋与装备" className="space-y-3">
+        <h2 className="text-caption1 text-text-muted">跑鞋与装备</h2>
         <ShoeManager />
       </section>
-      <section aria-labelledby="profile-source-title" className="space-y-3">
-        <div className="space-y-1">
-          <h2 id="profile-source-title" className="font-display text-display-sm font-semibold text-text-primary">数据来源与恢复</h2>
-          <p className="text-caption1 text-text-muted">同步状态、近期恢复读数与训练设备。</p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="flex flex-col justify-between gap-4">
-            <div>
-              <h3 className="text-title3 font-semibold text-text-primary">Intervals.icu</h3>
-              <p className="mt-1 text-caption1 text-text-muted">
-                {intervalSync.data?.status === "connected"
-                  ? `已连接 · ${intervalSync.data.last_sync ? `最近同步于 ${new Date(intervalSync.data.last_sync).toLocaleDateString("zh-CN")}` : "等待首轮同步"}`
-                  : intervalSync.loading
-                    ? "正在读取连接状态…"
-                    : "尚未连接训练数据源"}
-              </p>
-              {intervalSync.data?.last_sync_error ? (
-                <p role="alert" className="mt-2 text-caption1 text-error">{intervalSync.data.last_sync_error}</p>
-              ) : null}
-            </div>
-            <Button asChild variant="outline" className="w-fit">
-              <Link href="/settings?section=data">数据管理</Link>
-            </Button>
-          </Card>
-          <DemoDevicesCard />
-          <DemoLoadRiskCard figures={figures} recoveryIndex={recoveryIndex} />
-        </div>
-        <Card padding="lg" className="space-y-4">
-          <div>
-            <h3 className="text-title3 font-semibold text-text-primary">训练数据质量</h3>
-            <p className="mt-1 text-caption1 text-text-muted">查看同步覆盖、数据完整度与缺失区间。</p>
-          </div>
-          <div className="rounded-xl border border-border-subtle bg-surface-sunken/50 p-4 sm:p-5">
-            <DataHealthSummary />
-          </div>
-          <Button asChild variant="outline" className="w-fit">
-            <Link href="/settings?section=data">管理来源与导入文件</Link>
-          </Button>
-        </Card>
-      </section>
+
+      <Card>
+        <CardTitle title="阈值变化" />
+        <div className="mt-3"><ThresholdHistoryChart /></div>
+      </Card>
+
+      <Card>
+        <CardTitle title="数据来源" />
+        <p className="mt-3 text-subheadline text-text-primary">Intervals.icu</p>
+        <p className="mt-1 text-caption1 text-text-muted">
+          {sync.data?.status === "connected" ? "已连接" : "尚未连接"}
+          {sync.data?.last_sync ? ` · 最近同步 ${new Date(sync.data.last_sync).toLocaleDateString("zh-CN")}` : ""}
+        </p>
+        {sync.data?.last_sync_error ? <p role="alert" className="mt-2 text-caption1 text-error">{sync.data.last_sync_error}</p> : null}
+        <Button asChild variant="outline" className="mt-4"><Link href="/settings?section=data">管理数据源</Link></Button>
+      </Card>
+
+      <Card>
+        <CardTitle title="数据质量" />
+        <div className="mt-3"><DataHealthSummary /></div>
+      </Card>
+    </div>
+  );
+}
+
+function CardTitle({ title }: { readonly title: string }) {
+  return <h2 className="text-caption1 text-text-muted">{title}</h2>;
+}
+
+function Parameter({ label, value, source }: { readonly label: string; readonly value: string | null; readonly source: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2.5">
+      <span className="text-caption1 text-text-secondary">{label}</span>
+      <span className="flex items-center gap-2 text-right">
+        <span className="font-mono text-caption1 text-text-primary">{value ?? NO_VALUE}</span>
+        <span className="rounded-full bg-surface-overlay px-1.5 py-0.5 text-caption2 text-text-muted">{source}</span>
+      </span>
     </div>
   );
 }

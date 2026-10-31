@@ -84,7 +84,7 @@ export function DemoTodayWorkoutCard({
     <Card
       variant="action"
       data-testid={testId}
-      className="relative overflow-hidden p-6 sm:p-8 lg:p-10"
+      className="relative overflow-hidden border-accent/30 bg-[radial-gradient(ellipse_at_top_right,var(--color-surface-raised),var(--color-surface-card))] p-4 sm:p-5"
     >
       <div
         aria-hidden="true"
@@ -104,7 +104,7 @@ export function DemoTodayWorkoutCard({
         ) : null}
       </div>
 
-      <h2 className="relative mt-4 text-display-lg font-semibold text-text-primary">
+      <h2 className="relative mt-3 font-display text-2xl font-bold text-text-primary">
         {title}
       </h2>
       <p className="relative mt-1 text-caption1 text-text-muted">{todayLabel}</p>

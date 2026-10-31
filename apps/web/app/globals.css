@@ -145,7 +145,7 @@
    * 数字，正文用 Space Grotesk。指标数字一律等宽并开表格数字，
    * 一列数字上下才对得齐。
    */
-  --font-sans: "Space Grotesk", var(--font-space-grotesk), "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-sans: "Noto Sans SC", var(--font-noto-sans-sc), "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
   --font-display: "Barlow Condensed", var(--font-barlow-condensed), "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-serif: var(--font-sans);
@@ -154,7 +154,7 @@
   --shell-pad-x-end: max(var(--shell-pad-x), env(safe-area-inset-right, 0px));
   --shell-pad-y: clamp(1.25rem, 4vw, 3.25rem);
   --shell-header-h: 3.5rem;
-  --shell-content-max: 64rem;
+  --shell-content-max: 42rem;
   --shell-gap: clamp(1rem, 1.6vw, 1.5rem);
   --mobile-nav-height: 4.5rem;
   --duration-instant: 100ms;
@@ -375,6 +375,8 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
 .shell-chrome-row { display: flex; min-width: 0; min-height: 0; flex: 1 1 auto; overflow: hidden; width: 100%; }
 
 .shell-header-inner, .shell-main-inner { width: 100%; max-width: var(--shell-content-max); margin-inline: auto; box-sizing: border-box; }
+.shell-main { padding: 1.25rem 1rem calc(7rem + env(safe-area-inset-bottom)); }
+.page-stack { gap: 1rem; }
 .shell-header-inner { display: flex; height: var(--shell-header-h); align-items: center; gap: .75rem; padding-inline: var(--shell-pad-x); }
 .shell-main { min-height: 0; flex: 1 1 auto; overflow-x: hidden; overflow-y: auto; padding: var(--shell-pad-y) var(--shell-pad-x-end) var(--shell-pad-y) var(--shell-pad-x); -webkit-overflow-scrolling: touch; background-color: var(--color-surface-sunken); }
 .shell-main-inner { min-width: 0; }

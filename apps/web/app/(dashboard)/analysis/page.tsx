@@ -17,7 +17,6 @@ import {
   AnalysisRangeProvider,
   useAnalysisRange,
 } from "@features/analysis/lib/analysis-range";
-import { RecoveryCollapsible } from "@features/analysis/components/RecoveryCollapsible";
 import {
   analysisTabUrl,
   canonicalAnalysisSearch,
@@ -28,18 +27,16 @@ import {
 // Tab wording matches ANALYSIS_TAB_LABELS and the pillar card titles, so one
 // surface never calls the same thing by a different name.
 const TABS = [
-  { id: "session", label: "跑步战报" },
-  { id: "strength", label: "力量训练" },
-  { id: "overview", label: "总览" },
-  { id: "load", label: "负荷与体能" },
-  { id: "intensity", label: "强度结构" },
-  { id: "performance", label: "表现能力" },
+  { id: "load", label: "负荷与恢复" },
+  { id: "performance", label: "能力与表现" },
+  { id: "overview", label: "身体与生活" },
 ] as const;
 
 type AnalysisTab = (typeof TABS)[number]["id"];
 
 function parseTabParam(raw: string | null): AnalysisTab {
-  return resolveAnalysisPageTab(raw) as AnalysisTab;
+  const resolved: string = resolveAnalysisPageTab(raw);
+  return TABS.some((item) => item.id === resolved) ? resolved as AnalysisTab : "load";
 }
 
 export default function AnalysisPage() {
@@ -66,7 +63,6 @@ function AnalysisPageContent() {
     parseTabParam(searchParams.get("tab")),
   );
   const { range, setRange } = useAnalysisRange();
-  const isStrengthTab = tab === "strength";
   const runningSportLabel = getSportConfig("Run").label;
 
   // Settle legacy aliases once on mount (ability → performance, etc.).
@@ -90,10 +86,10 @@ function AnalysisPageContent() {
     <div className="page-stack" data-testid="analysis-page">
       <PageHeader
         title={<span id="analysis-title">训练分析</span>}
-        action={!isStrengthTab ? <AnalysisRangeControls dateRange={range} onDateRangeChange={setRange} /> : undefined}
+        action={<AnalysisRangeControls dateRange={range} onDateRangeChange={setRange} />}
       />
       <Tabs value={tab} onValueChange={(value) => setTab(parseTabParam(value))} className="space-y-6" data-testid="analysis-tabs">
-        <TabsList className="grid grid-cols-3 sm:grid-cols-6">
+        <TabsList className="grid grid-cols-3">
           {TABS.map(({ id, label }) => (
             <TabsTrigger key={id} value={id} className="px-2 text-caption1 sm:px-3">
               {label}
@@ -112,9 +108,8 @@ function AnalysisPageContent() {
         <TabsContent value="load" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-load-adaptation">
           <section aria-label="负荷适应诊断" className="space-y-6">
             <AnalysisLoad />
-            <RecoveryCollapsible>
-              <AnalysisRecovery />
-            </RecoveryCollapsible>
+            <AnalysisRecovery />
+            <AnalysisIntensity />
           </section>
         </TabsContent>
         <TabsContent value="intensity" forceMount className="space-y-6 data-[state=inactive]:hidden" data-testid="analysis-intensity">

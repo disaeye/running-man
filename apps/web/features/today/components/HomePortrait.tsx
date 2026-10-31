@@ -26,6 +26,8 @@ import { DemoTodayWorkoutCard } from "./DemoTodayWorkoutCard";
 import { DemoWeekVolumeCard } from "./DemoWeekVolumeCard";
 import { DemoRecentActivityCard } from "./DemoRecentActivityCard";
 import { DemoAbilityCard } from "./DemoAbilityCard";
+import { TodayLoadCard } from "./TodayLoadCard";
+import { usePmcData } from "@features/pmc/hooks/usePmcData";
 import { HomeSetupCard } from "./HomeSetupCard";
 
 const RECENT_DAYS = 30;
@@ -71,6 +73,7 @@ export function HomePortrait() {
   const weekEvents = useCalendarEvents(weekRange.from, weekEnd);
   const weekly = useWeeklyProgress();
   const ability = useAbility();
+  const pmc = usePmcData(recentRange.from, recentRange.to);
   const personalRange = usePersonalRange();
   const dateLabel = useClientDateLabel({ month: "long", day: "numeric", weekday: "long" });
 
@@ -172,6 +175,10 @@ export function HomePortrait() {
         />
       ) : (
         <>
+          <div className="flex items-center gap-2 text-caption1 text-text-muted">
+            <span className={`size-1.5 rounded-full ${connection === "connected" ? "bg-accent" : "bg-text-muted"}`} />
+            <span>{caption}</span>
+          </div>
           <DemoTodayWorkoutCard
             testId="home-workout"
             decision={decision}
@@ -180,7 +187,7 @@ export function HomePortrait() {
             linkedActivityId={todayEvent?.linked_activity_id ?? null}
           />
 
-          <section aria-label="恢复与跑步能力" data-testid="home-recovery" className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <section aria-label="恢复信号" data-testid="home-recovery" className="space-y-4">
             <DemoReadinessCard
               testId="home-readiness"
               conclusionTestId="home-decision"
@@ -203,7 +210,9 @@ export function HomePortrait() {
             />
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <TodayLoadCard point={pmc.data.at(-1) ?? null} />
+
+          <div className="space-y-4">
             <DemoWeekVolumeCard
               actualDistanceM={week?.actual_distance_m ?? null}
               plannedDistanceM={
