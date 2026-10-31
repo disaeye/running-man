@@ -172,58 +172,52 @@ export function HomePortrait() {
         />
       ) : (
         <>
-          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            {/* 1. 今日就绪度与恢复评分 */}
-            <DemoReadinessCard
-            conclusionTestId="home-decision"
-            readingsTestId="home-readings"
-            score={assessment.available ? readiness?.score ?? null : null}
-            dataSufficient={assessment.available}
-            levelLabel={assessment.levelLabel}
-            conclusion={conclusion}
-            readings={{
-              resting_hr: readings?.resting_hr ?? null,
-              sleep_secs: readings?.sleep_secs ?? null,
-              hrv: readings?.hrv ?? null,
-            }}
-            />
-
-            {/* 2. 今日推荐训练（焦点行动卡） */}
-            <DemoTodayWorkoutCard
+          <DemoTodayWorkoutCard
             testId="home-workout"
             decision={decision}
             prescription={todayEvent?.workout_prescription ?? null}
             todayLabel={dateLabel}
             linkedActivityId={todayEvent?.linked_activity_id ?? null}
+          />
+
+          <section aria-label="恢复与跑步能力" data-testid="home-recovery" className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <DemoReadinessCard
+              testId="home-readiness"
+              conclusionTestId="home-decision"
+              readingsTestId="home-readings"
+              score={assessment.available ? readiness?.score ?? null : null}
+              dataSufficient={assessment.available}
+              levelLabel={assessment.levelLabel}
+              conclusion={conclusion}
+              readings={{
+                resting_hr: readings?.resting_hr ?? null,
+                sleep_secs: readings?.sleep_secs ?? null,
+                hrv: readings?.hrv ?? null,
+              }}
             />
-          </div>
+            <DemoAbilityCard
+              vdot={ability.data?.vdot ?? null}
+              thresholdPaceSPerKm={ability.data?.threshold_pace_s_per_km ?? null}
+              figures={personalRange.data?.figures ?? []}
+              windowDays={personalRange.data?.window_days ?? 90}
+            />
+          </section>
 
           <div className="grid gap-4 lg:grid-cols-2">
-          {/* 3. 本周训练里程进度环 */}
-          <DemoWeekVolumeCard
-            actualDistanceM={week?.actual_distance_m ?? null}
-            plannedDistanceM={
-              week && week.planned_distance_m > 0 ? week.planned_distance_m : null
-            }
-            elevationM={week?.actual_elevation_m ?? null}
-            avgPaceSPerKm={week?.avg_pace_s_per_km ?? null}
-            weekLabel={weekLabel}
-          />
-
-          {/* 4. 最近一次训练 */}
-          <DemoRecentActivityCard
-            activity={recentActivity}
-            paceVariationS={recentAnalysis.data?.pace_variation_s ?? null}
-            relativeLabel={recentActivity ? formatRelative(recentActivity.start_time) : ""}
-          />
-
-          {/* 5. 跑步能力摘要 */}
-          <DemoAbilityCard
-            vdot={ability.data?.vdot ?? null}
-            thresholdPaceSPerKm={ability.data?.threshold_pace_s_per_km ?? null}
-            figures={personalRange.data?.figures ?? []}
-            windowDays={personalRange.data?.window_days ?? 90}
-          />
+            <DemoWeekVolumeCard
+              actualDistanceM={week?.actual_distance_m ?? null}
+              plannedDistanceM={
+                week && week.planned_distance_m > 0 ? week.planned_distance_m : null
+              }
+              elevationM={week?.actual_elevation_m ?? null}
+              avgPaceSPerKm={week?.avg_pace_s_per_km ?? null}
+              weekLabel={weekLabel}
+            />
+            <DemoRecentActivityCard
+              activity={recentActivity}
+              paceVariationS={recentAnalysis.data?.pace_variation_s ?? null}
+              relativeLabel={recentActivity ? formatRelative(recentActivity.start_time) : ""}
+            />
           </div>
         </>
       )}

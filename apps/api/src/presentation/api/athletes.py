@@ -54,7 +54,16 @@ async def threshold_history(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
 ) -> list[ThresholdHistoryEntry]:
     history = await ThresholdRepo().history(athlete.id)
-    return [ThresholdHistoryEntry.model_validate(step) for step in history]
+    return [
+        ThresholdHistoryEntry(
+            effective_from=step.effective_from,
+            hr_max=step.hr_max,
+            resting_hr=step.resting_hr,
+            lthr=step.lthr,
+            threshold_pace=step.threshold_pace,
+        )
+        for step in history
+    ]
 
 
 @router.get("/me", response_model=AthleteMe)

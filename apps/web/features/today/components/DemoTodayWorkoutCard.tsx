@@ -25,7 +25,7 @@ interface Props {
 }
 
 /**
- * 今日焦点训练卡（参考稿第二张卡）。
+ * 今日焦点训练卡（首页主卡）。
  *
  * 这是全页唯一一张行动卡：它说清楚今天练什么、怎么练、练多久。
  *
@@ -81,10 +81,14 @@ export function DemoTodayWorkoutCard({
         : null;
 
   return (
-    <Card variant="action" data-testid={testId} className="relative overflow-hidden">
+    <Card
+      variant="action"
+      data-testid={testId}
+      className="relative overflow-hidden p-6 sm:p-8 lg:p-10"
+    >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-8 -top-8 size-32 rounded-full bg-accent/15 blur-3xl"
+        className="pointer-events-none absolute -right-12 -top-12 size-56 rounded-full bg-accent/15 blur-3xl"
       />
 
       <div className="relative flex items-center justify-between gap-3">
@@ -93,25 +97,25 @@ export function DemoTodayWorkoutCard({
             aria-hidden="true"
             className="size-2 rounded-full bg-accent motion-safe:animate-pulse"
           />
-          <LabelCaps className="text-accent">TODAY&apos;S WORKOUT · 今日焦点</LabelCaps>
+          <LabelCaps className="text-accent">TODAY&apos;S WORKOUT · 今日安排</LabelCaps>
         </span>
         {zoneChip ? (
           <span className="font-mono text-caption1 text-text-secondary">{zoneChip}</span>
         ) : null}
       </div>
 
-      <h2 className="relative mt-2 text-display-sm font-semibold text-text-primary">
+      <h2 className="relative mt-4 text-display-lg font-semibold text-text-primary">
         {title}
       </h2>
       <p className="relative mt-1 text-caption1 text-text-muted">{todayLabel}</p>
 
       {segments.length > 0 ? (
-        <div className="relative mt-4 rounded-lg bg-surface-overlay px-2 py-2">
+        <div className="relative mt-6 rounded-lg bg-surface-overlay px-2 py-3 sm:px-4">
           <DemoWorkoutSteps segments={segments} highlightIndex={highlightIndex} />
         </div>
       ) : null}
 
-      <div className="relative mt-4 flex flex-wrap items-end justify-between gap-4 border-t border-border-subtle pt-4">
+      <div className="relative mt-6 flex flex-wrap items-end justify-between gap-4 border-t border-border-subtle pt-5">
         <div className="flex gap-6">
           <div>
             <p className="text-caption1 text-text-muted">预估耗时</p>

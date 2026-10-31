@@ -44,6 +44,13 @@ export const DASHBOARD_FIXTURES: Readonly<Record<string, JsonFixture>> = {
     total_duration_s: 0, total_tss: 0,
   },
   "/api/v1/activities/trash": [],
+  "/api/v1/data/health": {
+    activities: { data_as_of: null, total: 0, with_hr: 0, with_gps: 0, with_power: 0, with_streams: 0 },
+    completeness: { activities: { with_hr: 0, with_gps: 0, with_power: 0 } },
+    wellness: { data_as_of: null, total_days: 0, latest_day: null },
+    training_load: { data_as_of: null },
+    gaps: [],
+  },
   "/api/v1/athletes/me": {
     id: "00000000-0000-0000-0000-000000000001", email: "qa@example.com",
     name: "QA Runner", timezone: "UTC", preferred_sport: "Run",
@@ -53,7 +60,7 @@ export const DASHBOARD_FIXTURES: Readonly<Record<string, JsonFixture>> = {
   },
   "/api/v1/athletes/me/auto-calculate": {},
   "/api/v1/athletes/me/physiology": { computed_at: null },
-  "/api/v1/athletes/me/thresholds": { computed_at: null },
+  "/api/v1/athletes/me/thresholds": [],
   "/api/v1/calendar": [],
   "/api/v1/goals": [],
   "/api/v1/insights/ability": [],
@@ -91,8 +98,9 @@ export const DASHBOARD_FIXTURES: Readonly<Record<string, JsonFixture>> = {
   },
   "/api/v1/integrations": [],
   "/api/v1/integrations/intervals_icu": {
-    source: "intervals_icu", connected: false, last_sync_at: null,
-    data_as_of: null, staleness_bucket: "missing",
+    source: "intervals_icu", connected: false, settings: { sync_frequency: "daily", auto_sync: true },
+    last_sync_at: null, last_sync_status: null, last_sync_error: null, last_sync_detail: null,
+    created_at: null, updated_at: null, data_as_of: null, staleness_bucket: "missing",
   },
   "/api/v1/integrations/intervals_icu/coverage": {
     source: "intervals_icu", first_activity_date: null, last_activity_date: null,

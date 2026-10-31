@@ -1,6 +1,5 @@
 "use client";
 
-import { Card } from "@shared/ui/Card";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { UserProfile } from "@shared/lib/auth";
 import { getSportConfig } from "@shared/config/sport-config";
@@ -48,17 +47,21 @@ export function DemoIdentityCard({
     : "跑步";
 
   return (
-    <Card
+    <section
       data-testid={testId ?? "demo-identity-card"}
-      className="relative"
+      className="relative overflow-hidden rounded-2xl bg-surface-card p-6 text-text-primary sm:p-8 lg:p-10"
     >
-      <div className="relative flex items-start gap-4">
-        <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-surface-raised text-accent">
-          <Activity className="size-5" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-12 -top-12 size-56 rounded-full bg-accent/10 blur-3xl"
+      />
+      <div className="relative flex items-start gap-4 sm:gap-5">
+        <span aria-hidden="true" className="grid size-16 shrink-0 place-items-center rounded-2xl bg-surface-raised text-accent sm:size-20">
+          <Activity className="size-7" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-title2 uppercase tracking-wide text-text-primary">
+            <h2 className="font-display text-display-lg uppercase tracking-wide text-text-primary">
               {name}
             </h2>
             {tierLabel ? (
@@ -67,7 +70,7 @@ export function DemoIdentityCard({
               </span>
             ) : null}
           </div>
-          <p className="mt-1 font-mono text-caption1 text-text-muted">
+          <p className="mt-2 font-mono text-subheadline text-text-muted">
             {bestSummary ? `${bestSummary} · ` : ""}
             {vdot != null ? `VDOT ${vdot.toFixed(1)}` : "VDOT 未记录"}
           </p>
@@ -82,7 +85,7 @@ export function DemoIdentityCard({
         </div>
       </div>
 
-      <div className="relative mt-5 grid grid-cols-2 gap-3 pt-1">
+      <div className="relative mt-8 grid grid-cols-2 gap-3 border-t border-border-subtle pt-6">
         <Stat
           label="累计总里程"
           value={lifetimeKm != null ? Math.round(lifetimeKm).toLocaleString() : NO_VALUE}
@@ -94,7 +97,7 @@ export function DemoIdentityCard({
           unit={raceCount != null ? "次" : null}
         />
       </div>
-    </Card>
+    </section>
   );
 }
 
@@ -108,13 +111,13 @@ function Stat({
   readonly unit: string | null;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-overlay px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-overlay px-4 py-4 sm:px-5">
       <div className="min-w-0">
         <p className="truncate text-caption1 uppercase tracking-wider text-text-muted">
           {label}
         </p>
         <p className="mt-0.5 flex items-baseline gap-1">
-          <span className="font-mono text-title2 font-bold tabular-nums text-text-primary">
+          <span className="font-mono text-display-sm font-bold tabular-nums text-text-primary">
             {value}
           </span>
           {unit ? (

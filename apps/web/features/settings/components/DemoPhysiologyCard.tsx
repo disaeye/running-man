@@ -35,13 +35,15 @@ export function DemoPhysiologyCard({
 }: Props) {
   const bmi = bodyMassIndex(weightKg, heightCm);
   return (
-    <Card data-testid={testId ?? "demo-physiology-card"}>
+    <Card data-testid={testId ?? "demo-physiology-card"} padding="lg">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-title3 font-semibold text-text-primary">身体与跑步能力</h2>
-        <span className="text-caption1 text-text-muted">个人区间：近 {windowDays} 天</span>
+        <div>
+          <h2 className="font-display text-display-sm font-semibold text-text-primary">身体与跑步能力</h2>
+          <span className="mt-1 block text-caption1 text-text-muted">个人区间：近 {windowDays} 天</span>
+        </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Reading
           label="最大摄氧量 (VO2max)"
           value={vo2max != null ? vo2max.toFixed(1) : null}
@@ -98,7 +100,7 @@ function Reading({
   readonly note: string;
 }) {
   return (
-    <div className="rounded-lg bg-surface-overlay px-3 py-2.5">
+    <div className="rounded-xl bg-surface-overlay px-4 py-4">
       <p className="text-caption1 text-text-muted">{label}</p>
       {value == null ? (
         <p className="mt-1 text-caption1 text-text-muted">{NO_VALUE}</p>

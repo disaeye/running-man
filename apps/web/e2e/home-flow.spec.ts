@@ -3,23 +3,13 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * 锁住首页的阅读顺序。
  *
- * 页面先答「今天练什么」（34px 结论与说明），紧跟它的四格读数说明这个决定的
- * 四个口径；然后是近 42 天负荷趋势，最后是本周训练清单与课表。
+ * 页面先展示今天的训练安排，再列出恢复状态和身体读数；随后展示本周跑量与最近训练。
  * 所以这个顺序在手机上也不变。
  *
- * 四个块按 testid 定位而不是布局类名，日常的间距与分栏调整不会让这套断言失败：
- * - `home-decision`        34px 结论句与说明
- * - `home-readings`        结论句下面的四格读数
- * - `home-load`            负荷趋势卡（PMC）
- * - `home-weekly-horizon`  本周训练清单卡
+ * 主要内容按 testid 定位，布局调整后仍检查训练与恢复的阅读顺序。
  */
 
-const BLOCKS = [
-  "home-decision",
-  "home-readings",
-  "home-load",
-  "home-weekly-horizon",
-] as const;
+const BLOCKS = ["home-workout", "home-recovery"] as const;
 
 async function blockTops(page: Page) {
   return page.evaluate((ids) => {
@@ -37,7 +27,7 @@ test.describe("home page information flow", () => {
   // meaningful against a known viewport height.
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("the conclusion and its four numbers are both on the first screen", async ({ page }) => {
+  test("today's workout is the first-screen focal point", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(6000);
 
@@ -63,25 +53,17 @@ test.describe("home page information flow", () => {
     }
 
     const tops = await blockTops(page);
-    const readingsBottom = await page.evaluate(
-      () =>
-        Math.round(
-          document
-            .querySelector('[data-testid="home-readings"]')!
-            .getBoundingClientRect().bottom,
-        ),
+    const workoutBottom = await page.evaluate(
+      () => Math.round(document.querySelector('[data-testid="home-workout"]')!.getBoundingClientRect().bottom),
     );
 
-    expect(tops["home-decision"], "the conclusion must be on the first screen").toBeLessThan(
-      shellHeight,
+    expect(tops["home-workout"], "today's workout must be the first content block").toBeLessThan(
+      tops["home-recovery"] ?? shellHeight,
     );
-    expect(
-      readingsBottom,
-      "the reading strip under the conclusion must be on the first screen",
-    ).toBeLessThan(shellHeight);
+    expect(workoutBottom, "the workout hero must fit on the first screen").toBeLessThan(shellHeight);
   });
 
-  test("narrow screens stack in priority order", async ({ page }) => {
+  test("narrow screens show the workout before recovery", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 900 });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(6000);

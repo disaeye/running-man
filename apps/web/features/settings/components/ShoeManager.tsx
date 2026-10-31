@@ -99,10 +99,7 @@ export function ShoeManager() {
 
   return (
     <Card padding="md" className="space-y-5">
-      <div>
-        <h2 className="text-title3 font-semibold text-text-primary">跑鞋</h2>
-        <p className="mt-1 text-caption1 text-text-muted">记录鞋款与累计跑量；跑量按已关联的跑步活动计算。</p>
-      </div>
+      <p className="text-caption1 text-text-muted">记录鞋款与累计跑量；跑量按已关联的跑步活动计算。</p>
       {loading ? <p className="text-caption1 text-text-muted">正在读取跑鞋…</p> : error ? (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-error/30 bg-error/5 p-3 text-error">
           <p className="text-caption1">{error}</p>
