@@ -14,7 +14,7 @@ import { TrainingWeekView } from "@features/calendar/components/TrainingWeekView
 import { TrainingMonthView } from "@features/calendar/components/TrainingMonthView";
 import { TrainingActivityList } from "@features/calendar/components/TrainingActivityList";
 
-export function TrainingPageContent() {
+export default function TrainingPageContent() {
   const [view, setView] = useState<"week" | "month" | "list">("week");
   const [sport, setSport] = useState("all");
   const [showLog, setShowLog] = useState(false);
