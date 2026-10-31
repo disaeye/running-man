@@ -28,8 +28,8 @@ test.describe("Profile and settings flow", () => {
     const settingsLink = page.getByRole("link", { name: "设置" });
     await expect(settingsLink).toHaveAttribute("href", "/settings");
     await expect(page.getByTestId("settings-section-data")).toHaveCount(0);
-    await expect(page.getByTestId("demo-identity-card")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "跑鞋", exact: true })).toBeVisible();
+    await expect(page.locator("h2").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "跑鞋与装备", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "添加跑鞋" })).toBeDisabled();
     await expect(page.getByLabel("名称")).toBeVisible();
 

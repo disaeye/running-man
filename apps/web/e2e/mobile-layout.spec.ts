@@ -25,7 +25,7 @@ interface Geometry {
 async function geometry(page: Page): Promise<Geometry> {
   return page.evaluate(() => {
     const main = document.querySelector<HTMLElement>('[data-shell-region="main"]')!;
-    const inner = main.querySelector<HTMLElement>(".shell-main-inner")!;
+    const inner = main.querySelector<HTMLElement>(".page-stack") ?? main;
     const header = inner.firstElementChild as HTMLElement | null;
     const h1 = inner.querySelector("h1");
     const actionRow = header?.querySelector<HTMLElement>("h1 + div, h1 ~ div") ?? null;

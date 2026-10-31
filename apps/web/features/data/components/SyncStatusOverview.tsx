@@ -149,7 +149,7 @@ export function SyncStatusOverview({
             ) : null}
           </div>
         </div>
-        <div className="mt-3 text-caption1 text-text-muted truncate">
+        <div className="mt-3 text-caption1 text-text-muted">
           {activeJob
             ? activeJob.windowsTotal > 0
               ? `窗口 ${activeJob.windowsDone}/${activeJob.windowsTotal} · 新增 +${activeJob.activitiesUpserted} · 流 +${activeJob.streamsInserted}`

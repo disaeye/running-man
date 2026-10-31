@@ -160,9 +160,9 @@ export function IntervalsSourceCard({
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <IcuIcon />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <span className="text-subheadline font-medium text-text-primary">Intervals.icu</span>
-            <p className="text-caption1 text-text-secondary sm:truncate">
+            <p className="text-caption1 text-text-secondary">
               <Subtitle connected={connected} lastSync={lastSync} syncStatus={syncStatus} isSyncing={isSyncing} />
             </p>
           </div>

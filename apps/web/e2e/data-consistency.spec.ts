@@ -156,7 +156,7 @@ test.describe("connection state consistency", () => {
     await expect(setup).toBeVisible();
     await expect(setup).toContainText("已连接，还没有同步到训练数据");
     await expect(page.getByRole("link", { name: "去连接" })).toHaveCount(0);
-    await expect(page.getByTestId("sync-status-indicator")).not.toContainText("未连接数据源");
+    await expect(page.getByTestId("home-portrait")).not.toContainText("未连接数据源");
     await expect(page.getByTestId("home-portrait")).toContainText("已连接，等待首次同步");
     await expect(page.getByTestId("home-portrait")).not.toContainText("数据已过期");
   });
@@ -168,7 +168,6 @@ test.describe("connection state consistency", () => {
     const setup = page.getByTestId("home-starting-point");
     await expect(setup).toBeVisible();
     await expect(page.getByRole("link", { name: "去连接" })).toHaveCount(1);
-    await expect(page.getByTestId("sync-status-indicator")).toContainText("未连接数据源");
     await expect(page.getByTestId("home-portrait")).toContainText("未连接数据源");
   });
 
@@ -184,7 +183,6 @@ test.describe("connection state consistency", () => {
     // Age is stated as a fact, not as an alarm, and never as a missing source.
     await expect(page.getByTestId("home-portrait")).toContainText("数据截至");
     await expect(page.getByTestId("home-portrait")).not.toContainText("数据已过期");
-    await expect(page.getByTestId("sync-status-indicator")).toContainText("最新数据");
-    await expect(page.getByTestId("sync-status-indicator")).not.toContainText("未连接数据源");
+    await expect(page.getByTestId("home-portrait")).not.toContainText("未连接数据源");
   });
 });

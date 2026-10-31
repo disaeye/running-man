@@ -37,8 +37,7 @@ const ANALYSIS_TAB_ALIASES: Readonly<Record<string, AnalysisTabId>> = {
   recovery: "load",
 };
 
-/** `session` 是分析页的默认模式（单次战报）。 */
-const DEFAULT_ANALYSIS_TAB: AnalysisPageTab = "session";
+const DEFAULT_ANALYSIS_TAB: AnalysisPageTab = "load";
 
 const CANONICAL_ANALYSIS_TABS: ReadonlySet<AnalysisTabId> = new Set([
   "load",

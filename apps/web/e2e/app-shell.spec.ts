@@ -37,10 +37,9 @@ test.describe("app shell", () => {
       await expect(nav).toBeVisible();
     });
 
-    test("sidebar is hidden on mobile", async ({ page }) => {
+    test("no desktop sidebar is rendered", async ({ page }) => {
       await page.goto("/");
-      const sidebar = page.getByTestId("sidebar");
-      await expect(sidebar).toBeHidden();
+      await expect(page.getByTestId("sidebar")).toHaveCount(0);
     });
 
     test("all tab bar items meet 44px touch target", async ({ page }) => {
@@ -62,25 +61,20 @@ test.describe("app shell", () => {
       }
     });
 
-    test("profile button meets 44px touch target", async ({ page }) => {
+    test("profile tab opens athlete profile", async ({ page }) => {
       await page.goto("/");
-      const btn = page.getByTestId("profile-button");
-      // Wait for hydration before measuring. The shell is a client component,
-      // so boundingBox() returns null until React has mounted — the old
-      // assertion read null and reported a missing element.
-      await expect(btn).toBeVisible();
-      const box = await btn.boundingBox();
-      expect(box).not.toBeNull();
-      expect(box!.width).toBeGreaterThanOrEqual(44);
-      expect(box!.height).toBeGreaterThanOrEqual(44);
+      const tab = page.locator('[data-layout-token="mobile-nav"] a').filter({ hasText: "我的" });
+      await expect(tab).toBeVisible();
+      await tab.click();
+      await expect(page).toHaveURL(/\/profile$/);
     });
 
-    test("profile button opens account settings", async ({ page }) => {
-      await page.goto("/");
-      const profileButton = page.getByRole("button", { name: "打开设置" });
-      await expect(profileButton).toBeVisible();
-      await profileButton.click();
-      await expect(page).toHaveURL(/\/settings\?section=account$/);
+    test("profile page opens settings", async ({ page }) => {
+      await page.goto("/profile");
+      const settingsButton = page.getByRole("link", { name: "设置", exact: true });
+      await expect(settingsButton).toBeVisible();
+      await settingsButton.click();
+      await expect(page).toHaveURL(/\/settings$/);
     });
 
     test("content end never sits under the mobile nav", async ({ page }) => {
@@ -108,9 +102,9 @@ test.describe("app shell", () => {
         // never scrolled (observed as a ~1840px "overlap" on /calendar).
         await expect
           .poll(
-            async () =>
-              main.evaluate((el) => {
-                el.scrollTo(0, el.scrollHeight);
+            async () => {
+              await main.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+              return page.evaluate(() => {
                 const sentinelEl = document.querySelector(
                   '[data-testid="content-end-sentinel"]',
                 );
@@ -122,40 +116,25 @@ test.describe("app shell", () => {
                   sentinelEl.getBoundingClientRect().bottom -
                   navEl.getBoundingClientRect().top
                 );
-              }),
+              });
+            },
             { message: `${route}: content end should clear the nav` },
           )
           .toBeLessThanOrEqual(25);
       }
     });
 
-    test("scroll region ends exactly where the nav starts", async ({
-      page,
-    }) => {
+    test("main content clears the bottom navigation", async ({ page }) => {
       await page.goto("/");
       const navEl = page.locator('[data-layout-token="mobile-nav"]');
-
-      // The scroll region is sized to `100dvh - var(--mobile-nav-height)`, so its
-      // bottom edge is the nav's top edge: content cannot hide behind the bar and
-      // there is no dead band to scroll through. The bar publishes its own height
-      // once, so the measurement polls until the two edges agree.
-      await expect
-        .poll(async () =>
-          page.evaluate(() => {
-            const main = document.querySelector('[data-shell-region="main"]');
-            const nav = document.querySelector('[data-layout-token="mobile-nav"]');
-            if (!main || !nav) return Number.POSITIVE_INFINITY;
-            return Math.abs(
-              main.getBoundingClientRect().bottom - nav.getBoundingClientRect().top,
-            );
-          }),
-        { message: "scroll region bottom should meet the nav top" })
-        .toBeLessThanOrEqual(1);
-
       const navHeight = await navEl.evaluate(
         (el) => el.getBoundingClientRect().height,
       );
       expect(navHeight).toBeGreaterThan(0);
+      const padding = await page.locator('[data-shell-region="main"]').evaluate(
+        (el) => parseFloat(getComputedStyle(el).paddingBottom),
+      );
+      expect(padding).toBeGreaterThanOrEqual(navHeight);
     });
 
     test("profile and settings show distinct page titles while sharing the profile tab", async ({ page }) => {
@@ -192,58 +171,42 @@ test.describe("app shell", () => {
   test.describe("tablet 768x1024", () => {
     test.use({ viewport: TABLET });
 
-    test("sidebar is visible and collapsed on tablet", async ({ page }) => {
+    test("bottom navigation stays visible on tablet", async ({ page }) => {
       await page.goto("/");
-      const sidebar = page.getByTestId("sidebar");
-      await expect(sidebar).toBeVisible();
-      await expect(sidebar).toHaveAttribute("data-collapsed", "true");
+      await expect(page.locator('[data-layout-token="mobile-nav"]')).toBeVisible();
+      await expect(page.getByTestId("sidebar")).toHaveCount(0);
     });
 
-    test("mobile tab bar is hidden on tablet", async ({ page }) => {
+    test("tablet navigation has five entries", async ({ page }) => {
       await page.goto("/");
-      await expect(
-        page.locator('[data-layout-token="mobile-nav"]'),
-      ).toBeHidden();
+      await expect(page.locator('[data-layout-token="mobile-nav"] a')).toHaveCount(5);
     });
   });
 
   test.describe("desktop 1280x800", () => {
     test.use({ viewport: DESKTOP });
 
-    test("sidebar is visible and expanded on desktop", async ({ page }) => {
+    test("bottom navigation stays visible on desktop", async ({ page }) => {
       await page.goto("/");
-      const sidebar = page.getByTestId("sidebar");
-      await expect(sidebar).toBeVisible();
+      await expect(page.locator('[data-layout-token="mobile-nav"]')).toBeVisible();
+      await expect(page.getByTestId("sidebar")).toHaveCount(0);
     });
 
-    test("mobile tab bar is hidden on desktop", async ({ page }) => {
+    test("desktop content uses the narrow reference layout", async ({ page }) => {
       await page.goto("/");
-      await expect(
-        page.locator('[data-layout-token="mobile-nav"]'),
-      ).toBeHidden();
+      const nav = page.locator('[data-layout-token="mobile-nav"] > div');
+      const box = await nav.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.width).toBeLessThanOrEqual(672);
     });
 
-    test("sidebar collapse persists across reload", async ({ page }) => {
+    test("desktop navigation links preserve their routes", async ({ page }) => {
       await page.goto("/");
-      const toggle = page.getByRole("button", { name: "折叠侧边栏" });
-      await toggle.click();
-      await expect(page.getByTestId("sidebar")).toHaveAttribute(
-        "data-collapsed",
-        "true",
-      );
-
-      await page.reload();
-      await expect(page.getByTestId("sidebar")).toHaveAttribute(
-        "data-collapsed",
-        "true",
-      );
-
-      const expandBtn = page.getByRole("button", { name: "展开侧边栏" });
-      await expandBtn.click();
-      await expect(page.getByTestId("sidebar")).toHaveAttribute(
-        "data-collapsed",
-        "false",
-      );
+      const nav = page.locator('[data-layout-token="mobile-nav"]');
+      await expect(nav.locator('a[href="/calendar"]')).toBeVisible();
+      await expect(nav.locator('a[href="/analysis"]')).toBeVisible();
+      await expect(nav.locator('a[href="/goals"]')).toBeVisible();
+      await expect(nav.locator('a[href="/profile"]')).toBeVisible();
     });
   });
 

@@ -4,8 +4,7 @@ test.describe("Smoke", () => {
   test("login → dashboard → logout", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("link", { name: "步迹" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "今天" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "今天", exact: true })).toBeVisible();
 
     await page.goto("/settings?section=account");
 

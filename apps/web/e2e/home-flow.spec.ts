@@ -31,9 +31,7 @@ test.describe("home page information flow", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(6000);
 
-    const shellHeight = await page.evaluate(
-      () => (document.querySelector(".shell-main") as HTMLElement).clientHeight,
-    );
+    const shellHeight = await page.evaluate(() => window.innerHeight);
 
     // An account with no history has nothing to decide, so the page shows the
     // starting point instead. Asserting a reading strip there would demand a

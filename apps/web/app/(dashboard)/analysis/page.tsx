@@ -32,11 +32,10 @@ const TABS = [
   { id: "overview", label: "身体与生活" },
 ] as const;
 
-type AnalysisTab = (typeof TABS)[number]["id"];
+type AnalysisTab = AnalysisPageTab;
 
 function parseTabParam(raw: string | null): AnalysisTab {
-  const resolved: string = resolveAnalysisPageTab(raw);
-  return TABS.some((item) => item.id === resolved) ? resolved as AnalysisTab : "load";
+  return resolveAnalysisPageTab(raw);
 }
 
 export default function AnalysisPage() {
