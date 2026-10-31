@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Page, Segmented } from "@shared/ui/Lovable";
 import { AnalysisLoadRecovery } from "@features/analysis/components/AnalysisLoadRecovery";
