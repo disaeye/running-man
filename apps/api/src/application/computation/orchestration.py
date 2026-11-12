@@ -10,9 +10,11 @@ import psycopg
 from psycopg.rows import DictRow
 
 from application.computation.runs import ComputationRunResult
+from application.goals.progress import refresh_active_goal_progress
 from application.load.pmc_facts import recompute_pmc_facts
 from application.load.recompute import recompute_activity_load_facts
 from application.physiology.service import calculate_physiology
+from application.plan.adjustment_pipeline import maybe_detect_adjustments
 from application.run_classification.service import recompute_session_classifications
 from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
@@ -55,6 +57,8 @@ async def recompute_after_activity_change(
     pmc = await recompute_pmc_facts(athlete_id, trigger)
     await _prune_activity_facts_without_history(athlete_id)
     await _recompute_classifications(athlete_id)
+    await refresh_active_goal_progress(athlete_id)
+    await maybe_detect_adjustments(athlete_id)
     staleness = await check_athlete_computation_staleness(athlete_id)
     return RecomputeChainResult(activity, pmc, staleness)
 
