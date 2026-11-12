@@ -24,6 +24,7 @@ from presentation.api import (
     data_health,
     export,
     gear,
+    goal_result_api,
     goals,
     insights,
     insights_ability,
@@ -116,6 +117,7 @@ app.include_router(activity_analysis.router, prefix=API_V1_PREFIX)
 app.include_router(share.router, prefix=API_V1_PREFIX)
 app.include_router(calendar.router, prefix=API_V1_PREFIX)
 app.include_router(goals.router, prefix=API_V1_PREFIX)
+app.include_router(goal_result_api.router, prefix=API_V1_PREFIX)
 app.include_router(coach_context.router, prefix=API_V1_PREFIX)
 app.include_router(data_health.router, prefix=API_V1_PREFIX)
 app.include_router(insights_ability.router, prefix=API_V1_PREFIX)

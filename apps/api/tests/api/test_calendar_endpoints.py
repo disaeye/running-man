@@ -64,6 +64,15 @@ async def test_create_calendar_event() -> None:
         "sport_type": "Run",
         "name": "Tempo Run",
         "predicted_tss": 65.0,
+        "predicted_distance_m": 10000.0,
+        "training_type": "tempo",
+        "workout_prescription": {
+            "type": "tempo",
+            "duration_min": 50,
+            "pace_min_s_km": 270,
+            "pace_max_s_km": 285,
+            "segments": [],
+        },
         "status": "planned",
         "done": False,
     }
@@ -74,9 +83,12 @@ async def test_create_calendar_event() -> None:
     assert body["event_id"] == "e-new"
     assert body["category"] == "workout"
     assert body["name"] == "Tempo Run"
+    assert body["predicted_distance_m"] == 10000.0
     assert len(repo.create_calls) == 1
     assert repo.create_calls[0][0] == ATHLETE.id
     assert repo.create_calls[0][1]["event_id"] == "e-new"
+    assert repo.create_calls[0][1]["predicted_distance_m"] == 10000.0
+    assert repo.create_calls[0][1]["training_type"] == "tempo"
 
 
 @pytest.mark.no_db

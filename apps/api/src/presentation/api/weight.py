@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
+from application.goals.progress import refresh_active_goal_progress
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.weight import WeightRepo
 from presentation.api.analytics_health_contracts import (
@@ -53,6 +54,8 @@ async def upsert_weight(
 ) -> WeightEntryResponse:
     """Create or update a weight entry for the authenticated athlete on a given day."""
     entry = await repo.upsert_entry(athlete.id, body.date, body.weight_kg)
+    # 体重是 weight 目标的进度来源，写入后立即刷新目标。
+    await refresh_active_goal_progress(athlete.id)
     return WeightEntryResponse.model_validate(entry)
 
 

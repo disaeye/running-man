@@ -38,7 +38,6 @@ _PROFILE_COLS = (
     "timezone",
     "dob",
     "sex",
-    "weight_goal",
     "weekly_training_days",
     "max_session_duration_min",
     "preferred_sport",
@@ -72,20 +71,13 @@ async def threshold_history(
 
 @router.get("/me", response_model=AthleteMe)
 async def me(athlete: Annotated[Athlete, Depends(get_current_athlete)]) -> AthleteMe:
-    inputs = await load_threshold_inputs(athlete.id, include_weight_fallback=True)
+    inputs = await load_threshold_inputs(athlete.id)
     thresholds = effective_from_inputs(inputs)
     row = inputs.profile or {}
     data: dict[str, object] = dict(row)
     data["id"] = str(athlete.id)
     data.setdefault("email", athlete.email)
     data.update({field: getattr(thresholds, field).value for field in _THRESHOLD_COLS})
-
-    # Wellness supplies body weight for the goal field; the resting-HR and
-    # observed-HR fallbacks already live in the shared resolver, so they are not
-    # re-applied here (that duplication is what made this endpoint and
-    # /insights/zones disagree about HRmax).
-    if data.get("weight_goal") is None:
-        data["weight_goal"] = (inputs.wellness or {}).get("weight")
     return AthleteMe.model_validate(data)
 
 

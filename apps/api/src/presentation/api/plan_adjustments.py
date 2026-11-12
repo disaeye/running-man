@@ -44,6 +44,15 @@ class DetectionRequest(BaseModel):
     event_id: str
 
 
+class DetectionResponse(BaseModel):
+    """检测的结果：没有触发时 adjustment 为空，附一句说明。"""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    adjustment: PlanAdjustmentResponse | None = None
+    message: str
+
+
 @router.get("/adjustments", response_model=AdjustmentListResponse)
 async def list_adjustments(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
@@ -57,12 +66,12 @@ async def list_adjustments(
     )
 
 
-@router.post("/adjustments/detect", response_model=PlanAdjustmentResponse)
+@router.post("/adjustments/detect", response_model=DetectionResponse)
 async def detect_adjustment_for_event(
     body: DetectionRequest,
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
-) -> PlanAdjustmentResponse:
-    """Check a planned session and record a proposal for review."""
+) -> DetectionResponse:
+    """检查一节计划课并记录待确认建议；没有触发迹象时正常返回空结果。"""
     today = today_in_zone(athlete.timezone)
     await open_pool()
     async with get_pool().connection() as conn:
@@ -79,10 +88,7 @@ async def detect_adjustment_for_event(
         long_run_seconds=inputs.long_run_seconds,
     )
     if adjustment is None:
-        raise HTTPException(
-            status_code=status.HTTP_200_OK,
-            detail="这节训练没有需要调整的迹象",
-        )
+        return DetectionResponse(adjustment=None, message="这节训练没有需要调整的迹象")
 
     original = event.get("workout_prescription")
     original_dict = original if isinstance(original, dict) else None
@@ -99,7 +105,7 @@ async def detect_adjustment_for_event(
         adjusted,
         -adjustment.reduction_pct,
     )
-    return response(row)
+    return DetectionResponse(adjustment=response(row), message=summary)
 
 
 @router.post("/adjustments/{adjustment_id}/accept", response_model=DecisionResponse)
@@ -124,10 +130,15 @@ async def accept_adjustment(
         _ = await cur.execute(
             """
             UPDATE training_calendar
-            SET workout_prescription = %s::jsonb
+            SET workout_prescription = %s::jsonb,
+                predicted_distance_m = COALESCE(
+                    (%s::jsonb ->> 'predicted_distance_m')::double precision,
+                    predicted_distance_m
+                )
             WHERE athlete_id = %s AND event_id = %s
             """,
             (
+                encode_prescription(adjusted),
                 encode_prescription(adjusted),
                 athlete.id,
                 str(pending["event_id"]),

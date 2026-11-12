@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -69,7 +70,6 @@ class AthleteProfileUpdate(BaseModel):
     # accepted: the column used to be VARCHAR(1) and took 'M', which the readers
     # had to guess at while the select could never match it.
     sex: Literal["male", "female"] | None = None
-    weight_goal: float | None = Field(default=None, gt=0)
     weekly_training_days: int | None = Field(default=None, ge=1, le=7)
     max_session_duration_min: int | None = Field(default=None, gt=0)
     preferred_sport: str | None = None
@@ -95,6 +95,7 @@ class CalendarEventCreate(BaseModel):
     name: str | None = None
     workout_xml: str | None = None
     predicted_tss: float | None = Field(default=None, ge=0)
+    predicted_distance_m: float | None = Field(default=None, ge=0)
     status: str | None = None
     done: bool | None = None
     plan_goal_id: str | None = None
@@ -112,8 +113,10 @@ class CalendarEventUpdate(BaseModel):
     name: str | None = None
     workout_xml: str | None = None
     predicted_tss: float | None = Field(default=None, ge=0)
+    predicted_distance_m: float | None = Field(default=None, ge=0)
     status: str | None = None
     done: bool | None = None
+    training_type: str | None = None
     workout_prescription: RunWorkoutPrescription | None = None
     execution: SessionExecutionPayload | None = None
     quality: SessionQualityPayload | None = None
@@ -130,6 +133,7 @@ class MilestoneUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     title: str | None = Field(default=None, min_length=1)
+    phase_id: UUID | None = None
     target_date: date | None = None
     target_value: float | None = None
     unit: str | None = None

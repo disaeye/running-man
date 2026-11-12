@@ -4,8 +4,15 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
+from presentation.api.goal_schemas import (  # noqa: F401 — 既有导入方继续从 schemas 拿目标模型
+    GoalCreate,
+    GoalResponse,
+    GoalUpdate,
+    MilestoneCreate,
+    MilestoneResponse,
+)
 from presentation.api.json_contracts import JsonDocument
 from presentation.api.schemas_core import (
     RunWorkoutPrescription,
@@ -43,7 +50,6 @@ class AthleteMe(BaseModel):
     threshold_pace: float | None = None
     dob: date | None = None
     sex: str | None = None
-    weight_goal: float | None = None
     weekly_training_days: int | None = 5
     max_session_duration_min: int | None = 120
     preferred_sport: str | None = "Run"
@@ -192,97 +198,6 @@ class CalendarEvent(BaseModel):
     execution: SessionExecutionPayload | None = None
     quality: SessionQualityPayload | None = None
     session_classification: SessionClassificationResponse | None = None
-
-
-class GoalCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    type: str
-    title: str
-    target_value: float | None = None
-    current_value: float | None = None
-    unit: str | None = None
-    target_date: date | None = None
-    race_distance_m: float | None = Field(default=None, ge=1500, le=1_000_000)
-    race_target_time_s: int | None = Field(default=None, ge=180, le=172_800)
-    status: str | None = None
-
-    @model_validator(mode="after")
-    def _race_fields_require_event(self) -> GoalCreate:
-        has_race_data = self.race_distance_m is not None or self.race_target_time_s is not None
-        if has_race_data and self.type != "event":
-            raise ValueError("比赛距离与目标用时仅适用于比赛目标")
-        if self.race_target_time_s is not None and self.race_distance_m is None:
-            raise ValueError("设置比赛目标用时前必须填写比赛距离")
-        return self
-
-
-class GoalUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    type: str | None = None
-    title: str | None = None
-    target_value: float | None = None
-    current_value: float | None = None
-    unit: str | None = None
-    target_date: date | None = None
-    race_distance_m: float | None = Field(default=None, ge=1500, le=1_000_000)
-    race_target_time_s: int | None = Field(default=None, ge=180, le=172_800)
-    status: str | None = None
-
-    @model_validator(mode="after")
-    def _validate_race_update(self) -> GoalUpdate:
-        if self.type is not None and self.type != "event":
-            if self.race_distance_m is not None or self.race_target_time_s is not None:
-                raise ValueError("比赛距离与目标用时仅适用于比赛目标")
-        if self.race_target_time_s is not None and self.race_distance_m is None:
-            raise ValueError("设置比赛目标用时前必须填写比赛距离")
-        if self.race_distance_m is None and self.race_target_time_s is not None:
-            raise ValueError("设置比赛目标用时前必须填写比赛距离")
-        return self
-
-
-class GoalResponse(BaseModel):
-    goal_id: str
-    athlete_id: str
-    type: str
-    title: str
-    target_value: float | None = None
-    current_value: float
-    unit: str | None = None
-    target_date: date | None = None
-    race_distance_m: float | None = None
-    race_target_time_s: int | None = None
-    status: str
-    created_at: datetime
-    updated_at: datetime
-
-    @field_validator("goal_id", "athlete_id", mode="before")
-    @classmethod
-    def _uuid_as_string(cls, value: object) -> str:
-        return str(value)
-
-
-class MilestoneCreate(BaseModel):
-    title: str
-    target_date: date | None = None
-    target_value: float | None = None
-    unit: str | None = None
-    result_text: str | None = None
-    achieved: bool | None = None
-    achieved_at: datetime | None = None
-
-
-class MilestoneResponse(BaseModel):
-    milestone_id: str
-    goal_id: str
-    title: str
-    target_date: date | None = None
-    target_value: float | None = None
-    unit: str | None = None
-    result_text: str | None = None
-    achieved: bool
-    achieved_at: datetime | None = None
 
 
 class LapResponse(BaseModel):

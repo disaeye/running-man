@@ -42,10 +42,21 @@ async def test_wellness_rating_saves_soreness() -> None:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.put(
                 "/api/v1/wellness/ratings",
-                json={"day": "2026-10-29", "soreness": 40},
+                json={"day": "2026-10-29", "soreness": 3},
             )
         assert response.status_code == 200
-        assert response.json()["soreness"] == 40
-        assert calls == [(athlete.id, date(2026, 10, 29), 40)]
+        assert response.json()["soreness"] == 3
+        assert calls == [(athlete.id, date(2026, 10, 29), 3)]
+
+        bad_high = await AsyncClient(transport=ASGITransport(app=app), base_url="http://test").put(
+            "/api/v1/wellness/ratings",
+            json={"day": "2026-10-29", "soreness": 5},
+        )
+        assert bad_high.status_code == 422
+        bad_low = await AsyncClient(transport=ASGITransport(app=app), base_url="http://test").put(
+            "/api/v1/wellness/ratings",
+            json={"day": "2026-10-29", "soreness": 0},
+        )
+        assert bad_low.status_code == 422
     finally:
         app.dependency_overrides.clear()

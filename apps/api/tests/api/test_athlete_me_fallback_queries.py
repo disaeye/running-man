@@ -46,9 +46,9 @@ async def _reset() -> None:
     async with get_pool().connection() as conn, conn.cursor() as cur:
         await cur.execute(
             """
-            INSERT INTO athletes (id, email, password_hash, name, timezone, dob, weight_goal)
-            VALUES (%s, %s, 'hash', 'Fast Profile', 'Asia/Shanghai', %s, 68.5)
-            ON CONFLICT (id) DO UPDATE SET dob = EXCLUDED.dob, weight_goal = EXCLUDED.weight_goal
+            INSERT INTO athletes (id, email, password_hash, name, timezone, dob)
+            VALUES (%s, %s, 'hash', 'Fast Profile', 'Asia/Shanghai', %s)
+            ON CONFLICT (id) DO UPDATE SET dob = EXCLUDED.dob
             """,
             (ATHLETE_ID, ATHLETE_EMAIL, date(1994, 3, 2)),
         )
@@ -157,7 +157,6 @@ async def test_recorded_thresholds_skip_both_fallback_tables(
     body = response.json()
     assert body["hr_max"] == 186
     assert body["resting_hr"] == 52
-    assert body["weight_goal"] == 68.5
     queries = pool.all_queries()
     assert len(queries) == 2, queries
     assert _summary_count(queries) == 0
@@ -192,9 +191,9 @@ async def test_fallback_reads_each_column_from_its_own_latest_day(
 ) -> None:
     """Wellness rows arrive a column at a time.
 
-    The newest row carries only weight, while resting HR was measured a week
-    earlier. Reading the newest row and taking every column from it used to
-    report no resting HR at all, which then disagreed with the health charts.
+    The newest row carries no resting HR; the reading was taken a week earlier.
+    Reading the newest row and taking every column from it used to report no
+    resting HR at all, which then disagreed with the health charts.
     """
     await _reset()
     await _seed(
@@ -214,9 +213,8 @@ async def test_fallback_reads_each_column_from_its_own_latest_day(
     assert response.status_code == 200
     body = response.json()
     assert body["resting_hr"] == 47
-    assert body["weight_goal"] == 68.5
     queries = pool.all_queries()
-    # One wellness statement resolves both columns with scalar subqueries.
+    # One wellness statement resolves the resting HR with a scalar subquery.
     assert _wellness_count(queries) == 1, queries
 
 

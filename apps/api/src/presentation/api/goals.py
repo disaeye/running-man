@@ -1,3 +1,5 @@
+"""目标 CRUD、进度刷新与里程碑接口。比赛结案见 goal_result_api。"""
+
 from typing import Annotated
 from uuid import UUID
 
@@ -6,8 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from application.goals.progress import refresh_goal_progress
 from infrastructure.auth.models import Athlete
 from infrastructure.db.pool import get_pool
+from infrastructure.repositories.goal_milestone_repo import GoalMilestoneRepo
+from infrastructure.repositories.goal_race_results import GoalRaceRepo
 from infrastructure.repositories.goals import GoalsRepo
-from presentation.api.schemas import (
+from presentation.api.goal_schemas import (
     GoalCreate,
     GoalResponse,
     GoalUpdate,
@@ -39,7 +43,9 @@ async def create_goal(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
     repo: Annotated[GoalsRepo, Depends(get_goals_repo)],
 ) -> GoalResponse:
-    return GoalResponse.model_validate(await repo.create(athlete.id, payload.model_dump()))
+    await _validate_sport_key(payload.sport_key)
+    data = payload.model_dump()
+    return GoalResponse.model_validate(await repo.create(athlete.id, data))
 
 
 @router.post("/refresh-all", response_model=list[GoalResponse])
@@ -76,6 +82,7 @@ async def update_goal(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
     repo: Annotated[GoalsRepo, Depends(get_goals_repo)],
 ) -> GoalResponse:
+    await _validate_sport_key(payload.sport_key)
     row = await repo.update(athlete.id, goal_id, payload.model_dump(exclude_unset=True))
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="goal not found")
@@ -113,7 +120,8 @@ async def list_milestones(
 ) -> list[MilestoneResponse]:
     if await repo.get(athlete.id, goal_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="goal not found")
-    return [MilestoneResponse.model_validate(row) for row in await repo.list_milestones(goal_id)]
+    milestones = await GoalMilestoneRepo().list_milestones(goal_id)
+    return [MilestoneResponse.model_validate(row) for row in milestones]
 
 
 @router.post(
@@ -127,7 +135,7 @@ async def create_milestone(
 ) -> MilestoneResponse:
     if await repo.get(athlete.id, goal_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="goal not found")
-    milestone = await repo.create_milestone(goal_id, payload.model_dump())
+    milestone = await GoalMilestoneRepo().create_milestone(goal_id, payload.model_dump())
     return MilestoneResponse.model_validate(milestone)
 
 
@@ -141,7 +149,18 @@ async def update_milestone(
 ) -> MilestoneResponse:
     if await repo.get(athlete.id, goal_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="goal not found")
-    row = await repo.update_milestone(goal_id, milestone_id, payload.model_dump(exclude_unset=True))
+    row = await GoalMilestoneRepo().update_milestone(
+        goal_id, milestone_id, payload.model_dump(exclude_unset=True)
+    )
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="milestone not found")
     return MilestoneResponse.model_validate(row)
+
+
+async def _validate_sport_key(sport_key: str | None) -> None:
+    """运动类别必须是注册表里的键，避免外键错误变成 500。"""
+    if sport_key is not None and not await GoalRaceRepo().sport_exists(sport_key):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="未知的运动类别",
+        )

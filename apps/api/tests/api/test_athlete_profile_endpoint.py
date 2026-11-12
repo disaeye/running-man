@@ -65,7 +65,6 @@ async def test_saving_the_form_stores_sex_and_the_thresholds(
             "resting_hr": 52,
             "lthr": 167,
             "threshold_pace": 294,
-            "weight_goal": 68.5,
             "dob": "1994-03-02",
             "sex": "female",
         }
@@ -77,11 +76,10 @@ async def test_saving_the_form_stores_sex_and_the_thresholds(
     assert body["hr_max"] == 186
     assert body["lthr"] == 167
     assert body["threshold_pace"] == 294
-    assert body["weight_goal"] == 68.5
 
     with db_conn.cursor() as cur:
-        cur.execute("SELECT sex, weight_goal FROM athletes WHERE id = %s", (ATHLETE_ID,))
-        assert cur.fetchone() == ("female", 68.5)
+        cur.execute("SELECT sex FROM athletes WHERE id = %s", (ATHLETE_ID,))
+        assert cur.fetchone() == ("female",)
 
 
 async def test_a_single_letter_sex_is_rejected_before_the_write(

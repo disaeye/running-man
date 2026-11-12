@@ -41,8 +41,9 @@ def select_goal(
 ) -> dict[str, object] | None:
     """The goal the page should show.
 
-    The requested goal wins. Otherwise the active goal is used: the one whose
-    target date is still ahead, and among those the one that closes soonest.
+    The requested goal wins. Otherwise the active primary goal is used, and
+    failing that the active goal whose target date is still ahead, closest
+    first: a short-term side goal must not displace the athlete's main race.
     """
     if goal_id is not None:
         for goal in goals:
@@ -57,6 +58,9 @@ def select_goal(
         and goal_target(goal) is not None
         and (goal_target(goal) or date.max) >= today
     ]
+    primary = [goal for goal in candidates if goal.get("is_primary")]
+    if primary:
+        return min(primary, key=lambda goal: goal_target(goal) or date.max)
     if not candidates:
         candidates = [goal for goal in goals if goal.get("status") == "active"]
     if not candidates:

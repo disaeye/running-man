@@ -178,9 +178,13 @@ async def test_get_periodization() -> None:
         _phase(goal_id, "Build", date(2026, 6, 29), date(2026, 7, 19), 28000.0),
         _phase(goal_id, "Peak", date(2026, 7, 20), date(2026, 8, 2), 30400.0),
     ]
-    _use_repo(_FakeRepo(get_result=_goal(goal_id), phases=phases))
-
-    response = await _get(f"/api/v1/plan/periodization?goal_id={goal_id}")
+    _use_repo(_FakeRepo(get_result=_goal(goal_id)))
+    with patch(
+        "infrastructure.repositories.goal_milestone_repo.GoalMilestoneRepo.list_training_phases",
+        new_callable=AsyncMock,
+        return_value=phases,
+    ):
+        response = await _get(f"/api/v1/plan/periodization?goal_id={goal_id}")
 
     assert response.status_code == 200
     body = response.json()

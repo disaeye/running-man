@@ -25,7 +25,7 @@ def get_wellness_repo() -> WellnessRepo:
 
 class WellnessRatingUpdate(BaseModel):
     day: date
-    soreness: int | None = Field(default=None, ge=0, le=100)
+    soreness: int | None = Field(default=None, ge=1, le=4)
 
 
 SLEEP_TARGET_SECS = 7 * 3600  # 7-hour target per night

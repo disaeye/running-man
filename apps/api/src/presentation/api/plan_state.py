@@ -27,6 +27,7 @@ from application.plan.training_paces import (
 from domain.time import today_in_zone
 from infrastructure.auth.models import Athlete
 from infrastructure.db.pool import get_pool, open_pool
+from infrastructure.repositories.goal_milestone_repo import GoalMilestoneRepo
 from infrastructure.repositories.goals import GoalsRepo
 from infrastructure.repositories.plan_week import (
     WEEK_DAYS,
@@ -80,7 +81,7 @@ async def get_active_plan(
     goal_id_value = goal_uuid(selected)
     if goal_id_value is None:
         return ActivePlanResponse()
-    phases = await repo.list_training_phases(athlete.id, goal_id_value)
+    phases = await GoalMilestoneRepo().list_training_phases(athlete.id, goal_id_value)
 
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=WEEK_DAYS - 1)
