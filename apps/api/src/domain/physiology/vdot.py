@@ -25,7 +25,7 @@ Pure Python, no external dependencies. All paces are seconds-per-kilometre.
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Final
 
 # Daniels' oxygen cost of running, per m/min of velocity.
@@ -39,6 +39,9 @@ _FRACTION_FAST_AMPLITUDE: Final = 0.1894393
 _FRACTION_FAST_DECAY: Final = -0.012778
 _FRACTION_SLOW_AMPLITUDE: Final = 0.2989558
 _FRACTION_SLOW_DECAY: Final = -0.1932605
+
+VDOT_SOURCE_REFS: Final[tuple[str, ...]] = ("Daniels-VDOT", "World-Athletics-2022-speed-training")
+VDOT_ALGORITHM_VERSION: Final = "vdot-1.0.0"
 
 # Training intensities as a fraction of VDOT (i.e. of VO2max).
 #
@@ -145,6 +148,29 @@ def training_paces(vdot: float) -> dict[str, dict[str, float]]:
         "threshold": _pace_range(vdot, _T_PCT, _T_PCT_HIGH),
         "interval": _pace_range(vdot, _I_PCT, _I_PCT_HIGH),
         "repetition": _pace_range(vdot, _R_PCT, _R_PCT_HIGH),
+    }
+
+
+def vdot_pace_anchor(
+    paces: Mapping[str, Mapping[str, float]],
+    pace_key: str,
+    *,
+    effective_from: str | None = None,
+    source_refs: Sequence[str] = VDOT_SOURCE_REFS,
+) -> dict[str, object]:
+    """Bind one VDOT pace range to its model version, date and source refs."""
+    pace = paces.get(pace_key)
+    if pace is None:
+        raise ValueError(f"missing VDOT pace range: {pace_key}")
+    return {
+        "model": "Daniels-VDOT",
+        "intensity_anchor": "Daniels-VDOT",
+        "algorithm_version": VDOT_ALGORITHM_VERSION,
+        "effective_from": effective_from,
+        "pace_key": pace_key,
+        "pace_min_s_km": float(pace["min"]),
+        "pace_max_s_km": float(pace["max"]),
+        "source_refs": list(dict.fromkeys(source_refs)),
     }
 
 

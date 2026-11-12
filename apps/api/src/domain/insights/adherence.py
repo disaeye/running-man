@@ -12,9 +12,22 @@ the next cycle. Stored as a weekly ``derived_metric_fact`` so trends are queryab
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
+from typing import TypedDict
+
+from domain.insights.session_quality import QualityMatches, empty_quality_matches, quality_matches
+
+
+class AdherenceTrend(TypedDict):
+    avg_adherence_pct: float
+    on_track_weeks: int
+    total_weeks: int
+    trend: str
+    type_match: float | None
+    structure_match: float | None
+    domain_match: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +39,7 @@ class WeeklyAdherence:
     sessions_completed: int
     sessions_missed: int
     sessions_extra: int
+    matches: QualityMatches | None = None
 
     @property
     def status(self) -> str:
@@ -47,14 +61,16 @@ def compute_weekly_adherence(
     sessions_completed: int = 0,
     sessions_missed: int = 0,
     sessions_extra: int = 0,
+    classifications: Sequence[Mapping[str, object]] | None = None,
 ) -> WeeklyAdherence:
     """Adherence for one ISO week.
 
-    week_start is the Monday of the week. TSS values are the week's totals.
+    ``classifications`` are the stored five-object results for the week. When
+    supplied, their per-segment quality gives the type, structure and domain
+    agreement alongside the TSS ratio, using the same definition as plan
+    quality and the weekly trend views.
     """
-    adherence = (
-        round(completed_tss / planned_tss * 100, 1) if planned_tss > 0 else 0.0
-    )
+    adherence = round(completed_tss / planned_tss * 100, 1) if planned_tss > 0 else 0.0
     return WeeklyAdherence(
         week_start=week_start,
         completed_tss=round(completed_tss, 1),
@@ -63,6 +79,11 @@ def compute_weekly_adherence(
         sessions_completed=sessions_completed,
         sessions_missed=sessions_missed,
         sessions_extra=sessions_extra,
+        matches=(
+            quality_matches(classifications)
+            if classifications is not None
+            else empty_quality_matches()
+        ),
     )
 
 
@@ -73,7 +94,7 @@ def iso_week_start(day: date) -> date:
 
 def adherence_trend(
     weeks: Sequence[WeeklyAdherence],
-) -> dict[str, float | str]:
+) -> AdherenceTrend:
     """Aggregate adherence signal across multiple weeks.
 
     Returns avg adherence, on-track week count, and a directional label. This
@@ -81,15 +102,10 @@ def adherence_trend(
     I following the plan?'
     """
     if not weeks:
-        return {"avg_adherence_pct": 0.0, "on_track_weeks": 0, "total_weeks": 0, "trend": "no_data"}
+        return _trend(0.0, 0, 0, "no_data", [], [], [])
     with_plan = [w for w in weeks if w.planned_tss > 0]
     if not with_plan:
-        return {
-            "avg_adherence_pct": 0.0,
-            "on_track_weeks": 0,
-            "total_weeks": len(weeks),
-            "trend": "no_plan",
-        }
+        return _trend(0.0, 0, len(weeks), "no_plan", [], [], [])
     avg = sum(w.adherence_pct for w in with_plan) / len(with_plan)
     on_track = sum(1 for w in with_plan if w.status == "on_track")
     if avg >= 90:
@@ -98,9 +114,37 @@ def adherence_trend(
         trend = "variable"
     else:
         trend = "inconsistent"
+    return _trend(
+        round(avg, 1),
+        on_track,
+        len(with_plan),
+        trend,
+        [week.matches["type_match"] for week in with_plan if week.matches],
+        [week.matches["structure_match"] for week in with_plan if week.matches],
+        [week.matches["domain_match"] for week in with_plan if week.matches],
+    )
+
+
+def _trend(
+    avg: float,
+    on_track: int,
+    total: int,
+    label: str,
+    type_values: list[float | None],
+    structure_values: list[float | None],
+    domain_values: list[float | None],
+) -> AdherenceTrend:
     return {
-        "avg_adherence_pct": round(avg, 1),
+        "avg_adherence_pct": avg,
         "on_track_weeks": on_track,
-        "total_weeks": len(with_plan),
-        "trend": trend,
+        "total_weeks": total,
+        "trend": label,
+        "type_match": _mean(type_values),
+        "structure_match": _mean(structure_values),
+        "domain_match": _mean(domain_values),
     }
+
+
+def _mean(values: list[float | None]) -> float | None:
+    present = [value for value in values if value is not None]
+    return round(sum(present) / len(present), 3) if present else None

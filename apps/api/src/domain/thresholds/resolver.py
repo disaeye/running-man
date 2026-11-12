@@ -40,6 +40,9 @@ class ThresholdStep:
     resting_hr: int | None = None
     lthr: int | None = None
     threshold_pace: float | None = None
+    # Where the step came from: "manual" (entered by the athlete) or
+    # "estimated" (written by the physiology algorithm).
+    source: str | None = None
 
 
 def threshold_from_row(row: Mapping[str, object]) -> ThresholdStep:
@@ -54,6 +57,7 @@ def threshold_from_row(row: Mapping[str, object]) -> ThresholdStep:
         resting_hr=_as_int(row.get("resting_hr")),
         lthr=_as_int(row.get("lthr")),
         threshold_pace=_as_float(row.get("threshold_pace")),
+        source=_as_str(row.get("source")),
     )
 
 
@@ -61,11 +65,19 @@ def resolve_threshold(
     history: Sequence[ThresholdStep],
     target_date: date | None,
     field: ThresholdField,
+    *,
+    backfill_earlier: bool = False,
 ) -> int | float | None:
     """Value of ``field`` in force on ``target_date`` (or the latest if ``None``).
 
     ``history`` need not be sorted. Steps where ``field`` is ``None`` are
     skipped rather than treated as "the value became unknown".
+
+    ``backfill_earlier`` covers an imported history older than the first
+    recorded step: the earliest known value is used as the best available
+    estimate, because the alternative — no load at all for those sessions —
+    throws away the athlete's imported past. Without the flag the answer
+    stays ``None``: the value was genuinely not known yet.
     """
     candidates = [
         (step.effective_from, value)
@@ -74,6 +86,14 @@ def resolve_threshold(
         and (target_date is None or step.effective_from <= target_date)
     ]
     if not candidates:
+        if backfill_earlier:
+            earliest = [
+                (step.effective_from, value)
+                for step in history
+                if (value := getattr(step, field)) is not None
+            ]
+            if earliest:
+                return min(earliest, key=lambda entry: entry[0])[1]
         return None
     return max(candidates, key=lambda entry: entry[0])[1]
 
@@ -81,13 +101,23 @@ def resolve_threshold(
 def resolve_all(
     history: Sequence[ThresholdStep],
     target_date: date | None,
+    *,
+    backfill_earlier: bool = False,
 ) -> dict[ThresholdField, int | float | None]:
     """Resolve every threshold at once — the shape compute paths consume."""
     return {
-        "hr_max": resolve_threshold(history, target_date, "hr_max"),
-        "resting_hr": resolve_threshold(history, target_date, "resting_hr"),
-        "lthr": resolve_threshold(history, target_date, "lthr"),
-        "threshold_pace": resolve_threshold(history, target_date, "threshold_pace"),
+        "hr_max": resolve_threshold(
+            history, target_date, "hr_max", backfill_earlier=backfill_earlier
+        ),
+        "resting_hr": resolve_threshold(
+            history, target_date, "resting_hr", backfill_earlier=backfill_earlier
+        ),
+        "lthr": resolve_threshold(
+            history, target_date, "lthr", backfill_earlier=backfill_earlier
+        ),
+        "threshold_pace": resolve_threshold(
+            history, target_date, "threshold_pace", backfill_earlier=backfill_earlier
+        ),
     }
 
 
@@ -134,4 +164,12 @@ def _as_float(value: object) -> float | None:
         return None
     if isinstance(value, int | float):
         return float(value)
+    return None
+
+
+def _as_str(value: object) -> str | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        return value
     return None

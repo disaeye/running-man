@@ -1,6 +1,13 @@
 from dataclasses import dataclass
+from datetime import date
 from typing import Final
 
+from domain.workout.plan_evidence import (
+    PlanScience,
+    format_plan_expression,
+    session_science,
+)
+from domain.workout.plan_segments import enrich_plan_segments
 from domain.workout.prescription import (
     EASY,
     INTERVALS,
@@ -29,6 +36,8 @@ class PlannedDay:
     workout_segments: tuple[dict[str, object], ...] = ()
     pace_min_s_km: int | None = None
     pace_max_s_km: int | None = None
+    science: PlanScience | None = None
+    display_line: str | None = None
 
 
 @dataclass(frozen=True)
@@ -43,6 +52,10 @@ class WeekPlanOptions:
     progression_weeks: int = 3
     max_session_duration_min: int = 180
     long_run_day: int | None = None
+    pace_effective_from: str | None = None
+    pace_source_refs: tuple[str, ...] = ()
+    pace_anchors: dict[str, dict[str, object]] | None = None
+    plan_date: date | None = None
 
 
 def generate_weekly_plan(
@@ -202,7 +215,9 @@ def _planned_day(
         return PlannedDay(day, REST, None, 0, description(REST, options.sport))
 
     pace_key = PACE_KEYS.get(workout_type)
-    pace = options.training_paces.get(pace_key) if options.training_paces and pace_key else None
+    if pace_key is None:
+        raise ValueError(f"workout type has no training pace: {workout_type}")
+    pace = options.training_paces.get(pace_key) if options.training_paces else None
     pace_min = round(pace["min"]) if pace else None
     pace_max = round(pace["max"]) if pace else None
     if pace_min is None or pace_max is None or pace_min <= 0 or pace_max < pace_min:
@@ -212,7 +227,17 @@ def _planned_day(
     if duration > max_session_duration_min:
         raise ValueError("计划中的单次跑步时长超过运动员设置的上限")
     duration = max(duration, 1)
-    segments = workout_segments(workout_type, duration, pace_min, pace_max)
+    raw_segments = workout_segments(workout_type, duration, pace_min, pace_max)
+    science = session_science(
+        workout_type,
+        duration,
+        options.training_paces,
+        pace_effective_from=options.pace_effective_from,
+        pace_source_refs=options.pace_source_refs,
+        pace_anchors=(options.pace_anchors or {}).get(pace_key),
+    )
+    segments = enrich_plan_segments(raw_segments, science, pace_min, pace_max)
+    display_line = format_plan_expression(science, segments)
     actual_distance = session_distance_m(segments, pace_min, pace_max)
     return PlannedDay(
         day_offset=day,
@@ -223,4 +248,6 @@ def _planned_day(
         workout_segments=segments,
         pace_min_s_km=pace_min,
         pace_max_s_km=pace_max,
+        science=science,
+        display_line=display_line,
     )

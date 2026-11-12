@@ -1,6 +1,8 @@
+from collections.abc import Mapping, Sequence
 from datetime import date, timedelta
 from typing import Literal, TypedDict
 
+from domain.insights.domain_tid import domain_intensity_score
 from domain.insights.plan_intensity import (
     INTENSITY_DISTRIBUTION_WEIGHT,
     SESSION_SPACING_WEIGHT,
@@ -8,6 +10,11 @@ from domain.insights.plan_intensity import (
     session_duration,
     spacing_score,
 )
+from domain.insights.plan_segments import (
+    aggregate_execution_segment_facts,
+    aggregate_plan_segment_facts,
+)
+from domain.insights.session_domains import aggregate_domain_seconds
 from domain.insights.weekly_progress import (
     WeekProgress,
     as_date,
@@ -54,13 +61,24 @@ def compute_plan_quality(
     activities: list[dict[str, object]],
     start: date,
     end: date,
+    classifications: Sequence[Mapping[str, object]] | None = None,
 ) -> PlanQuality:
-    inputs = _plan_inputs(planned_events, activities, start, end)
+    inputs = _plan_inputs(planned_events, activities, start, end, classifications)
     if not inputs["planned_tss"]:
         return _quality(0.0, [], ["所选周期没有训练计划"], ["先为本周安排至少3次训练"])
+    planned_facts = aggregate_plan_segment_facts(planned_events)
+    execution_facts = aggregate_execution_segment_facts(classifications or [])
+    measured_intensity = domain_intensity_score(aggregate_domain_seconds(classifications or []))
     parts = {
-        "volume": _volume_score(inputs["weeks"]),
-        "intensity": intensity_score(
+        "volume": _volume_from_ratio(
+            execution_facts["work_distance_m"]
+            or sum(float(week["work_distance_m"]) for week in inputs["weeks"]),
+            planned_facts["work_distance_m"]
+            or sum(float(week["planned_distance_m"]) for week in inputs["weeks"]),
+        ),
+        "intensity": measured_intensity
+        if measured_intensity is not None
+        else intensity_score(
             inputs["planned_types"], inputs["planned_durations"], inputs["planned_tss"]
         ),
         "rest": _rest_score(inputs["planned_days"], start, end),
@@ -88,6 +106,7 @@ def _plan_inputs(
     activities: list[dict[str, object]],
     start: date,
     end: date,
+    classifications: Sequence[Mapping[str, object]] | None = None,
 ) -> PlanInputs:
     planned_tss = [
         num(event.get("predicted_tss")) for event in planned_events if in_range(event, start, end)
@@ -107,7 +126,7 @@ def _plan_inputs(
         and num(event.get("predicted_tss")) > 0
     ]
     return {
-        "weeks": compute_weekly_progress(planned_events, activities, start, end),
+        "weeks": compute_weekly_progress(planned_events, activities, start, end, classifications),
         "planned_tss": [tss for tss in planned_tss if tss > 0],
         "planned_types": planned_types,
         "planned_durations": planned_durations,
@@ -123,8 +142,17 @@ def _plan_inputs(
 
 
 def _volume_score(weeks: list[WeekProgress]) -> float:
+    """Compare planned work distance with measured per-segment work distance."""
+    planned_distance = sum(float(week["planned_distance_m"]) for week in weeks)
+    measured_distance = sum(float(week["work_distance_m"]) for week in weeks)
+    if any(week["classification_count"] > 0 for week in weeks):
+        return _volume_from_ratio(measured_distance, planned_distance)
     planned = sum(float(week["planned_tss"]) for week in weeks)
     actual = sum(float(week["actual_tss"]) for week in weeks)
+    return _volume_from_ratio(actual, planned)
+
+
+def _volume_from_ratio(actual: float, planned: float) -> float:
     if planned <= 0:
         return 0.0
     ratio = actual / planned

@@ -64,6 +64,29 @@ def is_usable_for(
     return 0 <= age <= max_age_days
 
 
+def latest_day_for(
+    target_day: date,
+    days_with_metric: tuple[date, ...],
+    *,
+    max_age_days: int = MAX_OBSERVATION_AGE_DAYS,
+) -> date | None:
+    """Most recent day carrying *one specific* metric, within the age cap.
+
+    Vitals do not arrive together: a device may report HRV and sleep overnight
+    but resting heart rate only after the next morning's measurement, or skip
+    one of the three for days. Resolving all three from a single
+    "observation day" therefore blanks out a metric that was in fact measured
+    hours earlier, while a chart of the same metric over a range shows it —
+    the same athlete, the same data, two different answers.
+
+    Each metric is resolved on its own timeline, with the same rules as
+    ``observation_day``: never look forward, and never reach past the cap.
+    """
+    cutoff = target_day - timedelta(days=max_age_days)
+    candidates = [day for day in days_with_metric if cutoff <= day <= target_day]
+    return max(candidates) if candidates else None
+
+
 def baseline_days(
     target_day: date,
     observed: tuple[date, ...],

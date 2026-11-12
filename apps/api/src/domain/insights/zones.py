@@ -5,9 +5,13 @@ from datetime import date, datetime, timedelta
 from math import ceil, floor
 from typing import Final, Literal, TypedDict, cast
 
+from domain.insights.domain_tid import (
+    DistributionType,
+    classify_weekly_distribution,
+)
+from domain.insights.session_domains import aggregate_domain_seconds, domain_seconds_by_week
 from domain.time import DEFAULT_TIMEZONE, local_day
 
-DistributionType = Literal["polarized", "pyramidal", "threshold", "high-volume"]
 MetricSource = Literal["heart_rate", "power", "summary"]
 
 POLARIZED_LOW_MIN: Final = 75.0
@@ -105,6 +109,33 @@ def activity_distribution(
     return ActivityDistribution(_activity_date(activity, timezone), empty_by_zone(), None)
 
 
+def activity_distribution_from_counts(
+    activity: ActivityLike,
+    value_counts: Mapping[int, int],
+    hr_zones: Sequence[Zone] | None,
+    timezone: str | None = DEFAULT_TIMEZONE,
+) -> ActivityDistribution:
+    """与 :func:`activity_distribution` 同一结果，但输入是数据库按值计数。
+
+    逐样本路径把时长摊到每个样本；按值计数把同一数值的样本乘以次数，
+    两者在数学上等价（同一时长总量、同一分桶），后者只需要传输每个
+    （活动, 数值）一行。
+    """
+    duration_s = _positive_int(activity.get("duration_s"))
+    if duration_s == 0 or not hr_zones or not value_counts:
+        return activity_distribution(activity, [], hr_zones, timezone)
+    total_samples = sum(value_counts.values())
+    if total_samples == 0:
+        return activity_distribution(activity, [], hr_zones, timezone)
+    seconds_per_sample = duration_s / total_samples
+    by_zone = empty_by_zone()
+    for value, count in value_counts.items():
+        zone = zone_for_value(float(value), hr_zones)
+        if zone is not None:
+            by_zone[f"z{zone}"] += seconds_per_sample * count / 60
+    return ActivityDistribution(_activity_date(activity, timezone), _rounded(by_zone), "heart_rate")
+
+
 def combine_distributions(distributions: Iterable[ActivityDistribution]) -> dict[str, float]:
     totals = empty_by_zone()
     for distribution in distributions:
@@ -113,41 +144,35 @@ def combine_distributions(distributions: Iterable[ActivityDistribution]) -> dict
     return _rounded(totals)
 
 
-def weekly_breakdown(distributions: Iterable[ActivityDistribution]) -> list[dict[str, object]]:
+def weekly_breakdown(
+    distributions: Iterable[ActivityDistribution],
+    classifications: Iterable[Mapping[str, object]] | None = None,
+) -> list[dict[str, object]]:
     grouped: dict[date, dict[str, float]] = defaultdict(empty_by_zone)
     for distribution in distributions:
         week_start = distribution.start_date - timedelta(days=distribution.start_date.weekday())
         for zone, minutes in distribution.by_zone.items():
             grouped[week_start][zone] += minutes
+    domain_by_week = domain_seconds_by_week(classifications or [])
     return [
         {
             "week_start": week,
             "by_zone": _rounded(by_zone),
-            "distribution_type": classify_distribution(by_zone),
+            "distribution_type": classify_weekly_distribution(
+                by_zone, domain_by_week.get(week, aggregate_domain_seconds([]))
+            ),
+            "work_domain_seconds": domain_by_week.get(week, aggregate_domain_seconds([])),
         }
         for week, by_zone in sorted(grouped.items())
     ]
 
 
 def classify_distribution(by_zone: Mapping[str, float]) -> DistributionType:
-    total = sum(by_zone.values())
-    if total <= 0:
-        return "high-volume"
-    low = _percent(by_zone.get("z1", 0.0) + by_zone.get("z2", 0.0), total)
-    mid = _percent(by_zone.get("z3", 0.0), total)
-    high = _percent(by_zone.get("z4", 0.0) + by_zone.get("z5", 0.0), total)
-    if low > POLARIZED_LOW_MIN and high > POLARIZED_HIGH_MIN:
-        return "polarized"
-    if low >= HIGH_VOLUME_LOW_MIN:
-        return "high-volume"
-    if mid >= THRESHOLD_MID_MIN or by_zone.get("z4", 0.0) >= by_zone.get("z2", 0.0):
-        return "threshold"
-    return "pyramidal"
+    """Five-zone distribution kept for callers that have no stored domains."""
+    return classify_weekly_distribution(by_zone, aggregate_domain_seconds([]))
 
 
-def zone_for_value(
-    value: float, zones: Sequence[Mapping[str, object]]
-) -> int | None:
+def zone_for_value(value: float, zones: Sequence[Mapping[str, object]]) -> int | None:
     """Index of the zone containing ``value``, or ``None`` when below the first zone.
 
     Zones are bucketed by their *lower* edge: ``value`` belongs to the last

@@ -3,7 +3,7 @@ from decimal import Decimal
 from statistics import mean
 from typing import Final
 
-from domain.insights.wellness_window import baseline_days, observation_day
+from domain.insights.wellness_window import baseline_days, latest_day_for, observation_day
 from domain.load.constants import (
     READINESS_WEIGHT_ATL_VELOCITY,
     READINESS_WEIGHT_HRV,
@@ -49,13 +49,12 @@ def compute_readiness(target_day: date, wellness: list[Row], loads: list[Row]) -
         if any(_num(row, key) is not None for key in _WELLNESS_KEYS)
     )
     day = observation_day(target_day, observed_days)
-    today = by_day.get(day) if day is not None else None
     scored = [
-        _sleep_factor(target_day, today, by_day),
-        _rhr_factor(target_day, today, by_day),
+        _sleep_factor(target_day, by_day),
+        _rhr_factor(target_day, by_day),
         _tsb_factor(target_day, load_by_day),
         _atl_velocity_factor(target_day, load_by_day),
-        _hrv_factor(target_day, today, by_day),
+        _hrv_factor(target_day, by_day),
     ]
     factors = [factor for factor, _weight in scored]
     weights = [weight for _factor, weight in scored]
@@ -81,17 +80,33 @@ def _readings(target_day: date, day: date | None, by_day: dict[date, Row]) -> di
     own recent days look like, so a difference from it means something about
     this athlete.
 
+    Each metric is resolved on its own timeline (``latest_day_for``): a device
+    that reports HRV and sleep overnight but resting heart rate only later
+    must not blank out the reading that does exist. ``observed_on`` states the
+    day the value was measured, so a reading carried over from yesterday is
+    shown as such instead of as today's.
+
     A reading that was not measured is absent from the result rather than
     present as zero.
     """
-    today = by_day.get(day) if day is not None else None
+    _ = day
     readings: dict[str, object] = {}
     for key, unit in (("hrv", "ms"), ("resting_hr", "bpm"), ("sleep_secs", "s")):
-        value = _num(today, key)
+        measured_days = tuple(
+            day_key for day_key, row in by_day.items() if _num(row, key) is not None
+        )
+        observed = latest_day_for(target_day, measured_days)
+        if observed is None:
+            continue
+        value = _num(by_day.get(observed), key)
         if value is None:
             continue
         baseline = _baseline(target_day, by_day, key)
-        entry: dict[str, object] = {"value": value, "unit": unit}
+        entry: dict[str, object] = {
+            "value": value,
+            "unit": unit,
+            "observed_on": observed,
+        }
         if baseline is not None:
             entry["baseline"] = round(baseline, 1)
             entry["delta"] = round(value - baseline, 1)
@@ -105,14 +120,18 @@ def _baseline(target_day: date, by_day: dict[date, Row], key: str) -> float | No
     return _avg([value for value in history if value])
 
 
-def _sleep_factor(
-    target_day: date, today: Row | None, by_day: dict[date, Row]
-) -> tuple[Factor, float]:
-    sleep_secs = _num(today, "sleep_secs")
-    history = [
-        _num(by_day.get(day), "sleep_secs") for day in baseline_days(target_day, tuple(by_day))
-    ]
-    baseline = _avg([value for value in history if value])
+def _metric_value(target_day: date, by_day: dict[date, Row], key: str) -> float | None:
+    """The most recent measurement of one metric within the allowed age window."""
+    measured_days = tuple(
+        day_key for day_key, row in by_day.items() if _num(row, key) is not None
+    )
+    observed = latest_day_for(target_day, measured_days)
+    return _num(by_day.get(observed), key) if observed is not None else None
+
+
+def _sleep_factor(target_day: date, by_day: dict[date, Row]) -> tuple[Factor, float]:
+    sleep_secs = _metric_value(target_day, by_day, "sleep_secs")
+    baseline = _baseline(target_day, by_day, "sleep_secs")
     if sleep_secs is None or baseline is None:
         return _factor("sleep", 50, "neutral", "睡眠数据不足"), 0.0
     ratio = sleep_secs / max(baseline, 1)
@@ -128,14 +147,9 @@ def _sleep_factor(
     )
 
 
-def _rhr_factor(
-    target_day: date, today: Row | None, by_day: dict[date, Row]
-) -> tuple[Factor, float]:
-    rhr = _num(today, "resting_hr")
-    history = [
-        _num(by_day.get(day), "resting_hr") for day in baseline_days(target_day, tuple(by_day))
-    ]
-    baseline = _avg([value for value in history if value])
+def _rhr_factor(target_day: date, by_day: dict[date, Row]) -> tuple[Factor, float]:
+    rhr = _metric_value(target_day, by_day, "resting_hr")
+    baseline = _baseline(target_day, by_day, "resting_hr")
     if rhr is None or baseline is None:
         return _factor("resting_hr", 50, "neutral", "静息心率数据不足"), 0.0
     delta = rhr - baseline
@@ -182,12 +196,9 @@ def _atl_velocity_factor(target_day: date, loads: dict[date, Row]) -> tuple[Fact
     )
 
 
-def _hrv_factor(
-    target_day: date, today: Row | None, by_day: dict[date, Row]
-) -> tuple[Factor, float]:
-    hrv = _num(today, "hrv")
-    history = [_num(by_day.get(day), "hrv") for day in baseline_days(target_day, tuple(by_day))]
-    baseline = _avg([value for value in history if value])
+def _hrv_factor(target_day: date, by_day: dict[date, Row]) -> tuple[Factor, float]:
+    hrv = _metric_value(target_day, by_day, "hrv")
+    baseline = _baseline(target_day, by_day, "hrv")
     if hrv is None or baseline is None:
         return _factor("hrv", 50, "neutral", "HRV 数据不足"), 0.0
     score = round(_compute_hrv_score(hrv, baseline))

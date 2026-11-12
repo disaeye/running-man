@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, cast
+
+from domain.insights.session_quality import QualityMatches, empty_quality_matches, quality_matches
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,12 +17,14 @@ class PlannedActualMatch:
     actual_activity_id: str | None
     actual_tss: float | None
     match_status: str  # "completed" | "partial" | "missed" | "extra"
+    matches: QualityMatches | None = None
 
 
 def match_planned_actual(
     planned: list[dict[str, object]],
     actuals: list[dict[str, object]],
     tss_tolerance: float = 0.2,
+    classifications: Sequence[Mapping[str, object]] | None = None,
 ) -> list[PlannedActualMatch]:
     """
     Match planned training_calendar events to actual activity_summary activities.
@@ -32,6 +37,7 @@ def match_planned_actual(
     """
     matches: list[PlannedActualMatch] = []
     matched_actual_ids: set[str] = set()
+    by_activity = {str(row.get("activity_id")): row for row in classifications or []}
 
     for plan in planned:
         plan_date = _as_date(plan["start_time"])
@@ -39,20 +45,11 @@ def match_planned_actual(
         plan_tss = plan.get("predicted_tss")
         plan_tss_val = _as_float(plan_tss) if plan_tss is not None else None
 
-        best_actual = None
-        for act in actuals:
-            act_id = str(act["activity_id"])
-            if act_id in matched_actual_ids:
-                continue
-            act_date = _as_date(act["start_time"])
-            act_sport = str(act.get("sport") or "")
-            date_diff = abs((plan_date - act_date).days)
-            if date_diff <= 1 and _sport_matches(plan_sport, act_sport):
-                best_actual = act
-                break
+        best_actual = _find_actual(plan, plan_date, plan_sport, actuals, matched_actual_ids)
 
         if best_actual is not None:
-            matched_actual_ids.add(str(best_actual["activity_id"]))
+            actual_id = str(best_actual["activity_id"])
+            matched_actual_ids.add(actual_id)
             act_tss_val = _as_float(best_actual.get("tss") or 0)
             if plan_tss_val is not None and plan_tss_val > 0:
                 ratio = act_tss_val / plan_tss_val
@@ -62,15 +59,19 @@ def match_planned_actual(
                     status = "partial"
             else:
                 status = "completed"
+            stored = by_activity.get(actual_id)
             matches.append(
                 PlannedActualMatch(
                     planned_event_id=str(plan["event_id"]),
                     planned_date=plan_date,
                     planned_sport=plan_sport or None,
                     planned_tss=plan_tss_val,
-                    actual_activity_id=str(best_actual["activity_id"]),
+                    actual_activity_id=actual_id,
                     actual_tss=act_tss_val,
                     match_status=status,
+                    matches=(
+                        quality_matches([stored]) if stored is not None else empty_quality_matches()
+                    ),
                 )
             )
         else:
@@ -103,6 +104,39 @@ def match_planned_actual(
             )
 
     return matches
+
+
+def _find_actual(
+    plan: dict[str, object],
+    plan_date: date,
+    plan_sport: str,
+    actuals: list[dict[str, object]],
+    matched_actual_ids: set[str],
+) -> dict[str, object] | None:
+    """A stored link wins; otherwise match by date and sport."""
+    linked_id = str(plan.get("linked_activity_id") or "")
+    if linked_id:
+        found = next(
+            (
+                act
+                for act in actuals
+                if str(act["activity_id"]) == linked_id
+                and str(act["activity_id"]) not in matched_actual_ids
+            ),
+            None,
+        )
+        if found is not None:
+            return found
+    for act in actuals:
+        act_id = str(act["activity_id"])
+        if act_id in matched_actual_ids:
+            continue
+        act_date = _as_date(act["start_time"])
+        act_sport = str(act.get("sport") or "")
+        date_diff = abs((plan_date - act_date).days)
+        if date_diff <= 1 and _sport_matches(plan_sport, act_sport):
+            return act
+    return None
 
 
 def _as_date(value: object) -> date:
