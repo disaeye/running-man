@@ -167,3 +167,18 @@ algorithms:
         inputs: { vdot: 50 }
         expect: { threshold_min_s_per_km: 255 }
         tolerance: 4
+  - key: run_classification
+    version: 1.0.0
+    input_window_days: 1
+    materialization: derived_on_read
+    outputs:
+      - structure
+      - session_type
+      - primary_stimulus
+      - pacing_pattern
+      - display_name
+      - display_line
+      - evidence_grade
+      - confidence
+      - quality
+    reference_cases: []

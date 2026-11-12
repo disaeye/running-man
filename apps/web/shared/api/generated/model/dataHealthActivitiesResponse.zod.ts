@@ -9,6 +9,7 @@ import { z as zod } from 'zod';
 export const dataHealthActivitiesResponseWithStreamsDefault = 0;
 export const DataHealthActivitiesResponse = zod.object({
   "data_as_of": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
+  "first_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "total": zod.number(),
   "with_gps": zod.number(),
   "with_hr": zod.number(),

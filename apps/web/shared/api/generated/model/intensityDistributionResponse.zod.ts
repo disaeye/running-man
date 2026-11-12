@@ -6,10 +6,22 @@
  */
 import { z as zod } from 'zod';
 
+export const intensityDistributionResponseWorkDomainSecondsAboveWmaxDefault = 0;
+export const intensityDistributionResponseWorkDomainSecondsBelowMt1Default = 0;
+export const intensityDistributionResponseWorkDomainSecondsLowUnspecifiedDefault = 0;
+export const intensityDistributionResponseWorkDomainSecondsMt1Mt2Default = 0;
+export const intensityDistributionResponseWorkDomainSecondsMt2WmaxDefault = 0;
 export const IntensityDistributionResponse = zod.object({
   "bucket": zod.iso.date(),
   "by_zone": zod.record(zod.string(), zod.number()),
   "distribution_type": zod.enum(['polarized', 'pyramidal', 'threshold', 'high-volume']),
+  "work_domain_seconds": zod.object({
+  "above_wmax": zod.number().default(intensityDistributionResponseWorkDomainSecondsAboveWmaxDefault),
+  "below_mt1": zod.number().default(intensityDistributionResponseWorkDomainSecondsBelowMt1Default),
+  "low_unspecified": zod.number().default(intensityDistributionResponseWorkDomainSecondsLowUnspecifiedDefault),
+  "mt1_mt2": zod.number().default(intensityDistributionResponseWorkDomainSecondsMt1Mt2Default),
+  "mt2_wmax": zod.number().default(intensityDistributionResponseWorkDomainSecondsMt2WmaxDefault)
+}).optional().describe('Work seconds or share in the four ACSM\/ESSA intensity domains.'),
   "zone_seconds": zod.tuple([zod.number(),
 zod.number(),
 zod.number(),

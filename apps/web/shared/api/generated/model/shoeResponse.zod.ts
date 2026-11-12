@@ -6,19 +6,22 @@
  */
 import { z as zod } from 'zod';
 
+export const shoeResponseTotalActivitiesDefault = 0;
 export const ShoeResponse = zod.object({
   "athlete_id": zod.uuid(),
   "brand": zod.union([zod.string(),zod.null()]).optional(),
   "created_at": zod.iso.datetime({"offset":true}),
   "current_mileage_m": zod.union([zod.number(),zod.null()]).optional(),
   "id": zod.uuid(),
+  "last_used_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "mileage_m": zod.number(),
   "model": zod.union([zod.string(),zod.null()]).optional(),
   "name": zod.string(),
   "notes": zod.union([zod.string(),zod.null()]).optional(),
   "purchase_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "retired_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
-  "retirement_alert": zod.boolean()
+  "retirement_alert": zod.boolean(),
+  "total_activities": zod.number().default(shoeResponseTotalActivitiesDefault)
 })
 
 export type ShoeResponse = zod.input<typeof ShoeResponse>;

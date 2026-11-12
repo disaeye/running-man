@@ -222,7 +222,10 @@
           "notifications",
           "shares",
           "strength",
-          "sync_runs"
+          "sync_runs",
+          "session_classifications",
+          "activity_intervals",
+          "workout_templates"
         ],
         "title": "AccountExportResourceName",
         "type": "string"
@@ -2847,6 +2850,16 @@
             "title": "Event Id",
             "type": "string"
           },
+          "execution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionExecutionPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "linked_activity_id": {
             "anyOf": [
               {
@@ -2913,6 +2926,26 @@
               }
             ],
             "title": "Predicted Tss"
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionQualityPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "session_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionClassificationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "sport_type": {
             "anyOf": [
@@ -3207,6 +3240,16 @@
             ],
             "title": "Done"
           },
+          "execution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionExecutionPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "linked_activity_id": {
             "anyOf": [
               {
@@ -3240,6 +3283,26 @@
               }
             ],
             "title": "Predicted Tss"
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionQualityPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "session_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionClassificationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "sport_type": {
             "anyOf": [
@@ -3298,6 +3361,60 @@
           }
         },
         "title": "CalendarEventUpdate",
+        "type": "object"
+      },
+      "ClassificationItemResponse": {
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/PlanEvidencePayload"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/SessionExecutionPayload"
+          },
+          "prescription": {
+            "$ref": "#/components/schemas/RunWorkoutPrescription"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/SessionQualityPayload"
+          },
+          "session_classification": {
+            "$ref": "#/components/schemas/SessionClassificationSummary"
+          }
+        },
+        "required": [
+          "session_classification",
+          "prescription",
+          "execution",
+          "quality",
+          "evidence"
+        ],
+        "title": "ClassificationItemResponse",
+        "type": "object"
+      },
+      "ClassificationListResponse": {
+        "properties": {
+          "activity_count": {
+            "title": "Activity Count",
+            "type": "integer"
+          },
+          "athlete_id": {
+            "title": "Athlete Id",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SessionClassificationResponse"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "athlete_id",
+          "activity_count",
+          "results"
+        ],
+        "title": "ClassificationListResponse",
         "type": "object"
       },
       "CoachCaveatResponse": {
@@ -3557,9 +3674,42 @@
             "title": "Completed Tss 7D",
             "type": "number"
           },
+          "domain_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Match"
+          },
           "planned_tss_7d": {
             "title": "Planned Tss 7D",
             "type": "number"
+          },
+          "structure_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structure Match"
+          },
+          "type_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type Match"
           }
         },
         "required": [
@@ -3607,6 +3757,12 @@
           "d90_tss": {
             "title": "D90 Tss",
             "type": "number"
+          },
+          "work_domain_seconds": {
+            "$ref": "#/components/schemas/PhysiologicalDomains"
+          },
+          "work_domain_share": {
+            "$ref": "#/components/schemas/PhysiologicalDomains"
           }
         },
         "required": [
@@ -3816,6 +3972,18 @@
             ],
             "title": "Data As Of"
           },
+          "first_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First At"
+          },
           "total": {
             "title": "Total",
             "type": "integer"
@@ -3875,8 +4043,25 @@
       "DataHealthActivityCoverageResponse": {
         "additionalProperties": false,
         "properties": {
+          "first_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First At"
+          },
           "total_activities": {
             "title": "Total Activities",
+            "type": "integer"
+          },
+          "unassigned_run_activities_30d": {
+            "default": 0,
+            "title": "Unassigned Run Activities 30D",
             "type": "integer"
           },
           "with_gps": {
@@ -3929,6 +4114,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/DataHealthStrengthCoverageResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sync": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataHealthSyncCoverageResponse"
               },
               {
                 "type": "null"
@@ -4037,6 +4232,36 @@
         "title": "DataHealthStrengthCoverageResponse",
         "type": "object"
       },
+      "DataHealthSyncCoverageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          },
+          "last_sync_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync Status"
+          }
+        },
+        "title": "DataHealthSyncCoverageResponse",
+        "type": "object"
+      },
       "DataHealthTrainingLoadResponse": {
         "additionalProperties": false,
         "properties": {
@@ -4079,6 +4304,18 @@
       "DataHealthWellnessCoverageResponse": {
         "additionalProperties": false,
         "properties": {
+          "first_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Day"
+          },
           "hrv_days_28d": {
             "default": 0,
             "title": "Hrv Days 28D",
@@ -4115,6 +4352,18 @@
             ],
             "title": "Data As Of"
           },
+          "first_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Day"
+          },
           "latest_day": {
             "anyOf": [
               {
@@ -4150,6 +4399,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/DataHealthStrengthCoverageResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sync": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataHealthSyncCoverageResponse"
               },
               {
                 "type": "null"
@@ -4305,6 +4564,67 @@
         "title": "DetectionRequest",
         "type": "object"
       },
+      "DomainResidence": {
+        "properties": {
+          "above_wmax": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Above Wmax"
+          },
+          "below_mt1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Below Mt1"
+          },
+          "low_unspecified": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Unspecified"
+          },
+          "mt1_mt2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mt1 Mt2"
+          },
+          "mt2_wmax": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mt2 Wmax"
+          }
+        },
+        "title": "DomainResidence",
+        "type": "object"
+      },
       "E1rmTrendResponse": {
         "additionalProperties": false,
         "properties": {
@@ -4333,6 +4653,44 @@
           "date"
         ],
         "title": "E1rmTrendResponse",
+        "type": "object"
+      },
+      "EffortDescriptorPayload": {
+        "properties": {
+          "descriptor": {
+            "title": "Descriptor",
+            "type": "string"
+          },
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "rir": {
+            "title": "Rir",
+            "type": "string"
+          },
+          "rpe10": {
+            "title": "Rpe10",
+            "type": "string"
+          },
+          "rpe20": {
+            "title": "Rpe20",
+            "type": "string"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          }
+        },
+        "required": [
+          "term",
+          "descriptor",
+          "rpe10",
+          "rpe20",
+          "rir",
+          "domain"
+        ],
+        "title": "EffortDescriptorPayload",
         "type": "object"
       },
       "ExerciseLibraryItem": {
@@ -5097,6 +5455,44 @@
         "title": "HrZoneTimesResponse",
         "type": "object"
       },
+      "IaafNotationPayload": {
+        "properties": {
+          "distance_unit": {
+            "title": "Distance Unit",
+            "type": "string"
+          },
+          "example": {
+            "title": "Example",
+            "type": "string"
+          },
+          "pace_unit": {
+            "title": "Pace Unit",
+            "type": "string"
+          },
+          "pattern": {
+            "title": "Pattern",
+            "type": "string"
+          },
+          "recovery_distance": {
+            "title": "Recovery Distance",
+            "type": "string"
+          },
+          "recovery_duration": {
+            "title": "Recovery Duration",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern",
+          "example",
+          "pace_unit",
+          "distance_unit",
+          "recovery_duration",
+          "recovery_distance"
+        ],
+        "title": "IaafNotationPayload",
+        "type": "object"
+      },
       "IgnoreResult": {
         "description": "Outcome of ignoring or un-ignoring one activity.",
         "properties": {
@@ -5336,6 +5732,92 @@
         "title": "IntegrationSettingsUpdate",
         "type": "object"
       },
+      "IntensityAnchor": {
+        "properties": {
+          "algorithm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Algorithm Version"
+          },
+          "effective_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective From"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "pace_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Key"
+          },
+          "pace_max_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Max S Km"
+          },
+          "pace_min_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Min S Km"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "threshold_pace_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Pace S Km"
+          }
+        },
+        "required": [
+          "model"
+        ],
+        "title": "IntensityAnchor",
+        "type": "object"
+      },
       "IntensityDistributionResponse": {
         "additionalProperties": false,
         "properties": {
@@ -5360,6 +5842,9 @@
             ],
             "title": "Distribution Type",
             "type": "string"
+          },
+          "work_domain_seconds": {
+            "$ref": "#/components/schemas/PhysiologicalDomains"
           },
           "zone_seconds": {
             "maxItems": 5,
@@ -5392,6 +5877,39 @@
           "distribution_type"
         ],
         "title": "IntensityDistributionResponse",
+        "type": "object"
+      },
+      "IntervalProtocolPayload": {
+        "properties": {
+          "intensity": {
+            "title": "Intensity",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "recovery_duration_s": {
+            "title": "Recovery Duration S",
+            "type": "string"
+          },
+          "typical_total": {
+            "title": "Typical Total",
+            "type": "string"
+          },
+          "work_duration_s": {
+            "title": "Work Duration S",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "work_duration_s",
+          "recovery_duration_s",
+          "typical_total",
+          "intensity"
+        ],
+        "title": "IntervalProtocolPayload",
         "type": "object"
       },
       "JsonDocument": {
@@ -6828,6 +7346,39 @@
         "title": "PersonalRangeResponse",
         "type": "object"
       },
+      "PhysiologicalDomains": {
+        "additionalProperties": false,
+        "description": "Work seconds or share in the four ACSM/ESSA intensity domains.",
+        "properties": {
+          "above_wmax": {
+            "default": 0.0,
+            "title": "Above Wmax",
+            "type": "number"
+          },
+          "below_mt1": {
+            "default": 0.0,
+            "title": "Below Mt1",
+            "type": "number"
+          },
+          "low_unspecified": {
+            "default": 0.0,
+            "title": "Low Unspecified",
+            "type": "number"
+          },
+          "mt1_mt2": {
+            "default": 0.0,
+            "title": "Mt1 Mt2",
+            "type": "number"
+          },
+          "mt2_wmax": {
+            "default": 0.0,
+            "title": "Mt2 Wmax",
+            "type": "number"
+          }
+        },
+        "title": "PhysiologicalDomains",
+        "type": "object"
+      },
       "PhysiologyResponse": {
         "additionalProperties": false,
         "properties": {
@@ -7026,6 +7577,17 @@
             "title": "Date",
             "type": "string"
           },
+          "display_line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Line"
+          },
           "duration_min": {
             "title": "Duration Min",
             "type": "integer"
@@ -7033,6 +7595,26 @@
           "event_id": {
             "title": "Event Id",
             "type": "string"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanEvidencePayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intensity_anchor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IntensityAnchor"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "name": {
             "title": "Name",
@@ -7060,6 +7642,17 @@
             ],
             "title": "Pace Min S Km"
           },
+          "pacing_pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pacing Pattern"
+          },
           "phase": {
             "title": "Phase",
             "type": "string"
@@ -7075,12 +7668,95 @@
             ],
             "title": "Predicted Distance M"
           },
+          "primary_stimulus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Stimulus"
+          },
+          "quality_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
           "segments": {
             "items": {
               "$ref": "#/components/schemas/RunWorkoutSegment"
             },
             "title": "Segments",
             "type": "array"
+          },
+          "session_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Type"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "structure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structure"
+          },
+          "target_adaptation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Adaptation"
+          },
+          "target_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Domain"
           },
           "training_type": {
             "title": "Training Type",
@@ -7097,6 +7773,139 @@
           "phase"
         ],
         "title": "PlanEventPreview",
+        "type": "object"
+      },
+      "PlanEvidencePayload": {
+        "properties": {
+          "algorithm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Algorithm Version"
+          },
+          "direct_metabolic_thresholds": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direct Metabolic Thresholds"
+          },
+          "interval_summary": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Summary"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "measurement_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Measurement Sources",
+            "type": "array"
+          },
+          "race_marker_present": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race Marker Present"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          },
+          "source_details": {
+            "items": {
+              "$ref": "#/components/schemas/SourceDetailPayload"
+            },
+            "title": "Source Details",
+            "type": "array"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "subjective": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubjectiveEvidencePayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "theory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TheoryPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threshold_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThresholdSnapshotPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "PlanEvidencePayload",
         "type": "object"
       },
       "PlanGenerateRequest": {
@@ -7426,6 +8235,12 @@
           "weekly_tss": {
             "title": "Weekly Tss",
             "type": "number"
+          },
+          "work_domain_seconds": {
+            "$ref": "#/components/schemas/PhysiologicalDomains"
+          },
+          "work_domain_share": {
+            "$ref": "#/components/schemas/PhysiologicalDomains"
           }
         },
         "required": [
@@ -7710,6 +8525,47 @@
         "title": "PublicActivityResponse",
         "type": "object"
       },
+      "QualityMatchesResponse": {
+        "additionalProperties": false,
+        "description": "Shared per-session type, structure and domain agreement.",
+        "properties": {
+          "domain_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Match"
+          },
+          "structure_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structure Match"
+          },
+          "type_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type Match"
+          }
+        },
+        "title": "QualityMatchesResponse",
+        "type": "object"
+      },
       "QualitySummaryResponse": {
         "additionalProperties": false,
         "properties": {
@@ -7738,6 +8594,56 @@
           "last_checked_at"
         ],
         "title": "QualitySummaryResponse",
+        "type": "object"
+      },
+      "QualityTarget": {
+        "properties": {
+          "target_repetitions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Repetitions"
+          },
+          "time_in_domain_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time In Domain S"
+          },
+          "work_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Distance M"
+          },
+          "work_duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Duration S"
+          }
+        },
+        "title": "QualityTarget",
         "type": "object"
       },
       "RaceBasisCrossCheckResponse": {
@@ -8328,26 +9234,6 @@
         "title": "RecomputeRequest",
         "type": "object"
       },
-      "RecomputeResponse": {
-        "additionalProperties": false,
-        "properties": {
-          "recompute_generation": {
-            "title": "Recompute Generation",
-            "type": "integer"
-          },
-          "recompute_status": {
-            "const": "queued",
-            "title": "Recompute Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "recompute_status",
-          "recompute_generation"
-        ],
-        "title": "RecomputeResponse",
-        "type": "object"
-      },
       "RegisterRequest": {
         "additionalProperties": false,
         "properties": {
@@ -8478,6 +9364,52 @@
         "title": "RidePersonalRecordResponse",
         "type": "object"
       },
+      "RpeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "activity_id": {
+            "title": "Activity Id",
+            "type": "string"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          }
+        },
+        "required": [
+          "activity_id",
+          "rpe"
+        ],
+        "title": "RpeResponse",
+        "type": "object"
+      },
+      "RpeUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "rpe": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          }
+        },
+        "title": "RpeUpdate",
+        "type": "object"
+      },
       "RunPersonalRecordResponse": {
         "additionalProperties": false,
         "properties": {
@@ -8525,20 +9457,53 @@
         "type": "object"
       },
       "RunWorkoutPrescription": {
-        "additionalProperties": false,
         "properties": {
+          "display_line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Line"
+          },
           "duration_min": {
-            "maximum": 600.0,
-            "minimum": 0.0,
-            "title": "Duration Min",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Min"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanEvidencePayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intensity_anchor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IntensityAnchor"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "pace_max_s_km": {
             "anyOf": [
               {
-                "exclusiveMinimum": 0.0,
-                "maximum": 1800.0,
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8549,15 +9514,24 @@
           "pace_min_s_km": {
             "anyOf": [
               {
-                "exclusiveMinimum": 0.0,
-                "maximum": 1800.0,
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
               }
             ],
             "title": "Pace Min S Km"
+          },
+          "pacing_pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pacing Pattern"
           },
           "phase": {
             "anyOf": [
@@ -8570,6 +9544,38 @@
             ],
             "title": "Phase"
           },
+          "primary_stimulus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Stimulus"
+          },
+          "quality_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
           "segments": {
             "items": {
               "$ref": "#/components/schemas/RunWorkoutSegment"
@@ -8577,47 +9583,209 @@
             "title": "Segments",
             "type": "array"
           },
-          "type": {
-            "enum": [
-              "easy",
-              "recovery",
-              "long",
-              "tempo",
-              "intervals"
+          "session_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Type",
-            "type": "string"
+            "title": "Session Type"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "structure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structure"
+          },
+          "target_adaptation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Adaptation"
+          },
+          "target_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Domain"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
           },
           "version": {
-            "const": 1,
-            "title": "Version",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
           }
         },
-        "required": [
-          "version",
-          "type",
-          "duration_min",
-          "segments"
-        ],
         "title": "RunWorkoutPrescription",
         "type": "object"
       },
       "RunWorkoutSegment": {
-        "additionalProperties": false,
         "properties": {
+          "avg_hr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Hr"
+          },
+          "distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance M"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
           "duration_min": {
-            "exclusiveMinimum": 0.0,
-            "maximum": 600.0,
-            "title": "Duration Min",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Min"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "end_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End S"
+          },
+          "evidence_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Source"
+          },
+          "intensity_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intensity Domain"
+          },
+          "measured": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionMeasured"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order"
           },
           "pace_max_s_km": {
             "anyOf": [
               {
-                "exclusiveMinimum": 0.0,
-                "maximum": 1800.0,
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8628,9 +9796,7 @@
           "pace_min_s_km": {
             "anyOf": [
               {
-                "exclusiveMinimum": 0.0,
-                "maximum": 1800.0,
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8638,12 +9804,64 @@
             ],
             "title": "Pace Min S Km"
           },
+          "pace_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace S Km"
+          },
+          "quality_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "recovery_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Distance M"
+          },
+          "recovery_duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Duration S"
+          },
           "recovery_min": {
             "anyOf": [
               {
-                "exclusiveMinimum": 0.0,
-                "maximum": 120.0,
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8654,8 +9872,6 @@
           "repetitions": {
             "anyOf": [
               {
-                "maximum": 100.0,
-                "minimum": 1.0,
                 "type": "integer"
               },
               {
@@ -8664,12 +9880,21 @@
             ],
             "title": "Repetitions"
           },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
           "rpe_max": {
             "anyOf": [
               {
-                "maximum": 10.0,
-                "minimum": 1.0,
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8680,9 +9905,7 @@
           "rpe_min": {
             "anyOf": [
               {
-                "maximum": 10.0,
-                "minimum": 1.0,
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8690,26 +9913,920 @@
             ],
             "title": "Rpe Min"
           },
-          "type": {
-            "enum": [
-              "easy",
-              "recovery",
-              "long",
-              "tempo",
-              "intervals",
-              "threshold",
-              "warmup",
-              "cooldown"
+          "sets": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Type",
+            "title": "Sets"
+          },
+          "source_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Group"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "start_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start S"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target_adaptation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Adaptation"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "RunWorkoutSegment",
+        "type": "object"
+      },
+      "SegmentDifferencePayload": {
+        "properties": {
+          "distance_delta_m": {
+            "title": "Distance Delta M",
+            "type": "number"
+          },
+          "duration_delta_s": {
+            "title": "Duration Delta S",
+            "type": "number"
+          },
+          "hr_delta_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hr Delta Bpm"
+          },
+          "measured_distance_m": {
+            "title": "Measured Distance M",
+            "type": "number"
+          },
+          "measured_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured Order"
+          },
+          "measured_role": {
+            "title": "Measured Role",
+            "type": "string"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "overlap_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overlap S"
+          },
+          "pace_delta_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Delta S Km"
+          },
+          "paired": {
+            "default": true,
+            "title": "Paired",
+            "type": "boolean"
+          },
+          "role_match": {
+            "title": "Role Match",
+            "type": "boolean"
+          },
+          "target_distance_m": {
+            "title": "Target Distance M",
+            "type": "number"
+          },
+          "target_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Order"
+          },
+          "target_role": {
+            "title": "Target Role",
             "type": "string"
           }
         },
         "required": [
-          "type",
-          "duration_min"
+          "order",
+          "target_role",
+          "measured_role",
+          "role_match",
+          "distance_delta_m",
+          "duration_delta_s",
+          "target_distance_m",
+          "measured_distance_m"
         ],
-        "title": "RunWorkoutSegment",
+        "title": "SegmentDifferencePayload",
+        "type": "object"
+      },
+      "SessionClassificationResponse": {
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/PlanEvidencePayload"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/SessionExecutionPayload"
+          },
+          "prescription": {
+            "$ref": "#/components/schemas/RunWorkoutPrescription"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/SessionQualityPayload"
+          },
+          "session_classification": {
+            "$ref": "#/components/schemas/SessionClassificationSummary"
+          }
+        },
+        "required": [
+          "session_classification",
+          "prescription",
+          "execution",
+          "quality",
+          "evidence"
+        ],
+        "title": "SessionClassificationResponse",
+        "type": "object"
+      },
+      "SessionClassificationSummary": {
+        "properties": {
+          "activity_id": {
+            "title": "Activity Id",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "context": {
+            "title": "Context",
+            "type": "string"
+          },
+          "display_line": {
+            "title": "Display Line",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "evidence_grade": {
+            "title": "Evidence Grade",
+            "type": "string"
+          },
+          "local_day": {
+            "title": "Local Day",
+            "type": "string"
+          },
+          "modifiers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Modifiers",
+            "type": "array"
+          },
+          "pacing_pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pacing Pattern"
+          },
+          "primary_stimulus": {
+            "title": "Primary Stimulus",
+            "type": "string"
+          },
+          "secondary_stimuli": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Secondary Stimuli",
+            "type": "array"
+          },
+          "session_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Type"
+          },
+          "structure": {
+            "title": "Structure",
+            "type": "string"
+          }
+        },
+        "required": [
+          "activity_id",
+          "local_day",
+          "context",
+          "structure",
+          "primary_stimulus",
+          "display_name",
+          "display_line",
+          "evidence_grade",
+          "confidence"
+        ],
+        "title": "SessionClassificationSummary",
+        "type": "object"
+      },
+      "SessionExecutionPayload": {
+        "properties": {
+          "activity_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Distance M"
+          },
+          "cooldown_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cooldown Distance M"
+          },
+          "recovery_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Distance M"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/RunWorkoutSegment"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "segments_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segments Distance M"
+          },
+          "warmup_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warmup Distance M"
+          },
+          "work_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Distance M"
+          },
+          "work_groups": {
+            "items": {
+              "$ref": "#/components/schemas/WorkGroupPayload"
+            },
+            "title": "Work Groups",
+            "type": "array"
+          }
+        },
+        "title": "SessionExecutionPayload",
+        "type": "object"
+      },
+      "SessionMeasured": {
+        "properties": {
+          "avg_hr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Hr"
+          },
+          "distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance M"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "pace_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace S Km"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
+          "speed_m_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed M S"
+          }
+        },
+        "title": "SessionMeasured",
+        "type": "object"
+      },
+      "SessionQualityPayload": {
+        "properties": {
+          "aerobic_decoupling_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aerobic Decoupling Pct"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "distance_consistency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Consistency"
+          },
+          "domain_residence_s": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DomainResidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Grade"
+          },
+          "fade_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fade Pct"
+          },
+          "hr_attainment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hr Attainment"
+          },
+          "last_domain_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Domain Match"
+          },
+          "low_domain_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Domain Share"
+          },
+          "monotonicity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monotonicity"
+          },
+          "pace_attainment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Attainment"
+          },
+          "paired_segment_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paired Segment Count"
+          },
+          "peak_speed_attainment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Speed Attainment"
+          },
+          "per_segment_differences": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentDifferencePayload"
+            },
+            "title": "Per Segment Differences",
+            "type": "array"
+          },
+          "recovery_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Ratio"
+          },
+          "repetition_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repetition Match"
+          },
+          "rpe_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe Match"
+          },
+          "speed_increase_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Increase Pct"
+          },
+          "stride_consistency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stride Consistency"
+          },
+          "structure_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structure Match"
+          },
+          "time_in_domain_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time In Domain S"
+          },
+          "trimp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trimp"
+          },
+          "tss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tss"
+          },
+          "unpaired_segment_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unpaired Segment Count"
+          },
+          "work_distance_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Distance Match"
+          },
+          "work_domain_residence_s": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DomainResidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "work_duration_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Duration Match"
+          },
+          "work_pace_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Pace Cv"
+          }
+        },
+        "title": "SessionQualityPayload",
+        "type": "object"
+      },
+      "SessionTarget": {
+        "properties": {
+          "anchor_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Model"
+          },
+          "distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance M"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "hr_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hr Bpm"
+          },
+          "hr_max_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hr Max Bpm"
+          },
+          "hr_min_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hr Min Bpm"
+          },
+          "pace_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Key"
+          },
+          "pace_max_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Max S Km"
+          },
+          "pace_min_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Min S Km"
+          },
+          "pace_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace S Km"
+          },
+          "rpe_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe Max"
+          },
+          "rpe_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe Min"
+          }
+        },
+        "title": "SessionTarget",
         "type": "object"
       },
       "SetCreate": {
@@ -9105,6 +11222,18 @@
             "title": "Id",
             "type": "string"
           },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
           "mileage_m": {
             "title": "Mileage M",
             "type": "number"
@@ -9162,6 +11291,11 @@
           "retirement_alert": {
             "title": "Retirement Alert",
             "type": "boolean"
+          },
+          "total_activities": {
+            "default": 0,
+            "title": "Total Activities",
+            "type": "integer"
           }
         },
         "required": [
@@ -9460,6 +11594,32 @@
         "title": "SourceCoverageResponse",
         "type": "object"
       },
+      "SourceDetailPayload": {
+        "properties": {
+          "doi": {
+            "default": "",
+            "title": "Doi",
+            "type": "string"
+          },
+          "key": {
+            "default": "",
+            "title": "Key",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "default": "",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "title": "SourceDetailPayload",
+        "type": "object"
+      },
       "SourceReadinessResponse": {
         "properties": {
           "observed_on": {
@@ -9634,6 +11794,45 @@
           "set_count"
         ],
         "title": "StrengthActivityResponse",
+        "type": "object"
+      },
+      "SubjectiveEvidencePayload": {
+        "properties": {
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
+          "rpe_scale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe Scale"
+          },
+          "talk_test": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Talk Test"
+          }
+        },
+        "title": "SubjectiveEvidencePayload",
         "type": "object"
       },
       "SyncJobError": {
@@ -9988,6 +12187,72 @@
         "title": "TaperResponse",
         "type": "object"
       },
+      "TheoryPayload": {
+        "properties": {
+          "effort_descriptors": {
+            "items": {
+              "$ref": "#/components/schemas/EffortDescriptorPayload"
+            },
+            "title": "Effort Descriptors",
+            "type": "array"
+          },
+          "fitt_vp": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fitt Vp",
+            "type": "array"
+          },
+          "fixed_percent_caveat": {
+            "default": "",
+            "title": "Fixed Percent Caveat",
+            "type": "string"
+          },
+          "haugen_protocols": {
+            "items": {
+              "$ref": "#/components/schemas/IntervalProtocolPayload"
+            },
+            "title": "Haugen Protocols",
+            "type": "array"
+          },
+          "iaaf_notation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IaafNotationPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "physiological_domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Physiological Domains",
+            "type": "array"
+          },
+          "rpe_caveat": {
+            "default": "",
+            "title": "Rpe Caveat",
+            "type": "string"
+          },
+          "talk_test_caveat": {
+            "default": "",
+            "title": "Talk Test Caveat",
+            "type": "string"
+          },
+          "world_athletics_examples": {
+            "items": {
+              "type": "string"
+            },
+            "title": "World Athletics Examples",
+            "type": "array"
+          }
+        },
+        "title": "TheoryPayload",
+        "type": "object"
+      },
       "ThresholdHistoryEntry": {
         "properties": {
           "effective_from": {
@@ -10027,6 +12292,17 @@
               }
             ],
             "title": "Resting Hr"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
           },
           "threshold_pace": {
             "anyOf": [
@@ -10143,6 +12419,103 @@
           "algorithm_version"
         ],
         "title": "ThresholdPaceEstimateResponse",
+        "type": "object"
+      },
+      "ThresholdSnapshotPayload": {
+        "properties": {
+          "backfill_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backfill From"
+          },
+          "effective_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective From"
+          },
+          "hr_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hr Max"
+          },
+          "intensity_anchor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intensity Anchor"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "lthr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lthr"
+          },
+          "resting_hr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resting Hr"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "threshold_pace_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Pace S Km"
+          }
+        },
+        "title": "ThresholdSnapshotPayload",
         "type": "object"
       },
       "TrainingPaceRangeResponse": {
@@ -10534,6 +12907,11 @@
             ],
             "title": "Avg Pace S Per Km"
           },
+          "classification_count": {
+            "default": 0,
+            "title": "Classification Count",
+            "type": "integer"
+          },
           "completion_pct": {
             "anyOf": [
               {
@@ -10557,6 +12935,9 @@
             "title": "Planned Tss",
             "type": "number"
           },
+          "quality_matches": {
+            "$ref": "#/components/schemas/QualityMatchesResponse"
+          },
           "remaining_distance_m": {
             "default": 0.0,
             "title": "Remaining Distance M",
@@ -10565,6 +12946,27 @@
           "week": {
             "title": "Week",
             "type": "string"
+          },
+          "work_bouts": {
+            "default": 0,
+            "title": "Work Bouts",
+            "type": "integer"
+          },
+          "work_distance_m": {
+            "default": 0.0,
+            "title": "Work Distance M",
+            "type": "number"
+          },
+          "work_domain_seconds": {
+            "$ref": "#/components/schemas/PhysiologicalDomains"
+          },
+          "work_domain_share": {
+            "$ref": "#/components/schemas/PhysiologicalDomains"
+          },
+          "work_duration_s": {
+            "default": 0.0,
+            "title": "Work Duration S",
+            "type": "number"
           }
         },
         "required": [
@@ -10958,7 +13360,7 @@
         "type": "object"
       },
       "WellnessReadingResponse": {
-        "description": "One wellness reading of the day, with the athlete's own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"\u672a\u8bb0\u5f55\" instead of showing a zero.",
+        "description": "One wellness reading of the day, with the athlete's own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"\u672a\u8bb0\u5f55\" instead of showing a zero.\n\n``observed_on`` is the day the value was actually measured. Vitals arrive\nindependently \u2014 HRV overnight, resting heart rate after the next morning \u2014\nso a reading may come from an earlier day than the one being viewed, and\nthe page states which.",
         "properties": {
           "baseline": {
             "anyOf": [
@@ -10981,6 +13383,18 @@
               }
             ],
             "title": "Delta"
+          },
+          "observed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed On"
           },
           "unit": {
             "title": "Unit",
@@ -11033,6 +13447,92 @@
           }
         },
         "title": "WellnessReadingsResponse",
+        "type": "object"
+      },
+      "WorkGroupPayload": {
+        "properties": {
+          "distance_range_m": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Distance Range M",
+            "type": "array"
+          },
+          "duration_range_s": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Duration Range S",
+            "type": "array"
+          },
+          "pace_range_s_km": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Pace Range S Km",
+            "type": "array"
+          },
+          "recovery_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Distance M"
+          },
+          "recovery_duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Duration S"
+          },
+          "repetitions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repetitions"
+          },
+          "sets": {
+            "title": "Sets",
+            "type": "integer"
+          },
+          "source_group": {
+            "title": "Source Group",
+            "type": "string"
+          },
+          "target_pace_s_km": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Pace S Km"
+          }
+        },
+        "required": [
+          "source_group",
+          "sets"
+        ],
+        "title": "WorkGroupPayload",
         "type": "object"
       },
       "WorkoutCreate": {
@@ -11516,13 +14016,214 @@
       },
       "WorkoutTemplateSegment": {
         "properties": {
+          "anchor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor"
+          },
+          "distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance M"
+          },
           "duration_s": {
             "title": "Duration S",
-            "type": "integer"
+            "type": "number"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanEvidencePayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measured": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionMeasured"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pace_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Key"
+          },
+          "pace_max_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Max S Km"
+          },
+          "pace_min_s_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pace Min S Km"
+          },
+          "primary_stimulus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Stimulus"
+          },
+          "quality_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "recovery_distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Distance M"
+          },
+          "recovery_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery S"
+          },
+          "repetitions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repetitions"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
           },
           "segment_type": {
             "title": "Segment Type",
             "type": "string"
+          },
+          "sets": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sets"
+          },
+          "source_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target_adaptation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Adaptation"
+          },
+          "target_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Domain"
           }
         },
         "required": [
@@ -11940,6 +14641,60 @@
         ],
         "title": "ZonesResponse",
         "type": "object"
+      },
+      "presentation__api__analytics_insight_contracts__RecomputeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "recompute_generation": {
+            "title": "Recompute Generation",
+            "type": "integer"
+          },
+          "recompute_status": {
+            "const": "queued",
+            "title": "Recompute Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recompute_status",
+          "recompute_generation"
+        ],
+        "title": "RecomputeResponse",
+        "type": "object"
+      },
+      "presentation__api__run_classifications__RecomputeResponse": {
+        "properties": {
+          "activity_count": {
+            "title": "Activity Count",
+            "type": "integer"
+          },
+          "algorithm_version": {
+            "title": "Algorithm Version",
+            "type": "string"
+          },
+          "athlete_id": {
+            "title": "Athlete Id",
+            "type": "string"
+          },
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "persisted_count": {
+            "title": "Persisted Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "athlete_id",
+          "activity_count",
+          "persisted_count",
+          "algorithm_version",
+          "computed_at"
+        ],
+        "title": "RecomputeResponse",
+        "type": "object"
       }
     }
   },
@@ -12090,6 +14845,94 @@
           }
         },
         "summary": "Batch Upload Activities",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/api/v1/activities/classifications": {
+      "get": {
+        "operationId": "list_classifications_api_v1_activities_classifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassificationListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Classifications",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/api/v1/activities/classifications/recompute": {
+      "post": {
+        "operationId": "recompute_classifications_api_v1_activities_classifications_recompute_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/presentation__api__run_classifications__RecomputeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Recompute Classifications",
         "tags": [
           "activities"
         ]
@@ -12474,6 +15317,48 @@
         ]
       }
     },
+    "/api/v1/activities/{activity_id}/classification": {
+      "get": {
+        "operationId": "get_classification_api_v1_activities_activity_id_classification_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassificationItemResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Classification",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
     "/api/v1/activities/{activity_id}/export": {
       "get": {
         "operationId": "export_activity_api_v1_activities_activity_id_export_get",
@@ -12754,6 +15639,58 @@
           }
         },
         "summary": "Restore Activity",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/api/v1/activities/{activity_id}/rpe": {
+      "patch": {
+        "operationId": "update_rpe_api_v1_activities_activity_id_rpe_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RpeUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RpeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Rpe",
         "tags": [
           "activities"
         ]
@@ -13371,6 +16308,57 @@
           }
         },
         "summary": "Update Event",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/api/v1/calendar/{event_id}/link": {
+      "post": {
+        "operationId": "link_event_api_v1_calendar_event_id_link_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "title": "Activity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEvent-Output"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Link Event",
         "tags": [
           "calendar"
         ]
@@ -14826,7 +17814,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RecomputeResponse"
+                  "$ref": "#/components/schemas/presentation__api__analytics_insight_contracts__RecomputeResponse"
                 }
               }
             },
@@ -15557,6 +18545,49 @@
           }
         },
         "summary": "Cancel Sync Job",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/{source}/resync": {
+      "post": {
+        "description": "Clear this source's imported data and re-import the athlete's full history.",
+        "operationId": "resync_integration_api_v1_integrations_source_resync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "title": "Source",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resync Integration",
         "tags": [
           "integrations"
         ]

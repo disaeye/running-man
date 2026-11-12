@@ -6,9 +6,124 @@
  */
 import { z as zod } from 'zod';
 
+export const workoutTemplateSegmentEvidenceOneSourceDetailsItemDoiDefault = ``;
+export const workoutTemplateSegmentEvidenceOneSourceDetailsItemKeyDefault = ``;
+export const workoutTemplateSegmentEvidenceOneSourceDetailsItemTitleDefault = ``;
+export const workoutTemplateSegmentEvidenceOneSourceDetailsItemUrlDefault = ``;
+export const workoutTemplateSegmentEvidenceOneTheoryOneFixedPercentCaveatDefault = ``;
+export const workoutTemplateSegmentEvidenceOneTheoryOneRpeCaveatDefault = ``;
+export const workoutTemplateSegmentEvidenceOneTheoryOneTalkTestCaveatDefault = ``;
 export const WorkoutTemplateSegment = zod.object({
+  "anchor": zod.union([zod.string(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
   "duration_s": zod.number(),
-  "segment_type": zod.string()
+  "evidence": zod.union([zod.object({
+  "algorithm_version": zod.union([zod.string(),zod.null()]).optional(),
+  "direct_metabolic_thresholds": zod.union([zod.boolean(),zod.null()]).optional(),
+  "interval_summary": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "measurement_sources": zod.array(zod.string()).optional(),
+  "race_marker_present": zod.union([zod.boolean(),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "schema_version": zod.union([zod.string(),zod.null()]).optional(),
+  "source_details": zod.array(zod.object({
+  "doi": zod.string().default(workoutTemplateSegmentEvidenceOneSourceDetailsItemDoiDefault),
+  "key": zod.string().default(workoutTemplateSegmentEvidenceOneSourceDetailsItemKeyDefault),
+  "title": zod.string().default(workoutTemplateSegmentEvidenceOneSourceDetailsItemTitleDefault),
+  "url": zod.string().default(workoutTemplateSegmentEvidenceOneSourceDetailsItemUrlDefault)
+})).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "subjective": zod.union([zod.object({
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_scale": zod.union([zod.string(),zod.null()]).optional(),
+  "talk_test": zod.union([zod.string(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "theory": zod.union([zod.object({
+  "effort_descriptors": zod.array(zod.object({
+  "descriptor": zod.string(),
+  "domain": zod.string(),
+  "rir": zod.string(),
+  "rpe10": zod.string(),
+  "rpe20": zod.string(),
+  "term": zod.string()
+})).optional(),
+  "fitt_vp": zod.array(zod.string()).optional(),
+  "fixed_percent_caveat": zod.string().default(workoutTemplateSegmentEvidenceOneTheoryOneFixedPercentCaveatDefault),
+  "haugen_protocols": zod.array(zod.object({
+  "intensity": zod.string(),
+  "key": zod.string(),
+  "recovery_duration_s": zod.string(),
+  "typical_total": zod.string(),
+  "work_duration_s": zod.string()
+})).optional(),
+  "iaaf_notation": zod.union([zod.object({
+  "distance_unit": zod.string(),
+  "example": zod.string(),
+  "pace_unit": zod.string(),
+  "pattern": zod.string(),
+  "recovery_distance": zod.string(),
+  "recovery_duration": zod.string()
+}),zod.null()]).optional(),
+  "physiological_domains": zod.array(zod.string()).optional(),
+  "rpe_caveat": zod.string().default(workoutTemplateSegmentEvidenceOneTheoryOneRpeCaveatDefault),
+  "talk_test_caveat": zod.string().default(workoutTemplateSegmentEvidenceOneTheoryOneTalkTestCaveatDefault),
+  "world_athletics_examples": zod.array(zod.string()).optional()
+}),zod.null()]).optional(),
+  "threshold_snapshot": zod.union([zod.object({
+  "backfill_from": zod.union([zod.string(),zod.null()]).optional(),
+  "effective_from": zod.union([zod.string(),zod.null()]).optional(),
+  "hr_max": zod.union([zod.number(),zod.null()]).optional(),
+  "intensity_anchor": zod.union([zod.string(),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "lthr": zod.union([zod.number(),zod.null()]).optional(),
+  "resting_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "threshold_pace_s_km": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "measured": zod.union([zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "speed_m_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "primary_stimulus": zod.union([zod.string(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_s": zod.union([zod.number(),zod.null()]).optional(),
+  "repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "role": zod.union([zod.string(),zod.null()]).optional(),
+  "segment_type": zod.string(),
+  "sets": zod.union([zod.number(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "target": zod.union([zod.object({
+  "anchor_model": zod.union([zod.string(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_max_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_min_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "target_domain": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export type WorkoutTemplateSegment = zod.input<typeof WorkoutTemplateSegment>;

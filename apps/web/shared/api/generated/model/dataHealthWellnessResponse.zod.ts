@@ -8,6 +8,7 @@ import { z as zod } from 'zod';
 
 export const DataHealthWellnessResponse = zod.object({
   "data_as_of": zod.union([zod.iso.date(),zod.null()]),
+  "first_day": zod.union([zod.iso.date(),zod.null()]).optional(),
   "latest_day": zod.union([zod.iso.date(),zod.null()]),
   "total_days": zod.number()
 })

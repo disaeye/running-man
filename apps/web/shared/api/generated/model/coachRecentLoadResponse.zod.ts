@@ -8,6 +8,16 @@ import { z as zod } from 'zod';
 
 export const coachRecentLoadResponseCtlHistoryDaysDefault = 0;
 export const coachRecentLoadResponseCtlWarmingUpDefault = false;
+export const coachRecentLoadResponseWorkDomainSecondsAboveWmaxDefault = 0;
+export const coachRecentLoadResponseWorkDomainSecondsBelowMt1Default = 0;
+export const coachRecentLoadResponseWorkDomainSecondsLowUnspecifiedDefault = 0;
+export const coachRecentLoadResponseWorkDomainSecondsMt1Mt2Default = 0;
+export const coachRecentLoadResponseWorkDomainSecondsMt2WmaxDefault = 0;
+export const coachRecentLoadResponseWorkDomainShareAboveWmaxDefault = 0;
+export const coachRecentLoadResponseWorkDomainShareBelowMt1Default = 0;
+export const coachRecentLoadResponseWorkDomainShareLowUnspecifiedDefault = 0;
+export const coachRecentLoadResponseWorkDomainShareMt1Mt2Default = 0;
+export const coachRecentLoadResponseWorkDomainShareMt2WmaxDefault = 0;
 export const CoachRecentLoadResponse = zod.object({
   "ctl_history_days": zod.number().default(coachRecentLoadResponseCtlHistoryDaysDefault),
   "ctl_warming_up": zod.boolean().default(coachRecentLoadResponseCtlWarmingUpDefault),
@@ -16,7 +26,21 @@ export const CoachRecentLoadResponse = zod.object({
   "current_tsb": zod.number(),
   "d28_tss": zod.number(),
   "d7_tss": zod.number(),
-  "d90_tss": zod.number()
+  "d90_tss": zod.number(),
+  "work_domain_seconds": zod.object({
+  "above_wmax": zod.number().default(coachRecentLoadResponseWorkDomainSecondsAboveWmaxDefault),
+  "below_mt1": zod.number().default(coachRecentLoadResponseWorkDomainSecondsBelowMt1Default),
+  "low_unspecified": zod.number().default(coachRecentLoadResponseWorkDomainSecondsLowUnspecifiedDefault),
+  "mt1_mt2": zod.number().default(coachRecentLoadResponseWorkDomainSecondsMt1Mt2Default),
+  "mt2_wmax": zod.number().default(coachRecentLoadResponseWorkDomainSecondsMt2WmaxDefault)
+}).optional().describe('Work seconds or share in the four ACSM\/ESSA intensity domains.'),
+  "work_domain_share": zod.object({
+  "above_wmax": zod.number().default(coachRecentLoadResponseWorkDomainShareAboveWmaxDefault),
+  "below_mt1": zod.number().default(coachRecentLoadResponseWorkDomainShareBelowMt1Default),
+  "low_unspecified": zod.number().default(coachRecentLoadResponseWorkDomainShareLowUnspecifiedDefault),
+  "mt1_mt2": zod.number().default(coachRecentLoadResponseWorkDomainShareMt1Mt2Default),
+  "mt2_wmax": zod.number().default(coachRecentLoadResponseWorkDomainShareMt2WmaxDefault)
+}).optional().describe('Work seconds or share in the four ACSM\/ESSA intensity domains.')
 }).describe('Recent load and whether CTL may be quoted.\n\n``ctl_warming_up`` is true until enough history exists for the CTL EWMA to\nhave converged away from its zero seed. A consumer that states a CTL figure\nmust check it: early values describe the warm-up, not the athlete.')
 
 export type CoachRecentLoadResponse = zod.input<typeof CoachRecentLoadResponse>;

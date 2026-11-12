@@ -6,8 +6,11 @@
  */
 import { z as zod } from 'zod';
 
+export const dataHealthActivityCoverageResponseUnassignedRunActivities30dDefault = 0;
 export const DataHealthActivityCoverageResponse = zod.object({
+  "first_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "total_activities": zod.number(),
+  "unassigned_run_activities_30d": zod.number().default(dataHealthActivityCoverageResponseUnassignedRunActivities30dDefault),
   "with_gps": zod.number(),
   "with_hr": zod.number(),
   "with_power": zod.number(),

@@ -7,6 +7,7 @@
 import { z as zod } from 'zod';
 
 export const dataHealthResponseActivitiesWithStreamsDefault = 0;
+export const dataHealthResponseCoverageOneActivitiesUnassignedRunActivities30dDefault = 0;
 export const dataHealthResponseCoverageOneStrengthOneSessions14dDefault = 0;
 export const dataHealthResponseCoverageOneStrengthOneSessionsTotalDefault = 0;
 export const dataHealthResponseCoverageOneUploadsOneFailed30dDefault = 0;
@@ -15,6 +16,7 @@ export const dataHealthResponseCoverageOneWellnessHrvDays28dDefault = 0;
 export const DataHealthResponse = zod.object({
   "activities": zod.object({
   "data_as_of": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
+  "first_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "total": zod.number(),
   "with_gps": zod.number(),
   "with_hr": zod.number(),
@@ -30,7 +32,9 @@ export const DataHealthResponse = zod.object({
 }),
   "coverage": zod.union([zod.object({
   "activities": zod.object({
+  "first_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "total_activities": zod.number(),
+  "unassigned_run_activities_30d": zod.number().default(dataHealthResponseCoverageOneActivitiesUnassignedRunActivities30dDefault),
   "with_gps": zod.number(),
   "with_hr": zod.number(),
   "with_power": zod.number(),
@@ -40,11 +44,16 @@ export const DataHealthResponse = zod.object({
   "sessions_14d": zod.number().default(dataHealthResponseCoverageOneStrengthOneSessions14dDefault),
   "sessions_total": zod.number().default(dataHealthResponseCoverageOneStrengthOneSessionsTotalDefault)
 }),zod.null()]).optional(),
+  "sync": zod.union([zod.object({
+  "last_sync_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
+  "last_sync_status": zod.union([zod.string(),zod.null()]).optional()
+}),zod.null()]).optional(),
   "uploads": zod.union([zod.object({
   "failed_30d": zod.number().default(dataHealthResponseCoverageOneUploadsOneFailed30dDefault),
   "runs_30d": zod.number().default(dataHealthResponseCoverageOneUploadsOneRuns30dDefault)
 }),zod.null()]).optional(),
   "wellness": zod.object({
+  "first_day": zod.union([zod.iso.date(),zod.null()]).optional(),
   "hrv_days_28d": zod.number().default(dataHealthResponseCoverageOneWellnessHrvDays28dDefault),
   "rhr_days_28d": zod.number(),
   "sleep_days_28d": zod.number()
@@ -59,6 +68,7 @@ export const DataHealthResponse = zod.object({
 }),
   "wellness": zod.object({
   "data_as_of": zod.union([zod.iso.date(),zod.null()]),
+  "first_day": zod.union([zod.iso.date(),zod.null()]).optional(),
   "latest_day": zod.union([zod.iso.date(),zod.null()]),
   "total_days": zod.number()
 })

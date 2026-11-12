@@ -13,7 +13,7 @@ export const AccountExportManifestResponse = zod.object({
   "generated_at": zod.iso.datetime({"offset":true}),
   "resources": zod.array(zod.object({
   "count": zod.number(),
-  "name": zod.enum(['activities', 'activity_laps', 'calendar_events', 'derived_metrics', 'ftp_history', 'gear', 'goals', 'health', 'integrations', 'notifications', 'shares', 'strength', 'sync_runs'])
+  "name": zod.enum(['activities', 'activity_laps', 'calendar_events', 'derived_metrics', 'ftp_history', 'gear', 'goals', 'health', 'integrations', 'notifications', 'shares', 'strength', 'sync_runs', 'session_classifications', 'activity_intervals', 'workout_templates'])
 }))
 })
 

@@ -10,34 +10,13 @@ import { z as zod } from 'zod';
 
 export const createEventApiV1CalendarPostBodyPredictedTssOneMin = 0;
 
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneDurationMinMin = 0;
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneDurationMinMax = 600;
-
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOnePaceMaxSKmOneExclusiveMin = 0;
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOnePaceMaxSKmOneMax = 1800;
-
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOnePaceMinSKmOneExclusiveMin = 0;
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOnePaceMinSKmOneMax = 1800;
-
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemDurationMinExclusiveMin = 0;
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemDurationMinMax = 600;
-
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemPaceMaxSKmOneExclusiveMin = 0;
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemPaceMaxSKmOneMax = 1800;
-
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemPaceMinSKmOneExclusiveMin = 0;
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemPaceMinSKmOneMax = 1800;
-
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRecoveryMinOneExclusiveMin = 0;
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRecoveryMinOneMax = 120;
-
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRepetitionsOneMax = 100;
-
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRpeMaxOneMax = 10;
-
-export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRpeMinOneMax = 10;
-
-
+export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneSourceDetailsItemDoiDefault = ``;
+export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneSourceDetailsItemKeyDefault = ``;
+export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneSourceDetailsItemTitleDefault = ``;
+export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneSourceDetailsItemUrlDefault = ``;
+export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneTheoryOneFixedPercentCaveatDefault = ``;
+export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneTheoryOneRpeCaveatDefault = ``;
+export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneTheoryOneTalkTestCaveatDefault = ``;
 export const CreateEventApiV1CalendarPostBody = zod.object({
   "category": zod.string().min(1),
   "done": zod.union([zod.boolean(),zod.null()]).optional(),
@@ -51,22 +30,159 @@ export const CreateEventApiV1CalendarPostBody = zod.object({
   "status": zod.union([zod.string(),zod.null()]).optional(),
   "training_type": zod.union([zod.string(),zod.null()]).optional(),
   "workout_prescription": zod.union([zod.object({
-  "duration_min": zod.number().min(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneDurationMinMin).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneDurationMinMax),
-  "pace_max_s_km": zod.union([zod.number().gt(createEventApiV1CalendarPostBodyWorkoutPrescriptionOnePaceMaxSKmOneExclusiveMin).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOnePaceMaxSKmOneMax),zod.null()]).optional(),
-  "pace_min_s_km": zod.union([zod.number().gt(createEventApiV1CalendarPostBodyWorkoutPrescriptionOnePaceMinSKmOneExclusiveMin).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOnePaceMinSKmOneMax),zod.null()]).optional(),
+  "display_line": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_min": zod.union([zod.number(),zod.null()]).optional(),
+  "evidence": zod.union([zod.object({
+  "algorithm_version": zod.union([zod.string(),zod.null()]).optional(),
+  "direct_metabolic_thresholds": zod.union([zod.boolean(),zod.null()]).optional(),
+  "interval_summary": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "measurement_sources": zod.array(zod.string()).optional(),
+  "race_marker_present": zod.union([zod.boolean(),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "schema_version": zod.union([zod.string(),zod.null()]).optional(),
+  "source_details": zod.array(zod.object({
+  "doi": zod.string().default(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneSourceDetailsItemDoiDefault),
+  "key": zod.string().default(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneSourceDetailsItemKeyDefault),
+  "title": zod.string().default(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneSourceDetailsItemTitleDefault),
+  "url": zod.string().default(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneSourceDetailsItemUrlDefault)
+})).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "subjective": zod.union([zod.object({
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_scale": zod.union([zod.string(),zod.null()]).optional(),
+  "talk_test": zod.union([zod.string(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "theory": zod.union([zod.object({
+  "effort_descriptors": zod.array(zod.object({
+  "descriptor": zod.string(),
+  "domain": zod.string(),
+  "rir": zod.string(),
+  "rpe10": zod.string(),
+  "rpe20": zod.string(),
+  "term": zod.string()
+})).optional(),
+  "fitt_vp": zod.array(zod.string()).optional(),
+  "fixed_percent_caveat": zod.string().default(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneTheoryOneFixedPercentCaveatDefault),
+  "haugen_protocols": zod.array(zod.object({
+  "intensity": zod.string(),
+  "key": zod.string(),
+  "recovery_duration_s": zod.string(),
+  "typical_total": zod.string(),
+  "work_duration_s": zod.string()
+})).optional(),
+  "iaaf_notation": zod.union([zod.object({
+  "distance_unit": zod.string(),
+  "example": zod.string(),
+  "pace_unit": zod.string(),
+  "pattern": zod.string(),
+  "recovery_distance": zod.string(),
+  "recovery_duration": zod.string()
+}),zod.null()]).optional(),
+  "physiological_domains": zod.array(zod.string()).optional(),
+  "rpe_caveat": zod.string().default(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneTheoryOneRpeCaveatDefault),
+  "talk_test_caveat": zod.string().default(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneTheoryOneTalkTestCaveatDefault),
+  "world_athletics_examples": zod.array(zod.string()).optional()
+}),zod.null()]).optional(),
+  "threshold_snapshot": zod.union([zod.object({
+  "backfill_from": zod.union([zod.string(),zod.null()]).optional(),
+  "effective_from": zod.union([zod.string(),zod.null()]).optional(),
+  "hr_max": zod.union([zod.number(),zod.null()]).optional(),
+  "intensity_anchor": zod.union([zod.string(),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "lthr": zod.union([zod.number(),zod.null()]).optional(),
+  "resting_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "threshold_pace_s_km": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "intensity_anchor": zod.union([zod.object({
+  "algorithm_version": zod.union([zod.string(),zod.null()]).optional(),
+  "effective_from": zod.union([zod.string(),zod.null()]).optional(),
+  "model": zod.string(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "threshold_pace_s_km": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pacing_pattern": zod.union([zod.string(),zod.null()]).optional(),
   "phase": zod.union([zod.string(),zod.null()]).optional(),
+  "primary_stimulus": zod.union([zod.string(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
   "segments": zod.array(zod.object({
-  "duration_min": zod.number().gt(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemDurationMinExclusiveMin).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemDurationMinMax),
-  "pace_max_s_km": zod.union([zod.number().gt(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemPaceMaxSKmOneExclusiveMin).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemPaceMaxSKmOneMax),zod.null()]).optional(),
-  "pace_min_s_km": zod.union([zod.number().gt(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemPaceMinSKmOneExclusiveMin).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemPaceMinSKmOneMax),zod.null()]).optional(),
-  "recovery_min": zod.union([zod.number().gt(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRecoveryMinOneExclusiveMin).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRecoveryMinOneMax),zod.null()]).optional(),
-  "repetitions": zod.union([zod.number().min(1).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRepetitionsOneMax),zod.null()]).optional(),
-  "rpe_max": zod.union([zod.number().min(1).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRpeMaxOneMax),zod.null()]).optional(),
-  "rpe_min": zod.union([zod.number().min(1).max(createEventApiV1CalendarPostBodyWorkoutPrescriptionOneSegmentsItemRpeMinOneMax),zod.null()]).optional(),
-  "type": zod.enum(['easy', 'recovery', 'long', 'tempo', 'intervals', 'threshold', 'warmup', 'cooldown'])
-})),
-  "type": zod.enum(['easy', 'recovery', 'long', 'tempo', 'intervals']),
-  "version": zod.number()
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_min": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "end_s": zod.union([zod.number(),zod.null()]).optional(),
+  "evidence_source": zod.union([zod.string(),zod.null()]).optional(),
+  "intensity_domain": zod.union([zod.string(),zod.null()]).optional(),
+  "measured": zod.union([zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "speed_m_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "order": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_min": zod.union([zod.number(),zod.null()]).optional(),
+  "repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "role": zod.union([zod.string(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional(),
+  "sets": zod.union([zod.number(),zod.null()]).optional(),
+  "source_group": zod.union([zod.string(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "start_s": zod.union([zod.number(),zod.null()]).optional(),
+  "target": zod.union([zod.object({
+  "anchor_model": zod.union([zod.string(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_max_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_min_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.string(),zod.null()]).optional()
+})).optional(),
+  "session_type": zod.union([zod.string(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "status": zod.union([zod.string(),zod.null()]).optional(),
+  "structure": zod.union([zod.string(),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "target_domain": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.string(),zod.null()]).optional(),
+  "version": zod.union([zod.number(),zod.null()]).optional()
 }),zod.null()]).optional(),
   "workout_xml": zod.union([zod.string(),zod.null()]).optional()
 })

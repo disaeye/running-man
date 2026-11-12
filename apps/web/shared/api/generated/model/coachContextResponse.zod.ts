@@ -9,6 +9,16 @@ import { z as zod } from 'zod';
 export const coachContextResponseReadinessDataSufficientDefault = false;
 export const coachContextResponseRecentLoadCtlHistoryDaysDefault = 0;
 export const coachContextResponseRecentLoadCtlWarmingUpDefault = false;
+export const coachContextResponseRecentLoadWorkDomainSecondsAboveWmaxDefault = 0;
+export const coachContextResponseRecentLoadWorkDomainSecondsBelowMt1Default = 0;
+export const coachContextResponseRecentLoadWorkDomainSecondsLowUnspecifiedDefault = 0;
+export const coachContextResponseRecentLoadWorkDomainSecondsMt1Mt2Default = 0;
+export const coachContextResponseRecentLoadWorkDomainSecondsMt2WmaxDefault = 0;
+export const coachContextResponseRecentLoadWorkDomainShareAboveWmaxDefault = 0;
+export const coachContextResponseRecentLoadWorkDomainShareBelowMt1Default = 0;
+export const coachContextResponseRecentLoadWorkDomainShareLowUnspecifiedDefault = 0;
+export const coachContextResponseRecentLoadWorkDomainShareMt1Mt2Default = 0;
+export const coachContextResponseRecentLoadWorkDomainShareMt2WmaxDefault = 0;
 export const CoachContextResponse = zod.object({
   "data_freshness": zod.record(zod.string(), zod.object({
   "data_as_of": zod.union([zod.iso.date(),zod.null()]),
@@ -22,7 +32,10 @@ export const CoachContextResponse = zod.object({
   "plan_adherence": zod.object({
   "adherence_pct": zod.number(),
   "completed_tss_7d": zod.number(),
-  "planned_tss_7d": zod.number()
+  "domain_match": zod.union([zod.number(),zod.null()]).optional(),
+  "planned_tss_7d": zod.number(),
+  "structure_match": zod.union([zod.number(),zod.null()]).optional(),
+  "type_match": zod.union([zod.number(),zod.null()]).optional()
 }),
   "readiness": zod.object({
   "data_sufficient": zod.boolean().default(coachContextResponseReadinessDataSufficientDefault),
@@ -38,21 +51,24 @@ export const CoachContextResponse = zod.object({
   "hrv": zod.union([zod.object({
   "baseline": zod.union([zod.number(),zod.null()]).optional(),
   "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "observed_on": zod.union([zod.iso.date(),zod.null()]).optional(),
   "unit": zod.string(),
   "value": zod.number()
-}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional(),
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.\n\n``observed_on`` is the day the value was actually measured. Vitals arrive\nindependently — HRV overnight, resting heart rate after the next morning —\nso a reading may come from an earlier day than the one being viewed, and\nthe page states which.'),zod.null()]).optional(),
   "resting_hr": zod.union([zod.object({
   "baseline": zod.union([zod.number(),zod.null()]).optional(),
   "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "observed_on": zod.union([zod.iso.date(),zod.null()]).optional(),
   "unit": zod.string(),
   "value": zod.number()
-}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional(),
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.\n\n``observed_on`` is the day the value was actually measured. Vitals arrive\nindependently — HRV overnight, resting heart rate after the next morning —\nso a reading may come from an earlier day than the one being viewed, and\nthe page states which.'),zod.null()]).optional(),
   "sleep_secs": zod.union([zod.object({
   "baseline": zod.union([zod.number(),zod.null()]).optional(),
   "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "observed_on": zod.union([zod.iso.date(),zod.null()]).optional(),
   "unit": zod.string(),
   "value": zod.number()
-}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional()
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.\n\n``observed_on`` is the day the value was actually measured. Vitals arrive\nindependently — HRV overnight, resting heart rate after the next morning —\nso a reading may come from an earlier day than the one being viewed, and\nthe page states which.'),zod.null()]).optional()
 }).optional().describe('The day\'s wellness readings, each with the athlete\'s own baseline.\n\nThe three readings the page shows are named fields rather than a map, so\nthe contract states exactly which ones exist and what their units are.'),
   "recommendation": zod.string(),
   "score": zod.number()
@@ -65,7 +81,21 @@ export const CoachContextResponse = zod.object({
   "current_tsb": zod.number(),
   "d28_tss": zod.number(),
   "d7_tss": zod.number(),
-  "d90_tss": zod.number()
+  "d90_tss": zod.number(),
+  "work_domain_seconds": zod.object({
+  "above_wmax": zod.number().default(coachContextResponseRecentLoadWorkDomainSecondsAboveWmaxDefault),
+  "below_mt1": zod.number().default(coachContextResponseRecentLoadWorkDomainSecondsBelowMt1Default),
+  "low_unspecified": zod.number().default(coachContextResponseRecentLoadWorkDomainSecondsLowUnspecifiedDefault),
+  "mt1_mt2": zod.number().default(coachContextResponseRecentLoadWorkDomainSecondsMt1Mt2Default),
+  "mt2_wmax": zod.number().default(coachContextResponseRecentLoadWorkDomainSecondsMt2WmaxDefault)
+}).optional().describe('Work seconds or share in the four ACSM\/ESSA intensity domains.'),
+  "work_domain_share": zod.object({
+  "above_wmax": zod.number().default(coachContextResponseRecentLoadWorkDomainShareAboveWmaxDefault),
+  "below_mt1": zod.number().default(coachContextResponseRecentLoadWorkDomainShareBelowMt1Default),
+  "low_unspecified": zod.number().default(coachContextResponseRecentLoadWorkDomainShareLowUnspecifiedDefault),
+  "mt1_mt2": zod.number().default(coachContextResponseRecentLoadWorkDomainShareMt1Mt2Default),
+  "mt2_wmax": zod.number().default(coachContextResponseRecentLoadWorkDomainShareMt2WmaxDefault)
+}).optional().describe('Work seconds or share in the four ACSM\/ESSA intensity domains.')
 }).describe('Recent load and whether CTL may be quoted.\n\n``ctl_warming_up`` is true until enough history exists for the CTL EWMA to\nhave converged away from its zero seed. A consumer that states a CTL figure\nmust check it: early values describe the warm-up, not the athlete.'),
   "recommendation": zod.object({
   "action": zod.string(),

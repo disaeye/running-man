@@ -26,21 +26,24 @@ export const LocalReadinessResponse = zod.object({
   "hrv": zod.union([zod.object({
   "baseline": zod.union([zod.number(),zod.null()]).optional(),
   "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "observed_on": zod.union([zod.iso.date(),zod.null()]).optional(),
   "unit": zod.string(),
   "value": zod.number()
-}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional(),
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.\n\n``observed_on`` is the day the value was actually measured. Vitals arrive\nindependently — HRV overnight, resting heart rate after the next morning —\nso a reading may come from an earlier day than the one being viewed, and\nthe page states which.'),zod.null()]).optional(),
   "resting_hr": zod.union([zod.object({
   "baseline": zod.union([zod.number(),zod.null()]).optional(),
   "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "observed_on": zod.union([zod.iso.date(),zod.null()]).optional(),
   "unit": zod.string(),
   "value": zod.number()
-}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional(),
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.\n\n``observed_on`` is the day the value was actually measured. Vitals arrive\nindependently — HRV overnight, resting heart rate after the next morning —\nso a reading may come from an earlier day than the one being viewed, and\nthe page states which.'),zod.null()]).optional(),
   "sleep_secs": zod.union([zod.object({
   "baseline": zod.union([zod.number(),zod.null()]).optional(),
   "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "observed_on": zod.union([zod.iso.date(),zod.null()]).optional(),
   "unit": zod.string(),
   "value": zod.number()
-}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.'),zod.null()]).optional()
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.\n\n``observed_on`` is the day the value was actually measured. Vitals arrive\nindependently — HRV overnight, resting heart rate after the next morning —\nso a reading may come from an earlier day than the one being viewed, and\nthe page states which.'),zod.null()]).optional()
 }).optional().describe('The day\'s wellness readings, each with the athlete\'s own baseline.\n\nThe three readings the page shows are named fields rather than a map, so\nthe contract states exactly which ones exist and what their units are.'),
   "recommendation": zod.string(),
   "score": zod.number()

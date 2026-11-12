@@ -18,34 +18,29 @@ export const calendarEventUpdateCompletedRpeOneMax = 10;
 
 export const calendarEventUpdatePredictedTssOneMin = 0;
 
-export const calendarEventUpdateWorkoutPrescriptionOneDurationMinMin = 0;
-export const calendarEventUpdateWorkoutPrescriptionOneDurationMinMax = 600;
-
-export const calendarEventUpdateWorkoutPrescriptionOnePaceMaxSKmOneExclusiveMin = 0;
-export const calendarEventUpdateWorkoutPrescriptionOnePaceMaxSKmOneMax = 1800;
-
-export const calendarEventUpdateWorkoutPrescriptionOnePaceMinSKmOneExclusiveMin = 0;
-export const calendarEventUpdateWorkoutPrescriptionOnePaceMinSKmOneMax = 1800;
-
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemDurationMinExclusiveMin = 0;
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemDurationMinMax = 600;
-
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemPaceMaxSKmOneExclusiveMin = 0;
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemPaceMaxSKmOneMax = 1800;
-
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemPaceMinSKmOneExclusiveMin = 0;
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemPaceMinSKmOneMax = 1800;
-
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRecoveryMinOneExclusiveMin = 0;
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRecoveryMinOneMax = 120;
-
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRepetitionsOneMax = 100;
-
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRpeMaxOneMax = 10;
-
-export const calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRpeMinOneMax = 10;
-
-
+export const calendarEventUpdateQualityOnePerSegmentDifferencesItemPairedDefault = true;
+export const calendarEventUpdateSessionClassificationOneEvidenceSourceDetailsItemDoiDefault = ``;
+export const calendarEventUpdateSessionClassificationOneEvidenceSourceDetailsItemKeyDefault = ``;
+export const calendarEventUpdateSessionClassificationOneEvidenceSourceDetailsItemTitleDefault = ``;
+export const calendarEventUpdateSessionClassificationOneEvidenceSourceDetailsItemUrlDefault = ``;
+export const calendarEventUpdateSessionClassificationOneEvidenceTheoryOneFixedPercentCaveatDefault = ``;
+export const calendarEventUpdateSessionClassificationOneEvidenceTheoryOneRpeCaveatDefault = ``;
+export const calendarEventUpdateSessionClassificationOneEvidenceTheoryOneTalkTestCaveatDefault = ``;
+export const calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneSourceDetailsItemDoiDefault = ``;
+export const calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneSourceDetailsItemKeyDefault = ``;
+export const calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneSourceDetailsItemTitleDefault = ``;
+export const calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneSourceDetailsItemUrlDefault = ``;
+export const calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneTheoryOneFixedPercentCaveatDefault = ``;
+export const calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneTheoryOneRpeCaveatDefault = ``;
+export const calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneTheoryOneTalkTestCaveatDefault = ``;
+export const calendarEventUpdateSessionClassificationOneQualityPerSegmentDifferencesItemPairedDefault = true;
+export const calendarEventUpdateWorkoutPrescriptionOneEvidenceOneSourceDetailsItemDoiDefault = ``;
+export const calendarEventUpdateWorkoutPrescriptionOneEvidenceOneSourceDetailsItemKeyDefault = ``;
+export const calendarEventUpdateWorkoutPrescriptionOneEvidenceOneSourceDetailsItemTitleDefault = ``;
+export const calendarEventUpdateWorkoutPrescriptionOneEvidenceOneSourceDetailsItemUrlDefault = ``;
+export const calendarEventUpdateWorkoutPrescriptionOneEvidenceOneTheoryOneFixedPercentCaveatDefault = ``;
+export const calendarEventUpdateWorkoutPrescriptionOneEvidenceOneTheoryOneRpeCaveatDefault = ``;
+export const calendarEventUpdateWorkoutPrescriptionOneEvidenceOneTheoryOneTalkTestCaveatDefault = ``;
 export const CalendarEventUpdate = zod.object({
   "actual_logged_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "category": zod.union([zod.string().min(1),zod.null()]).optional(),
@@ -54,29 +49,668 @@ export const CalendarEventUpdate = zod.object({
   "completed_duration_s": zod.union([zod.number().gt(calendarEventUpdateCompletedDurationSOneExclusiveMin),zod.null()]).optional(),
   "completed_rpe": zod.union([zod.number().min(1).max(calendarEventUpdateCompletedRpeOneMax),zod.null()]).optional(),
   "done": zod.union([zod.boolean(),zod.null()]).optional(),
+  "execution": zod.union([zod.object({
+  "activity_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "cooldown_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "segments": zod.array(zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_min": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "end_s": zod.union([zod.number(),zod.null()]).optional(),
+  "evidence_source": zod.union([zod.string(),zod.null()]).optional(),
+  "intensity_domain": zod.union([zod.string(),zod.null()]).optional(),
+  "measured": zod.union([zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "speed_m_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "order": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_min": zod.union([zod.number(),zod.null()]).optional(),
+  "repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "role": zod.union([zod.string(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional(),
+  "sets": zod.union([zod.number(),zod.null()]).optional(),
+  "source_group": zod.union([zod.string(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "start_s": zod.union([zod.number(),zod.null()]).optional(),
+  "target": zod.union([zod.object({
+  "anchor_model": zod.union([zod.string(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_max_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_min_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.string(),zod.null()]).optional()
+})).optional(),
+  "segments_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "warmup_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_groups": zod.array(zod.object({
+  "distance_range_m": zod.array(zod.number()).optional(),
+  "duration_range_s": zod.array(zod.number()).optional(),
+  "pace_range_s_km": zod.array(zod.number()).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "sets": zod.number(),
+  "source_group": zod.string(),
+  "target_pace_s_km": zod.union([zod.array(zod.number()),zod.null()]).optional()
+})).optional()
+}),zod.null()]).optional(),
   "linked_activity_id": zod.union([zod.string(),zod.null()]).optional(),
   "name": zod.union([zod.string(),zod.null()]).optional(),
   "predicted_tss": zod.union([zod.number().min(calendarEventUpdatePredictedTssOneMin),zod.null()]).optional(),
+  "quality": zod.union([zod.object({
+  "aerobic_decoupling_pct": zod.union([zod.number(),zod.null()]).optional(),
+  "confidence": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_consistency": zod.union([zod.number(),zod.null()]).optional(),
+  "domain_residence_s": zod.union([zod.object({
+  "above_wmax": zod.union([zod.number(),zod.null()]).optional(),
+  "below_mt1": zod.union([zod.number(),zod.null()]).optional(),
+  "low_unspecified": zod.union([zod.number(),zod.null()]).optional(),
+  "mt1_mt2": zod.union([zod.number(),zod.null()]).optional(),
+  "mt2_wmax": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "evidence_grade": zod.union([zod.string(),zod.null()]).optional(),
+  "fade_pct": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_attainment": zod.union([zod.number(),zod.null()]).optional(),
+  "last_domain_match": zod.union([zod.number(),zod.null()]).optional(),
+  "low_domain_share": zod.union([zod.number(),zod.null()]).optional(),
+  "monotonicity": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_attainment": zod.union([zod.number(),zod.null()]).optional(),
+  "paired_segment_count": zod.union([zod.number(),zod.null()]).optional(),
+  "peak_speed_attainment": zod.union([zod.number(),zod.null()]).optional(),
+  "per_segment_differences": zod.array(zod.object({
+  "distance_delta_m": zod.number(),
+  "duration_delta_s": zod.number(),
+  "hr_delta_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "measured_distance_m": zod.number(),
+  "measured_order": zod.union([zod.number(),zod.null()]).optional(),
+  "measured_role": zod.string(),
+  "order": zod.number(),
+  "overlap_s": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_delta_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "paired": zod.boolean().default(calendarEventUpdateQualityOnePerSegmentDifferencesItemPairedDefault),
+  "role_match": zod.boolean(),
+  "target_distance_m": zod.number(),
+  "target_order": zod.union([zod.number(),zod.null()]).optional(),
+  "target_role": zod.string()
+})).optional(),
+  "recovery_ratio": zod.union([zod.number(),zod.null()]).optional(),
+  "repetition_match": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_match": zod.union([zod.number(),zod.null()]).optional(),
+  "speed_increase_pct": zod.union([zod.number(),zod.null()]).optional(),
+  "stride_consistency": zod.union([zod.number(),zod.null()]).optional(),
+  "structure_match": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "trimp": zod.union([zod.number(),zod.null()]).optional(),
+  "tss": zod.union([zod.number(),zod.null()]).optional(),
+  "unpaired_segment_count": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_match": zod.union([zod.number(),zod.null()]).optional(),
+  "work_domain_residence_s": zod.union([zod.object({
+  "above_wmax": zod.union([zod.number(),zod.null()]).optional(),
+  "below_mt1": zod.union([zod.number(),zod.null()]).optional(),
+  "low_unspecified": zod.union([zod.number(),zod.null()]).optional(),
+  "mt1_mt2": zod.union([zod.number(),zod.null()]).optional(),
+  "mt2_wmax": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "work_duration_match": zod.union([zod.number(),zod.null()]).optional(),
+  "work_pace_cv": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "session_classification": zod.union([zod.object({
+  "evidence": zod.object({
+  "algorithm_version": zod.union([zod.string(),zod.null()]).optional(),
+  "direct_metabolic_thresholds": zod.union([zod.boolean(),zod.null()]).optional(),
+  "interval_summary": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "measurement_sources": zod.array(zod.string()).optional(),
+  "race_marker_present": zod.union([zod.boolean(),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "schema_version": zod.union([zod.string(),zod.null()]).optional(),
+  "source_details": zod.array(zod.object({
+  "doi": zod.string().default(calendarEventUpdateSessionClassificationOneEvidenceSourceDetailsItemDoiDefault),
+  "key": zod.string().default(calendarEventUpdateSessionClassificationOneEvidenceSourceDetailsItemKeyDefault),
+  "title": zod.string().default(calendarEventUpdateSessionClassificationOneEvidenceSourceDetailsItemTitleDefault),
+  "url": zod.string().default(calendarEventUpdateSessionClassificationOneEvidenceSourceDetailsItemUrlDefault)
+})).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "subjective": zod.union([zod.object({
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_scale": zod.union([zod.string(),zod.null()]).optional(),
+  "talk_test": zod.union([zod.string(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "theory": zod.union([zod.object({
+  "effort_descriptors": zod.array(zod.object({
+  "descriptor": zod.string(),
+  "domain": zod.string(),
+  "rir": zod.string(),
+  "rpe10": zod.string(),
+  "rpe20": zod.string(),
+  "term": zod.string()
+})).optional(),
+  "fitt_vp": zod.array(zod.string()).optional(),
+  "fixed_percent_caveat": zod.string().default(calendarEventUpdateSessionClassificationOneEvidenceTheoryOneFixedPercentCaveatDefault),
+  "haugen_protocols": zod.array(zod.object({
+  "intensity": zod.string(),
+  "key": zod.string(),
+  "recovery_duration_s": zod.string(),
+  "typical_total": zod.string(),
+  "work_duration_s": zod.string()
+})).optional(),
+  "iaaf_notation": zod.union([zod.object({
+  "distance_unit": zod.string(),
+  "example": zod.string(),
+  "pace_unit": zod.string(),
+  "pattern": zod.string(),
+  "recovery_distance": zod.string(),
+  "recovery_duration": zod.string()
+}),zod.null()]).optional(),
+  "physiological_domains": zod.array(zod.string()).optional(),
+  "rpe_caveat": zod.string().default(calendarEventUpdateSessionClassificationOneEvidenceTheoryOneRpeCaveatDefault),
+  "talk_test_caveat": zod.string().default(calendarEventUpdateSessionClassificationOneEvidenceTheoryOneTalkTestCaveatDefault),
+  "world_athletics_examples": zod.array(zod.string()).optional()
+}),zod.null()]).optional(),
+  "threshold_snapshot": zod.union([zod.object({
+  "backfill_from": zod.union([zod.string(),zod.null()]).optional(),
+  "effective_from": zod.union([zod.string(),zod.null()]).optional(),
+  "hr_max": zod.union([zod.number(),zod.null()]).optional(),
+  "intensity_anchor": zod.union([zod.string(),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "lthr": zod.union([zod.number(),zod.null()]).optional(),
+  "resting_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "threshold_pace_s_km": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional()
+}),
+  "execution": zod.object({
+  "activity_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "cooldown_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "segments": zod.array(zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_min": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "end_s": zod.union([zod.number(),zod.null()]).optional(),
+  "evidence_source": zod.union([zod.string(),zod.null()]).optional(),
+  "intensity_domain": zod.union([zod.string(),zod.null()]).optional(),
+  "measured": zod.union([zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "speed_m_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "order": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_min": zod.union([zod.number(),zod.null()]).optional(),
+  "repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "role": zod.union([zod.string(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional(),
+  "sets": zod.union([zod.number(),zod.null()]).optional(),
+  "source_group": zod.union([zod.string(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "start_s": zod.union([zod.number(),zod.null()]).optional(),
+  "target": zod.union([zod.object({
+  "anchor_model": zod.union([zod.string(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_max_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_min_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.string(),zod.null()]).optional()
+})).optional(),
+  "segments_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "warmup_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_groups": zod.array(zod.object({
+  "distance_range_m": zod.array(zod.number()).optional(),
+  "duration_range_s": zod.array(zod.number()).optional(),
+  "pace_range_s_km": zod.array(zod.number()).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "sets": zod.number(),
+  "source_group": zod.string(),
+  "target_pace_s_km": zod.union([zod.array(zod.number()),zod.null()]).optional()
+})).optional()
+}),
+  "prescription": zod.object({
+  "display_line": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_min": zod.union([zod.number(),zod.null()]).optional(),
+  "evidence": zod.union([zod.object({
+  "algorithm_version": zod.union([zod.string(),zod.null()]).optional(),
+  "direct_metabolic_thresholds": zod.union([zod.boolean(),zod.null()]).optional(),
+  "interval_summary": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "measurement_sources": zod.array(zod.string()).optional(),
+  "race_marker_present": zod.union([zod.boolean(),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "schema_version": zod.union([zod.string(),zod.null()]).optional(),
+  "source_details": zod.array(zod.object({
+  "doi": zod.string().default(calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneSourceDetailsItemDoiDefault),
+  "key": zod.string().default(calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneSourceDetailsItemKeyDefault),
+  "title": zod.string().default(calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneSourceDetailsItemTitleDefault),
+  "url": zod.string().default(calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneSourceDetailsItemUrlDefault)
+})).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "subjective": zod.union([zod.object({
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_scale": zod.union([zod.string(),zod.null()]).optional(),
+  "talk_test": zod.union([zod.string(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "theory": zod.union([zod.object({
+  "effort_descriptors": zod.array(zod.object({
+  "descriptor": zod.string(),
+  "domain": zod.string(),
+  "rir": zod.string(),
+  "rpe10": zod.string(),
+  "rpe20": zod.string(),
+  "term": zod.string()
+})).optional(),
+  "fitt_vp": zod.array(zod.string()).optional(),
+  "fixed_percent_caveat": zod.string().default(calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneTheoryOneFixedPercentCaveatDefault),
+  "haugen_protocols": zod.array(zod.object({
+  "intensity": zod.string(),
+  "key": zod.string(),
+  "recovery_duration_s": zod.string(),
+  "typical_total": zod.string(),
+  "work_duration_s": zod.string()
+})).optional(),
+  "iaaf_notation": zod.union([zod.object({
+  "distance_unit": zod.string(),
+  "example": zod.string(),
+  "pace_unit": zod.string(),
+  "pattern": zod.string(),
+  "recovery_distance": zod.string(),
+  "recovery_duration": zod.string()
+}),zod.null()]).optional(),
+  "physiological_domains": zod.array(zod.string()).optional(),
+  "rpe_caveat": zod.string().default(calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneTheoryOneRpeCaveatDefault),
+  "talk_test_caveat": zod.string().default(calendarEventUpdateSessionClassificationOnePrescriptionEvidenceOneTheoryOneTalkTestCaveatDefault),
+  "world_athletics_examples": zod.array(zod.string()).optional()
+}),zod.null()]).optional(),
+  "threshold_snapshot": zod.union([zod.object({
+  "backfill_from": zod.union([zod.string(),zod.null()]).optional(),
+  "effective_from": zod.union([zod.string(),zod.null()]).optional(),
+  "hr_max": zod.union([zod.number(),zod.null()]).optional(),
+  "intensity_anchor": zod.union([zod.string(),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "lthr": zod.union([zod.number(),zod.null()]).optional(),
+  "resting_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "threshold_pace_s_km": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "intensity_anchor": zod.union([zod.object({
+  "algorithm_version": zod.union([zod.string(),zod.null()]).optional(),
+  "effective_from": zod.union([zod.string(),zod.null()]).optional(),
+  "model": zod.string(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "threshold_pace_s_km": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pacing_pattern": zod.union([zod.string(),zod.null()]).optional(),
+  "phase": zod.union([zod.string(),zod.null()]).optional(),
+  "primary_stimulus": zod.union([zod.string(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "segments": zod.array(zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_min": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "end_s": zod.union([zod.number(),zod.null()]).optional(),
+  "evidence_source": zod.union([zod.string(),zod.null()]).optional(),
+  "intensity_domain": zod.union([zod.string(),zod.null()]).optional(),
+  "measured": zod.union([zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "speed_m_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "order": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_min": zod.union([zod.number(),zod.null()]).optional(),
+  "repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "role": zod.union([zod.string(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional(),
+  "sets": zod.union([zod.number(),zod.null()]).optional(),
+  "source_group": zod.union([zod.string(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "start_s": zod.union([zod.number(),zod.null()]).optional(),
+  "target": zod.union([zod.object({
+  "anchor_model": zod.union([zod.string(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_max_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_min_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.string(),zod.null()]).optional()
+})).optional(),
+  "session_type": zod.union([zod.string(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "status": zod.union([zod.string(),zod.null()]).optional(),
+  "structure": zod.union([zod.string(),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "target_domain": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.string(),zod.null()]).optional(),
+  "version": zod.union([zod.number(),zod.null()]).optional()
+}),
+  "quality": zod.object({
+  "aerobic_decoupling_pct": zod.union([zod.number(),zod.null()]).optional(),
+  "confidence": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_consistency": zod.union([zod.number(),zod.null()]).optional(),
+  "domain_residence_s": zod.union([zod.object({
+  "above_wmax": zod.union([zod.number(),zod.null()]).optional(),
+  "below_mt1": zod.union([zod.number(),zod.null()]).optional(),
+  "low_unspecified": zod.union([zod.number(),zod.null()]).optional(),
+  "mt1_mt2": zod.union([zod.number(),zod.null()]).optional(),
+  "mt2_wmax": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "evidence_grade": zod.union([zod.string(),zod.null()]).optional(),
+  "fade_pct": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_attainment": zod.union([zod.number(),zod.null()]).optional(),
+  "last_domain_match": zod.union([zod.number(),zod.null()]).optional(),
+  "low_domain_share": zod.union([zod.number(),zod.null()]).optional(),
+  "monotonicity": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_attainment": zod.union([zod.number(),zod.null()]).optional(),
+  "paired_segment_count": zod.union([zod.number(),zod.null()]).optional(),
+  "peak_speed_attainment": zod.union([zod.number(),zod.null()]).optional(),
+  "per_segment_differences": zod.array(zod.object({
+  "distance_delta_m": zod.number(),
+  "duration_delta_s": zod.number(),
+  "hr_delta_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "measured_distance_m": zod.number(),
+  "measured_order": zod.union([zod.number(),zod.null()]).optional(),
+  "measured_role": zod.string(),
+  "order": zod.number(),
+  "overlap_s": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_delta_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "paired": zod.boolean().default(calendarEventUpdateSessionClassificationOneQualityPerSegmentDifferencesItemPairedDefault),
+  "role_match": zod.boolean(),
+  "target_distance_m": zod.number(),
+  "target_order": zod.union([zod.number(),zod.null()]).optional(),
+  "target_role": zod.string()
+})).optional(),
+  "recovery_ratio": zod.union([zod.number(),zod.null()]).optional(),
+  "repetition_match": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_match": zod.union([zod.number(),zod.null()]).optional(),
+  "speed_increase_pct": zod.union([zod.number(),zod.null()]).optional(),
+  "stride_consistency": zod.union([zod.number(),zod.null()]).optional(),
+  "structure_match": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "trimp": zod.union([zod.number(),zod.null()]).optional(),
+  "tss": zod.union([zod.number(),zod.null()]).optional(),
+  "unpaired_segment_count": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_match": zod.union([zod.number(),zod.null()]).optional(),
+  "work_domain_residence_s": zod.union([zod.object({
+  "above_wmax": zod.union([zod.number(),zod.null()]).optional(),
+  "below_mt1": zod.union([zod.number(),zod.null()]).optional(),
+  "low_unspecified": zod.union([zod.number(),zod.null()]).optional(),
+  "mt1_mt2": zod.union([zod.number(),zod.null()]).optional(),
+  "mt2_wmax": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "work_duration_match": zod.union([zod.number(),zod.null()]).optional(),
+  "work_pace_cv": zod.union([zod.number(),zod.null()]).optional()
+}),
+  "session_classification": zod.object({
+  "activity_id": zod.string(),
+  "confidence": zod.number(),
+  "context": zod.string(),
+  "display_line": zod.string(),
+  "display_name": zod.string(),
+  "evidence_grade": zod.string(),
+  "local_day": zod.string(),
+  "modifiers": zod.array(zod.string()).optional(),
+  "pacing_pattern": zod.union([zod.string(),zod.null()]).optional(),
+  "primary_stimulus": zod.string(),
+  "secondary_stimuli": zod.array(zod.string()).optional(),
+  "session_type": zod.union([zod.string(),zod.null()]).optional(),
+  "structure": zod.string()
+})
+}),zod.null()]).optional(),
   "sport_type": zod.union([zod.string(),zod.null()]).optional(),
   "start_time": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "status": zod.union([zod.string(),zod.null()]).optional(),
   "workout_prescription": zod.union([zod.object({
-  "duration_min": zod.number().min(calendarEventUpdateWorkoutPrescriptionOneDurationMinMin).max(calendarEventUpdateWorkoutPrescriptionOneDurationMinMax),
-  "pace_max_s_km": zod.union([zod.number().gt(calendarEventUpdateWorkoutPrescriptionOnePaceMaxSKmOneExclusiveMin).max(calendarEventUpdateWorkoutPrescriptionOnePaceMaxSKmOneMax),zod.null()]).optional(),
-  "pace_min_s_km": zod.union([zod.number().gt(calendarEventUpdateWorkoutPrescriptionOnePaceMinSKmOneExclusiveMin).max(calendarEventUpdateWorkoutPrescriptionOnePaceMinSKmOneMax),zod.null()]).optional(),
+  "display_line": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_min": zod.union([zod.number(),zod.null()]).optional(),
+  "evidence": zod.union([zod.object({
+  "algorithm_version": zod.union([zod.string(),zod.null()]).optional(),
+  "direct_metabolic_thresholds": zod.union([zod.boolean(),zod.null()]).optional(),
+  "interval_summary": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "measurement_sources": zod.array(zod.string()).optional(),
+  "race_marker_present": zod.union([zod.boolean(),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "schema_version": zod.union([zod.string(),zod.null()]).optional(),
+  "source_details": zod.array(zod.object({
+  "doi": zod.string().default(calendarEventUpdateWorkoutPrescriptionOneEvidenceOneSourceDetailsItemDoiDefault),
+  "key": zod.string().default(calendarEventUpdateWorkoutPrescriptionOneEvidenceOneSourceDetailsItemKeyDefault),
+  "title": zod.string().default(calendarEventUpdateWorkoutPrescriptionOneEvidenceOneSourceDetailsItemTitleDefault),
+  "url": zod.string().default(calendarEventUpdateWorkoutPrescriptionOneEvidenceOneSourceDetailsItemUrlDefault)
+})).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "subjective": zod.union([zod.object({
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_scale": zod.union([zod.string(),zod.null()]).optional(),
+  "talk_test": zod.union([zod.string(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "theory": zod.union([zod.object({
+  "effort_descriptors": zod.array(zod.object({
+  "descriptor": zod.string(),
+  "domain": zod.string(),
+  "rir": zod.string(),
+  "rpe10": zod.string(),
+  "rpe20": zod.string(),
+  "term": zod.string()
+})).optional(),
+  "fitt_vp": zod.array(zod.string()).optional(),
+  "fixed_percent_caveat": zod.string().default(calendarEventUpdateWorkoutPrescriptionOneEvidenceOneTheoryOneFixedPercentCaveatDefault),
+  "haugen_protocols": zod.array(zod.object({
+  "intensity": zod.string(),
+  "key": zod.string(),
+  "recovery_duration_s": zod.string(),
+  "typical_total": zod.string(),
+  "work_duration_s": zod.string()
+})).optional(),
+  "iaaf_notation": zod.union([zod.object({
+  "distance_unit": zod.string(),
+  "example": zod.string(),
+  "pace_unit": zod.string(),
+  "pattern": zod.string(),
+  "recovery_distance": zod.string(),
+  "recovery_duration": zod.string()
+}),zod.null()]).optional(),
+  "physiological_domains": zod.array(zod.string()).optional(),
+  "rpe_caveat": zod.string().default(calendarEventUpdateWorkoutPrescriptionOneEvidenceOneTheoryOneRpeCaveatDefault),
+  "talk_test_caveat": zod.string().default(calendarEventUpdateWorkoutPrescriptionOneEvidenceOneTheoryOneTalkTestCaveatDefault),
+  "world_athletics_examples": zod.array(zod.string()).optional()
+}),zod.null()]).optional(),
+  "threshold_snapshot": zod.union([zod.object({
+  "backfill_from": zod.union([zod.string(),zod.null()]).optional(),
+  "effective_from": zod.union([zod.string(),zod.null()]).optional(),
+  "hr_max": zod.union([zod.number(),zod.null()]).optional(),
+  "intensity_anchor": zod.union([zod.string(),zod.null()]).optional(),
+  "limitations": zod.array(zod.string()).optional(),
+  "lthr": zod.union([zod.number(),zod.null()]).optional(),
+  "resting_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "threshold_pace_s_km": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "intensity_anchor": zod.union([zod.object({
+  "algorithm_version": zod.union([zod.string(),zod.null()]).optional(),
+  "effective_from": zod.union([zod.string(),zod.null()]).optional(),
+  "model": zod.string(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "threshold_pace_s_km": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pacing_pattern": zod.union([zod.string(),zod.null()]).optional(),
   "phase": zod.union([zod.string(),zod.null()]).optional(),
+  "primary_stimulus": zod.union([zod.string(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
   "segments": zod.array(zod.object({
-  "duration_min": zod.number().gt(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemDurationMinExclusiveMin).max(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemDurationMinMax),
-  "pace_max_s_km": zod.union([zod.number().gt(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemPaceMaxSKmOneExclusiveMin).max(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemPaceMaxSKmOneMax),zod.null()]).optional(),
-  "pace_min_s_km": zod.union([zod.number().gt(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemPaceMinSKmOneExclusiveMin).max(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemPaceMinSKmOneMax),zod.null()]).optional(),
-  "recovery_min": zod.union([zod.number().gt(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRecoveryMinOneExclusiveMin).max(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRecoveryMinOneMax),zod.null()]).optional(),
-  "repetitions": zod.union([zod.number().min(1).max(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRepetitionsOneMax),zod.null()]).optional(),
-  "rpe_max": zod.union([zod.number().min(1).max(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRpeMaxOneMax),zod.null()]).optional(),
-  "rpe_min": zod.union([zod.number().min(1).max(calendarEventUpdateWorkoutPrescriptionOneSegmentsItemRpeMinOneMax),zod.null()]).optional(),
-  "type": zod.enum(['easy', 'recovery', 'long', 'tempo', 'intervals', 'threshold', 'warmup', 'cooldown'])
-})),
-  "type": zod.enum(['easy', 'recovery', 'long', 'tempo', 'intervals']),
-  "version": zod.number()
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_min": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "end_s": zod.union([zod.number(),zod.null()]).optional(),
+  "evidence_source": zod.union([zod.string(),zod.null()]).optional(),
+  "intensity_domain": zod.union([zod.string(),zod.null()]).optional(),
+  "measured": zod.union([zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "speed_m_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "order": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_min": zod.union([zod.number(),zod.null()]).optional(),
+  "repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "role": zod.union([zod.string(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional(),
+  "sets": zod.union([zod.number(),zod.null()]).optional(),
+  "source_group": zod.union([zod.string(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "start_s": zod.union([zod.number(),zod.null()]).optional(),
+  "target": zod.union([zod.object({
+  "anchor_model": zod.union([zod.string(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_max_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_min_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.string(),zod.null()]).optional()
+})).optional(),
+  "session_type": zod.union([zod.string(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "status": zod.union([zod.string(),zod.null()]).optional(),
+  "structure": zod.union([zod.string(),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "target_domain": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.string(),zod.null()]).optional(),
+  "version": zod.union([zod.number(),zod.null()]).optional()
 }),zod.null()]).optional(),
   "workout_xml": zod.union([zod.string(),zod.null()]).optional()
 })

@@ -8,6 +8,7 @@ import { z as zod } from 'zod';
 
 export const dataHealthWellnessCoverageResponseHrvDays28dDefault = 0;
 export const DataHealthWellnessCoverageResponse = zod.object({
+  "first_day": zod.union([zod.iso.date(),zod.null()]).optional(),
   "hrv_days_28d": zod.number().default(dataHealthWellnessCoverageResponseHrvDays28dDefault),
   "rhr_days_28d": zod.number(),
   "sleep_days_28d": zod.number()

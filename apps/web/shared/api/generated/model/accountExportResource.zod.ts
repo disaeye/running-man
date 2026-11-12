@@ -7,7 +7,7 @@
 import { z as zod } from 'zod';
 
 export const AccountExportResource = zod.object({
-  "name": zod.enum(['activities', 'activity_laps', 'calendar_events', 'derived_metrics', 'ftp_history', 'gear', 'goals', 'health', 'integrations', 'notifications', 'shares', 'strength', 'sync_runs']),
+  "name": zod.enum(['activities', 'activity_laps', 'calendar_events', 'derived_metrics', 'ftp_history', 'gear', 'goals', 'health', 'integrations', 'notifications', 'shares', 'strength', 'sync_runs', 'session_classifications', 'activity_intervals', 'workout_templates']),
   "records": zod.array(zod.union([zod.record(zod.string(), zod.unknown()),zod.array(zod.unknown()),zod.string(),zod.number(),zod.number(),zod.boolean(),zod.null()]))
 })
 

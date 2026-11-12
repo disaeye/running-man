@@ -6,6 +6,7 @@
  */
 import { z as zod } from 'zod';
 
+export const dataQualityCoverageResponseActivitiesUnassignedRunActivities30dDefault = 0;
 export const dataQualityCoverageResponseStrengthOneSessions14dDefault = 0;
 export const dataQualityCoverageResponseStrengthOneSessionsTotalDefault = 0;
 export const dataQualityCoverageResponseUploadsOneFailed30dDefault = 0;
@@ -13,7 +14,9 @@ export const dataQualityCoverageResponseUploadsOneRuns30dDefault = 0;
 export const dataQualityCoverageResponseWellnessHrvDays28dDefault = 0;
 export const DataQualityCoverageResponse = zod.object({
   "activities": zod.object({
+  "first_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "total_activities": zod.number(),
+  "unassigned_run_activities_30d": zod.number().default(dataQualityCoverageResponseActivitiesUnassignedRunActivities30dDefault),
   "with_gps": zod.number(),
   "with_hr": zod.number(),
   "with_power": zod.number(),
@@ -23,11 +26,16 @@ export const DataQualityCoverageResponse = zod.object({
   "sessions_14d": zod.number().default(dataQualityCoverageResponseStrengthOneSessions14dDefault),
   "sessions_total": zod.number().default(dataQualityCoverageResponseStrengthOneSessionsTotalDefault)
 }),zod.null()]).optional(),
+  "sync": zod.union([zod.object({
+  "last_sync_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
+  "last_sync_status": zod.union([zod.string(),zod.null()]).optional()
+}),zod.null()]).optional(),
   "uploads": zod.union([zod.object({
   "failed_30d": zod.number().default(dataQualityCoverageResponseUploadsOneFailed30dDefault),
   "runs_30d": zod.number().default(dataQualityCoverageResponseUploadsOneRuns30dDefault)
 }),zod.null()]).optional(),
   "wellness": zod.object({
+  "first_day": zod.union([zod.iso.date(),zod.null()]).optional(),
   "hrv_days_28d": zod.number().default(dataQualityCoverageResponseWellnessHrvDays28dDefault),
   "rhr_days_28d": zod.number(),
   "sleep_days_28d": zod.number()

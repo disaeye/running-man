@@ -6,7 +6,7 @@
  */
 import { z as zod } from 'zod';
 
-export const AccountExportResourceName = zod.enum(['activities', 'activity_laps', 'calendar_events', 'derived_metrics', 'ftp_history', 'gear', 'goals', 'health', 'integrations', 'notifications', 'shares', 'strength', 'sync_runs'])
+export const AccountExportResourceName = zod.enum(['activities', 'activity_laps', 'calendar_events', 'derived_metrics', 'ftp_history', 'gear', 'goals', 'health', 'integrations', 'notifications', 'shares', 'strength', 'sync_runs', 'session_classifications', 'activity_intervals', 'workout_templates'])
 
 export type AccountExportResourceName = zod.input<typeof AccountExportResourceName>;
 export type AccountExportResourceNameOutput = zod.output<typeof AccountExportResourceName>;

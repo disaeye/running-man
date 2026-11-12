@@ -6,6 +6,16 @@
  */
 import { z as zod } from 'zod';
 
+export const planQualityResponseWorkDomainSecondsAboveWmaxDefault = 0;
+export const planQualityResponseWorkDomainSecondsBelowMt1Default = 0;
+export const planQualityResponseWorkDomainSecondsLowUnspecifiedDefault = 0;
+export const planQualityResponseWorkDomainSecondsMt1Mt2Default = 0;
+export const planQualityResponseWorkDomainSecondsMt2WmaxDefault = 0;
+export const planQualityResponseWorkDomainShareAboveWmaxDefault = 0;
+export const planQualityResponseWorkDomainShareBelowMt1Default = 0;
+export const planQualityResponseWorkDomainShareLowUnspecifiedDefault = 0;
+export const planQualityResponseWorkDomainShareMt1Mt2Default = 0;
+export const planQualityResponseWorkDomainShareMt2WmaxDefault = 0;
 export const PlanQualityResponse = zod.object({
   "concerns": zod.array(zod.string()),
   "grade": zod.enum(['A', 'B+', 'B', 'C']),
@@ -17,7 +27,21 @@ export const PlanQualityResponse = zod.object({
   "score": zod.number(),
   "strengths": zod.array(zod.string()),
   "target_tss": zod.number(),
-  "weekly_tss": zod.number()
+  "weekly_tss": zod.number(),
+  "work_domain_seconds": zod.object({
+  "above_wmax": zod.number().default(planQualityResponseWorkDomainSecondsAboveWmaxDefault),
+  "below_mt1": zod.number().default(planQualityResponseWorkDomainSecondsBelowMt1Default),
+  "low_unspecified": zod.number().default(planQualityResponseWorkDomainSecondsLowUnspecifiedDefault),
+  "mt1_mt2": zod.number().default(planQualityResponseWorkDomainSecondsMt1Mt2Default),
+  "mt2_wmax": zod.number().default(planQualityResponseWorkDomainSecondsMt2WmaxDefault)
+}).optional().describe('Work seconds or share in the four ACSM\/ESSA intensity domains.'),
+  "work_domain_share": zod.object({
+  "above_wmax": zod.number().default(planQualityResponseWorkDomainShareAboveWmaxDefault),
+  "below_mt1": zod.number().default(planQualityResponseWorkDomainShareBelowMt1Default),
+  "low_unspecified": zod.number().default(planQualityResponseWorkDomainShareLowUnspecifiedDefault),
+  "mt1_mt2": zod.number().default(planQualityResponseWorkDomainShareMt1Mt2Default),
+  "mt2_wmax": zod.number().default(planQualityResponseWorkDomainShareMt2WmaxDefault)
+}).optional().describe('Work seconds or share in the four ACSM\/ESSA intensity domains.')
 })
 
 export type PlanQualityResponse = zod.input<typeof PlanQualityResponse>;

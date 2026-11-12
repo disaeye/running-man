@@ -24,6 +24,8 @@ import {
   BulkDeleteResponse,
   BulkIgnoreResult,
   CalendarEventOutput,
+  ClassificationItemResponse,
+  ClassificationListResponse,
   CoachContextResponse,
   DataHealthResponse,
   DataQualityResponse,
@@ -46,14 +48,16 @@ import {
   PlanAdjustmentResponse,
   PlanGenerateResponse,
   PlanQualityResponse,
+  PresentationApiAnalyticsInsightContractsRecomputeResponse,
+  PresentationApiRunClassificationsRecomputeResponse,
   PublicActivityResponse,
   RaceFlagResponse,
   RacePredictionResponse,
   RaceResultResponse,
   ReadinessResponse,
   RecomputeJobStatusResponse,
-  RecomputeResponse,
   RestoreResult,
+  RpeResponse,
   SetResponse,
   ShareCreateResponse,
   ShoeAssignmentResponse,
@@ -120,9 +124,11 @@ import type {
   IntegrationSettingsUpdate,
   IntensityDistributionResponse,
   LapResponse,
+  LinkEventApiV1CalendarEventIdLinkPostParams,
   ListActivitiesApiV1ActivitiesGetParams,
   ListAdjustmentsApiV1PlanAdjustmentsGetParams,
   ListAthleteNotificationsApiV1NotificationsGetParams,
+  ListClassificationsApiV1ActivitiesClassificationsGetParams,
   ListEventsApiV1CalendarGetParams,
   ListExercisesApiV1StrengthExercisesGetParams,
   ListStrengthActivitiesApiV1StrengthWorkoutsGetParams,
@@ -146,6 +152,7 @@ import type {
   RecomputeRequest,
   RegisterRequest,
   RidePersonalRecordResponse,
+  RpeUpdate,
   RunPersonalRecordResponse,
   SetCreate,
   SetUpdate,
@@ -338,6 +345,108 @@ bodyBatchUploadActivitiesApiV1ActivitiesBatchUploadPost.files.forEach(value => f
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BatchUploadResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as batchUploadActivitiesApiV1ActivitiesBatchUploadPostResponse
+}
+
+
+
+export type listClassificationsApiV1ActivitiesClassificationsGetResponse200 = {
+  data: ClassificationListResponse
+  status: 200
+}
+
+export type listClassificationsApiV1ActivitiesClassificationsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listClassificationsApiV1ActivitiesClassificationsGetResponseSuccess = (listClassificationsApiV1ActivitiesClassificationsGetResponse200) & {
+  headers: Headers;
+};
+export type listClassificationsApiV1ActivitiesClassificationsGetResponseError = (listClassificationsApiV1ActivitiesClassificationsGetResponse422) & {
+  headers: Headers;
+};
+
+export type listClassificationsApiV1ActivitiesClassificationsGetResponse = (listClassificationsApiV1ActivitiesClassificationsGetResponseSuccess | listClassificationsApiV1ActivitiesClassificationsGetResponseError)
+
+export const getListClassificationsApiV1ActivitiesClassificationsGetUrl = (params?: ListClassificationsApiV1ActivitiesClassificationsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/activities/classifications?${stringifiedParams}` : `/api/v1/activities/classifications`
+}
+
+/**
+ * @summary List Classifications
+ */
+export const listClassificationsApiV1ActivitiesClassificationsGet = async (params?: ListClassificationsApiV1ActivitiesClassificationsGetParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<listClassificationsApiV1ActivitiesClassificationsGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getListClassificationsApiV1ActivitiesClassificationsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ClassificationListResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as listClassificationsApiV1ActivitiesClassificationsGetResponse
+}
+
+
+
+export type recomputeClassificationsApiV1ActivitiesClassificationsRecomputePostResponse200 = {
+  data: PresentationApiRunClassificationsRecomputeResponse
+  status: 200
+}
+
+export type recomputeClassificationsApiV1ActivitiesClassificationsRecomputePostResponseSuccess = (recomputeClassificationsApiV1ActivitiesClassificationsRecomputePostResponse200) & {
+  headers: Headers;
+};
+;
+
+export type recomputeClassificationsApiV1ActivitiesClassificationsRecomputePostResponse = (recomputeClassificationsApiV1ActivitiesClassificationsRecomputePostResponseSuccess)
+
+export const getRecomputeClassificationsApiV1ActivitiesClassificationsRecomputePostUrl = () => {
+
+
+
+
+  return `/api/v1/activities/classifications/recompute`
+}
+
+/**
+ * @summary Recompute Classifications
+ */
+export const recomputeClassificationsApiV1ActivitiesClassificationsRecomputePost = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<recomputeClassificationsApiV1ActivitiesClassificationsRecomputePostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getRecomputeClassificationsApiV1ActivitiesClassificationsRecomputePostUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PresentationApiRunClassificationsRecomputeResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as recomputeClassificationsApiV1ActivitiesClassificationsRecomputePostResponse
 }
 
 
@@ -803,6 +912,57 @@ export const getActivityAnalysisApiV1ActivitiesActivityIdAnalysisGet = async (ac
 
 
 
+export type getClassificationApiV1ActivitiesActivityIdClassificationGetResponse200 = {
+  data: ClassificationItemResponse
+  status: 200
+}
+
+export type getClassificationApiV1ActivitiesActivityIdClassificationGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getClassificationApiV1ActivitiesActivityIdClassificationGetResponseSuccess = (getClassificationApiV1ActivitiesActivityIdClassificationGetResponse200) & {
+  headers: Headers;
+};
+export type getClassificationApiV1ActivitiesActivityIdClassificationGetResponseError = (getClassificationApiV1ActivitiesActivityIdClassificationGetResponse422) & {
+  headers: Headers;
+};
+
+export type getClassificationApiV1ActivitiesActivityIdClassificationGetResponse = (getClassificationApiV1ActivitiesActivityIdClassificationGetResponseSuccess | getClassificationApiV1ActivitiesActivityIdClassificationGetResponseError)
+
+export const getGetClassificationApiV1ActivitiesActivityIdClassificationGetUrl = (activityId: string,) => {
+
+
+
+
+  return `/api/v1/activities/${activityId}/classification`
+}
+
+/**
+ * @summary Get Classification
+ */
+export const getClassificationApiV1ActivitiesActivityIdClassificationGet = async (activityId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<getClassificationApiV1ActivitiesActivityIdClassificationGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getGetClassificationApiV1ActivitiesActivityIdClassificationGetUrl(activityId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ClassificationItemResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as getClassificationApiV1ActivitiesActivityIdClassificationGetResponse
+}
+
+
+
 export type exportActivityApiV1ActivitiesActivityIdExportGetResponse200ApplicationVndAntFit = {
   data: Blob
   status: 200
@@ -1123,6 +1283,58 @@ export const restoreActivityApiV1ActivitiesActivityIdRestorePost = async (activi
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? RestoreResult.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as restoreActivityApiV1ActivitiesActivityIdRestorePostResponse
+}
+
+
+
+export type updateRpeApiV1ActivitiesActivityIdRpePatchResponse200 = {
+  data: RpeResponse
+  status: 200
+}
+
+export type updateRpeApiV1ActivitiesActivityIdRpePatchResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateRpeApiV1ActivitiesActivityIdRpePatchResponseSuccess = (updateRpeApiV1ActivitiesActivityIdRpePatchResponse200) & {
+  headers: Headers;
+};
+export type updateRpeApiV1ActivitiesActivityIdRpePatchResponseError = (updateRpeApiV1ActivitiesActivityIdRpePatchResponse422) & {
+  headers: Headers;
+};
+
+export type updateRpeApiV1ActivitiesActivityIdRpePatchResponse = (updateRpeApiV1ActivitiesActivityIdRpePatchResponseSuccess | updateRpeApiV1ActivitiesActivityIdRpePatchResponseError)
+
+export const getUpdateRpeApiV1ActivitiesActivityIdRpePatchUrl = (activityId: string,) => {
+
+
+
+
+  return `/api/v1/activities/${activityId}/rpe`
+}
+
+/**
+ * @summary Update Rpe
+ */
+export const updateRpeApiV1ActivitiesActivityIdRpePatch = async (activityId: string,
+    rpeUpdate: RpeUpdate, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<updateRpeApiV1ActivitiesActivityIdRpePatchResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getUpdateRpeApiV1ActivitiesActivityIdRpePatchUrl(activityId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(rpeUpdate)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? RpeResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as updateRpeApiV1ActivitiesActivityIdRpePatchResponse
 }
 
 
@@ -1999,6 +2211,66 @@ export const updateEventApiV1CalendarEventIdPut = async (eventId: string,
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? CalendarEventOutput.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as updateEventApiV1CalendarEventIdPutResponse
+}
+
+
+
+export type linkEventApiV1CalendarEventIdLinkPostResponse200 = {
+  data: CalendarEventOutput
+  status: 200
+}
+
+export type linkEventApiV1CalendarEventIdLinkPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type linkEventApiV1CalendarEventIdLinkPostResponseSuccess = (linkEventApiV1CalendarEventIdLinkPostResponse200) & {
+  headers: Headers;
+};
+export type linkEventApiV1CalendarEventIdLinkPostResponseError = (linkEventApiV1CalendarEventIdLinkPostResponse422) & {
+  headers: Headers;
+};
+
+export type linkEventApiV1CalendarEventIdLinkPostResponse = (linkEventApiV1CalendarEventIdLinkPostResponseSuccess | linkEventApiV1CalendarEventIdLinkPostResponseError)
+
+export const getLinkEventApiV1CalendarEventIdLinkPostUrl = (eventId: string,
+    params: LinkEventApiV1CalendarEventIdLinkPostParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/calendar/${eventId}/link?${stringifiedParams}` : `/api/v1/calendar/${eventId}/link`
+}
+
+/**
+ * @summary Link Event
+ */
+export const linkEventApiV1CalendarEventIdLinkPost = async (eventId: string,
+    params: LinkEventApiV1CalendarEventIdLinkPostParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<linkEventApiV1CalendarEventIdLinkPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getLinkEventApiV1CalendarEventIdLinkPostUrl(eventId,params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? CalendarEventOutput.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as linkEventApiV1CalendarEventIdLinkPostResponse
 }
 
 
@@ -3793,7 +4065,7 @@ export const getRecommendationApiV1InsightsRecommendationGet = async (params: Ge
 
 
 export type recomputeInsightsApiV1InsightsRecomputePostResponse200 = {
-  data: RecomputeResponse
+  data: PresentationApiAnalyticsInsightContractsRecomputeResponse
   status: 200
 }
 
@@ -3837,7 +4109,7 @@ export const recomputeInsightsApiV1InsightsRecomputePost = async (recomputeReque
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? RecomputeResponse.parse(parsedBody) : parsedBody
+  const data = contentType.includes('json') ? PresentationApiAnalyticsInsightContractsRecomputeResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as recomputeInsightsApiV1InsightsRecomputePostResponse
 }
 
@@ -4620,6 +4892,58 @@ export const cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPost = async (so
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? SyncJobResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPostResponse
+}
+
+
+
+export type resyncIntegrationApiV1IntegrationsSourceResyncPostResponse200 = {
+  data: SyncJobResponse
+  status: 200
+}
+
+export type resyncIntegrationApiV1IntegrationsSourceResyncPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type resyncIntegrationApiV1IntegrationsSourceResyncPostResponseSuccess = (resyncIntegrationApiV1IntegrationsSourceResyncPostResponse200) & {
+  headers: Headers;
+};
+export type resyncIntegrationApiV1IntegrationsSourceResyncPostResponseError = (resyncIntegrationApiV1IntegrationsSourceResyncPostResponse422) & {
+  headers: Headers;
+};
+
+export type resyncIntegrationApiV1IntegrationsSourceResyncPostResponse = (resyncIntegrationApiV1IntegrationsSourceResyncPostResponseSuccess | resyncIntegrationApiV1IntegrationsSourceResyncPostResponseError)
+
+export const getResyncIntegrationApiV1IntegrationsSourceResyncPostUrl = (source: string,) => {
+
+
+
+
+  return `/api/v1/integrations/${source}/resync`
+}
+
+/**
+ * Clear this source's imported data and re-import the athlete's full history.
+ * @summary Resync Integration
+ */
+export const resyncIntegrationApiV1IntegrationsSourceResyncPost = async (source: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<resyncIntegrationApiV1IntegrationsSourceResyncPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getResyncIntegrationApiV1IntegrationsSourceResyncPostUrl(source),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? SyncJobResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as resyncIntegrationApiV1IntegrationsSourceResyncPostResponse
 }
 
 

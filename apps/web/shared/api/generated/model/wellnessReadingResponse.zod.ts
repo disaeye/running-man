@@ -9,9 +9,10 @@ import { z as zod } from 'zod';
 export const WellnessReadingResponse = zod.object({
   "baseline": zod.union([zod.number(),zod.null()]).optional(),
   "delta": zod.union([zod.number(),zod.null()]).optional(),
+  "observed_on": zod.union([zod.iso.date(),zod.null()]).optional(),
   "unit": zod.string(),
   "value": zod.number()
-}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.')
+}).describe('One wellness reading of the day, with the athlete\'s own baseline.\n\n``baseline`` is the seven-day mean of the same reading; ``delta`` is the\ndifference from it. A reading that was not measured is ``None`` at the\nfield level, so the page can say \"未记录\" instead of showing a zero.\n\n``observed_on`` is the day the value was actually measured. Vitals arrive\nindependently — HRV overnight, resting heart rate after the next morning —\nso a reading may come from an earlier day than the one being viewed, and\nthe page states which.')
 
 export type WellnessReadingResponse = zod.input<typeof WellnessReadingResponse>;
 export type WellnessReadingResponseOutput = zod.output<typeof WellnessReadingResponse>;

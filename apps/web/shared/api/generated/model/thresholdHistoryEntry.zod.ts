@@ -11,6 +11,7 @@ export const ThresholdHistoryEntry = zod.object({
   "hr_max": zod.union([zod.number(),zod.null()]).optional(),
   "lthr": zod.union([zod.number(),zod.null()]).optional(),
   "resting_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "source": zod.union([zod.string(),zod.null()]).optional(),
   "threshold_pace": zod.union([zod.number(),zod.null()]).optional()
 })
 

@@ -6,34 +6,62 @@
  */
 import { z as zod } from 'zod';
 
-export const runWorkoutSegmentDurationMinExclusiveMin = 0;
-export const runWorkoutSegmentDurationMinMax = 600;
-
-export const runWorkoutSegmentPaceMaxSKmOneExclusiveMin = 0;
-export const runWorkoutSegmentPaceMaxSKmOneMax = 1800;
-
-export const runWorkoutSegmentPaceMinSKmOneExclusiveMin = 0;
-export const runWorkoutSegmentPaceMinSKmOneMax = 1800;
-
-export const runWorkoutSegmentRecoveryMinOneExclusiveMin = 0;
-export const runWorkoutSegmentRecoveryMinOneMax = 120;
-
-export const runWorkoutSegmentRepetitionsOneMax = 100;
-
-export const runWorkoutSegmentRpeMaxOneMax = 10;
-
-export const runWorkoutSegmentRpeMinOneMax = 10;
-
-
 export const RunWorkoutSegment = zod.object({
-  "duration_min": zod.number().gt(runWorkoutSegmentDurationMinExclusiveMin).max(runWorkoutSegmentDurationMinMax),
-  "pace_max_s_km": zod.union([zod.number().gt(runWorkoutSegmentPaceMaxSKmOneExclusiveMin).max(runWorkoutSegmentPaceMaxSKmOneMax),zod.null()]).optional(),
-  "pace_min_s_km": zod.union([zod.number().gt(runWorkoutSegmentPaceMinSKmOneExclusiveMin).max(runWorkoutSegmentPaceMinSKmOneMax),zod.null()]).optional(),
-  "recovery_min": zod.union([zod.number().gt(runWorkoutSegmentRecoveryMinOneExclusiveMin).max(runWorkoutSegmentRecoveryMinOneMax),zod.null()]).optional(),
-  "repetitions": zod.union([zod.number().min(1).max(runWorkoutSegmentRepetitionsOneMax),zod.null()]).optional(),
-  "rpe_max": zod.union([zod.number().min(1).max(runWorkoutSegmentRpeMaxOneMax),zod.null()]).optional(),
-  "rpe_min": zod.union([zod.number().min(1).max(runWorkoutSegmentRpeMinOneMax),zod.null()]).optional(),
-  "type": zod.enum(['easy', 'recovery', 'long', 'tempo', 'intervals', 'threshold', 'warmup', 'cooldown'])
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_min": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "end_s": zod.union([zod.number(),zod.null()]).optional(),
+  "evidence_source": zod.union([zod.string(),zod.null()]).optional(),
+  "intensity_domain": zod.union([zod.string(),zod.null()]).optional(),
+  "measured": zod.union([zod.object({
+  "avg_hr": zod.union([zod.number(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe": zod.union([zod.number(),zod.null()]).optional(),
+  "speed_m_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "order": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "quality_target": zod.union([zod.object({
+  "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "time_in_domain_s": zod.union([zod.number(),zod.null()]).optional(),
+  "work_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "work_duration_s": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "rationale": zod.union([zod.string(),zod.null()]).optional(),
+  "recovery_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "recovery_min": zod.union([zod.number(),zod.null()]).optional(),
+  "repetitions": zod.union([zod.number(),zod.null()]).optional(),
+  "role": zod.union([zod.string(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional(),
+  "sets": zod.union([zod.number(),zod.null()]).optional(),
+  "source_group": zod.union([zod.string(),zod.null()]).optional(),
+  "source_refs": zod.array(zod.string()).optional(),
+  "start_s": zod.union([zod.number(),zod.null()]).optional(),
+  "target": zod.union([zod.object({
+  "anchor_model": zod.union([zod.string(),zod.null()]).optional(),
+  "distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "domain": zod.union([zod.string(),zod.null()]).optional(),
+  "duration_s": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_max_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "hr_min_bpm": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_key": zod.union([zod.string(),zod.null()]).optional(),
+  "pace_max_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_min_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "pace_s_km": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_max": zod.union([zod.number(),zod.null()]).optional(),
+  "rpe_min": zod.union([zod.number(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "target_adaptation": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export type RunWorkoutSegment = zod.input<typeof RunWorkoutSegment>;

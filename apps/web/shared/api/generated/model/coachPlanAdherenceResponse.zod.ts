@@ -9,7 +9,10 @@ import { z as zod } from 'zod';
 export const CoachPlanAdherenceResponse = zod.object({
   "adherence_pct": zod.number(),
   "completed_tss_7d": zod.number(),
-  "planned_tss_7d": zod.number()
+  "domain_match": zod.union([zod.number(),zod.null()]).optional(),
+  "planned_tss_7d": zod.number(),
+  "structure_match": zod.union([zod.number(),zod.null()]).optional(),
+  "type_match": zod.union([zod.number(),zod.null()]).optional()
 })
 
 export type CoachPlanAdherenceResponse = zod.input<typeof CoachPlanAdherenceResponse>;

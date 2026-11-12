@@ -7,19 +7,56 @@
 import { z as zod } from 'zod';
 
 export const weeklyProgressResponseActualElevationMDefault = 0;
+export const weeklyProgressResponseClassificationCountDefault = 0;
 export const weeklyProgressResponseRemainingDistanceMDefault = 0;
+export const weeklyProgressResponseWorkBoutsDefault = 0;
+export const weeklyProgressResponseWorkDistanceMDefault = 0;
+export const weeklyProgressResponseWorkDomainSecondsAboveWmaxDefault = 0;
+export const weeklyProgressResponseWorkDomainSecondsBelowMt1Default = 0;
+export const weeklyProgressResponseWorkDomainSecondsLowUnspecifiedDefault = 0;
+export const weeklyProgressResponseWorkDomainSecondsMt1Mt2Default = 0;
+export const weeklyProgressResponseWorkDomainSecondsMt2WmaxDefault = 0;
+export const weeklyProgressResponseWorkDomainShareAboveWmaxDefault = 0;
+export const weeklyProgressResponseWorkDomainShareBelowMt1Default = 0;
+export const weeklyProgressResponseWorkDomainShareLowUnspecifiedDefault = 0;
+export const weeklyProgressResponseWorkDomainShareMt1Mt2Default = 0;
+export const weeklyProgressResponseWorkDomainShareMt2WmaxDefault = 0;
+export const weeklyProgressResponseWorkDurationSDefault = 0;
 export const WeeklyProgressResponse = zod.object({
   "actual_distance_m": zod.number(),
   "actual_elevation_m": zod.number().default(weeklyProgressResponseActualElevationMDefault),
   "actual_sessions": zod.number(),
   "actual_tss": zod.number(),
   "avg_pace_s_per_km": zod.union([zod.number(),zod.null()]).optional(),
+  "classification_count": zod.number().default(weeklyProgressResponseClassificationCountDefault),
   "completion_pct": zod.union([zod.number(),zod.string()]),
   "planned_distance_m": zod.number(),
   "planned_sessions": zod.number(),
   "planned_tss": zod.number(),
+  "quality_matches": zod.object({
+  "domain_match": zod.union([zod.number(),zod.null()]).optional(),
+  "structure_match": zod.union([zod.number(),zod.null()]).optional(),
+  "type_match": zod.union([zod.number(),zod.null()]).optional()
+}).optional().describe('Shared per-session type, structure and domain agreement.'),
   "remaining_distance_m": zod.number().default(weeklyProgressResponseRemainingDistanceMDefault),
-  "week": zod.string()
+  "week": zod.string(),
+  "work_bouts": zod.number().default(weeklyProgressResponseWorkBoutsDefault),
+  "work_distance_m": zod.number().default(weeklyProgressResponseWorkDistanceMDefault),
+  "work_domain_seconds": zod.object({
+  "above_wmax": zod.number().default(weeklyProgressResponseWorkDomainSecondsAboveWmaxDefault),
+  "below_mt1": zod.number().default(weeklyProgressResponseWorkDomainSecondsBelowMt1Default),
+  "low_unspecified": zod.number().default(weeklyProgressResponseWorkDomainSecondsLowUnspecifiedDefault),
+  "mt1_mt2": zod.number().default(weeklyProgressResponseWorkDomainSecondsMt1Mt2Default),
+  "mt2_wmax": zod.number().default(weeklyProgressResponseWorkDomainSecondsMt2WmaxDefault)
+}).optional().describe('Work seconds or share in the four ACSM\/ESSA intensity domains.'),
+  "work_domain_share": zod.object({
+  "above_wmax": zod.number().default(weeklyProgressResponseWorkDomainShareAboveWmaxDefault),
+  "below_mt1": zod.number().default(weeklyProgressResponseWorkDomainShareBelowMt1Default),
+  "low_unspecified": zod.number().default(weeklyProgressResponseWorkDomainShareLowUnspecifiedDefault),
+  "mt1_mt2": zod.number().default(weeklyProgressResponseWorkDomainShareMt1Mt2Default),
+  "mt2_wmax": zod.number().default(weeklyProgressResponseWorkDomainShareMt2WmaxDefault)
+}).optional().describe('Work seconds or share in the four ACSM\/ESSA intensity domains.'),
+  "work_duration_s": zod.number().default(weeklyProgressResponseWorkDurationSDefault)
 })
 
 export type WeeklyProgressResponse = zod.input<typeof WeeklyProgressResponse>;
