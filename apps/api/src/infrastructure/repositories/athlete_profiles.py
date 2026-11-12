@@ -26,7 +26,6 @@ _PROFILE_COLUMNS = (
     "timezone",
     "dob",
     "sex",
-    "weight_goal",
     "weekly_training_days",
     "max_session_duration_min",
     "preferred_sport",
@@ -35,11 +34,11 @@ _PROFILE_COLUMNS = (
 # The profile columns are a fixed list, so the statement lists them verbatim
 # instead of building the SQL by interpolation.
 _PROFILE_COLUMNS_SQL = (
-    "name, timezone, dob, sex, weight_goal, weekly_training_days, "
+    "name, timezone, dob, sex, weekly_training_days, "
     "max_session_duration_min, preferred_sport, height_cm"
 )
 _PROFILE_QUERY = """
-SELECT id, email, name, timezone, dob, sex, weight_goal, weekly_training_days,
+SELECT id, email, name, timezone, dob, sex, weekly_training_days,
        max_session_duration_min, preferred_sport, height_cm, notification_prefs
 FROM athletes WHERE id = %s
 """
@@ -98,13 +97,9 @@ class AthleteProfileRepo:
                       (SELECT resting_hr FROM health_wellness
                        WHERE athlete_id = %s AND day <= %s
                          AND resting_hr IS NOT NULL
-                       ORDER BY day DESC LIMIT 1) AS resting_hr,
-                      (SELECT weight FROM health_wellness
-                       WHERE athlete_id = %s AND day <= %s
-                         AND weight IS NOT NULL
-                       ORDER BY day DESC LIMIT 1) AS weight
+                       ORDER BY day DESC LIMIT 1) AS resting_hr
                     """,
-                    (athlete_id, day_upper, athlete_id, day_upper),
+                    (athlete_id, day_upper),
                 )
                 row = await cur.fetchone()
                 wellness_row = _row(row) if row else None
@@ -138,7 +133,7 @@ class AthleteProfileRepo:
             """
             UPDATE athletes SET {assignments}
             WHERE id = %s
-            RETURNING id, email, name, timezone, dob, sex, weight_goal,
+            RETURNING id, email, name, timezone, dob, sex,
                       weekly_training_days, max_session_duration_min,
                       preferred_sport, height_cm, notification_prefs
             """

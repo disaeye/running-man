@@ -49,18 +49,18 @@ class CalendarRepo:
                 """
                 INSERT INTO training_calendar
                 (event_id, athlete_id, start_time, category, sport_type, name,
-                 workout_xml, predicted_tss, status, done, plan_goal_id, plan_source,
-                 training_type, workout_prescription, athlete_edited, execution,
-                 quality, session_classification)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, COALESCE(%s, 'planned'),
+                 workout_xml, predicted_tss, predicted_distance_m, status, done,
+                 plan_goal_id, plan_source, training_type, workout_prescription,
+                 athlete_edited, execution, quality, session_classification)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(%s, 'planned'),
                         COALESCE(%s, false), %s, %s, %s, %s::jsonb,
                         COALESCE(%s, false), %s::jsonb, %s::jsonb, %s::jsonb)
                 RETURNING event_id, start_time, category, sport_type, name, workout_xml,
-                          predicted_tss, status, done, plan_goal_id, plan_source,
-                          training_type, workout_prescription, athlete_edited,
-                          linked_activity_id, completed_distance_m, completed_duration_s,
-                          completed_avg_hr, completed_rpe, actual_logged_at,
-                          execution, quality, session_classification
+                          predicted_tss, predicted_distance_m, external_id, status, done,
+                          plan_goal_id, plan_source, training_type, workout_prescription,
+                          athlete_edited, linked_activity_id, completed_distance_m,
+                          completed_duration_s, completed_avg_hr, completed_rpe,
+                          actual_logged_at, execution, quality, session_classification
                 """,
                 (
                     event["event_id"],
@@ -71,6 +71,7 @@ class CalendarRepo:
                     event.get("name"),
                     event.get("workout_xml"),
                     event.get("predicted_tss"),
+                    event.get("predicted_distance_m"),
                     event.get("status"),
                     event.get("done"),
                     event.get("plan_goal_id"),
@@ -90,7 +91,12 @@ class CalendarRepo:
     async def update(
         self, athlete_id: UUID, event_id: str, event: dict[str, object]
     ) -> dict[str, object] | None:
-        edited = "name" in event or "predicted_tss" in event or "workout_prescription" in event
+        edited = (
+            "name" in event
+            or "predicted_tss" in event
+            or "predicted_distance_m" in event
+            or "workout_prescription" in event
+        )
         async with await _connect() as conn, conn.cursor() as cur:
             await cur.execute(
                 """
@@ -101,8 +107,10 @@ class CalendarRepo:
                     name = COALESCE(%s, name),
                     workout_xml = COALESCE(%s, workout_xml),
                     predicted_tss = COALESCE(%s, predicted_tss),
+                    predicted_distance_m = COALESCE(%s, predicted_distance_m),
                     status = COALESCE(%s, status),
                     done = COALESCE(%s, done),
+                    training_type = COALESCE(%s, training_type),
                     workout_prescription = COALESCE(%s::jsonb, workout_prescription),
                     completed_distance_m = COALESCE(%s, completed_distance_m),
                     completed_duration_s = COALESCE(%s, completed_duration_s),
@@ -117,11 +125,11 @@ class CalendarRepo:
                     plan_source = CASE WHEN %s THEN 'manual' ELSE plan_source END
                 WHERE athlete_id = %s AND event_id = %s
                 RETURNING event_id, start_time, category, sport_type, name, workout_xml,
-                          predicted_tss, status, done, plan_goal_id, plan_source,
-                          training_type, workout_prescription, athlete_edited,
-                          linked_activity_id, completed_distance_m, completed_duration_s,
-                          completed_avg_hr, completed_rpe, actual_logged_at,
-                          execution, quality, session_classification
+                          predicted_tss, predicted_distance_m, external_id, status, done,
+                          plan_goal_id, plan_source, training_type, workout_prescription,
+                          athlete_edited, linked_activity_id, completed_distance_m,
+                          completed_duration_s, completed_avg_hr, completed_rpe,
+                          actual_logged_at, execution, quality, session_classification
                 """,
                 (
                     event.get("start_time"),
@@ -130,8 +138,10 @@ class CalendarRepo:
                     event.get("name"),
                     event.get("workout_xml"),
                     event.get("predicted_tss"),
+                    event.get("predicted_distance_m"),
                     event.get("status"),
                     event.get("done"),
+                    event.get("training_type"),
                     _jsonb(event.get("workout_prescription")),
                     event.get("completed_distance_m"),
                     event.get("completed_duration_s"),

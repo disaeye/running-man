@@ -7,6 +7,7 @@ import pytest
 from conftest import TEST_DSN
 from infrastructure.auth.settings import settings
 from infrastructure.db.pool import close_pool, get_pool, open_pool
+from infrastructure.repositories.goal_milestone_repo import GoalMilestoneRepo
 from infrastructure.repositories.goals import GoalsRepo
 
 pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.no_db]
@@ -28,7 +29,7 @@ async def test_goals_repo_crud_is_athlete_scoped() -> None:
     assert updated is not None
     assert updated["current_value"] == 20
     assert updated["status"] == "achieved"
-    assert [row["goal_id"] for row in await repo.list(athlete_id)] == [goal_id]
+    assert [row["goal_id"] for row in await repo.list(athlete_id)] == [str(goal_id)]
 
     assert await repo.delete(athlete_id, goal_id) is True
     assert await repo.get(athlete_id, goal_id) is None
@@ -41,12 +42,13 @@ async def test_goals_repo_milestones_and_training_phases() -> None:
     other_athlete_id = uuid4()
     await _seed(athlete_id, other_athlete_id)
     repo = GoalsRepo()
+    milestones = GoalMilestoneRepo()
     goal_id = _uuid((await repo.create(athlete_id, _goal("Marathon")))["goal_id"])
 
-    milestone = await repo.create_milestone(
+    milestone = await milestones.create_milestone(
         goal_id, {"title": "Half", "target_date": date(2026, 4, 1), "target_value": 21.1}
     )
-    phase = await repo.create_training_phase(
+    phase = await milestones.create_training_phase(
         athlete_id,
         goal_id,
         {
@@ -61,15 +63,15 @@ async def test_goals_repo_milestones_and_training_phases() -> None:
     assert milestone["achieved"] is False
     assert milestone["unit"] is None
     assert milestone["result_text"] is None
-    phases = await repo.list_training_phases(athlete_id, goal_id)
+    phases = await milestones.list_training_phases(athlete_id, goal_id)
     assert phases[0]["target_weekly_distance_m"] == 42000
-    assert [row["milestone_id"] for row in await repo.list_milestones(goal_id)] == [
+    assert [row["milestone_id"] for row in await milestones.list_milestones(goal_id)] == [
         milestone["milestone_id"]
     ]
-    assert [row["phase_id"] for row in await repo.list_training_phases(athlete_id, goal_id)] == [
-        phase["phase_id"]
-    ]
-    assert await repo.list_training_phases(other_athlete_id, goal_id) == []
+    assert [
+        row["phase_id"] for row in await milestones.list_training_phases(athlete_id, goal_id)
+    ] == [phase["phase_id"]]
+    assert await milestones.list_training_phases(other_athlete_id, goal_id) == []
     await _cleanup(athlete_id, other_athlete_id)
 
 
@@ -140,7 +142,7 @@ async def _ensure_schema(cur: Any) -> None:
     """)
 
 
-def _uuid(value: object) -> str:
+def _uuid(value: object) -> UUID:
     """Repo contract returns UUID columns as JSON-safe strings."""
     assert isinstance(value, str)
-    return value
+    return UUID(value)

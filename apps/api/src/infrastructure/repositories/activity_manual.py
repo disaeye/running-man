@@ -77,11 +77,18 @@ async def create_manual_activity(
 
 
 async def set_activity_rpe(athlete_id: UUID, activity_id: str, rpe: int | None) -> bool:
-    """写入自评用力程度；返回该活动是否属于这名运动员。"""
-    query = (
+    """写入自评用力程度；同时同步已关联计划事件的 completed_rpe。"""
+    update_activity = (
         "UPDATE activity_summary SET rpe = %s "
         "WHERE athlete_id = %s AND activity_id = %s RETURNING activity_id"
     )
+    update_event = (
+        "UPDATE training_calendar SET completed_rpe = %s "
+        "WHERE athlete_id = %s AND linked_activity_id = %s"
+    )
     async with _connect() as conn, conn.cursor() as cur:
-        _ = await cur.execute(query, (rpe, athlete_id, activity_id))
-        return await cur.fetchone() is not None
+        _ = await cur.execute(update_activity, (rpe, athlete_id, activity_id))
+        updated = await cur.fetchone() is not None
+        if updated:
+            _ = await cur.execute(update_event, (rpe, athlete_id, activity_id))
+        return updated
