@@ -116,7 +116,7 @@ def config(module: ModuleType, tmp_path: Path, *, validate_only: bool, state_pat
     return module.BootstrapConfig(
         validate_only=validate_only,
         storage_state_path=state_path or tmp_path / "e2e" / ".auth" / "storageState.json",
-        api_url="http://localhost:28801/api/v1/athletes/me",
+        api_url="http://localhost:31002/api/v1/athletes/me",
         database_url="postgresql://user:password@localhost/db",
         jwt_secret="super-secret-value",
     )
@@ -318,7 +318,7 @@ def test_bad_storage_parent_keeps_prior_state_unmodified(tmp_path: Path) -> None
     cfg = module.BootstrapConfig(
         validate_only=False,
         storage_state_path=blocked_parent / "storageState.json",
-        api_url="http://localhost:28801/api/v1/athletes/me",
+        api_url="http://localhost:31002/api/v1/athletes/me",
         database_url="postgresql://user:password@localhost/db",
         jwt_secret="super-secret-value",
     )

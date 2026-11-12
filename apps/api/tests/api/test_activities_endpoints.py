@@ -286,3 +286,68 @@ async def test_delete_activities_by_source_bulk() -> None:
         (ATHLETE_A.id, "tcx"),
     ]
     assert repo.delete_all_calls == []
+
+
+# ---------------------------------------------------------------------------
+# PATCH /activities/{activity_id}/rpe
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.no_db
+async def test_update_activity_rpe() -> None:
+    _use_repo(ATHLETE_A, _FakeRepo(owner_id=ATHLETE_A.id))
+
+    with patch(
+        "presentation.api.activity_rpe.set_activity_rpe",
+        new_callable=AsyncMock,
+        return_value=True,
+    ) as save:
+        response = await _patch("/api/v1/activities/run-1/rpe", {"rpe": 7})
+
+    assert response.status_code == 200
+    assert response.json() == {"activity_id": "run-1", "rpe": 7}
+    save.assert_awaited_once_with(ATHLETE_A.id, "run-1", 7)
+
+
+@pytest.mark.no_db
+async def test_update_activity_rpe_can_be_cleared() -> None:
+    _use_repo(ATHLETE_A, _FakeRepo(owner_id=ATHLETE_A.id))
+
+    with patch(
+        "presentation.api.activity_rpe.set_activity_rpe",
+        new_callable=AsyncMock,
+        return_value=True,
+    ):
+        response = await _patch("/api/v1/activities/run-1/rpe", {"rpe": None})
+
+    assert response.status_code == 200
+    assert response.json() == {"activity_id": "run-1", "rpe": None}
+
+
+@pytest.mark.no_db
+async def test_update_activity_rpe_rejects_out_of_range() -> None:
+    _use_repo(ATHLETE_A, _FakeRepo(owner_id=ATHLETE_A.id))
+
+    with patch(
+        "presentation.api.activity_rpe.set_activity_rpe",
+        new_callable=AsyncMock,
+        return_value=True,
+    ) as save:
+        response = await _patch("/api/v1/activities/run-1/rpe", {"rpe": 11})
+
+    assert response.status_code == 422
+    save.assert_not_awaited()
+
+
+@pytest.mark.no_db
+async def test_update_activity_rpe_not_found() -> None:
+    _use_repo(ATHLETE_A, _FakeRepo(owner_id=ATHLETE_A.id))
+
+    with patch(
+        "presentation.api.activity_rpe.set_activity_rpe",
+        new_callable=AsyncMock,
+        return_value=False,
+    ):
+        response = await _patch("/api/v1/activities/missing/rpe", {"rpe": 5})
+
+    assert response.status_code == 404

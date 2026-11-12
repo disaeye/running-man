@@ -9,7 +9,7 @@ from domain.generated.metrics import Metric
 from domain.metric_series import MetricSeriesGrain, MetricSeriesQuery, MetricSeriesRecord
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories import metric_series as metric_series_repo
-from infrastructure.repositories.metric_series import MetricSeriesRepo
+from infrastructure.repositories.metric_series import MetricSeriesBatchQuery, MetricSeriesRepo
 from main import app
 from presentation.api.metrics import get_metric_series_repo
 from presentation.auth.deps import get_current_athlete
@@ -90,7 +90,16 @@ async def test_batch_series_pivots_multiple_metrics() -> None:
         {"period": "2026-01-01", "value": 50.0, "samples": 1},
         {"period": "2026-01-02", "value": 60.0, "samples": 1},
     ]
-    assert {q.metric for q in repo.queries} == {Metric.DAILY_TSS, Metric.CTL}
+    assert repo.batch_queries == [
+        MetricSeriesBatchQuery(
+            athlete_id=ATHLETE.id,
+            metrics=(Metric.DAILY_TSS, Metric.CTL),
+            grain=MetricSeriesGrain.DAILY,
+            start=date(2026, 1, 1),
+            end=date(2026, 1, 2),
+            sport=None,
+        )
+    ]
 
 
 @pytest.mark.no_db
@@ -170,10 +179,17 @@ async def test_metric_series_repo_uses_composed_sql(monkeypatch: pytest.MonkeyPa
 class FakeMetricSeriesRepo:
     rows: list[MetricSeriesRecord]
     queries: list[MetricSeriesQuery] = field(default_factory=list)
+    batch_queries: list[MetricSeriesBatchQuery] = field(default_factory=list)
 
     async def fetch(self, query: MetricSeriesQuery) -> list[MetricSeriesRecord]:
         self.queries.append(query)
         return list(self.rows)
+
+    async def fetch_batch(
+        self, query: MetricSeriesBatchQuery
+    ) -> dict[str, list[MetricSeriesRecord]]:
+        self.batch_queries.append(query)
+        return {str(metric.value): list(self.rows) for metric in query.metrics}
 
 
 class SqlExecutionSpy:

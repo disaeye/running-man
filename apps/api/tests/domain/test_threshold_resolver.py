@@ -66,6 +66,38 @@ def test_empty_history_resolves_to_none() -> None:
     assert resolve_threshold([], JUN, "lthr") is None
 
 
+def test_backfill_earlier_uses_the_earliest_known_step() -> None:
+    # 导入的历史早于阈值记录的起点时，用最早的已知值近似，
+    # 否则那些会话永远没有负荷。
+    assert (
+        resolve_threshold(
+            HISTORY, date(2025, 4, 13), "lthr", backfill_earlier=True
+        )
+        == 168
+    )
+    assert (
+        resolve_threshold(
+            HISTORY, date(2025, 4, 13), "threshold_pace", backfill_earlier=True
+        )
+        == 270.0
+    )
+    # hr_max 最早在 JUN 被测量，回填同样取它。
+    assert (
+        resolve_threshold(HISTORY, date(2025, 4, 13), "hr_max", backfill_earlier=True)
+        == 189
+    )
+    # 不早于历史起点的日期不受影响。
+    assert resolve_threshold(HISTORY, JUN, "lthr", backfill_earlier=True) == 175
+
+
+def test_backfill_earlier_in_resolve_all() -> None:
+    resolved = resolve_all(HISTORY, date(2025, 1, 1), backfill_earlier=True)
+    assert resolved["lthr"] == 168
+    assert resolved["threshold_pace"] == 270.0
+    assert resolved["hr_max"] == 189
+    assert resolved["resting_hr"] is None
+
+
 def test_unsorted_history_is_handled() -> None:
     shuffled = [HISTORY[2], HISTORY[0], HISTORY[1]]
     assert resolve_threshold(shuffled, date(2026, 9, 30), "lthr") == 175

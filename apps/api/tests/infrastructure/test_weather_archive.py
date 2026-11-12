@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -35,6 +35,15 @@ def test_url_covers_the_activity_day_and_its_neighbours() -> None:
     assert "latitude=31.8618" in url
     assert "longitude=118.8409" in url
     assert "models=best_match" in url
+
+
+def test_url_never_reaches_past_today() -> None:
+    """The archive service rejects a window with a future day in it."""
+    today = datetime.now(UTC).date()
+    position = _position(start_time=datetime.combine(today, datetime.min.time(), tzinfo=UTC))
+    url = build_archive_url(position)
+    assert f"end_date={today.isoformat()}" in url
+    assert f"end_date={(today + timedelta(days=1)).isoformat()}" not in url
 
 
 def test_response_is_read_for_the_hours_the_activity_covers() -> None:

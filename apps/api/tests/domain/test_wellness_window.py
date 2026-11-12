@@ -17,6 +17,7 @@ from domain.insights.wellness_window import (
     MAX_OBSERVATION_AGE_DAYS,
     baseline_days,
     is_usable_for,
+    latest_day_for,
     observation_day,
 )
 
@@ -73,6 +74,30 @@ class TestIsUsableFor:
     def test_rejects_future_and_stale(self) -> None:
         assert is_usable_for(TARGET + timedelta(days=1), TARGET) is False
         assert is_usable_for(TARGET - timedelta(days=30), TARGET) is False
+
+
+class TestLatestDayFor:
+    """One metric's own timeline: vitals do not arrive together."""
+
+    def test_uses_yesterdays_value_when_today_lacks_that_metric(self) -> None:
+        # The case that made today's card blank while the chart showed data:
+        # HRV and sleep arrived for today, resting heart rate only yesterday.
+        rhr_days = (TARGET - timedelta(days=1),)
+        assert latest_day_for(TARGET, rhr_days) == TARGET - timedelta(days=1)
+
+    def test_prefers_todays_measurement(self) -> None:
+        days = (TARGET - timedelta(days=1), TARGET)
+        assert latest_day_for(TARGET, days) == TARGET
+
+    def test_never_looks_forward(self) -> None:
+        assert latest_day_for(TARGET, (TARGET + timedelta(days=1),)) is None
+
+    def test_respects_the_same_age_cap(self) -> None:
+        stale = TARGET - timedelta(days=MAX_OBSERVATION_AGE_DAYS + 1)
+        assert latest_day_for(TARGET, (stale,)) is None
+
+    def test_none_when_the_metric_was_never_measured(self) -> None:
+        assert latest_day_for(TARGET, ()) is None
 
 
 class TestBaselineDays:

@@ -9,6 +9,7 @@ import vcr
 
 from infrastructure.integrations.intervals import sync
 from infrastructure.integrations.intervals.client import IntervalsClient
+from infrastructure.integrations.intervals.history import incremental_start_or_none
 
 from .helpers import ensure_tables, seed_athlete
 
@@ -74,7 +75,7 @@ async def test_incremental_resume_cursor_follows_the_athlete_timezone(
             (ATHLETE_ID,),
         )
 
-    assert sync._next_sync_date(ATHLETE_ID, db_conn) == date(2026, 6, 18)
+    assert incremental_start_or_none(db_conn, ATHLETE_ID) == date(2026, 6, 18)
 
 
 class NoopLimiter:

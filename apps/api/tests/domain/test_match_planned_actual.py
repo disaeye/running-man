@@ -255,12 +255,40 @@ def test_custom_tolerance() -> None:
 
 
 def test_sport_type_none_in_plan() -> None:
-    planned: list[dict[str, object]] = [
-        {"event_id": "p1", "start_time": date(2025, 6, 1)}
-    ]
+    planned: list[dict[str, object]] = [{"event_id": "p1", "start_time": date(2025, 6, 1)}]
     actuals = [_actual("a1", date(2025, 6, 1), sport="Run")]
 
     result = match_planned_actual(planned, actuals)
 
     assert len(result) == 1
     assert result[0].match_status == "completed"
+
+
+def test_linked_plan_wins_and_exposes_stored_quality() -> None:
+    planned = [
+        _plan("p1", date(2025, 6, 1), sport_type="Run", predicted_tss=100.0)
+        | {"linked_activity_id": "a-linked"},
+    ]
+    actuals = [
+        _actual("a-near", date(2025, 6, 1), sport="Run", tss=100.0),
+        _actual("a-linked", date(2025, 6, 2), sport="Run", tss=90.0),
+    ]
+    classifications = [
+        {
+            "activity_id": "a-linked",
+            "quality": {
+                "repetition_match": 1.0,
+                "structure_match": 0.8,
+                "work_distance_match": 0.6,
+            },
+        }
+    ]
+
+    result = match_planned_actual(planned, actuals, classifications=classifications)
+
+    assert result[0].actual_activity_id == "a-linked"
+    assert result[0].matches == {
+        "type_match": 1.0,
+        "structure_match": 0.8,
+        "domain_match": 0.6,
+    }

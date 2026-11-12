@@ -203,6 +203,10 @@ class FakeGearRepo:
         assert shoe_id == SHOE_ID
         return self.mileage_m
 
+    async def compute_shoe_usage(self, shoe_id: UUID) -> tuple[int, datetime | None]:
+        assert shoe_id == SHOE_ID
+        return (3, None)
+
     async def get_activity(self, athlete_id: UUID, activity_id: str) -> dict[str, object] | None:
         assert athlete_id == ATHLETE.id
         return {"activity_id": activity_id, "sport": self.activity_sport, "distance_m": 10_000}

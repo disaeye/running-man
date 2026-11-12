@@ -78,7 +78,9 @@ class _FakeRepo:
     async def exists(self, activity_id: str) -> bool:
         return activity_id in self.exists_ids
 
-    async def get_streams(self, _athlete_id: UUID, _activity_id: str) -> list[dict[str, object]]:
+    async def get_streams(
+        self, _athlete_id: UUID, _activity_id: str, _start_time: datetime
+    ) -> list[dict[str, object]]:
         return []
 
     async def delete(self, athlete_id: UUID, activity_id: str) -> bool:

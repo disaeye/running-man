@@ -107,6 +107,10 @@ _CREATE_TABLES = (
     )
     """,
     """
+    CREATE UNIQUE INDEX uq_source_records_dedup
+        ON source_records (athlete_id, source, entity_type, source_record_id)
+    """,
+    """
     CREATE TABLE integration_sync_errors (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         sync_run_id UUID NOT NULL,

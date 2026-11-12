@@ -5,7 +5,7 @@ and the staleness badge keep working from the existing response shape. The
 public filter strips only ``credentials``, so the detail passes through to the
 client.
 
-``compute_data_health`` is patched in the GET tests to keep them off the DB.
+``compute_activity_data_as_of`` is patched in the GET tests to keep them off the DB.
 """
 
 from __future__ import annotations
@@ -47,11 +47,11 @@ def _detail(**counts: int) -> dict[str, object]:
     }
 
 
-@patch("presentation.api.integrations.compute_data_health", new_callable=AsyncMock)
+@patch("presentation.api.integrations.compute_activity_data_as_of", new_callable=AsyncMock)
 async def test_finished_job_detail_is_visible_through_get(
-    mock_health: AsyncMock, monkeypatch: pytest.MonkeyPatch
+    mock_data_as_of: AsyncMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    mock_health.return_value = {"activities": {"data_as_of": datetime.now(UTC)}}
+    mock_data_as_of.return_value = datetime.now(UTC)
     repo = _DetailTrackingRepo()
     _use_repo(repo)
     monkeypatch.setattr(execution, "UserIntegrationRepo", lambda: repo)
@@ -85,11 +85,11 @@ async def test_finished_job_detail_is_visible_through_get(
     assert detail["errors"] == []
 
 
-@patch("presentation.api.integrations.compute_data_health", new_callable=AsyncMock)
+@patch("presentation.api.integrations.compute_activity_data_as_of", new_callable=AsyncMock)
 async def test_public_filter_passes_detail_and_strips_credentials(
-    mock_health: AsyncMock,
+    mock_data_as_of: AsyncMock,
 ) -> None:
-    mock_health.return_value = {"activities": {"data_as_of": datetime.now(UTC)}}
+    mock_data_as_of.return_value = datetime.now(UTC)
     _use_repo(_DetailTrackingRepo())
 
     transport = ASGITransport(app=app)

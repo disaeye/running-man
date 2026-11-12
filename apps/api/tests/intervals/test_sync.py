@@ -123,6 +123,20 @@ async def test_incremental_inserts_activities(
     monkeypatch.setattr(sync, "date", FixedDate)
     ensure_activity_summary(db_conn)
     insert_athlete(db_conn)
+    # The cassette only covers the incremental window; history discovery for a
+    # first import is exercised separately in test_history.py.
+    async def _no_history(*_args: object) -> None:
+        raise AssertionError("first-import discovery must not run for an existing account")
+
+    monkeypatch.setattr(
+        "infrastructure.integrations.intervals.history.resolve_initial_history_window",
+        _no_history,
+    )
+    monkeypatch.setattr(
+        sync,
+        "incremental_window",
+        lambda _athlete, _conn: (date(2026, 5, 17), date(2026, 6, 16)),
+    )
 
     async with IntervalsClient(
         api_key="API_KEY_PLACEHOLDER", athlete_id=0, rate_limiter=NoopLimiter()

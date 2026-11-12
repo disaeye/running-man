@@ -140,6 +140,37 @@ def _wellness(day: date, sleep_secs: int, resting_hr: int) -> dict[str, object]:
     return {"day": day, "sleep_secs": sleep_secs, "resting_hr": resting_hr}
 
 
+def test_readings_resolve_each_metric_on_its_own_day() -> None:
+    """A metric measured yesterday must not vanish because today lacks it.
+
+    Vitals arrive independently: HRV and sleep are uploaded overnight, resting
+    heart rate after the next morning's measurement. Resolving all three from a
+    single observation day blanked the missing one on the today card while the
+    same metric's history chart showed it.
+    """
+    target = date(2026, 11, 4)
+    wellness = [
+        {"day": target, "hrv": 74.4, "sleep_secs": 20_100},
+        {"day": target - timedelta(days=1), "resting_hr": 47, "hrv": 68.3},
+    ]
+
+    readings = compute_readiness(target, wellness, [])["readings"]
+
+    assert readings["hrv"]["value"] == 74.4
+    assert readings["hrv"]["observed_on"] == target
+    assert readings["resting_hr"]["value"] == 47
+    assert readings["resting_hr"]["observed_on"] == target - timedelta(days=1)
+
+
+def test_readings_drop_a_metric_older_than_the_window() -> None:
+    target = date(2026, 11, 4)
+    wellness = [{"day": target - timedelta(days=6), "resting_hr": 47}]
+
+    readings = compute_readiness(target, wellness, [])["readings"]
+
+    assert "resting_hr" not in readings
+
+
 def _load(day: date, ctl: float, atl: float, tsb: float) -> dict[str, object]:
     return {"day": day, "ctl": ctl, "atl": atl, "tsb": tsb, "tss": 50.0}
 

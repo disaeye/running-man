@@ -66,7 +66,8 @@ def test_adherence_trend_inconsistent_when_low_avg() -> None:
     ]
     result = adherence_trend(weeks)
     assert result["trend"] == "inconsistent"
-    assert result["avg_adherence_pct"] < 70
+    avg_adherence_pct = result["avg_adherence_pct"]
+    assert isinstance(avg_adherence_pct, (int, float)) and avg_adherence_pct < 70
 
 
 def test_weekly_adherence_carries_session_counts() -> None:
@@ -81,3 +82,39 @@ def test_weekly_adherence_carries_session_counts() -> None:
     assert w.sessions_completed == 4
     assert w.sessions_missed == 1
     assert w.sessions_extra == 2
+
+
+def test_weekly_adherence_uses_stored_five_object_quality() -> None:
+    classifications = [
+        {
+            "activity_id": "run-1",
+            "quality": {
+                "repetition_match": 1.0,
+                "structure_match": 0.9,
+                "work_distance_match": 0.8,
+            },
+        },
+        {
+            "activity_id": "run-2",
+            "quality": {
+                "repetition_match": 0.8,
+                "structure_match": 0.7,
+                "work_distance_match": 0.6,
+            },
+        },
+    ]
+    week = compute_weekly_adherence(
+        date(2026, 7, 27),
+        planned_tss=300,
+        completed_tss=285,
+        classifications=classifications,
+    )
+    assert week.matches == {
+        "type_match": 0.9,
+        "structure_match": 0.8,
+        "domain_match": 0.7,
+    }
+    trend = adherence_trend([week])
+    assert trend["type_match"] == 0.9
+    assert trend["structure_match"] == 0.8
+    assert trend["domain_match"] == 0.7

@@ -60,6 +60,7 @@ async def test_threshold_history_serializes_recorded_steps() -> None:
                 "resting_hr": 50,
                 "lthr": 170,
                 "threshold_pace": 280.0,
+                "source": "manual",
             }
         ]
     finally:
