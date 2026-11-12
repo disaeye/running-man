@@ -30,7 +30,7 @@
 - 同步链路：Intervals.icu 客户端、增量同步（游标为最新活动日期加一天）、14 天回看窗口、幽灵活动清理（reconcile_ghosts）、payload_hash 与 secondary duplicate 去重。
 - 计算层：`application/computation` 按运动员加计算种类加锁，指纹命中跳过，成功与失败都留记录。
 - 处方生成：`domain/workout/plan_generator.py` 有质量训练相邻检查、休息日、可用训练日、周 TSS 预算；处方带结构化 segments。
-- 恢复调整：未实现。设计第 6 节要求依据 readiness 与 TSB 调整后续训练，并在调整前取得用户授权、保留原值与理由；目前只有就绪评分与建议文字，日历上的课表不会自动变动。
+- 恢复调整：已接通。`domain/insights/load_adjustment.py` 依据 HRV 七日基线与长距离心率漂移触发，`application/plan/adjustment_pipeline.py` 挂在活动计算链末尾自动为未来 48 小时的课生成待确认建议；日历课表在运动员确认前保持原样，确认后按比例缩减时长与距离并重算 quality_target（`plan_adjustment_rules.scaled_prescription`）。
 - 生理估计：`domain/physiology`（HRmax、LTHR、临界速度），无 numpy 与 scipy 依赖。
 - 指标登记：`scripts/generate_data_contract.py` 生成统一 registry（分类、单位、区间、null 语义、说明），前后端共享（`metric-registry.ts`、`domain/generated/metrics.py`）。
 - 前端：Orval 从 OpenAPI 生成客户端并经 zod 校验（`shared/api/generated`、`orval-adapter`）；五个导航入口与 `features/` 目录和设计第 2 节一一对应；ECharts 与 Playwright 已在用。
@@ -38,16 +38,16 @@
 
 ## 需要新建的部分
 
-1. `WorkoutExecution` 与完成评估：活动与处方的关联表，训练量、强度、主要步骤的评估，关联存在歧义时交给用户确认。属于设计阶段三的核心。
-2. `PlanRevision` 与 `DecisionRecord`：计划完整版本历史、修改原因、用户接受与拒绝记录、自动调整授权设置。属于设计阶段四的核心。
+1. `WorkoutExecution` 与完成评估：活动与处方的关联表，训练量、强度、主要步骤的评估，关联存在歧义时交给用户确认。属于设计阶段三的核心。（关联链路已接通：手动录入经 `event_id`、同步活动经 `POST /api/v1/calendar/{event_id}/link` 与日视图的关联区块，五对象分类结果写入 `training_calendar.session_classification`；独立关联表待建。）
+2. ~~`PlanRevision` 与 `DecisionRecord`~~：`plan_revisions` 表已建，每次生成写入整份快照（课表与阶段），`training_calendar.revision_id` 指向所属版本，已完成或手动修改的行保留当时处方；单课调整的决策记录由 `plan_adjustments` 承载（pending / applied / reverted）。
 3. MapLibre GL JS：当前路线展示由 `features/activity` 的自有实现承担，设计指定 MapLibre，属于新依赖。
 4. Celery + Redis：pyproject 无相关依赖；当前后台工作由请求内计算与 recompute worker（API lifespan 内启动）承担。属于新增部署组件，引入前需确认主机资源与运维方式。
 5. S3 兼容对象存储：原始数据当前存 `activity_summary.raw_data` JSONB；设计要求大型原始文件与时序文件外置存储。
 
 ## 两个语义冲突
 
-1. ACWR 展示语义。设计明确"ACWR 不用于输出个人受伤概率"。当前 metric registry 中 acwr 的分区命名为"安全区"与"损伤风险"（大于 1.5 一档），以受伤概率的口吻呈现；registry 的 note 字段已写明损伤预测效力存在争议，说明问题已被识别，分区命名尚未按此调整。修改位置是 registry 的源定义（`generate_data_contract.py` 的输入），分区说明改为描述负荷变化速率本身，并按设计第 5 节为健康类提示补充行动指引。
-2. 计划覆盖式生成。event_id 按 goal_id 与日期哈希生成，重新生成计划直接覆盖旧行，与设计"每次计划修改保存完整版本、已完成训练保留当时处方、修改带决定依据"的要求冲突。`PlanRevision` 引入时必须同时改为版本化写入。
+1. ACWR 展示语义。设计明确“ACWR 不用于输出个人受伤概率”。当前 metric registry 中 acwr 的分区命名为“安全区”与“损伤风险”（大于 1.5 一档），以受伤概率的口吻呈现；registry 的 note 字段已写明损伤预测效力存在争议，说明问题已被识别，分区命名尚未按此调整。修改位置是 registry 的源定义（`generate_data_contract.py` 的输入），分区说明改为描述负荷变化速率本身，并按设计第 5 节为健康类提示补充行动指引。
+2. ~~计划覆盖式生成~~：`plan_revisions` 已引入版本化写入；已完成与手动修改的行保留原版本处方，重生成产生新版本并可在目标页的「计划版本」里查看历史快照。
 
 ## 迭代阶段与现状对照
 
@@ -55,6 +55,6 @@
 |---|---|---|
 | 一 可靠记录与活动回顾 | 同步、活动列表详情、导出、分享基本运行 | 同步体验缺口（见 `docs/sync-experience.md`）；隐私控制与导出默认项 |
 | 二 理解积累与能力变化 | 周统计、PMC、insights、生理估计已有 | 训练连续性指标、阶段报告导出 |
-| 三 完整训练计划 | 目标、生成器、日历、处方已有 | `WorkoutExecution`、计划版本机制 |
-| 四 动态调整 | 仅整体 TSS 缩放 | 训练后评估、调整建议、确认与授权全流程 |
-| 五 个体化验证 | 无 | 阶段能力检查、个人参数更新、长期报告 |
+| 三 完整训练计划 | 目标、生成器、日历、处方、计划版本已有 | `WorkoutExecution` 独立关联表 |
+| 四 动态调整 | HRV/心率漂移触发、待确认、按比例缩减、自动检测已接通 | 更多触发输入（TSB、readiness）与自动调整授权设置 |
+| 五 个体化验证 | 阶段里程碑自动核验（阶段累计跑量） | 阶段能力检查、个人参数更新、长期报告 |

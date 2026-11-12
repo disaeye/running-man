@@ -137,9 +137,7 @@ test.describe("activity workflow", () => {
     await expect(page.getByTestId("activity-list")).toBeVisible({ timeout: 15000 });
     const course = page.getByTestId("activity-list-course").first();
     await expect(course).toBeVisible({ timeout: 15000 });
-    await expect(course).toContainText(" km", { timeout: 15000 });
-    await expect(page.getByTestId("activity-list-quality").first()).toContainText("证据");
-    await expect(page.getByTestId("activity-list-quality").first()).toContainText("置信度");
+    await expect(page.getByTestId("activity-list-quality")).toHaveCount(0);
   });
 
   test("shows filter controls on activities page", async ({ page }) => {

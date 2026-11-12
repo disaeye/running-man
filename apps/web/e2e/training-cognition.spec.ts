@@ -122,13 +122,49 @@ test.describe("training cognition", () => {
     await expect(empty.getByRole("link", { name: "去连接" })).toBeVisible();
   });
 
-  test("已连接但整周空白时给编排入口，且计划列写未编排", async ({ page }) => {
+  test("已连接但整周空白时折叠计划对比列并给编排入口", async ({ page }) => {
     await mockTraining(page, {});
     await page.goto("/calendar");
     const empty = page.getByTestId("training-empty-state");
+    const summary = page.getByTestId("training-period-summary");
     await expect(empty).toBeVisible({ timeout: 15000 });
     await expect(empty).toContainText("这周还没有安排");
-    await expect(page.getByTestId("training-period-summary")).toContainText("未编排");
+    await expect(summary).toContainText("该周尚未编排计划");
+    await expect(summary).not.toContainText("差值");
+  });
+
+  test("同一天有晨跑但晚上有未完成阈值课时，今天卡优先提示待完成计划", async ({ page }) => {
+    await mockTraining(page, {
+      activities: [activity("a1", { name: "晨间轻松跑", duration_s: 1800 })],
+      events: [
+        event("e-done", {
+          name: "晨间轻松跑",
+          linked_activity_id: "a1",
+          workout_prescription: { type: "easy", duration_min: 30, segments: [] },
+        }),
+        event("e-evening", { name: "晚间阈值跑" }),
+      ],
+    });
+    await page.goto("/calendar");
+    const focus = page.getByTestId("training-focus");
+    await expect(focus).toBeVisible({ timeout: 15000 });
+    await expect(focus).toContainText("今天还要练");
+    await expect(focus).toContainText("晚间阈值跑");
+    await expect(page.getByTestId("plan-week-day-2026-11-04")).toContainText("部分完成");
+  });
+
+  test("课表接口 500 失败时显示错误和重试，不显示这周还没有安排", async ({ page }) => {
+    await mockTraining(page, {});
+    await page.unroute("**/api/v1/calendar?*");
+    await page.route("**/api/v1/calendar?*", (route) => route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "upstream failure" }),
+    }));
+    await page.goto("/calendar");
+    await expect(page.getByTestId("training-error-state")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("button", { name: "重新尝试" })).toBeVisible();
+    await expect(page.getByTestId("training-empty-state")).toHaveCount(0);
   });
 
   test("有计划未完成时列出差哪几课", async ({ page }) => {

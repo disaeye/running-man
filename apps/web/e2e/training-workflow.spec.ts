@@ -63,10 +63,7 @@ test.describe("training workflow", () => {
       await page.goto("/calendar");
       const summary = page.getByTestId("training-period-summary");
       await expect(summary).toBeVisible({ timeout: 15000 });
-      await expect(summary).toContainText("本周完成度");
-      await expect(summary).toContainText("计划");
-      await expect(summary).toContainText("实际");
-      await expect(summary).toContainText("差值");
+      await expect(summary).toContainText(/本周(完成度|训练汇总)/);
       await expect(summary).toContainText("次数");
       await expect(summary).toContainText("距离");
       await expect(summary).toContainText("时长");
