@@ -41,7 +41,7 @@ const TOKEN_PX: Record<string, number> = {
   "text-footnote": 13,
   "text-subheadline": 13,
   "text-callout": 14,
-  "text-body": 15,
+  "text-body": 16,
   "text-headline": 15,
   "text-title3": 20,
   "text-title2": 22,

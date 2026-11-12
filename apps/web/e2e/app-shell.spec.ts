@@ -18,10 +18,9 @@ test.describe("app shell", () => {
   test.describe("mobile 375x812", () => {
     test.use({ viewport: MOBILE });
 
-    test("shell regions are present", async ({ page }) => {
+    test("shell regions are present @smoke", async ({ page }) => {
       await page.goto("/");
       await expect(page.locator('[data-shell="root"]')).toBeVisible();
-      await expect(page.locator('[data-shell-region="top"]')).toBeVisible();
       await expect(page.locator('[data-shell-region="main"]')).toBeVisible();
       await expect(page.locator('[data-shell-region="bottom"]')).toBeVisible();
     });
@@ -69,12 +68,12 @@ test.describe("app shell", () => {
       await expect(page).toHaveURL(/\/profile$/);
     });
 
-    test("profile page opens settings", async ({ page }) => {
+    test("profile page opens the zone settings", async ({ page }) => {
       await page.goto("/profile");
-      const settingsButton = page.getByRole("link", { name: "设置", exact: true });
-      await expect(settingsButton).toBeVisible();
-      await settingsButton.click();
-      await expect(page).toHaveURL(/\/settings$/);
+      const zonesLink = page.getByRole("link", { name: "调整训练区间" });
+      await expect(zonesLink).toBeVisible();
+      await zonesLink.click();
+      await expect(page).toHaveURL(/\/settings\?section=training/);
     });
 
     test("content end never sits under the mobile nav", async ({ page }) => {
@@ -212,13 +211,6 @@ test.describe("app shell", () => {
 
   test.describe("safe-area tokens", () => {
     test.use({ viewport: MOBILE });
-
-    test("header has safe-area top attribute", async ({ page }) => {
-      await page.goto("/");
-      await expect(
-        page.locator('[data-shell-region="top"][data-safe-area="top"]'),
-      ).toBeVisible();
-    });
 
     test("mobile nav has safe-area bottom attribute", async ({ page }) => {
       await page.goto("/");

@@ -11,13 +11,10 @@ export const REQUIRED_ACTIVITY_IDENTITIES = ["activity-valid", "activity-not-fou
 export const REQUIRED_STRENGTH_ACTIVITY_IDENTITIES = ["activity-strength-valid", "activity-strength-empty"] as const;
 export const REQUIRED_CALENDAR_IDENTITIES = ["calendar-week", "calendar-month", "calendar-list"] as const;
 export const REQUIRED_ANALYSIS_IDENTITIES = [
-  "analysis-session",
-  "analysis-overview",
   "analysis-load",
   "analysis-performance",
-  "analysis-intensity",
+  "analysis-body",
 ] as const;
-export const REQUIRED_STRENGTH_ANALYSIS_IDENTITIES = ["analysis-strength"] as const;
 export const REQUIRED_SETTINGS_IDENTITIES = [
   "settings-data",
   "settings-training",
@@ -32,7 +29,6 @@ export type RequiredIdentity =
   | (typeof REQUIRED_STRENGTH_ACTIVITY_IDENTITIES)[number]
   | (typeof REQUIRED_CALENDAR_IDENTITIES)[number]
   | (typeof REQUIRED_ANALYSIS_IDENTITIES)[number]
-  | (typeof REQUIRED_STRENGTH_ANALYSIS_IDENTITIES)[number]
   | (typeof REQUIRED_SETTINGS_IDENTITIES)[number]
   | (typeof REQUIRED_PROFILE_IDENTITIES)[number]
   | "today-home"
@@ -66,7 +62,6 @@ const REQUIRED_IDENTITIES = [
   ...REQUIRED_STRENGTH_ACTIVITY_IDENTITIES,
   ...REQUIRED_CALENDAR_IDENTITIES,
   ...REQUIRED_ANALYSIS_IDENTITIES,
-  ...REQUIRED_STRENGTH_ANALYSIS_IDENTITIES,
   ...REQUIRED_SETTINGS_IDENTITIES,
   ...REQUIRED_PROFILE_IDENTITIES,
   "today-home",
@@ -91,12 +86,9 @@ const DASHBOARD_ROUTES = [
   route("calendar-week", "dashboard", "calendar-week", "/calendar?view=week", ["week", "empty", "error"]),
   route("calendar-month", "dashboard", "calendar-month", "/calendar?view=month", ["month", "empty", "error"]),
   route("calendar-list", "dashboard", "calendar-list", "/calendar?view=list", ["list", "empty", "error"]),
-  route("analysis-session", "dashboard", "analysis-session", "/analysis", ["session", "sparse", "error"]),
-  route("analysis-strength", "dashboard", "analysis-strength", "/analysis?tab=strength", ["strength", "ready", "empty", "error"]),
-  route("analysis-overview", "dashboard", "analysis-overview", "/analysis?tab=overview", ["overview", "sparse", "error"]),
   route("analysis-load", "dashboard", "analysis-load", "/analysis?tab=load", ["load", "sparse", "error"]),
   route("analysis-performance", "dashboard", "analysis-performance", "/analysis?tab=performance", ["performance", "sparse", "error"]),
-  route("analysis-intensity", "dashboard", "analysis-intensity", "/analysis?tab=intensity", ["intensity", "sparse", "error"]),
+  route("analysis-body", "dashboard", "analysis-body", "/analysis?tab=body", ["body", "sparse", "error"]),
   route("dashboard-goals", "dashboard", "goals", "/goals", ["ready", "empty", "error", "edit"]),
   route("dashboard-profile", "dashboard", "dashboard-profile", "/profile", ["ready", "empty", "error"]),
 ] as const;
@@ -123,8 +115,6 @@ const REDIRECT_ALIASES = [
   alias("alias-trends", "/trends", "analysis-load", "/analysis?tab=load"),
   alias("alias-data", "/data", "settings-data", "/settings?section=data"),
   alias("alias-export", "/export", "settings-data", "/settings?section=data"),
-  alias("alias-strength", "/strength", "calendar-list", "/calendar?view=list"),
-  alias("alias-strength-analytics", "/strength/analytics", "calendar-list", "/calendar?view=list"),
   alias("alias-strength-view", "/calendar?view=strength", "calendar-list", "/calendar?view=list"),
   alias("alias-performance", "/performance", "analysis-performance", "/analysis?tab=performance"),
   alias("alias-gear", "/gear", "settings-account", "/settings?section=account"),

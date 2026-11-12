@@ -5,7 +5,7 @@ import { launch } from "chrome-launcher";
 import lighthouse from "lighthouse";
 
 const execFileAsync = promisify(execFile);
-const BASE_URL = "http://localhost:28801";
+const BASE_URL = "http://localhost:31000";
 const AUTH_FILE = "e2e/.auth/storageState.json";
 const ROUTE = process.argv[2] || "/";
 const FORM_FACTOR = process.argv[3] || "mobile";

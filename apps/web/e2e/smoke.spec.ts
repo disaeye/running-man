@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Smoke", () => {
-  test("login → dashboard → logout", async ({ page }) => {
+  test("login → dashboard → logout @smoke", async ({ page }) => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: "今天", exact: true })).toBeVisible();

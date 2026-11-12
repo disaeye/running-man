@@ -7,9 +7,9 @@
 // servers — including the local pi-web UI. Ports are the only unique handle.
 //
 // Usage:
-//   node scripts/kill-port.mjs 28801          # SIGTERM, then SIGKILL after timeout
-//   node scripts/kill-port.mjs 28801 --signal SIGKILL
-//   node scripts/kill-port.mjs 28801 --timeout 2000
+//   node scripts/kill-port.mjs 31002          # SIGTERM, then SIGKILL after timeout
+//   node scripts/kill-port.mjs 31002 --signal SIGKILL
+//   node scripts/kill-port.mjs 31002 --timeout 2000
 //
 // Exit codes: 0 = port free (killed and/or was already free), 1 = still occupied.
 

@@ -140,18 +140,14 @@ async function mockCommon(page: Page, sport: SportFixture = "Run"): Promise<void
   await mockApi(page, { sport, forecast: "empty", hasGps: false, streams: [] });
 }
 
-async function mockForecast(page: Page, fixture: ForecastFixture): Promise<void> {
-  await mockApi(page, { sport: "Run", forecast: fixture, hasGps: false, streams: [] });
-}
-
 test.describe("Todo 15 deterministic GPS, forecast, and analysis QA", () => {
   test.describe("analysis workflow", () => {
   test("valid GPS activity detail state is deterministic", async ({ page }) => {
     const assertClean = criticalMonitor(page);
     await mockActivity(page, true, [streamRow(0, 35, 139), streamRow(1, 35.1, 139.1), streamRow(2, 35.2, 139.2)]);
     await page.goto("/activities/activity-gps");
-    await expect(page.getByTestId("gps-map")).toHaveCount(2);
-    await expect(page.getByTestId("gps-track-polyline")).toHaveCount(2);
+    await expect(page.getByTestId("gps-map")).toBeVisible();
+    await expect(page.getByTestId("gps-track-polyline")).toBeVisible();
     await screenshot(page, "activity-gps-valid-1280");
     assertClean();
   });
@@ -178,33 +174,13 @@ test.describe("Todo 15 deterministic GPS, forecast, and analysis QA", () => {
     assertClean();
   });
 
-  for (const fixture of ["empty", "partial", "valid"] as const) {
-    test(`forecast ${fixture} state is deterministic`, async ({ page }) => {
-      const assertClean = criticalMonitor(page);
-      await page.setViewportSize({ width: 1280, height: 812 });
-      await mockForecast(page, fixture);
-      await page.goto("/calendar?view=week");
-      const summary = page.locator('[data-testid^="plan-forecast-summary"]');
-      await expect(summary).toBeVisible();
-      if (fixture === "valid") await expect(page.getByTestId("plan-forecast-summary")).toContainText("8.0 km");
-      if (fixture === "partial") await expect(page.getByTestId("plan-forecast-summary")).toContainText("待补充距离信息");
-      if (fixture === "empty") await expect(page.getByTestId("plan-forecast-summary-empty")).toBeVisible();
-      await expect(page.getByTestId("plan-forecast-chart")).toHaveCount(0);
-      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-      expect(overflow).toBeLessThanOrEqual(0);
-      await screenshot(page, `forecast-${fixture}-1280`);
-      assertClean();
-    });
-  }
-
-  for (const tab of ["overview", "load", "performance", "intensity"] as const) {
+  for (const tab of ["load", "performance", "body"] as const) {
     test(`analysis ${tab} section renders deterministically`, async ({ page }) => {
       const assertClean = criticalMonitor(page);
-      await page.setViewportSize({ width: tab === "overview" ? 375 : tab === "load" ? 768 : 1280, height: 900 });
+      await page.setViewportSize({ width: tab === "load" ? 375 : 1280, height: 900 });
       await mockCommon(page);
       await page.goto(`/analysis?tab=${tab}`);
-      const region = tab === "load" ? "analysis-load-adaptation" : tab === "performance" ? "analysis-performance" : tab === "intensity" ? "analysis-intensity" : "analysis-overview";
-      await expect(page.getByTestId(region)).toBeVisible();
+      await expect(page.getByTestId(`analysis-${tab}`)).toBeVisible();
       await screenshot(page, `analysis-${tab}-${page.viewportSize()?.width ?? 1280}`);
       assertClean();
     });
@@ -214,8 +190,9 @@ test.describe("Todo 15 deterministic GPS, forecast, and analysis QA", () => {
     const assertClean = criticalMonitor(page);
     await mockCommon(page, "Run");
     await page.goto("/analysis?tab=performance");
-    await expect(page.getByTestId("analysis-performance")).toBeVisible();
-    await expect(page.getByTestId("analysis-ability-summary")).not.toContainText(/FTP|功率|骑行/);
+    const region = page.getByTestId("analysis-performance");
+    await expect(region).toBeVisible();
+    await expect(region).not.toContainText(/FTP|功率|骑行/);
     await screenshot(page, "analysis-running-ability-1280");
     assertClean();
   });

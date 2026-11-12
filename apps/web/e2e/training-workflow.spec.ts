@@ -1,115 +1,106 @@
 /**
- * Training workflow — Playwright spec for the calendar + plan redesign.
- *
- * Authored for Todo 10. The spec exercises the calendar/plan surface end to
- * end: week/month/list view switching, mobile forecast progressive disclosure,
- * single-overlay-layer contract, planned-vs-completed comparison, and
- * generate plan dialog keyboard-safety.
- *
- * The Todo 10 acceptance only requires `--list --grep "training workflow"`
- * discovery. Served execution belongs to Todo 15 against the live
- * `running-man-web.service` on port 28801. Do not execute these tests
- * before that gate; reviewers discover them via the Playwright CLI.
- *
- * @tag: training-workflow
+ * 训练页工作流：视图切换、计划与实际对照、录入入口与移动端首屏顺序。
  */
 import { test, expect, type Page } from "@playwright/test";
 
-const MOBILE = { width: 390, height: 844 };
+const MOBILE = { width: 375, height: 812 };
 const DESKTOP = { width: 1280, height: 800 };
 
 async function gotoCalendar(page: Page): Promise<void> {
   await page.goto("/calendar");
-  await expect(page.getByTestId("plan-week-grid").or(page.getByTestId("plan-month-day-" + new Date().toISOString().slice(0, 10))).or(page.locator('[data-testid^="plan-week-day-"]')).first()).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTestId("plan-week-grid")).toBeVisible({ timeout: 15000 });
 }
 
 test.describe("training workflow", () => {
   test.describe("view switching via URL state", () => {
-    test("week view renders by default", async ({ page }) => {
+    test("week view renders by default @smoke", async ({ page }) => {
       await gotoCalendar(page);
       await expect(page).toHaveURL(/\/calendar$/);
-      const grid = page.locator('[data-testid="plan-week-grid"]');
-      await expect(grid).toBeVisible();
+      await expect(page.getByTestId("plan-week-grid")).toBeVisible();
+      await expect(page.getByRole("tab", { name: "本周" })).toHaveAttribute("aria-selected", "true");
     });
 
     test("month view activates via ?view=month deep link", async ({ page }) => {
       await page.goto("/calendar?view=month");
-      const monthCells = page.locator('[data-testid^="plan-month-day-"]');
-      // Wait for the view to settle before asserting on the cells. Under a
-      // parallel run the calendar chunk can still be loading, and the old
-      // assertion raced it — visible as a "month cells not found" failure that
-      // did not reproduce when the file ran alone.
-      await expect(page.getByRole("tab", { name: "月" })).toHaveAttribute(
-        "data-state",
-        "active",
+      await expect(page.getByRole("tab", { name: "负荷" })).toHaveAttribute(
+        "aria-selected",
+        "true",
       );
-      await expect(monthCells.first()).toBeVisible({ timeout: 15000 });
+      await expect(page.getByTestId("plan-month-grid")).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('[data-testid^="plan-month-day-"]').first()).toBeVisible({ timeout: 15000 });
+      await expect(page.getByTestId("month-legend")).toContainText("档位按近 8 周固定分位");
     });
 
-    test("list view renders calendar list", async ({ page }) => {
+    test("list view renders the activity stream", async ({ page }) => {
       await page.goto("/calendar?view=list");
       await expect(page).toHaveURL(/view=list/);
-      // `main` and `[role="main"]` are the same element in the shell, so the
-      // previous `.or()` matched twice and failed strict mode rather than
-      // catching a missing element.
-      await expect(page.locator("main").first()).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole("tab", { name: "流水" })).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByText("全部活动")).toBeVisible({ timeout: 15000 });
+      await expect(page.getByRole("button", { name: /加载更早/ })).toBeVisible();
     });
 
     test("unknown ?view= falls back to week", async ({ page }) => {
       await page.goto("/calendar?view=hour");
-      const grid = page.locator('[data-testid="plan-week-grid"]');
-      // The calendar chunk loads after navigation; give it a bounded wait
-      // rather than the default 5s, which raced a cold parallel load.
-      await expect(grid).toBeVisible({ timeout: 15000 });
+      await expect(page.getByTestId("plan-week-grid")).toBeVisible({ timeout: 15000 });
     });
   });
 
   test.describe("planned vs completed comparison", () => {
-    test("month view renders day cells", async ({ page }) => {
+    test("month view renders day cells with fixed load levels", async ({ page }) => {
       await page.goto("/calendar?view=month");
       const dayCells = page.locator('[data-testid^="plan-month-day-"]');
       await expect(dayCells.first()).toBeVisible({ timeout: 15000 });
+      const level = await dayCells.first().getAttribute("data-level");
+      expect(Number(level)).toBeGreaterThanOrEqual(0);
+      expect(Number(level)).toBeLessThanOrEqual(4);
     });
   });
 
-  test.describe("mobile progressive forecast", () => {
+  test.describe("mobile summary", () => {
     test.use({ viewport: MOBILE });
 
-    test("forecast opens on demand from the training overview row", async ({ page }) => {
+    test("period comparison labels are visible", async ({ page }) => {
       await page.goto("/calendar");
-      const toggle = page.getByTestId("calendar-insights-toggle");
-      await expect(toggle).toBeVisible({ timeout: 10000 });
-      const summary = page
-        .locator('[data-testid^="plan-forecast-summary"]')
-        .first();
-      await expect(summary).toBeHidden();
-      await toggle.click();
-      await expect(summary).toBeVisible();
-      await expect(page.getByTestId("plan-forecast-chart")).toHaveCount(0);
+      const summary = page.getByTestId("training-period-summary");
+      await expect(summary).toBeVisible({ timeout: 15000 });
+      await expect(summary).toContainText("本周完成度");
+      await expect(summary).toContainText("计划");
+      await expect(summary).toContainText("实际");
+      await expect(summary).toContainText("差值");
+      await expect(summary).toContainText("次数");
+      await expect(summary).toContainText("距离");
+      await expect(summary).toContainText("时长");
+      await expect(summary).toContainText("TSS");
     });
   });
 
-  test.describe("desktop forecast", () => {
+  test.describe("desktop summary", () => {
     test.use({ viewport: DESKTOP });
 
-    test("renders the run-distance summary on desktop", async ({ page }) => {
+    test("range is visible and matches the week grid", async ({ page }) => {
       await page.goto("/calendar");
-      await expect(page.locator('[data-testid^="plan-forecast-summary"]')).toBeVisible();
-      await expect(page.getByTestId("plan-forecast-chart")).toHaveCount(0);
+      const summary = page.getByTestId("training-period-summary");
+      await expect(summary).toBeVisible();
+      const range = await summary.getByTestId("period-range").textContent();
+      const dates = range?.match(/\d{2}-\d{2} – \d{2}-\d{2}/)?.[0] ?? "";
+      expect(dates).toMatch(/\d{2}-\d{2} – \d{2}-\d{2}/);
+      await expect(page.getByTestId("plan-week-grid")).toContainText(dates);
     });
   });
 
   test.describe("calendar page structure", () => {
-    test("week view has day cells with test IDs", async ({ page }) => {
+    test("only days with content or today are rendered", async ({ page }) => {
       await gotoCalendar(page);
       const dayCells = page.locator('[data-testid^="plan-week-day-"]');
-      await expect(dayCells.first()).toBeVisible({ timeout: 10000 });
-      await expect(dayCells).toHaveCount(7);
+      await expect(dayCells.first()).toBeVisible({ timeout: 15000 });
+      expect(await dayCells.count()).toBeLessThanOrEqual(7);
     });
 
-    test("generate plan button exists", async ({ page }) => {
+    test("creation actions sit behind one add button", async ({ page }) => {
       await gotoCalendar(page);
-      await expect(page.getByRole("button", { name: /生成计划/ })).toBeVisible();
+      await expect(page.getByLabel("添加训练")).toBeVisible();
+      await expect(page.getByLabel("导入文件")).toHaveCount(0);
+      await expect(page.getByLabel("手动添加")).toHaveCount(0);
     });
   });
 });

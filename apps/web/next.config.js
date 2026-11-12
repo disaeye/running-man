@@ -27,7 +27,14 @@ const nextConfig = {
     // /_next/static keep their default immutable caching.
     return [
       {
-        source: "/((?!_next/static|_next/image|favicon\\.ico).*)",
+        // Map tiles are immutable raster images; long-cache them at the CDN.
+        source: "/tiles/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=604800, immutable" },
+        ],
+      },
+      {
+        source: "/((?!_next/static|_next/image|favicon\\.ico|tiles/).*)",
         headers: [
           { key: "Cache-Control", value: "private, no-store" },
         ],

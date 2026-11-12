@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Profile and settings flow", () => {
-  test("renders settings page with clear profile navigation and sections", async ({ page }) => {
+  test("renders settings page with clear profile navigation and sections @smoke", async ({ page }) => {
     await page.goto("/settings");
 
     await expect(page.getByRole("heading", { name: "设置", exact: true })).toBeVisible();
@@ -25,16 +25,21 @@ test.describe("Profile and settings flow", () => {
     await page.goto("/profile");
 
     await expect(page.getByRole("heading", { name: "我的", exact: true })).toBeVisible();
-    const settingsLink = page.getByRole("link", { name: "设置" });
-    await expect(settingsLink).toHaveAttribute("href", "/settings");
     await expect(page.getByTestId("settings-section-data")).toHaveCount(0);
     await expect(page.locator("h2").first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "跑鞋与装备", exact: true })).toBeVisible();
+    // 新增跑鞋改为弹窗表单：未打开前页面上没有输入项。
+    await expect(page.getByLabel("名称")).toHaveCount(0);
+    await page.getByRole("button", { name: "新增跑鞋" }).click();
+    await expect(page.getByRole("dialog").getByLabel("名称")).toBeVisible();
     await expect(page.getByRole("button", { name: "添加跑鞋" })).toBeDisabled();
-    await expect(page.getByLabel("名称")).toBeVisible();
+    await page.getByRole("button", { name: "取消" }).click();
+    await expect(page.getByLabel("名称")).toHaveCount(0);
 
-    await settingsLink.click();
-    await expect(page).toHaveURL(/\/settings$/);
+    const zonesLink = page.getByRole("link", { name: "调整训练区间" });
+    await expect(zonesLink).toHaveAttribute("href", "/settings?section=training");
+    await zonesLink.click();
+    await expect(page).toHaveURL(/\/settings\?section=training/);
     await expect(page.getByRole("heading", { name: "设置", exact: true })).toBeVisible();
     await page.getByTestId("settings-page").getByRole("link", { name: "我的" }).click();
     await expect(page).toHaveURL(/\/profile$/);

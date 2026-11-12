@@ -148,7 +148,7 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 | `--text-metric-lg` | `1.5rem` | 1.1 | 24px 次大数字 |
 | `--text-display-sm` | `1.75rem` | 1.3 | 28px 页面标题与结论句 |
 | `--text-title2` | `1.375rem` | 1.4 | 22px 卡内数值 |
-| `--text-body` | `0.875rem` | 1.55 | 14px 正文 |
+| `--text-body` | `1rem` | 1.55 | 16px 正文 |
 | `--text-caption1` | `0.75rem` | 1.5 | 12px 标签与出处 |
 
 规则：
@@ -286,7 +286,30 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 
 ---
 
-## 10. 断点与触控
+## 10. 动效
+
+动效只承担三件事：确认操作、解释状态变化、保持导航连续性。操作型界面不编排页面入场，也不给每个区块重复同一个淡入。
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `--duration-instant` | `100ms` | 点按与颜色反馈、退场 |
+| `--duration-fast` | `180ms` | 常规状态变化、路由入场 |
+| `--duration-normal` | `300ms` | 进度条与抽屉 |
+| `--duration-slow` | `600ms` | 保留给较长的布局变化 |
+| `--duration-focal` | `520ms` | 首页主决策数字的一次遮罩揭示 |
+| `--ease-default` | `cubic-bezier(0.2, 0.8, 0.2, 1)` | 点按与颜色 |
+| `--ease-enter` | `cubic-bezier(0.16, 1, 0.3, 1)` | 进场与数值增长 |
+| `--ease-exit` | `cubic-bezier(0.7, 0, 0.84, 0)` | 退场，始终比进场快 |
+
+控件在 100ms 内给出颜色与轻微缩放，沿同一条曲线回位；触控目标保持 44px。分段控件、PC 侧栏、移动底栏与时间范围预设共用一条滑动指示条，位置从真实 DOM 量取。进度条只动 `transform: scaleX()`，不逐帧改宽度。ECharts 由 `buildBaseOption` 统一 260ms 插值，切换时间范围时外层不叠加入场。
+
+弹窗、抽屉、下拉、Tooltip、Toast 由 `tw-animate-css` 提供 `animate-in` / `animate-out` 规则，进场 150–300ms 用 `--ease-enter`，退场 100–150ms 用 `--ease-exit`。路由用 View Transition 做短交叉淡入，导航外壳不参与快照变化；浏览器不支持时退回 `template.tsx` 的 180ms 入场。分析页切 tab、日历页切视图只改查询参数，template 不重挂载，由内容区自己做一次 180ms 淡入。
+
+首页「今天该练什么」的距离是唯一一次遮罩揭示，其余读数不加编排。`prefers-reduced-motion` 保留颜色与透明度反馈，去掉位移、缩放、遮罩和路由交叉，操作结果仍然可读。
+
+---
+
+## 11. 断点与触控
 
 | 断点 | 宽度 | 布局 |
 |---|---|---|
@@ -302,11 +325,11 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 
 ---
 
-## 11. 禁止清单
+## 12. 禁止清单
 
 - 第二强调色。
 - 装饰性渐变（编码数据的渐变——热力图、轨迹着色、区间带——不在此列）。
-- 毛玻璃 / `backdrop-filter`。
+- 毛玻璃 / `backdrop-filter`（内容面板一律不用；只允许底部导航这类 chrome 使用半透明底色与背景模糊）。
 - 插画。
 - 头像（除账户入口的系统占位）。
 - emoji。

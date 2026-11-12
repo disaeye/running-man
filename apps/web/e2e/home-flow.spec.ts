@@ -27,7 +27,7 @@ test.describe("home page information flow", () => {
   // meaningful against a known viewport height.
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("today's workout is the first-screen focal point", async ({ page }) => {
+  test("today's workout is the first-screen focal point @smoke", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(6000);
 

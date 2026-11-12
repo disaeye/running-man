@@ -21,6 +21,7 @@ const eslintConfig = defineConfig([
     // must stay out of lint the same way `.next` does.
     ".next-gate/**",
     ".next-build/**",
+    ".next-dev/**",
     ".next-prev-*/**",
     ".omo/**",
     "out/**",

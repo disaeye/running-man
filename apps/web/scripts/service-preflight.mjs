@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const SERVICE = "running-man-web.service";
-const BASE_URL = "http://localhost:28801";
+const BASE_URL = "http://localhost:31000";
 const BUILD_ID_PATH = resolve(process.cwd(), ".next/BUILD_ID");
 
 async function command(command, args) {

@@ -38,51 +38,38 @@ test.describe("client-only rendering", () => {
     });
   }
 
-  test("no page ships a date baked into its HTML", async ({ request }) => {
-    // The mechanism, asserted directly on every page rather than just the one.
+  test("dashboard HTML carries the current week, not a build-time date", async ({ request }) => {
+    // 以前这些路由是静态预渲染的，`new Date()` 在构建时执行一次，HTML 里写死当天的
+    // 日期（生产在 9 月 13 日构建，次日仍在说 9月13日星期日）。浏览器水合时会改正，
+    // 所以只有直接看服务端返回的 HTML 才能发现。
     //
-    // These routes are statically pre-rendered, so `new Date()` in a client
-    // component did not merely disagree with the browser at request time — the
-    // date was written into the HTML *at build time* and then served unchanged
-    // for as long as the build lived. Production was built on Sep 13 and still
-    // told visitors it was 9月13日星期日 the next day, in UTC, to athletes in
-    // Asia/Shanghai.
-    //
-    // A test that renders the page and reads the date back cannot see this: the
-    // browser corrects it during hydration, which is why the symptom was a
-    // console error and a stale label rather than a visible break. Inspecting
-    // the server's own HTML is the only way to catch a build-time value.
+    // 现在这些路由按请求渲染，正确的断言是：HTML 里的周范围就是此刻的周范围。
+    const response = await request.get("/calendar");
+    const html = await response.text();
+    const week = currentWeekRange();
+    const shortRange = `${week.from.slice(5)} – ${week.to.slice(5)}`;
+    expect(html, "calendar HTML must render this week").toContain(shortRange);
+
     const weekday = /(星期日|星期一|星期二|星期三|星期四|星期五|星期六)/;
-    // The week grid renders cells as "09-14" plus a bare day number, and the
-    // activity filters render `<input value="2026-09-14">`. Both appear in the
-    // pre-rendered HTML when a component computes dates during render.
-    const isoDay = /\b[0-9]{2}-[0-9]{2}\b/;
     const dateInput = /value="20[0-9]{2}-[0-9]{2}-[0-9]{2}"/;
-
-    for (const path of [...PAGES, "/login", "/register"]) {
-      const response = await request.get(path);
-      const html = await response.text();
-
-      expect(
-        weekday.test(html),
-        `${path} HTML contains a date fixed at build time`,
-      ).toBe(false);
-
-      expect(
-        dateInput.test(html),
-        `${path} HTML contains a date input defaulting to build time`,
-      ).toBe(false);
-
-      // The week grid is dashboard-only.
-      if (PAGES.includes(path)) {
-        expect(
-          isoDay.test(html),
-          `${path} HTML contains a week-grid date fixed at build time`,
-        ).toBe(false);
-      }
+    for (const path of ["/login", "/register"]) {
+      const page = await (await request.get(path)).text();
+      expect(weekday.test(page), `${path} HTML contains a date`).toBe(false);
+      expect(dateInput.test(page), `${path} HTML contains a date input`).toBe(false);
     }
   });
 });
+
+/** 今天所在周（周一到周日），与页面 `weekRangeOf(today)` 同一套日历算术。 */
+function currentWeekRange(): { from: string; to: string } {
+  const today = new Date().toISOString().slice(0, 10);
+  const [year, month, day] = today.split("-").map(Number) as [number, number, number];
+  const anchor = Date.UTC(year, month - 1, day);
+  const weekday = new Date(anchor).getUTCDay();
+  const monday = new Date(anchor + (weekday === 0 ? -6 : 1 - weekday) * 86_400_000);
+  const sunday = new Date(monday.getTime() + 6 * 86_400_000);
+  return { from: monday.toISOString().slice(0, 10), to: sunday.toISOString().slice(0, 10) };
+}
 
 test.describe("activity range guard", () => {
   /**
@@ -108,6 +95,27 @@ test.describe("activity range guard", () => {
     await page.waitForTimeout(3500);
 
     expect(emptyRange, "requests sent with an empty from/to").toEqual([]);
+  });
+
+  test("first data wave starts alongside the profile request", async ({ page }) => {
+    const apiStarts: { path: string; at: number }[] = [];
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (url.pathname.startsWith("/api/v1/")) {
+        apiStarts.push({ path: url.pathname, at: Date.now() });
+      }
+    });
+
+    await page.goto("/", { waitUntil: "networkidle" });
+    await page.waitForTimeout(2500);
+
+    const profile = apiStarts.find((entry) => entry.path === "/api/v1/athletes/me");
+    const activities = apiStarts.find((entry) => entry.path === "/api/v1/activities");
+    expect(profile, "profile request missing").toBeDefined();
+    expect(activities, "first-wave data request missing").toBeDefined();
+    // 时区解析完成后数据请求在同一波发出；等待 profile 往返会把它推后
+    // 至少整个 /athletes/me 的响应时间。
+    expect(Math.abs((activities?.at ?? 0) - (profile?.at ?? 0))).toBeLessThan(300);
   });
 
   test("no request is answered with 422 while browsing the log", async ({ page }) => {

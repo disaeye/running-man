@@ -9,7 +9,7 @@ import { test, expect } from "@playwright/test";
  * passing on an unrelated element or failing for reasons unrelated to the page.
  */
 test.describe("Data Sync", () => {
-  test("renders the data section with its source list", async ({ page }) => {
+  test("renders the data section with its source list @smoke", async ({ page }) => {
     await page.goto("/settings?section=data");
 
     await expect(page.getByTestId("settings-section-data")).toHaveAttribute(

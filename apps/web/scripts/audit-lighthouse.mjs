@@ -6,7 +6,7 @@ import { launch } from "chrome-launcher";
 import lighthouse from "lighthouse";
 
 const execFileAsync = promisify(execFile);
-const BASE_URL = "http://localhost:28801";
+const BASE_URL = "http://localhost:31000";
 const AUTH_FILE = "e2e/.auth/storageState.json";
 const RUNS = 3;
 const EVIDENCE_DIR = "../../.omo/evidence/frontend-product-experience-redesign/implementation/task-15-frontend-product-experience-redesign";

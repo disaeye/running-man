@@ -37,8 +37,6 @@ const ALIAS_REDIRECTS: readonly AliasCase[] = [
   { source: "/trends", canonical: "/analysis?tab=load", note: "/trends maps to load adaptation" },
   { source: "/data", canonical: "/settings?section=data", note: "/data maps to settings data section" },
   { source: "/export", canonical: "/settings?section=data", note: "/export maps to settings data section" },
-  { source: "/strength", canonical: "/calendar?view=list", note: "/strength maps to the calendar log view, where strength content renders" },
-  { source: "/strength/analytics", canonical: "/calendar?view=list", note: "/strength/analytics maps to the calendar log view" },
   { source: "/activities", canonical: "/calendar?view=list", note: "/activities maps to calendar list view" },
   { source: "/plan", canonical: "/calendar", note: "/plan maps to calendar default view" },
 ];
@@ -53,11 +51,14 @@ const ANALYSIS_INPAGE_ALIASES: readonly InPageAlias[] = [
   { search: "?tab=recovery", settled: "/analysis" },
   { search: "?tab=load", settled: "/analysis" },
   { search: "?tab=performance", settled: "/analysis?tab=performance" },
-  { search: "?tab=intensity", settled: "/analysis?tab=intensity" },
+  { search: "?tab=body", settled: "/analysis?tab=body" },
+  // 强度分布与总览并入了负荷与恢复，旧链接落在默认视图
+  { search: "?tab=intensity", settled: "/analysis" },
   // 默认模式是负荷与恢复；单次战报与力量训练继续通过显式 URL 访问。
-  { search: "?tab=session", settled: "/analysis?tab=session" },
-  { search: "?tab=strength", settled: "/analysis?tab=strength" },
-  { search: "?tab=overview", settled: "/analysis?tab=overview" },
+  // 单次战报与力量分析不再属于分析页；旧链接回到默认视图
+  { search: "?tab=session", settled: "/analysis" },
+  { search: "?tab=strength", settled: "/analysis" },
+  { search: "?tab=overview", settled: "/analysis" },
   { search: "?tab=garbage", settled: "/analysis" },
   { search: "?tab=ABILITY", settled: "/analysis" },
 ];

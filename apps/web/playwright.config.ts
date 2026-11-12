@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import { AUTH_FILE } from "./e2e/auth";
 
-const BASE_URL = "http://localhost:28801";
+const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:31002";
 const VISUAL_BASELINE_PATH =
   "{testDir}/../../../.omo/evidence/visual-audit-v1/visual-baseline/{projectName}/{arg}{ext}";
 

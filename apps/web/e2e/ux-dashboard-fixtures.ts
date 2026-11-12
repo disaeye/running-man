@@ -51,6 +51,25 @@ export const DASHBOARD_FIXTURES: Readonly<Record<string, JsonFixture>> = {
     training_load: { data_as_of: null },
     gaps: [],
   },
+  "/api/v1/data/quality": {
+    coverage: {
+      activities: {
+        first_at: null,
+        total_activities: 0,
+        unassigned_run_activities_30d: 0,
+        with_gps: 0,
+        with_hr: 0,
+        with_power: 0,
+        with_streams: 0,
+      },
+      strength: { sessions_14d: 0, sessions_total: 0 },
+      sync: { last_sync_at: null, last_sync_status: null },
+      uploads: { failed_30d: 0, runs_30d: 0 },
+      wellness: { first_day: null, hrv_days_28d: 0, rhr_days_28d: 0, sleep_days_28d: 0 },
+    },
+    issues: [],
+    summary: { issue_count: 0, last_checked_at: null, status: "ok" },
+  },
   "/api/v1/athletes/me": {
     id: "00000000-0000-0000-0000-000000000001", email: "qa@example.com",
     name: "QA Runner", timezone: "UTC", preferred_sport: "Run",

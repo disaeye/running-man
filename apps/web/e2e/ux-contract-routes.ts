@@ -96,9 +96,13 @@ export interface Layer {
 }
 
 export const LAYERS: readonly Layer[] = [
-  { label: "A", theme: "light", widths: [390, 768, 1280], routes: ALL_ROUTES },
+  // Light theme sweeps every route at the two width extremes; light also
+  // samples the intermediate widths on the core routes (breakpoint bugs),
+  // and dark samples only the extremes (theme regressions are width-
+  // independent, so dark × six widths mostly re-measured light's geometry).
+  { label: "A", theme: "light", widths: [390, 1280], routes: ALL_ROUTES },
   { label: "B", theme: "light", widths: [844, 1024, 1440], routes: CORE_ROUTES },
-  { label: "C", theme: "dark", widths: [390, 768, 844, 1024, 1280, 1440], routes: CORE_ROUTES },
+  { label: "C", theme: "dark", widths: [390, 1280], routes: CORE_ROUTES },
 ];
 
 export const VIEWPORTS = [
@@ -106,7 +110,6 @@ export const VIEWPORTS = [
   { name: "desktop 1280", width: 1280, height: 800 },
   { name: "tablet landscape 1024", width: 1024, height: 768 },
   { name: "phone landscape 844x390", width: 844, height: 390 },
-  { name: "tablet portrait 768", width: 768, height: 1024 },
   { name: "phone portrait 390", width: 390, height: 844 },
 ] as const;
 

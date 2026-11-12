@@ -1,13 +1,36 @@
 // api-check.mjs
 // Verifies that generated API clients are up-to-date with the OpenAPI spec.
-// Runs `orval --config` and checks git status for changes to the generated dir.
+// The check snapshots generated content, runs Orval, then compares content.
 
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { join, relative } from "node:path";
 
 const GENERATED_DIR = "shared/api/generated";
 
-// Check if we're in a git repo
+function listFiles(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    return entry.isDirectory() ? listFiles(path) : [path];
+  });
+}
+
+function snapshot() {
+  const result = new Map();
+  for (const path of listFiles(GENERATED_DIR).sort()) {
+    const key = relative(GENERATED_DIR, path);
+    result.set(key, createHash("sha256").update(readFileSync(path)).digest("hex"));
+  }
+  return result;
+}
+
+function changedPaths(before, after) {
+  const keys = [...new Set([...before.keys(), ...after.keys()])].sort();
+  return keys.filter((key) => before.get(key) !== after.get(key));
+}
+
 try {
   execSync("git rev-parse --git-dir", { stdio: "ignore" });
 } catch {
@@ -15,7 +38,6 @@ try {
   process.exit(1);
 }
 
-// Check if generated dir exists
 if (!existsSync(GENERATED_DIR)) {
   console.error(
     `Generated directory ${GENERATED_DIR} does not exist. Run 'pnpm api:generate' first.`
@@ -25,20 +47,22 @@ if (!existsSync(GENERATED_DIR)) {
 
 console.log("Checking if API clients are up-to-date...");
 
-// Run orval in quiet mode
-execSync("npm run api:generate --silent", { stdio: "pipe" });
+const before = snapshot();
+try {
+  execSync("npm run api:generate --silent", { stdio: "pipe" });
+} catch (error) {
+  console.error("API client generation failed");
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+const after = snapshot();
+const changed = changedPaths(before, after);
 
-// Check git status for changes in generated dir
-const status = execSync(`git status --porcelain ${GENERATED_DIR}`, {
-  encoding: "utf-8",
-}).trim();
-
-if (status) {
-  console.error(
-    "\n❌ Generated API clients are out of sync with the OpenAPI spec.\n"
-  );
+if (changed.length > 0) {
+  console.error("\n❌ Generated API clients are out of sync with the OpenAPI spec.\n");
   console.error("Changes detected:");
-  console.error(status);
+  for (const path of changed.slice(0, 40)) console.error(path);
+  if (changed.length > 40) console.error(`... and ${changed.length - 40} more`);
   console.error("\nRun 'pnpm api:generate' and commit the changes.");
   process.exit(1);
 }
