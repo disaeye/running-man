@@ -5,6 +5,7 @@ Skips __init__.py files, blank lines, and comment-only lines.
 """
 
 import argparse
+import os
 import sys
 from collections.abc import Iterable
 from pathlib import Path
@@ -13,6 +14,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCAN_ROOTS = ("apps", "docs", "scripts")
 DEFAULT_ROOT_FILES = ("CLAUDE.md", "CONTRIBUTING.md", "README.md")
 DEFAULT_SUFFIXES = frozenset({".js", ".jsx", ".md", ".mjs", ".py", ".ts", ".tsx"})
+# Orval 根据 OpenAPI 生成每个模型的 zod schema；字段数量由契约决定，
+# 这一目录里的文件只通过 npm run api:generate 重写。
+GENERATED_OPENAPI_MODEL_DIR = "apps/web/shared/api/generated/model"
 EXCLUDED_DIRS = frozenset(
     {
         ".cache",
@@ -110,13 +114,29 @@ def collect_explicit_files(paths: Iterable[Path]) -> list[Path]:
         if path.is_file():
             files.append(path)
         elif path.is_dir():
-            files.extend(
-                p
-                for p in path.rglob("*")
-                if p.is_file()
-                and p.suffix in DEFAULT_SUFFIXES
-                and not has_excluded_part(p.relative_to(REPO_ROOT))
-            )
+            files.extend(walk_source_files(path))
+    return files
+
+
+def walk_source_files(root: Path) -> list[Path]:
+    """Walk ``root`` pruning excluded directories on the way down.
+
+    ``rglob`` cannot prune: it descends into ``node_modules`` and the ``.next*``
+    build outputs (a pnpm store alone is tens of thousands of entries) and only
+    filters afterwards, so most of the walk is wasted on files that are then
+    dropped.
+    """
+    files: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(
+            d for d in dirnames if d not in EXCLUDED_DIRS and not d.startswith(".next")
+        )
+        for filename in sorted(filenames):
+            if Path(filename).suffix not in DEFAULT_SUFFIXES:
+                continue
+            path = Path(dirpath, filename)
+            if not has_excluded_part(path.relative_to(REPO_ROOT)):
+                files.append(path)
     return files
 
 
@@ -125,13 +145,7 @@ def collect_default_files() -> list[Path]:
     for root_name in DEFAULT_SCAN_ROOTS:
         root = REPO_ROOT / root_name
         if root.is_dir():
-            files.extend(
-                path
-                for path in root.rglob("*")
-                if path.is_file()
-                and path.suffix in DEFAULT_SUFFIXES
-                and not has_excluded_part(path.relative_to(REPO_ROOT))
-            )
+            files.extend(walk_source_files(root))
     files.extend(
         path
         for name in DEFAULT_ROOT_FILES
@@ -156,7 +170,7 @@ def main() -> int:
         if f.name == "__init__.py":
             continue
         rel = f.relative_to(REPO_ROOT).as_posix()
-        if rel in ALLOWLIST:
+        if rel in ALLOWLIST or rel.startswith(f"{GENERATED_OPENAPI_MODEL_DIR}/"):
             continue
         loc = count_loc(f)
         if loc > args.max_loc:

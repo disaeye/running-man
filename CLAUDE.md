@@ -24,6 +24,16 @@ Both services run on this machine as systemd **user** units:
 | `running-man-api.service` | 31001 | `.venv/bin/python -m uvicorn main:app --host 127.0.0.1` |
 | `running-man-web.service` | 31000 | `node node_modules/next/dist/bin/next start -p 31000` |
 
+**Every port this project binds stays inside 31000–31099.**
+
+| Port | Used by |
+|---|---|
+| 31000 | production frontend |
+| 31001 | production API |
+| 31002 | gate frontend for the Playwright suite (`scripts/gate_server.py`) |
+| 31003 | local development frontend (`npm run dev`) |
+| 31004 | local development API (`uvicorn --reload`) |
+
 ```bash
 systemctl --user status  running-man-api.service running-man-web.service
 systemctl --user restart running-man-web.service    # only after scripts/deploy-web.sh
@@ -73,8 +83,8 @@ To restart a local `next start` (e2e, manual QA), kill the port instead:
 
 ```bash
 cd apps/web
-npm run qa:kill-port -- 28801                      # SIGTERM, then SIGKILL after 5s
-node scripts/kill-port.mjs 28801 --timeout 2000    # custom escalation window
+npm run qa:kill-port -- 31002                      # SIGTERM, then SIGKILL after 5s
+node scripts/kill-port.mjs 31002 --timeout 2000    # custom escalation window
 ```
 
 `scripts/kill-port.mjs` resolves the PID via `fuser -n tcp <port>`, so it only ever touches the process holding that exact port. For the systemd unit, prefer `systemctl --user restart running-man-web.service`, which signals only that unit's cgroup.
@@ -198,9 +208,12 @@ journalctl --user -u running-man-api.service -f   # tail logs
 # Sync Intervals.icu data
 curl -X POST http://localhost:31001/api/integrations/intervals_icu/sync -b "access_token=<token>"
 
-# Full quality gates (the one command — web lint/typecheck/test/build,
-# api ruff/mypy/openapi, contract registries):
-python3 scripts/run_gates.py            # everything
-python3 scripts/run_gates.py --fast     # skip next build
-python3 scripts/run_gates.py web        # one group
+# Full quality gates (web eslint/tsc/vitest, api ruff/mypy/openapi/pytest,
+# contract registries — run in parallel, memoised by content hash):
+python3 scripts/run_gates.py            # default: fast checks, seconds when cached
+python3 scripts/run_gates.py web        # one fast group
+python3 scripts/run_gates.py e2e        # next build + @smoke browser subset
+python3 scripts/run_gates.py e2e-full   # next build + every browser test
+python3 scripts/run_gates.py --no-cache # re-run every gate and refresh stored passes
+# Stored passes live in .gate-cache/ (gitignored); delete it to forget them.
 ```

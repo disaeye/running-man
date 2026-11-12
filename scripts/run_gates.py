@@ -2,22 +2,31 @@
 """Run the repository quality gates locally (no GitHub remote is configured).
 
 The job definitions in .github/workflows/ci.yml are the gate manifest; this
-script executes the same checks against the local environment:
-  - web:       eslint (zero warnings), tsc, vitest, next build, file-size
+script executes the equivalent checks against the local environment:
+
+  - web:       eslint (zero warnings), tsc, vitest, file-size
   - api:       ruff, mypy, OpenAPI contract checks, pytest (needs test DB)
   - contract:  validate / generate / check registries + generated-file drift
+  - e2e:       next build + the @smoke browser subset (one load per route)
+  - e2e-full:  next build + every browser test (minutes, run before deploying)
+
+Gates run in parallel (bounded by the core count) and are memoised: a gate whose
+inputs hash to the same content as its last pass is reported CACHED and skipped,
+so an unchanged tree finishes in seconds. Failures are never cached. The
+default selection finishes within half a minute on this host; the browser tiers
+are separate groups because a real browser suite cannot fit that budget. The
+registry generator runs first and everything else waits for it, because it
+rewrites files the other gates read. pytest's DSN comes from TEST_DATABASE_URL,
+failing that `wind_runner_test` is derived by `apps/api/testsupport.py`; the
+database is probed before a cached pytest pass is honoured. Exit code is
+non-zero when any gate fails or is blocked by a failed dependency.
 
 Usage:
-  scripts/run_gates.py            # all groups
-  scripts/run_gates.py web api    # selected groups
-  scripts/run_gates.py --fast     # skip next build (slowest gate)
-
-pytest always runs; it is never skipped. The DSN comes from TEST_DATABASE_URL,
-failing that `wind_runner_test` is derived from the app's own DATABASE_URL by
-`apps/api/testsupport.py`. Nothing credential-bearing lives in this file.
-Override explicitly with:
-  export TEST_DATABASE_URL='postgresql://user:pw@host:5432/other_test_db'
-Exit code is non-zero when any gate fails.
+  scripts/run_gates.py            # web + api + contract, seconds when cached
+  scripts/run_gates.py web api    # selected fast groups
+  scripts/run_gates.py e2e        # next build + smoke browser subset
+  scripts/run_gates.py e2e-full   # next build + full browser suite
+  scripts/run_gates.py --no-cache # re-run every gate and refresh stored passes
 """
 from __future__ import annotations
 
@@ -27,150 +36,168 @@ import os
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
 
-REPO_ROOT: Final = Path(__file__).resolve().parents[1]
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gate_e2e as _e2e  # noqa: E402
+from gate_execute import Gate, Snapshot, execute, say  # noqa: E402
+import gate_scheduler  # noqa: E402
+
+REPO_ROOT: Final = Path(__file__).resolve().parents[1]
 API_DIR: Final = REPO_ROOT / "apps" / "api"
 WEB_DIR: Final = REPO_ROOT / "apps" / "web"
 
-# pytest is part of the gate and never skipped; see `api_gates`.
-FAIL_OUTPUT_TAIL: Final = 40
+# Cache input sets. Coarse on purpose: hashing too little risks a stale pass,
+# hashing a bit too much only re-runs a gate that would have been skipped.
+API_INPUTS: Final = ("apps/api", "scripts", "contracts")
+WEB_INPUTS: Final = ("apps/web", "scripts", "contracts")
+E2E_INPUTS: Final = WEB_INPUTS + ("apps/api/src", "apps/api/main.py", "apps/api/.env")
+SIZE_INPUTS: Final = ("apps", "docs", "scripts", "CLAUDE.md", "README.md", "CONTRIBUTING.md")
+CONTRACT_INPUTS: Final = ("contracts", "scripts", "apps/api/src", "apps/web")
+GENERATED_OUTPUTS: Final = (
+    "apps/api/src/domain/generated",
+    "apps/web/shared/config/generated",
+)
+GENERATE_SLUG: Final = "contract-generate-semantic-registries"
+BUILD_SLUG: Final = "web-next-build"
+# Admission order for the worker pool: the longest gates claim slots first, so a
+# short gate finishing early cannot delay the start of the pole that sets the
+# wall time. Gates not listed here admit last, in name order.
+LONGEST_FIRST: Final = (
+    "web-e2e-(playwright)",
+    "api-pytest",
+    "web-e2e-(smoke)",
+    "web-next-build",
+    "web-vitest",
+    "web-tsc",
+    "web-eslint",
+    "web-file-size-(apps/web)",
+    "api-mypy",
+)
 
 
-@dataclass(slots=True)
-class Gate:
-    group: str
-    name: str
-    command: list[str]
-    cwd: Path
-    timeout: int = 300
-    skip_reason: str | None = None
-    failure_hint: str = ""
-    env: dict[str, str] = field(default_factory=dict)
-    # Drives a browser against the gate build on :28801, so `run_gate` has to
-    # prepare and start the gate server around it. Declared rather than sniffed
-    # from the name: the gate that needs it must not silently drop the server
-    # preparation.
-    needs_gate_server: bool = False
-
-
-@dataclass(slots=True)
-class Result:
-    gate: Gate
-    status: str
-    seconds: float
-    tail: str = field(default="")
-
-
-def ensure_node_on_path() -> None:
-    env_path = os.environ.get("PATH", "")
-    if all(shutil_which(tool, env_path) for tool in ("node", "npm")):
-        return
-    candidates = sorted(
-        glob.glob(os.path.expanduser("~/.nvm/versions/node/v22*/bin")), reverse=True
+def db_probe() -> str | None:
+    """Confirm the test database answers before honouring a cached pytest pass."""
+    code = (
+        "import sys; sys.path.insert(0, 'src'); "
+        "from testsupport import test_dsn; import psycopg; "
+        "conn = psycopg.connect(test_dsn(), connect_timeout=5); "
+        "ok = conn.execute(\"select to_regclass('public.athletes')\").fetchone()[0]; "
+        "conn.close(); sys.exit(0 if ok else 1)"
     )
-    for candidate in candidates:
-        if (Path(candidate) / "npm").exists():
-            os.environ["PATH"] = candidate + os.pathsep + env_path
-            return
-
-
-def shutil_which(tool: str, path: str) -> bool:
-    from shutil import which
-
-    return which(tool, path=path) is not None
+    try:
+        probe = subprocess.run(
+            [str(API_DIR / ".venv/bin/python"), "-c", code],
+            cwd=API_DIR,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        return f"test database probe could not run: {error}"
+    if probe.returncode != 0:
+        detail = (probe.stdout + probe.stderr).strip().splitlines()[-1:]
+        return "test database unreachable or schema missing: " + "".join(detail)
+    return None
 
 
 def api_gates() -> list[Gate]:
     python = str(API_DIR / ".venv/bin/python")
-    openapi_chk = "../../scripts/check_openapi_compatibility.py"
-    openapi_json = "../../contracts/v1/openapi.json"
-    gates = [
-        Gate("api", "ruff", [str(API_DIR / ".venv/bin/ruff"), "check", "."], API_DIR),
-        Gate("api", "mypy", [str(API_DIR / ".venv/bin/mypy"), "src", "tests"], API_DIR, 600),
-        Gate("api", "openapi response models", [python, "../../scripts/check_response_models.py", "--app", "main:app", "--json"], API_DIR),
-        Gate("api", "openapi contract drift", [python, "../../scripts/export_openapi.py", "--app", "main:app", "--check", openapi_json], API_DIR),
-        Gate("api", "openapi compatibility", [python, openapi_chk, openapi_json, openapi_json, "--json"], API_DIR),
-    ]
-    # pytest always runs. It used to be skipped when the test database was
-    # unreachable, which hid every runtime defect that only a real request or a
-    # real table can expose: a response model that forbids extra fields being fed
-    # one at runtime, a fixture asserting a hardcoded version, a test that only
-    # holds for half the day. A missing DSN now fails here, at conftest import,
-    # with the reason `testsupport.test_dsn()` raises.
-    gates.append(
+    return [
+        Gate("api", "ruff", [str(API_DIR / ".venv/bin/ruff"), "check", "."], API_DIR, inputs=API_INPUTS),
+        Gate("api", "mypy", [str(API_DIR / ".venv/bin/mypy"), "src", "tests"], API_DIR, 600, inputs=API_INPUTS),
+        Gate("api", "openapi response models", [python, "../../scripts/check_response_models.py", "--app", "main:app", "--json"], API_DIR, inputs=API_INPUTS),
+        Gate("api", "openapi contract drift", [python, "../../scripts/export_openapi.py", "--app", "main:app", "--check", "../../contracts/v1/openapi.json"], API_DIR, inputs=API_INPUTS),
+        Gate("api", "openapi compatibility", [python, "../../scripts/check_openapi_compatibility.py", "../../contracts/v1/openapi.json", "../../contracts/v1/openapi.json", "--json"], API_DIR, inputs=API_INPUTS),
+        # pytest always runs on change. A cached pass requires the database to
+        # answer with its schema: `testsupport.test_dsn()` still fails loudly at
+        # conftest import when the probe is unhappy.
         Gate(
             "api",
             "pytest",
-            [
-                python,
-                "-m",
-                "pytest",
-                "-q",
-                "--basetemp",
-                str(REPO_ROOT / ".pi" / "pytest-temp"),
-            ],
+            [python, "-m", "pytest", "-q", "--basetemp", str(REPO_ROOT / ".pi" / "pytest-temp")],
             API_DIR,
             900,
-        )
-    )
-    return gates
+            inputs=API_INPUTS,
+            salt=os.environ.get("TEST_DATABASE_URL", ""),
+            verify=db_probe,
+        ),
+    ]
 
 
 def contract_gates() -> list[Gate]:
     python = str(API_DIR / ".venv/bin/python")
     hint = "generated files differ from the index — if you just ran generate_data_contract.py or edited generators, commit the output"
+    inputs: tuple[str, ...] = CONTRACT_INPUTS
     return [
-        Gate("contract", "validate v1 contract", [python, "scripts/validate_data_contract.py", "contracts/v1", "--json"], REPO_ROOT),
-        Gate("contract", "grading contract (CAA / WMA)", [python, "scripts/check_grading_contract.py", "--json"], REPO_ROOT),
-        Gate("contract", "generate semantic registries", [python, "scripts/generate_data_contract.py", "contracts/v1", "--json"], REPO_ROOT),
-        Gate("contract", "check generated registry drift", [python, "scripts/check_generated_data_contract.py", "--json"], REPO_ROOT),
-        Gate("contract", "metric semantics (web)", [python, "scripts/check_metric_semantics.py"], REPO_ROOT),
-        Gate("contract", "design tokens vs DESIGN.md", [python, "scripts/check_design_tokens.py"], REPO_ROOT),
-        Gate("contract", "web tokens (panels, palette, type)", [python, "scripts/check_web_tokens.py"], REPO_ROOT),
-        Gate("contract", "token contrast (WCAG AA)", [python, "scripts/check_contrast.py", "--baseline", "scripts/contrast_baseline.json"], REPO_ROOT),
-        Gate("contract", "algorithm reference values", [python, "scripts/check_algorithm_references.py"], REPO_ROOT),
-        Gate("contract", "generated files checked in", ["git", "diff", "--exit-code", "--", "apps/api/src/domain/generated", "apps/web/shared/config/generated"], REPO_ROOT, failure_hint=hint),
-        Gate("contract", "file-size (repo)", ["python3", "scripts/lint_file_size.py"], REPO_ROOT),
+        Gate("contract", "validate v1 contract", [python, "scripts/validate_data_contract.py", "contracts/v1", "--json"], REPO_ROOT, inputs=inputs),
+        Gate("contract", "grading contract (CAA / WMA)", [python, "scripts/check_grading_contract.py", "--json"], REPO_ROOT, inputs=inputs),
+        Gate(
+            "contract",
+            "generate semantic registries",
+            [python, "scripts/generate_data_contract.py", "contracts/v1", "--json"],
+            REPO_ROOT,
+            invalidates_snapshot=True,
+            inputs=CONTRACT_INPUTS,
+            excludes=GENERATED_OUTPUTS,
+        ),
+        Gate("contract", "check generated registry drift", [python, "scripts/check_generated_data_contract.py", "--json"], REPO_ROOT, inputs=inputs),
+        Gate("contract", "metric semantics (web)", [python, "scripts/check_metric_semantics.py"], REPO_ROOT, inputs=inputs),
+        Gate("contract", "confirmed source examples", [python, "scripts/verify_confirmed_source.py"], REPO_ROOT, inputs=("docs", "scripts")),
+        Gate("contract", "design tokens vs DESIGN.md", [python, "scripts/check_design_tokens.py"], REPO_ROOT, inputs=inputs),
+        Gate("contract", "web tokens (panels, palette, type)", [python, "scripts/check_web_tokens.py"], REPO_ROOT, inputs=inputs),
+        Gate("contract", "token contrast (WCAG AA)", [python, "scripts/check_contrast.py", "--baseline", "scripts/contrast_baseline.json"], REPO_ROOT, inputs=inputs),
+        Gate("contract", "algorithm reference values", [python, "scripts/check_algorithm_references.py"], REPO_ROOT, inputs=inputs),
+        Gate("contract", "generated files checked in", ["git", "diff", "--exit-code", "--", "apps/api/src/domain/generated", "apps/web/shared/config/generated"], REPO_ROOT, failure_hint=hint, inputs=inputs),
+        Gate("contract", "file-size (repo)", ["python3", "scripts/lint_file_size.py"], REPO_ROOT, inputs=SIZE_INPUTS),
     ]
 
 
-def web_gates(fast: bool) -> list[Gate]:
-    gates = [
-        Gate("web", "eslint", ["npm", "run", "lint", "--", "--max-warnings=0"], WEB_DIR, 600),
-        Gate("web", "tsc", ["node", "node_modules/typescript/bin/tsc", "--noEmit"], WEB_DIR),
-        Gate("web", "vitest", ["npm", "run", "test"], WEB_DIR, env={"NODE_ENV": "test"}),
-        Gate("web", "file-size (apps/web)", ["python3", "scripts/lint_file_size.py", "apps/web"], REPO_ROOT),
+def web_gates() -> list[Gate]:
+    return [
+        Gate("web", "eslint", ["npm", "run", "lint", "--", "--max-warnings=0", "--cache", "--cache-strategy", "content", "--cache-location", "node_modules/.cache/eslint-gate.cache"], WEB_DIR, 600, inputs=WEB_INPUTS),
+        Gate("web", "tsc", ["node", "node_modules/typescript/bin/tsc", "--noEmit", "--incremental", "--tsBuildInfoFile", "gate.tsbuildinfo"], WEB_DIR, inputs=WEB_INPUTS),
+        Gate("web", "vitest", ["npm", "run", "test"], WEB_DIR, env={"NODE_ENV": "test"}, inputs=WEB_INPUTS),
+        Gate("web", "file-size (apps/web)", ["python3", "scripts/lint_file_size.py", "apps/web"], REPO_ROOT, inputs=WEB_INPUTS),
     ]
-    if fast:
-        gates.append(Gate("web", "next build", ["true"], WEB_DIR, skip_reason="--fast"))
-    else:
-        # Build into the gate's own directory. `npm run build` writes to
-        # NEXT_DIST_DIR, and the production service is serving `.next`; a build
-        # that overwrote it would break the live site without failing anything.
-        gates.append(
-            Gate(
-                "web",
-                "next build",
-                ["npm", "run", "build"],
-                WEB_DIR,
-                600,
-                env={"NEXT_DIST_DIR": _e2e.GATE_DIST_DIR},
-            )
-        )
-    gates.append(e2e_gate(fast))
-    return gates
 
 
-def e2e_gate(fast: bool) -> Gate:
-    """Delegates to scripts/gate_e2e.py; see there for the skip rules."""
-    definition = _e2e.e2e_gate(fast)
+def build_gate() -> Gate:
+    # Build into the gate's own directory; the production service serves
+    # `.next` and must never see a half-finished build under it. The e2e specs
+    # and the Playwright config do not feed the build, so editing them reuses
+    # the last verified build instead of rebuilding.
     return Gate(
+        "web",
+        "next build",
+        ["npm", "run", "build"],
+        WEB_DIR,
+        600,
+        env={"NEXT_DIST_DIR": _e2e.GATE_DIST_DIR},
+        inputs=WEB_INPUTS,
+        excludes=("apps/web/e2e", "apps/web/playwright.config.ts"),
+    )
+
+
+def api_service_probe() -> str | None:
+    """Confirm the API service answers before honouring a cached e2e pass."""
+    from urllib.error import URLError
+    from urllib.request import urlopen
+
+    try:
+        with urlopen("http://127.0.0.1:31001/openapi.json", timeout=3) as response:  # noqa: S310 - fixed local URL
+            if response.status >= 500:
+                return f"API service answered {response.status}"
+    except (URLError, OSError) as error:
+        return f"API service unreachable: {error}"
+    return None
+
+
+def e2e_gates(scope: str) -> list[Gate]:
+    """The build plus the browser suite; the suite runs against the fresh build."""
+    definition = _e2e.e2e_gate(scope)
+    suite = Gate(
         definition.group,
         definition.name,
         definition.command,
@@ -178,63 +205,36 @@ def e2e_gate(fast: bool) -> Gate:
         definition.timeout,
         skip_reason=definition.skip_reason,
         needs_gate_server=True,
+        failure_hint=definition.failure_hint,
+        inputs=E2E_INPUTS,
+        after=(BUILD_SLUG,),
+        verify=api_service_probe,
     )
+    return [build_gate(), suite]
 
 
-def run_gate(gate: Gate) -> Result:
-    if gate.skip_reason is not None:
-        return Result(gate, "SKIP", 0.0, gate.skip_reason)
-    env = dict(os.environ)
-    if gate.needs_gate_server:
-        # Restart here, not when the gate list is built: `next build` runs
-        # earlier in this same process and rewrites the gate dist directory, so
-        # any restart that happened before it would leave the server on the
-        # previous manifest — the exact mismatch that made pages fail to
-        # hydrate.
-        note = _e2e.prepare_server()
-        if note:
-            print(f"  ! {note}", flush=True)
-        started_note = _e2e.ensure_server()
-        if started_note:
-            print(f"  ! {started_note}", flush=True)
-        env.update(_e2e.e2e_env())
-    env.update(gate.env)
-    started = time.monotonic()
-    try:
-        completed = subprocess.run(
-            gate.command,
-            cwd=gate.cwd,
-            capture_output=True,
-            text=True,
-            timeout=gate.timeout,
-            env=env,
-        )
-    except subprocess.TimeoutExpired:
-        return Result(gate, "FAIL", time.monotonic() - started, f"timeout after {gate.timeout}s")
-    except OSError as error:
-        return Result(gate, "FAIL", time.monotonic() - started, str(error))
-    finally:
-        if gate.needs_gate_server:
-            _e2e.stop_server()
-    elapsed = time.monotonic() - started
-    status = "PASS" if completed.returncode == 0 else "FAIL"
-    tail = ""
-    if status == "FAIL":
-        output = (completed.stdout + "\n" + completed.stderr).strip().splitlines()
-        tail = "\n".join(output[-FAIL_OUTPUT_TAIL:])
-        if gate.failure_hint:
-            tail = f"{tail}\nhint: {gate.failure_hint}" if tail else f"hint: {gate.failure_hint}"
-    return Result(gate, status, elapsed, tail)
+def ensure_node_on_path() -> None:
+    from shutil import which
+
+    if all(which(tool) for tool in ("node", "npm")):
+        return
+    for candidate in sorted(
+        glob.glob(os.path.expanduser("~/.nvm/versions/node/v22*/bin")), reverse=True
+    ):
+        if (Path(candidate) / "npm").exists():
+            os.environ["PATH"] = candidate + os.pathsep + os.environ.get("PATH", "")
+            return
 
 
 def main() -> int:
     summary = (__doc__ or __file__).splitlines()[0]
     parser = argparse.ArgumentParser(description=summary)
     parser.add_argument("groups", nargs="*", metavar="group", default=[],
-                        help="web | api | contract | all (default: all)")
-    parser.add_argument("--fast", action="store_true", help="skip next build")
+                        help="web | api | contract | e2e | e2e-full | all (default: all)")
+    parser.add_argument("--no-cache", action="store_true",
+                        help="run every gate and refresh stored passes")
     args = parser.parse_args()
-    valid_groups = {"web", "api", "contract", "all"}
+    valid_groups = {"web", "api", "contract", "e2e", "e2e-full", "all"}
     unknown = set(args.groups) - valid_groups
     if unknown:
         parser.error(f"unknown group(s): {', '.join(sorted(unknown))}")
@@ -250,28 +250,50 @@ def main() -> int:
     if "api" in selected:
         gates += api_gates()
     if "web" in selected:
-        gates += web_gates(args.fast)
+        gates += web_gates()
+    if "e2e" in selected:
+        gates += e2e_gates("smoke")
+    if "e2e-full" in selected:
+        gates += e2e_gates("full")
 
-    results = []
-    for gate in gates:
-        print(f"▶ {gate.group}/{gate.name} …", flush=True)
-        result = run_gate(gate)
-        results.append(result)
-        suffix = f" ({result.tail.splitlines()[0]})" if result.tail else ""
-        print(f"  {result.status}  {result.seconds:.1f}s{suffix}")
-        if result.status == "FAIL" and result.tail:
-            for line in result.tail.splitlines():
-                print(f"    | {line}")
-
-    failed = [r for r in results if r.status == "FAIL"]
-    skipped = [r for r in results if r.status == "SKIP"]
-    print(
-        f"\nSummary: {len(results) - len(failed) - len(skipped)} passed, "
-        f"{len(failed)} failed, {len(skipped)} skipped"
+    # The registry generator rewrites files that every other gate reads, so it
+    # is a barrier: everything waits for it (a cached generate costs nothing).
+    if any(gate.slug == GENERATE_SLUG for gate in gates):
+        for gate in gates:
+            if gate.slug != GENERATE_SLUG:
+                gate.after += (GENERATE_SLUG,)
+    gates.sort(
+        key=lambda gate: (
+            LONGEST_FIRST.index(gate.slug) if gate.slug in LONGEST_FIRST else len(LONGEST_FIRST),
+            gate.slug,
+        )
     )
-    for result in skipped:
-        print(f"SKIPPED: {result.gate.group}/{result.gate.name}: {result.tail}")
-    return 1 if failed else 0
+
+    snapshot = Snapshot()
+    units = [
+        gate_scheduler.Unit(
+            gate.slug, gate.after, lambda bound=gate: execute(bound, snapshot, not args.no_cache)
+        )
+        for gate in gates
+    ]
+    started = time.monotonic()
+    statuses = gate_scheduler.run_all(units, max(2, os.cpu_count() or 2), announce=say)
+
+    failed = [name for name, status in statuses.items() if status == "FAIL"]
+    blocked = [name for name, status in statuses.items() if status == "BLOCKED"]
+    skipped = [name for name, status in statuses.items() if status == "SKIP"]
+    cached = [name for name, status in statuses.items() if status == "CACHED"]
+    print(
+        f"\nSummary: {len(statuses) - len(failed) - len(blocked) - len(skipped)} passed "
+        f"({len(cached)} cached), {len(failed)} failed, {len(blocked)} blocked, "
+        f"{len(skipped)} skipped — {time.monotonic() - started:.1f}s wall"
+    )
+    for name in blocked:
+        print(f"BLOCKED: {name}")
+    for name in skipped:
+        gate = next(g for g in gates if g.slug == name)
+        print(f"SKIPPED: {name}: {gate.skip_reason}")
+    return 1 if failed or blocked else 0
 
 
 if __name__ == "__main__":

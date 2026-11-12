@@ -14,7 +14,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
 # Edit .env to set DATABASE_URL
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 31004
 
 # Frontend (terminal 2)
 cd apps/web
@@ -27,6 +27,18 @@ Verify health:
 ```bash
 curl http://localhost:31001/health
 ```
+
+## Ports
+
+Every port this project binds stays inside 31000–31099.
+
+| Port | Service |
+|---|---|
+| 31000 | production frontend (`next start`, `running-man-web.service`) |
+| 31001 | production API (uvicorn, `running-man-api.service`) |
+| 31002 | gate frontend for the Playwright suite (`next start`, `.next-gate`) |
+| 31003 | local development frontend (`next dev`) |
+| 31004 | local development API (`uvicorn --reload`) |
 
 Expected response:
 
@@ -68,7 +80,7 @@ registered in `contracts/v1`.
 cd apps/api
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 31004
 ruff check . && mypy src tests
 
 # Frontend local (development — localhost only, no CDN)

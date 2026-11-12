@@ -21,7 +21,7 @@ ROOT: Final = Path(__file__).resolve().parents[1]
 API_DIR: Final = ROOT / "apps" / "api"
 API_SRC: Final = API_DIR / "src"
 DEFAULT_STORAGE_STATE: Final = ROOT / "apps" / "web" / "e2e" / ".auth" / "storageState.json"
-DEFAULT_API_URL: Final = "http://localhost:28801/api/v1/athletes/me"
+DEFAULT_API_URL: Final = "http://localhost:31002/api/v1/athletes/me"
 SELECT_ATHLETE_SQL: Final = """
 SELECT a.id FROM athletes a LEFT JOIN activity_summary x ON x.athlete_id = a.id GROUP BY a.id ORDER BY count(x.activity_id) DESC, a.id ASC LIMIT 1
 """.strip()

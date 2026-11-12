@@ -81,6 +81,23 @@ GRANT CREATE ON SCHEMA public TO wind_runner;
 Run it against `wind_runner_test` only. Without it every DB-backed test fails with
 `permission denied for schema public`.
 
+## Gate cache and parallel execution
+
+`scripts/run_gates.py` runs gates concurrently (bounded by the core count) and
+memoises each gate by the content hash of the files it depends on (`apps/api`,
+`apps/web`, `scripts/`, `contracts/` plus its own tool inputs). A gate that
+already passed on identical content is reported CACHED and skipped, so an
+unchanged tree finishes in seconds; only passes are memoised, so a failure
+always re-runs. The default selection (`web api contract`) finishes within
+half a minute. Browser tiers are separate groups — a real browser suite cannot
+fit that budget: `run_gates.py e2e` builds and runs the `@smoke` subset (one
+load per primary route); `run_gates.py e2e-full` runs every test before
+deploying. The registry generator runs first because it rewrites the
+generated files the other gates read. Before a cached pytest pass is honoured
+the test database is probed; a cached e2e pass requires the API service to
+answer. `--no-cache` re-runs everything; deleting `.gate-cache/` forgets
+stored passes (gitignored).
+
 ## Restore drill
 
 ```bash
@@ -166,7 +183,7 @@ Checked-in user-systemd templates live in `infra/systemd/user/`:
 | `running-man-sync.timer` | every 30 min | sync each athlete whose stored frequency says they are due |
 | `running-man-stale-audit.timer` | daily | emit stale computation audit JSON |
 | `running-man-db-partitions.timer` | monthly | create 24 future months of partitions |
-| `running-man-e2e.service` | on demand | serve the frontend on 28801 for the Playwright gate |
+| `running-man-e2e.service` | on demand | serve the frontend on 31002 for the Playwright gate |
 
 Install by copying to `~/.config/systemd/user/`, then `systemctl --user
 daemon-reload` and `systemctl --user enable --now` each timer plus
@@ -186,7 +203,7 @@ nothing:
   copying them verbatim would have replaced one failure with another.
 
 `running-man-e2e.service` is not a timer: it serves the built frontend on port
-28801 so the Playwright gate has something to drive. The gate restarts it when
+31002 so the Playwright gate has something to drive. The gate restarts it when
 `next build` has rewritten `.next` underneath a running server.
 Do not start uvicorn, Next.js, or any project port manually while installing
 maintenance timers.
@@ -263,8 +280,6 @@ The browser only ever sees the CDN domain. `/api/*`, `/auth/*` and `/webhooks/*`
 
 > Historical note: the frontend used to be deployed to Vercel (`running-man-ten.vercel.app`) while only the API ran here. That split is retired — running both sides under one origin removes the cross-site cookie problem entirely.
 
-> Historical note: the frontend previously ran under systemd as `running-man-web.service` on port 28801. That port is now 31000; `scripts/deploy-web.sh` drives the same unit.
-
 ### Build output directories
 
 | Producer | `NEXT_DIST_DIR` | Served by |
@@ -281,8 +296,8 @@ When you need to restart a local `next start` (e2e, manual QA, rebuild), **kill 
 
 ```bash
 cd apps/web
-npm run qa:kill-port -- 28801     # SIGTERM, escalates to SIGKILL after 5s
-node scripts/kill-port.mjs 28801 --signal SIGKILL --timeout 2000
+npm run qa:kill-port -- 31002     # SIGTERM, escalates to SIGKILL after 5s
+node scripts/kill-port.mjs 31002 --signal SIGKILL --timeout 2000
 ```
 
 **Do not use `pkill -f "next-server"` or `pkill -f "next start"`.** `pkill -f` matches the full command line of *every* process on the host, and every Next.js server reports the identical `next-server (v16.3.1)` cmdline — regardless of project or port. Those patterns take down unrelated servers, including the local **pi-web** UI on port 30141, which then exits with `Next.js exited unexpectedly (signal SIGKILL)`.

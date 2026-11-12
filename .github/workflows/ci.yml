@@ -112,6 +112,9 @@ jobs:
       - name: Validate v1 contract
         run: python scripts/validate_data_contract.py contracts/v1 --json
 
+      - name: Verify confirmed source examples
+        run: python scripts/verify_confirmed_source.py
+
       - name: Generate semantic registries
         run: python scripts/generate_data_contract.py contracts/v1 --json
 
@@ -125,7 +128,7 @@ jobs:
     name: Web (lint / typecheck / test / build / size / hex-ban)
     runs-on: ubuntu-latest
     env:
-      NEXT_PUBLIC_API_URL: http://localhost:18000
+      NEXT_PUBLIC_API_URL: http://localhost:31001
 
     steps:
       - uses: actions/checkout@v4

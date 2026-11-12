@@ -9,6 +9,7 @@ node_modules/
 .next-gate/
 .next-build*/
 .next-prev*/
+.next-dev*/
 *.tsbuildinfo
 out/
 
@@ -30,6 +31,8 @@ Thumbs.db
 # Project
 .omo/
 .pi/
+.gate-cache/
+.gate-cache-probe/
 /*-fullpage.png
 /mobile-disclosure-overflow.png
 /today-*.png
@@ -53,6 +56,7 @@ apps/web/e2e/.auth/
 
 # Research scratch output (one-off probes, vendored tarballs, draft specs)
 research_output/
+.analysis/
 
 # Local design mockups + one-off preview screenshots
 .scratch/

@@ -1,0 +1,14 @@
+title = "Running Man gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Training-theory identifiers are not credentials"
+regexes = [
+  '''(?i)"key": "(threshold|vo2max|short_sprint)_intervals"''',
+  '''(?i)vo2max_intervals''',
+]
+paths = [
+  '''apps/api/src/domain/run_classification/theory.py''',
+]
