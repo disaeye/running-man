@@ -3,117 +3,100 @@
 import { Card } from "@shared/ui/Card";
 import { CardHeader } from "@shared/ui/CardHeader";
 import { ScoreRing } from "@shared/ui/ScoreRing";
+import { Button } from "@shared/ui/button";
+import { RefreshSpinner } from "./RefreshSpinner";
 import type { Goal } from "@shared/types/goals";
-import {
-  goalProgress,
-  computeGoalStatus,
-  getGoalRecommendations,
-  statusLabel,
-} from "./goal-utils";
+import { goalReading } from "@features/goals/lib/goal-value";
 
 interface GoalProgressProps {
   goal: Goal;
+  onRefresh: () => void;
+  refreshLoading: boolean;
+  refreshError: string | null;
 }
 
-const STATUS_BAND_COLOR: Record<string, string> = {
-  "on-track": "var(--color-goal-on-track)",
-  behind: "var(--color-goal-behind)",
-  "at-risk": "var(--color-goal-at-risk)",
-};
+/** 体重目标的进度：从基线向目标的趋近比例。 */
+function decreasePct(goal: Goal): number | null {
+  const baseline = goal.baseline_value;
+  const target = goal.target_value;
+  if (baseline == null || target == null || baseline === target) return null;
+  const done = baseline - goal.current_value;
+  const total = baseline - target;
+  if (total === 0) return null;
+  return Math.min(100, Math.max(0, (done / total) * 100));
+}
 
-/**
- * 目标进度卡：环形进度是这一卡唯一的主数字，右侧一句状态加一行当前值 / 目标值。
- *
- * 两个数字不拆成格：只有两个数的「对比」是关系和，不是摘要，拆成两格后视觉上
- * 就不再是一句话里的两个数；三格以上的读数才用 MetricStrip。
- *
- * 建议列表用发丝线分隔，不刷成三条圆角底色块——卡内再套三块小卡，读起来
- * 就是四层卡片。
- */
-export function GoalProgress({ goal }: GoalProgressProps) {
-  if (goal.status === "achieved") return null;
+/** 累计类目标的进度：当前值占目标值的比例。 */
+function increasePct(goal: Goal): number | null {
+  const target = goal.target_value;
+  if (target == null || target <= 0) return null;
+  return Math.min(100, (goal.current_value / target) * 100);
+}
 
-  const targetValue = goal.target_value;
-  const hasNumericTarget = targetValue != null && targetValue > 0;
-  const pct = hasNumericTarget ? goalProgress(goal) : null;
-  const status = computeGoalStatus(goal);
-  const recommendations = hasNumericTarget ? getGoalRecommendations(goal) : [];
-  const ringColor = STATUS_BAND_COLOR[status] ?? "var(--color-accent)";
+/** 目标进度卡：环形进度按方向计算，附当前值与目标值的对照。 */
+export function GoalProgress({ goal, onRefresh, refreshLoading, refreshError }: GoalProgressProps) {
+  if (goal.status === "achieved") {
+    return (
+      <Card padding="md">
+        <CardHeader title="目标进度" />
+        <p className="mt-3 text-subheadline text-text-primary">已达成，累计与对照停在你标记时的读数。</p>
+      </Card>
+    );
+  }
+
+  const pct = goal.direction === "decrease" ? decreasePct(goal) : increasePct(goal);
+  const current = goalReading(goal, goal.current_value);
+  const target = goalReading(goal, goal.target_value);
 
   return (
     <Card padding="md">
-      <CardHeader title="目标进度" />
+      <CardHeader
+        title="目标进度"
+        trailing={
+          <Button variant="secondary" size="sm" onClick={onRefresh} disabled={refreshLoading}>
+            {refreshLoading ? (
+              <span className="inline-flex items-center gap-1.5">
+                <RefreshSpinner />
+                刷新中…
+              </span>
+            ) : (
+              "刷新进度"
+            )}
+          </Button>
+        }
+      />
 
-      <div className="flex items-center gap-4">
+      <div className="mt-3 flex items-center gap-4">
         {pct != null ? (
           <ScoreRing
             value={pct}
             max={100}
             size={72}
             strokeWidth={5}
-            color={ringColor}
-            ariaLabel={`目标进度 ${Math.round(pct)}% — ${statusLabel(status)}`}
+            color="var(--color-accent)"
+            ariaLabel={`目标进度 ${Math.round(pct)}%`}
           >
             <span className="font-mono tabular-nums text-callout font-bold text-text-primary">
               {Math.round(pct)}%
             </span>
           </ScoreRing>
         ) : null}
-
         <div className="flex-1">
-          {pct != null ? (
-            <p className="text-subheadline font-medium text-text-primary">
-              {statusLabel(status)}
-            </p>
-          ) : (
-            <p className="text-subheadline font-medium text-text-primary">尚未填写目标数值</p>
-          )}
-          {hasNumericTarget ? (
+          <p className="text-subheadline font-medium text-text-primary">
+            {pct == null ? "尚未填写目标数值" : goal.direction === "decrease" ? "正在向目标体重趋近" : "按起算日累计中"}
+          </p>
+          {current && target ? (
             <p className="mt-0.5 font-mono tabular-nums text-caption1 text-text-secondary">
-              {goal.current_value.toFixed(1)} / {targetValue?.toFixed(1)}
-              {goal.unit ? ` ${goal.unit}` : ""}
+              {current.value}
+              {current.unit ? ` ${current.unit}` : ""} / {target.value}
+              {target.unit ? ` ${target.unit}` : ""}
             </p>
           ) : null}
         </div>
       </div>
-
-      {recommendations.length > 0 ? (
-        <ul className="mt-4 divide-y divide-border-subtle border-t border-border-subtle">
-          {recommendations.map((tip, i) => (
-            <li key={i} className="flex items-start gap-2 py-2.5">
-              <TipIcon status={status} />
-              <span className="text-subheadline leading-relaxed text-text-secondary">
-                {tip}
-              </span>
-            </li>
-          ))}
-        </ul>
+      {refreshError ? (
+        <p role="alert" className="mt-3 text-caption1 text-error">{refreshError}</p>
       ) : null}
     </Card>
-  );
-}
-
-function TipIcon({ status }: { status: string }) {
-  const color =
-    status === "on-track"
-      ? "text-goal-on-track"
-      : status === "behind"
-        ? "text-goal-behind"
-        : "text-goal-at-risk";
-
-  return (
-    <svg
-      className={`mt-0.5 h-4 w-4 shrink-0 ${color}`}
-      viewBox="0 0 16 16"
-      fill="currentColor"
-    >
-      {status === "on-track" ? (
-        <path d="M8 0a8 8 0 110 16A8 8 0 018 0zm3.5 5.3l-4.5 5.5L4.3 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      ) : status === "behind" ? (
-        <path d="M8 1l7 14H1L8 1zM8 6v4m0 2v.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      ) : (
-        <path d="M8 0a8 8 0 110 16A8 8 0 018 0zm0 4v5m0 3v.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      )}
-    </svg>
   );
 }

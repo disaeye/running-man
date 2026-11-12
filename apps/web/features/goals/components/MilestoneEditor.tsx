@@ -2,31 +2,48 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import useSWR from "swr";
 import { X } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
+import { callOrvalValidated } from "@shared/api/orval-adapter";
+import { getPeriodizationApiV1PlanPeriodizationGet } from "@shared/api/generated/clients";
+import * as Generated from "@shared/api/generated/model";
+import { z } from "zod";
+import { phaseLabel } from "@features/goals/lib/phase-labels";
 import type { Milestone } from "@shared/types/goals";
 import type { MilestoneDraft } from "@features/goals/hooks/useGoals";
 
-export function MilestoneEditor({
-  initial,
-  goalUnit,
-  saving,
-  onCancel,
-  onSave,
-}: {
+interface MilestoneEditorProps {
+  goalId: string;
   initial: Milestone | null;
   goalUnit?: string | null;
   saving: boolean;
   onCancel: () => void;
   onSave: (draft: MilestoneDraft) => Promise<void>;
-}) {
+}
+
+/** 里程碑编辑：手动清单字段＋可选的阶段绑定（自动核验）。 */
+export function MilestoneEditor({ goalId, initial, goalUnit, saving, onCancel, onSave }: MilestoneEditorProps) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [targetDate, setTargetDate] = useState(initial?.target_date ?? "");
   const [targetValue, setTargetValue] = useState(initial?.target_value?.toString() ?? "");
   const [unit, setUnit] = useState(initial?.unit ?? goalUnit ?? "");
   const [resultText, setResultText] = useState(initial?.result_text ?? "");
+  const [phaseId, setPhaseId] = useState(initial?.phase_id ?? "");
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // 与 GoalPhases 共享同一个 SWR key：详情页里两处读的是同一份缓存。
+  const { data: phases } = useSWR<Generated.TrainingPhaseResponseOutput[]>(
+    initial == null ? ["/plan/periodization", goalId] : null,
+    {
+      fetcher: () =>
+        callOrvalValidated(
+          (fetcher) => getPeriodizationApiV1PlanPeriodizationGet({ goal_id: goalId }, {}, fetcher),
+          z.array(Generated.TrainingPhaseResponse),
+        ),
+    },
+  );
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,6 +59,7 @@ export function MilestoneEditor({
       target_value: parsedTarget,
       unit: unit.trim() || null,
       result_text: resultText.trim() || null,
+      phase_id: phaseId || null,
     });
   };
 
@@ -56,12 +74,27 @@ export function MilestoneEditor({
         <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
       </label>
       <label className="grid gap-1 text-caption1 text-text-secondary">
-        目标数值
+        目标数值（跑量里程碑按公里）
         <Input type="number" step="any" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} />
       </label>
       <label className="grid gap-1 text-caption1 text-text-secondary">
         单位
         <Input maxLength={40} value={unit} onChange={(event) => setUnit(event.target.value)} />
+      </label>
+      <label className="grid gap-1 text-caption1 text-text-secondary">
+        绑定阶段（阶段结束后按累计跑量自动核验）
+        <select
+          value={phaseId}
+          onChange={(event) => setPhaseId(event.target.value)}
+          className="min-h-11 rounded-lg border border-border-default bg-surface-card px-3 text-subheadline"
+        >
+          <option value="">不绑定（手动勾选）</option>
+          {(phases ?? []).map((phase) => (
+            <option key={phase.phase_id} value={phase.phase_id}>
+              {phaseLabel(phase.name)} · {phase.start_date} 至 {phase.end_date}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="grid gap-1 text-caption1 text-text-secondary">
         完成结果

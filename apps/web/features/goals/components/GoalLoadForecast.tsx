@@ -51,17 +51,21 @@ export function GoalLoadForecast({ today, targetDate, timezone }: { today: strin
     return days.map((value) => value.slice(5));
   }, [pmc.data, today, to]);
   if (!pmc.data.length) return <PageCard title="预计负荷走势"><p className="text-sm text-muted-foreground">尚无负荷记录，无法推演。</p></PageCard>;
+  const plannedFuture = events.events.filter(
+    (event) => event.status !== "deleted" && !event.done && activityLocalDay(event.start_time, timezone) > today,
+  );
   const plannedDays = new Set<string>();
-  for (const event of events.events) {
-    if (event.status === "deleted" || event.done || event.predicted_tss == null) continue;
+  for (const event of plannedFuture) {
+    if (event.predicted_tss == null) continue;
     plannedDays.add(activityLocalDay(event.start_time, timezone));
   }
-  const hardDays = [...plannedDays].filter((day) => (events.events.find((event) => activityLocalDay(event.start_time, timezone) === day)?.predicted_tss ?? 0) >= 80).length;
-  const weeklyKm = plannedDays.size ? [...plannedDays].reduce((sum) => sum + 0, 0) : 0;
+  const plannedDistanceKm = plannedFuture.reduce((sum, event) => sum + (event.predicted_distance_m ?? 0), 0) / 1000;
+  const plannedTssDays = plannedFuture.filter((event) => (event.predicted_tss ?? 0) >= 80).length;
+  const missingTss = plannedFuture.some((event) => event.predicted_tss == null);
   const rows = [
-    { label: "强度日间隔", value: hardDays ? `${hardDays} 个强度日按课表排列` : "课表未标记强度日", tone: hardDays ? "primary" as const : "muted" as const },
-    { label: "周跑量", value: weeklyKm ? `计划覆盖 ${plannedDays.size} 天` : "计划未覆盖未来训练", tone: plannedDays.size ? "warn" as const : "muted" as const },
+    { label: "强度课", value: plannedTssDays ? `${plannedTssDays} 节高强度课` : "课表未标记强度课", tone: plannedTssDays ? "primary" as const : "muted" as const },
+    { label: "计划覆盖", value: plannedFuture.length ? `未来 ${plannedFuture.length} 课 · ${plannedDistanceKm.toFixed(0)} 公里` : "计划未覆盖未来训练", tone: plannedFuture.length ? "warn" as const : "muted" as const },
     { label: "减量期安排", value: targetDate ? "比赛日已纳入推演" : "未设置减量日期", tone: targetDate ? "primary" as const : "muted" as const },
   ];
-  return <PageCard title="预计负荷走势" action={<Tag tone="warn">规划预测</Tag>}><LovableChart h={120} zero labels={forecastLabels} lines={[{ data: pmc.data.map((point) => point.ctl), cls: "stroke-fitness", label: "CTL", format: (v) => v.toFixed(1) }, { data: pmc.data.map((point) => point.tsb), cls: "stroke-form", label: "TSB", format: (v) => v.toFixed(1) }, { data: future, cls: "stroke-fitness", dashed: true, label: "计划 CTL", format: (v) => v.toFixed(1) }]} /><LovableLegend items={[{ label: "CTL 体能", cls: "bg-fitness" }, { label: "TSB 状态", cls: "bg-form" }, { label: "计划推演", cls: "border border-dashed border-fitness" }]} /><p className="mt-2 text-caption1 text-muted-foreground">{future.length ? "虚线按已保存计划的预计 TSS 计算，未安排日期按休息处理。" : "尚无未来计划负荷，当前仅展示历史记录。"}</p><div className="mt-3 space-y-2">{rows.map((row) => <div key={row.label} className="flex items-center justify-between gap-2 text-sm"><span className="text-muted-foreground">{row.label}</span><Tag tone={row.tone}>{row.value}</Tag></div>)}</div></PageCard>;
+  return <PageCard title="预计负荷走势" action={<Tag tone="warn">规划预测</Tag>}><LovableChart h={120} zero labels={forecastLabels} lines={[{ data: pmc.data.map((point) => point.ctl), cls: "stroke-fitness", label: "CTL", format: (v) => v.toFixed(1) }, { data: pmc.data.map((point) => point.tsb), cls: "stroke-form", label: "TSB", format: (v) => v.toFixed(1) }, { data: future, cls: "stroke-fitness", dashed: true, label: "计划 CTL", format: (v) => v.toFixed(1) }]} /><LovableLegend items={[{ label: "CTL 体能", cls: "bg-fitness" }, { label: "TSB 状态", cls: "bg-form" }, { label: "计划推演", cls: "border border-dashed border-fitness" }]} /><p className="mt-2 text-caption1 text-muted-foreground">{future.length ? "虚线按已保存计划的预计 TSS 计算，未安排日期按休息处理。" : "尚无未来计划负荷，当前仅展示历史记录。"}{missingTss ? " 部分课表未估算负荷，推演偏低。" : ""}</p><div className="mt-3 space-y-2">{rows.map((row) => <div key={row.label} className="flex items-center justify-between gap-2 text-sm"><span className="text-muted-foreground">{row.label}</span><Tag tone={row.tone}>{row.value}</Tag></div>)}</div></PageCard>;
 }

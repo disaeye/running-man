@@ -1,82 +1,38 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@shared/ui/dialog";
+import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shared/ui/dialog";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@shared/ui/select";
-import type { Goal, GoalType, GoalStatus } from "@shared/types/goals";
-import { GOAL_TYPES } from "@shared/types/goals";
+import { apiFetch } from "@shared/lib/api";
+import type { Goal, GoalStatus, GoalType } from "@shared/types/goals";
+import { EventFields, WeightFields, AccumulationFields, TypeSelector, typePatch, type GoalFormData, type FormPatch } from "./goal-form-fields";
 
-interface GoalFormProps {
-  open: boolean;
+export type { GoalFormData } from "./goal-form-fields";
+
+interface GoalFormProps {  open: boolean;
   onClose: () => void;
-  onSubmit: (data: GoalFormData) => void;
+  onSubmit: (data: GoalFormData) => Promise<void>;
   editingGoal?: Goal | null;
+  submitting?: boolean;
+  submitError?: string | null;
 }
 
-export interface GoalFormData {
-  type: GoalType;
-  title: string;
-  target_value: number | null;
-  current_value: number;
-  unit: string | null;
-  target_date: string | null;
-  race_distance_m: number | null;
-  race_target_time_s: number | null;
-  status: GoalStatus;
-}
-
-const TYPE_OPTIONS = Object.entries(GOAL_TYPES).map(([value, cfg]) => ({
-  value,
-  label: `${cfg.icon} ${cfg.label}`,
-}));
-
-/** Unit choices offered per goal type; the type's defaultUnit is first. */
-const UNIT_OPTIONS: Record<GoalType, readonly string[]> = {
-  event: ["km", "min"],
-  distance: ["km", "m"],
-  time: ["min", "h"],
-  weight: ["kg", "lb"],
-  consistency: ["天", "次", "周"],
-};
-
-function defaults(): GoalFormData {
-  return {
-    type: "event",
-    title: "",
-    target_value: null,
-    current_value: 0,
-    unit: "",
-    target_date: "",
-    race_distance_m: null,
-    race_target_time_s: null,
-    status: "active",
-  };
-}
-
-export function GoalForm({ open, onClose, onSubmit, editingGoal }: GoalFormProps) {
+export function GoalForm({ open, onClose, onSubmit, editingGoal, submitting, submitError }: GoalFormProps) {
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+    <Dialog open={open} onOpenChange={(next) => { if (!next && !submitting) onClose(); }}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
-        <DialogHeader><DialogTitle>{editingGoal ? "编辑目标" : "创建目标"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{editingGoal ? "编辑目标" : "创建目标"}</DialogTitle>
+        </DialogHeader>
         {open ? (
           <GoalFormFields
             key={editingGoal?.goal_id ?? "create"}
-            editingGoal={editingGoal}
+            editingGoal={editingGoal ?? null}
             onClose={onClose}
             onSubmit={onSubmit}
+            submitting={submitting ?? false}
+            submitError={submitError ?? null}
           />
         ) : null}
       </DialogContent>
@@ -84,103 +40,129 @@ export function GoalForm({ open, onClose, onSubmit, editingGoal }: GoalFormProps
   );
 }
 
-function GoalFormFields({ onClose, onSubmit, editingGoal }: Omit<GoalFormProps, "open">) {
-  const [form, setForm] = useState<GoalFormData>(
-    editingGoal
-      ? {
-          type: editingGoal.type,
-          title: editingGoal.title,
-          target_value: editingGoal.target_value,
-          current_value: editingGoal.current_value,
-          unit: editingGoal.unit ?? "",
-          target_date: editingGoal.target_date ?? "",
-          race_distance_m: editingGoal.race_distance_m,
-          race_target_time_s: editingGoal.race_target_time_s,
-          status: editingGoal.status,
-        }
-      : defaults(),
-  );
+function defaults(): GoalFormData {
+  return {
+    type: "event", title: "", target_value: null, current_value: 0, unit: null,
+    start_date: null, sport_key: "run", is_primary: false, baseline_value: null,
+    direction: "increase", target_date: null, race_distance_m: null,
+    race_target_time_s: null, status: "active",
+  };
+}
 
+function fromGoal(goal: Goal): GoalFormData {
+  return {
+    type: goal.type, title: goal.title, target_value: goal.target_value,
+    current_value: goal.current_value, unit: goal.unit, start_date: goal.start_date,
+    sport_key: goal.sport_key ?? "run", is_primary: goal.is_primary,
+    baseline_value: goal.baseline_value, direction: goal.direction,
+    target_date: goal.target_date, race_distance_m: goal.race_distance_m,
+    race_target_time_s: goal.race_target_time_s, status: goal.status,
+  };
+}
+
+function GoalFormFields({ editingGoal, onClose, onSubmit, submitting, submitError }: Omit<GoalFormProps, "open"> & { submitting: boolean; submitError: string | null }) {
+  const [form, setForm] = useState<GoalFormData>(editingGoal ? fromGoal(editingGoal) : defaults());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [latestWeight, setLatestWeight] = useState<number | null>(null);
 
-  const update = (field: keyof GoalFormData, value: string | number | null) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
+  useEffect(() => {
+    if (editingGoal || latestWeight != null) return;
+    let active = true;
+    void apiFetch<{ entries: { weight_kg: number }[] }>("/weight", { params: { from: "2020-01-01", to: new Date().toISOString().slice(0, 10) } })
+      .then((result) => {
+        if (active && result.entries.length > 0) {
+          const latest = result.entries[0];
+          if (latest) setLatestWeight(latest.weight_kg);
+        }
+      })
+      .catch(() => { /* 没有体重记录时留空，由用户输入 */ });
+    return () => { active = false; };
+  }, [editingGoal, latestWeight]);
+
+  const update = (patch: FormPatch) => {
+    setForm((prev) => ({ ...prev, ...patch }));
+    setErrors({});
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const raceSeconds = form.race_target_time_s ?? null;
+  const targetPace = raceSeconds && form.race_distance_m
+    ? raceSeconds / (form.race_distance_m / 1000) : null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!form.title.trim()) errs.title = "请输入目标标题";
-    if (form.target_value != null && form.target_value < 0)
-      errs.target_value = "目标值不能为负";
-
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
+    if (form.type === "event") {
+      if (!form.race_distance_m) errs.race = "请选择或填写比赛距离";
+      if (!raceSeconds || raceSeconds <= 0) errs.race = "请填写目标完赛用时";
+      if (!form.target_date) errs.date = "比赛目标需要比赛日期";
+    } else if (form.type === "weight") {
+      if (!form.baseline_value) errs.baseline = "请填写当前体重";
+      if (!form.target_value) errs.value = "请填写目标体重";
+    } else {
+      if (!form.target_value || form.target_value <= 0) errs.value = "请填写目标数值";
     }
-
-    onSubmit({
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    await onSubmit({
       ...form,
       title: form.title.trim(),
-      target_value: form.target_value ?? null,
-      unit: form.unit?.trim() || null,
-      target_date: form.target_date?.trim() || null,
-      race_distance_m: form.race_distance_m,
-      race_target_time_s: form.race_target_time_s,
+      target_value: form.type === "event" ? null : form.target_value,
+      unit: form.type === "event" ? null : unitFor(form.type, form.unit),
+      direction: form.type === "weight" ? "decrease" : "increase",
     });
-  };
-
-  // Auto-set unit from type
-  const handleTypeChange = (value: string) => {
-    const typeCfg = GOAL_TYPES[value as GoalType];
-    update("type", value);
-    if (typeCfg) {
-      update("unit", typeCfg.defaultUnit);
-    }
-    if (value !== "event") {
-      update("race_distance_m", null);
-      update("race_target_time_s", null);
-    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* Type selector */}
-        <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">目标类型</span><Select value={form.type} onValueChange={handleTypeChange}><SelectTrigger className="min-h-[44px] w-full bg-surface-overlay"><SelectValue /></SelectTrigger><SelectContent>{TYPE_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></label>
+      <div>
+        <span className="text-subheadline font-medium text-text-secondary">目标类型</span>
+        <TypeSelector current={form.type} onSelect={(value) => update(typePatch(value))} />
+      </div>
 
-        {/* Title */}
-        <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">目标名称</span><Input name="title" placeholder="例如：10K 破 45 分" value={form.title} onChange={(e) => update("title", e.target.value)} aria-invalid={Boolean(errors.title)} />{errors.title && <span className="text-caption1 text-error">{errors.title}</span>}</label>
+      <label className="flex flex-col gap-1">
+        <span className="text-subheadline font-medium text-text-secondary">目标名称</span>
+        <Input value={form.title} onChange={(e) => update({ title: e.target.value })} placeholder="例如：10K 破 45 分" aria-invalid={Boolean(errors.title)} />
+        {errors.title && <span className="text-caption1 text-error">{errors.title}</span>}
+      </label>
 
-        {/* Target value + unit */}
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">目标值</span><Input name="target_value" type="number" step="0.1" placeholder="0" value={form.target_value ?? ""} onChange={(e) => update("target_value", e.target.value ? Number(e.target.value) : null)} aria-invalid={Boolean(errors.target_value)} />{errors.target_value && <span className="text-caption1 text-error">{errors.target_value}</span>}</label>
-          <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">单位</span><Select value={form.unit ?? ""} onValueChange={(v) => update("unit", v)}><SelectTrigger className="min-h-[44px] w-full bg-surface-overlay"><SelectValue placeholder="选择单位" /></SelectTrigger><SelectContent>{UNIT_OPTIONS[form.type].map((unit) => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}</SelectContent></Select></label>
-        </div>
+      {form.type === "event" ? (
+        <EventFields form={form} update={update} errors={errors} targetPace={targetPace} />
+      ) : form.type === "weight" ? (
+        <WeightFields form={form} update={update} errors={errors} latestWeight={latestWeight} />
+      ) : (
+        <AccumulationFields form={form} update={update} errors={errors} />
+      )}
 
-        {form.type === "event" && (
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">比赛距离（公里）</span><Input name="race_distance_m" type="number" min="1.5" max="1000" step="0.1" placeholder="例如 42.195" value={form.race_distance_m == null ? "" : form.race_distance_m / 1000} onChange={(e) => update("race_distance_m", e.target.value ? Number(e.target.value) * 1000 : null)} /></label>
-            <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">目标完赛用时（分钟）</span><Input name="race_target_time_s" type="number" min="3" max="2880" step="1" placeholder="例如 240" value={form.race_target_time_s == null ? "" : form.race_target_time_s / 60} onChange={(e) => update("race_target_time_s", e.target.value ? Number(e.target.value) * 60 : null)} /></label>
-          </div>
-        )}
+      <label className="flex flex-col gap-1">
+        <span className="text-subheadline font-medium text-text-secondary">{form.type === "event" ? "比赛日期" : "目标日期"}</span>
+        <Input type="date" value={form.target_date ?? ""} onChange={(e) => update({ target_date: e.target.value || null })} />
+        {errors.date && <span className="text-caption1 text-error">{errors.date}</span>}
+      </label>
 
-        {/* Target date */}
-        <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">目标日期</span><Input name="target_date" type="date" value={form.target_date ?? ""} onChange={(e) => update("target_date", e.target.value)} /></label>
+      {editingGoal ? (
+        <label className="flex flex-col gap-1">
+          <span className="text-subheadline font-medium text-text-secondary">目标状态</span>
+          <select value={form.status} onChange={(e) => update({ status: e.target.value as GoalStatus })}
+            className="min-h-11 rounded-lg border border-border-default bg-surface-card px-3 text-subheadline">
+            <option value="active">进行中</option>
+            <option value="achieved">已达成</option>
+            <option value="abandoned">已放弃</option>
+          </select>
+        </label>
+      ) : null}
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            取消
-          </Button>
-          <Button type="submit">
-            {editingGoal ? "保存更改" : "创建目标"}
-          </Button>
-        </div>
+      {submitError ? <p role="alert" className="text-caption1 text-error">{submitError}</p> : null}
+
+      <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
+        <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>取消</Button>
+        <Button type="submit" disabled={submitting}>{submitting ? "保存中…" : editingGoal ? "保存更改" : "创建目标"}</Button>
+      </div>
     </form>
   );
+}
+
+function unitFor(type: GoalType, unit: string | null): string | null {
+  if (type === "weight") return "kg";
+  if (type === "consistency") return "天";
+  return unit;
 }

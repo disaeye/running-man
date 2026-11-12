@@ -9,8 +9,8 @@ import {
 } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
 import { z } from "zod";
-import { narrowToLiteral } from "@shared/lib/dto-nullable";
-import type { Goal, GoalType, GoalStatus } from "@shared/types/goals";
+import { goalFromResponse } from "./useGoals";
+import type { Goal } from "@shared/types/goals";
 
 interface UseGoalRefreshResult {
   refreshGoal: (goalId: string) => Promise<Goal>;
@@ -19,35 +19,8 @@ interface UseGoalRefreshResult {
   error: string | null;
 }
 
-const GOAL_TYPES: readonly GoalType[] = [
-  "event",
-  "distance",
-  "time",
-  "weight",
-  "consistency",
-];
-const GOAL_STATUSES: readonly GoalStatus[] = [
-  "active",
-  "achieved",
-  "abandoned",
-];
-
 function mapGoal(raw: Generated.GoalResponseOutput): Goal {
-  return {
-    goal_id: raw.goal_id,
-    athlete_id: raw.athlete_id,
-    type: narrowToLiteral(raw.type, GOAL_TYPES, "event"),
-    title: raw.title,
-    target_value: raw.target_value ?? null,
-    current_value: raw.current_value,
-    unit: raw.unit ?? null,
-    target_date: raw.target_date ?? null,
-    race_distance_m: raw.race_distance_m ?? null,
-    race_target_time_s: raw.race_target_time_s ?? null,
-    status: narrowToLiteral(raw.status, GOAL_STATUSES, "active"),
-    created_at: raw.created_at,
-    updated_at: raw.updated_at,
-  };
+  return goalFromResponse(raw);
 }
 
 export function useGoalRefresh(): UseGoalRefreshResult {

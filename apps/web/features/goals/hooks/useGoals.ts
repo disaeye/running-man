@@ -16,7 +16,7 @@ import {
 import * as Generated from "@shared/api/generated/model";
 import { z } from "zod";
 import { narrowToLiteral } from "@shared/lib/dto-nullable";
-import type { Goal, GoalType, GoalStatus, Milestone } from "@shared/types/goals";
+import type { Goal, GoalDirection, GoalType, GoalStatus, Milestone } from "@shared/types/goals";
 
 const GOAL_TYPES: readonly GoalType[] = [
   "event",
@@ -30,8 +30,10 @@ const GOAL_STATUSES: readonly GoalStatus[] = [
   "achieved",
   "abandoned",
 ];
+const GOAL_DIRECTIONS: readonly GoalDirection[] = ["increase", "decrease"];
 
-function mapGoal(raw: Generated.GoalResponseOutput): Goal {
+/** 把接口回应的 Goal 映射为前端类型；useGoalRefresh 与未接线的页面共用。 */
+export function goalFromResponse(raw: Generated.GoalResponseOutput): Goal {
   return {
     goal_id: raw.goal_id,
     athlete_id: raw.athlete_id,
@@ -40,9 +42,16 @@ function mapGoal(raw: Generated.GoalResponseOutput): Goal {
     target_value: raw.target_value ?? null,
     current_value: raw.current_value,
     unit: raw.unit ?? null,
+    start_date: raw.start_date ?? null,
+    sport_key: raw.sport_key ?? null,
+    is_primary: raw.is_primary ?? false,
+    baseline_value: raw.baseline_value ?? null,
+    direction: narrowToLiteral(raw.direction, GOAL_DIRECTIONS, "increase"),
     target_date: raw.target_date ?? null,
     race_distance_m: raw.race_distance_m ?? null,
     race_target_time_s: raw.race_target_time_s ?? null,
+    race_actual_time_s: raw.race_actual_time_s ?? null,
+    race_activity_id: raw.race_activity_id ?? null,
     status: narrowToLiteral(raw.status, GOAL_STATUSES, "active"),
     created_at: raw.created_at,
     updated_at: raw.updated_at,
@@ -53,6 +62,7 @@ function mapMilestone(raw: Generated.MilestoneResponseOutput): Milestone {
   return {
     milestone_id: raw.milestone_id,
     goal_id: raw.goal_id,
+    phase_id: raw.phase_id ?? null,
     title: raw.title,
     target_date: raw.target_date ?? null,
     target_value: raw.target_value ?? null,
@@ -69,7 +79,7 @@ export function useGoals() {
       callOrvalValidated(
         (f) => listGoalsApiV1GoalsGet({}, f),
         z.array(Generated.GoalResponse),
-      ).then((rows) => rows.map(mapGoal)),
+      ).then((rows) => rows.map(goalFromResponse)),
   });
   const refresh = useCallback(async () => {
     await mutate();
@@ -85,7 +95,7 @@ export function useGoal(goalId: string | null) {
       return callOrvalValidated(
         (f) => getGoalApiV1GoalsGoalIdGet(goalId, {}, f),
         Generated.GoalResponse,
-      ).then(mapGoal);
+      ).then(goalFromResponse);
     },
   });
   const milestonesResult = useSWR<Milestone[]>(
@@ -117,15 +127,24 @@ export function useGoal(goalId: string | null) {
   };
 }
 
-export async function createGoal(
-  payload: Omit<Goal, "goal_id" | "athlete_id" | "created_at" | "updated_at">,
-): Promise<Goal> {
+/** 客户端可写的目标字段：结案字段（实际成绩与活动）由比赛结案接口写入。 */
+export type GoalPayload = Omit<
+  Goal,
+  "goal_id" | "athlete_id" | "created_at" | "updated_at" | "race_actual_time_s" | "race_activity_id"
+>;
+
+export async function createGoal(payload: GoalPayload): Promise<Goal> {
   const body: Generated.GoalCreate = {
     type: payload.type,
     title: payload.title,
-    target_value: payload.target_value,
+    target_value: payload.type === "event" ? null : payload.target_value,
     current_value: payload.current_value,
-    unit: payload.unit,
+    unit: payload.type === "event" ? null : payload.unit,
+    start_date: payload.start_date,
+    sport_key: payload.sport_key,
+    is_primary: payload.is_primary,
+    baseline_value: payload.baseline_value,
+    direction: payload.direction,
     target_date: payload.target_date,
     race_distance_m: payload.race_distance_m,
     race_target_time_s: payload.race_target_time_s,
@@ -134,7 +153,7 @@ export async function createGoal(
   return callOrvalValidated(
     (f) => createGoalApiV1GoalsPost(body, {}, f),
     Generated.GoalResponse,
-  ).then(mapGoal);
+  ).then(goalFromResponse);
 }
 
 export async function updateGoal(
@@ -144,9 +163,14 @@ export async function updateGoal(
   const body: Generated.GoalUpdate = {
     type: payload.type,
     title: payload.title,
-    target_value: payload.target_value,
+    target_value: payload.type === undefined || payload.type !== "event" ? payload.target_value : null,
     current_value: payload.current_value,
-    unit: payload.unit,
+    unit: payload.type === undefined || payload.type !== "event" ? payload.unit : null,
+    start_date: payload.start_date,
+    sport_key: payload.sport_key,
+    is_primary: payload.is_primary,
+    baseline_value: payload.baseline_value,
+    direction: payload.direction,
     target_date: payload.target_date,
     race_distance_m: payload.race_distance_m,
     race_target_time_s: payload.race_target_time_s,
@@ -155,7 +179,7 @@ export async function updateGoal(
   return callOrvalValidated(
     (f) => updateGoalApiV1GoalsGoalIdPut(goalId, body, {}, f),
     Generated.GoalResponse,
-  ).then(mapGoal);
+  ).then(goalFromResponse);
 }
 
 export async function deleteGoal(goalId: string): Promise<void> {
@@ -168,6 +192,8 @@ export interface MilestoneDraft {
   target_value: number | null;
   unit: string | null;
   result_text: string | null;
+  /** 可选绑定阶段：阶段结束后按累计跑量自动核验。 */
+  phase_id: string | null;
 }
 
 export async function createMilestone(goalId: string, draft: MilestoneDraft): Promise<Milestone> {

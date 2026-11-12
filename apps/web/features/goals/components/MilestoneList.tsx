@@ -10,6 +10,7 @@ import { MilestoneEditor } from "@features/goals/components/MilestoneEditor";
 
 interface MilestoneListProps {
   milestones: Milestone[];
+  goalId: string;
   onToggle: (milestoneId: string) => Promise<void>;
   onSave: (milestoneId: string | null, draft: MilestoneDraft) => Promise<void>;
   goalUnit?: string | null;
@@ -17,6 +18,7 @@ interface MilestoneListProps {
 
 export function MilestoneList({
   milestones,
+  goalId,
   onToggle,
   onSave,
   goalUnit,
@@ -70,6 +72,7 @@ export function MilestoneList({
       {ordered.length === 0 && !creating ? <p className="text-caption1 text-text-muted">还没有里程碑</p> : null}
       {creating ? (
         <MilestoneEditor
+          goalId={goalId}
           initial={null}
           goalUnit={goalUnit}
           saving={saving}
@@ -83,6 +86,7 @@ export function MilestoneList({
             <MilestoneRow
               key={milestone.milestone_id}
               milestone={milestone}
+              goalId={goalId}
               goalUnit={goalUnit}
               saving={saving}
               editing={editingId === milestone.milestone_id}
@@ -104,6 +108,7 @@ export function MilestoneList({
 
 function MilestoneRow({
   milestone,
+  goalId,
   goalUnit,
   saving,
   editing,
@@ -113,6 +118,7 @@ function MilestoneRow({
   onSaveEdit,
 }: {
   milestone: Milestone;
+  goalId: string;
   goalUnit?: string | null;
   saving: boolean;
   editing: boolean;
@@ -125,6 +131,7 @@ function MilestoneRow({
     return (
       <li>
         <MilestoneEditor
+          goalId={goalId}
           initial={milestone}
           goalUnit={goalUnit}
           saving={saving}
