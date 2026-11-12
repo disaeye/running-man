@@ -143,7 +143,7 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" mobileSheet>
         <DialogHeader>
           <DialogTitle>从目标生成训练计划</DialogTitle>
           <DialogDescription>

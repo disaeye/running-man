@@ -96,7 +96,8 @@ export function ScoreRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="transition-all duration-500 ease-out"
+          className="ring-draw transition-all duration-500 ease-out"
+          style={{ "--ring-circumference": circumference, "--ring-target-offset": offset } as React.CSSProperties}
         />
       </svg>
       {children && (

@@ -44,7 +44,7 @@ export function GoalDetailArea({ goalId, onEdit, onAbandon, onGenerate }: {
   const racePassed = isEvent && goal.status === "active" && goal.target_date != null && goal.target_date < today;
 
   return (
-    <div className="space-y-4">
+    <div className="content-swap space-y-4">
       {isEvent ? (
         <PageCard hero>
           <GoalHeroSummary goal={goal} days={days} />

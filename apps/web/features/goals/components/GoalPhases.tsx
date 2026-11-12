@@ -29,7 +29,7 @@ export function GoalPhases({ goalId, today }: { goalId: string; today: string })
     ) : (
       <>
         <div className="mb-4 flex h-8 gap-1 overflow-hidden rounded-lg">
-          {phases.map((phase) => {
+          {phases.map((phase, index) => {
             const weeks = weeksOf(phase);
             const done = phase.end_date < today;
             const current = phase.start_date <= today && phase.end_date >= today;
@@ -37,10 +37,10 @@ export function GoalPhases({ goalId, today }: { goalId: string; today: string })
               <div
                 key={phase.phase_id}
                 title={`${phaseLabel(phase.name)} ${phase.start_date} – ${phase.end_date}`}
-                className={`flex items-center justify-center px-1 text-center text-caption1 font-medium ${
+                className={`phase-grow flex items-center justify-center px-1 text-center text-caption1 font-medium ${
                   done ? "bg-secondary text-muted-foreground" : current ? "bg-primary text-primary-foreground" : "bg-secondary/60 text-muted-foreground"
                 }`}
-                style={{ width: `${(weeks / totalWeeks) * 100}%` }}
+                style={{ width: `${(weeks / totalWeeks) * 100}%`, animationDelay: `${index * 45}ms` }}
               >
                 {phaseLabel(phase.name)}
               </div>

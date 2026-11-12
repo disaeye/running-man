@@ -150,12 +150,12 @@ function MilestoneRow({
         onClick={() => void onToggle()}
         disabled={saving}
         aria-label={milestone.achieved ? `取消完成${milestone.title}` : `标记完成${milestone.title}`}
-        className="focus-ring shrink-0 rounded-full p-0.5"
+        className="focus-ring tactile flex size-11 shrink-0 items-center justify-center rounded-full"
       >
         {milestone.achieved ? (
-          <Check aria-hidden="true" className="size-4 text-success" />
+          <Check aria-hidden="true" className="check-pop size-5 text-success" />
         ) : (
-          <Circle aria-hidden="true" className="size-4 text-text-muted" />
+          <Circle aria-hidden="true" className="size-5 text-text-muted" />
         )}
       </button>
       <span className="min-w-0 flex-1 text-subheadline text-text-primary">{milestone.title}</span>

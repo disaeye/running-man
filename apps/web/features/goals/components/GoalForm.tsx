@@ -21,7 +21,7 @@ interface GoalFormProps {  open: boolean;
 export function GoalForm({ open, onClose, onSubmit, editingGoal, submitting, submitError }: GoalFormProps) {
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next && !submitting) onClose(); }}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto" mobileSheet>
         <DialogHeader>
           <DialogTitle>{editingGoal ? "编辑目标" : "创建目标"}</DialogTitle>
         </DialogHeader>

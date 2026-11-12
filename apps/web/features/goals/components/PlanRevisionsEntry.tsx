@@ -22,7 +22,7 @@ export function PlanRevisionsEntry({ goalId }: { goalId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="tactile inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border-default px-3 text-caption1 text-text-secondary hover:bg-secondary"
+        className="tactile inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-default px-3.5 text-caption1 text-text-secondary hover:bg-secondary"
       >
         <History className="size-3.5" aria-hidden />
         计划版本
@@ -38,7 +38,7 @@ function PlanRevisionsDialog({ goalId, onClose }: { goalId: string; onClose: () 
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" mobileSheet>
         <DialogHeader>
           <DialogTitle>{detailId ? "版本快照" : "计划版本"}</DialogTitle>
         </DialogHeader>

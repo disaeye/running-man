@@ -34,15 +34,21 @@ export function TrainingPaceCard({ goalId }: { goalId: string }) {
       title="跑力与训练配速"
       action={plan?.vdot != null ? <Tag tone="primary">VDOT {plan.vdot.toFixed(1)}</Tag> : undefined}
     >
-      <div className="grid grid-cols-5 gap-2">
+      <div className="flex flex-col gap-1.5 sm:grid sm:grid-cols-5 sm:gap-2">
         {paces.map((pace) => (
-          <div key={pace.key} className="flex flex-col items-center justify-between gap-1 rounded-lg bg-surface-overlay/50 px-1 py-2.5">
+          <div
+            key={pace.key}
+            className="flex items-baseline justify-between gap-2 rounded-lg bg-surface-overlay/50 px-3 py-2 sm:flex-col sm:items-center sm:justify-between sm:gap-1 sm:px-1 sm:py-2.5"
+          >
             <span className="text-caption1 font-medium text-text-secondary">{pace.label}</span>
-            <span className="num text-subheadline font-semibold text-text-primary">
-              {formatPaceFromSeconds(pace.min_s_per_km)}
-            </span>
-            <span className="num text-caption1 text-text-muted">
-              {formatPaceFromSeconds(pace.max_s_per_km)}
+            <span className="flex items-baseline gap-1 sm:flex-col sm:items-center sm:gap-0">
+              <span className="num text-subheadline font-semibold text-text-primary">
+                {formatPaceFromSeconds(pace.min_s_per_km)}
+              </span>
+              <span aria-hidden className="text-caption1 text-text-muted sm:hidden">–</span>
+              <span className="num text-caption1 text-text-muted">
+                {formatPaceFromSeconds(pace.max_s_per_km)}
+              </span>
             </span>
           </div>
         ))}

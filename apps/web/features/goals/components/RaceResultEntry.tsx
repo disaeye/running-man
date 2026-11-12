@@ -98,7 +98,7 @@ function RaceResultDialog({ goal, onClose, onRecorded }: {
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next && !saving) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" mobileSheet>
         <DialogHeader>
           <DialogTitle>记录比赛结果</DialogTitle>
         </DialogHeader>

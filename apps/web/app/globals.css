@@ -558,6 +558,30 @@ html[data-route-vt] .page-arrival { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .view-swap { animation: none; }
 }
+
+/* 目标切换：详情区在两个目标之间做一次短淡入加轻微上浮，与视图切换同一节奏。 */
+.content-swap { animation: content-swap-in var(--duration-fast) var(--ease-enter) both; }
+@keyframes content-swap-in {
+  from { opacity: 0; transform: translate3d(0, 4px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* 里程碑勾选：对勾落定的一次性确认反馈。 */
+.check-pop { animation: check-pop var(--duration-fast) var(--ease-enter) both; }
+@keyframes check-pop {
+  from { opacity: 0; transform: scale(0.55); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* 阶段占比条：分段从左往右依次生长，只在挂载时执行一次；延迟由内联样式给出。 */
+.phase-grow {
+  transform-origin: left center;
+  animation: phase-grow var(--duration-normal) var(--ease-enter) both;
+}
+@keyframes phase-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* 进度环挂载时从空环扫到当前值；之后的数值变化仍由过渡接管。 */
+.ring-draw { animation: ring-sweep var(--duration-slow) var(--ease-enter) both; }
 /* 导航外壳在捕获新快照时保持静止，只让内容列交叉淡入。 */
 [data-shell-region="bottom"] { view-transition-name: mobile-nav; }
 [data-testid="sidebar"] { view-transition-name: desktop-nav; }
