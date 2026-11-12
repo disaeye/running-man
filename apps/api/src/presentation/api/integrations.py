@@ -1,11 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Any, cast
 from uuid import UUID
 
 import psycopg
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 
-from application.data_health import compute_data_health
+from application.data_health import compute_activity_data_as_of
 from application.integrations.sync_jobs import (
     create_sync_job,
     run_sync_job,
@@ -30,6 +30,9 @@ from presentation.api.integration_helpers import (
     credentials,
     decrypt_credentials,
     public_integration,
+)
+from presentation.api.integration_settings import (
+    update_settings as update_integration_settings,
 )
 from presentation.auth.deps import get_current_athlete
 
@@ -64,30 +67,25 @@ ActivityRepoDep = Annotated[ActivityRepo, Depends(get_activity_repo)]
 
 @router.get("", response_model=list[IntegrationResponse])
 async def list_integrations(
-    athlete: AthleteDep,
-    repo: RepoDep,
-    db_pool: PoolDep,
+    athlete: AthleteDep, repo: RepoDep, db_pool: PoolDep,
 ) -> list[IntegrationResponse]:
-    health = await _data_health(athlete.id, db_pool)
+    data_as_of = await _data_as_of(athlete.id, db_pool)
     return [
-        IntegrationResponse.model_validate(public_integration(row, health))
+        IntegrationResponse.model_validate(public_integration(row, data_as_of))
         for row in await repo.list(athlete.id)
     ]
 
 
 @router.get("/{source}", response_model=IntegrationResponse)
 async def get_integration(
-    source: str,
-    athlete: AthleteDep,
-    repo: RepoDep,
-    db_pool: PoolDep,
+    source: str, athlete: AthleteDep, repo: RepoDep, db_pool: PoolDep,
 ) -> IntegrationResponse:
     _validate_source(source)
     row = await repo.get(athlete.id, source)
     if row is None:
         return IntegrationResponse(source=source, connected=False, staleness_bucket="missing")
-    health = await _data_health(athlete.id, db_pool)
-    return IntegrationResponse.model_validate(public_integration(row, health))
+    data_as_of = await _data_as_of(athlete.id, db_pool)
+    return IntegrationResponse.model_validate(public_integration(row, data_as_of))
 
 
 @router.put("/{source}/connect", response_model=IntegrationResponse)
@@ -171,6 +169,29 @@ async def backfill_integration(
     return SyncJobResponse.model_validate(job)
 
 
+@router.post("/{source}/resync", response_model=SyncJobResponse)
+async def resync_integration(
+    source: str,
+    athlete: AthleteDep,
+    repo: RepoDep,
+    activity_repo: ActivityRepoDep,
+    job_repo: JobRepoDep,
+    background_tasks: BackgroundTasks,
+) -> SyncJobResponse:
+    """Clear this source's imported data and re-import the athlete's full history."""
+    _validate_source(source)
+    if await job_repo.active(athlete.id, source) is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=ACTIVE_JOB_CONFLICT)
+    credentials_data = decrypt_credentials(await _connected_row(repo, athlete.id, source))
+    # Clear only after the conflict check, so a running sync keeps its data.
+    _ = await clear_activities(athlete.id, activity_repo, repo, source)
+    job = await _queue_job(athlete.id, source, "incremental", "manual", job_repo)
+    background_tasks.add_task(
+        run_sync_job, cast(UUID, job["id"]), athlete.id, source, credentials_data
+    )
+    return SyncJobResponse.model_validate(job)
+
+
 @router.get("/{source}/jobs/current", response_model=SyncJobResponse | None)
 async def current_sync_job(
     source: str,
@@ -209,10 +230,11 @@ async def source_coverage(
     _validate_source(source)
     row = await activity_repo.data_range(athlete.id, source)
     first_day, last_day = row.get("first_day"), row.get("last_day")
+    assert isinstance(first_day, date | None) and isinstance(last_day, date | None)
     return SourceCoverageResponse(
         source=source,
-        first_activity_date=first_day if isinstance(first_day, date) else None,
-        last_activity_date=last_day if isinstance(last_day, date) else None,
+        first_activity_date=first_day,
+        last_activity_date=last_day,
         activity_count=int(cast(int, row.get("total") or 0)),
     )
 
@@ -249,6 +271,7 @@ async def _queue_job(
             status_code=status.HTTP_409_CONFLICT, detail=ACTIVE_JOB_CONFLICT
         ) from error
 
+
 @router.put("/{source}/settings", response_model=IntegrationResponse)
 async def update_settings(
     source: str,
@@ -257,30 +280,13 @@ async def update_settings(
     repo: RepoDep,
 ) -> IntegrationResponse:
     _validate_source(source)
-    row = await repo.get(athlete.id, source)
-    if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="integration not found")
-    raw_settings = row.get("settings")
-    stored_settings = (
-        cast(dict[str, object], raw_settings) if isinstance(raw_settings, dict) else {}
-    )
-    next_settings: dict[str, object] = stored_settings | payload.model_dump(exclude_none=True)
-    updated = await repo.upsert(
-        athlete.id,
-        source,
-        {
-            "connected": row.get("connected", False),
-            "credentials": row.get("credentials"),
-            "settings": next_settings,
-        },
-    )
-    return IntegrationResponse.model_validate(public_integration(updated))
+    return await update_integration_settings(source, payload, athlete.id, repo)
 
 
-async def _data_health(athlete_id: UUID, db_pool: Any) -> dict[str, object] | None:
+async def _data_as_of(athlete_id: UUID, db_pool: Any) -> datetime | None:
     if db_pool is None or getattr(db_pool, "closed", False):
         return None
-    return await compute_data_health(athlete_id, db_pool)
+    return await compute_activity_data_as_of(athlete_id, db_pool)
 
 
 def _validate_source(source: str) -> None:

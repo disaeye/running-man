@@ -42,12 +42,29 @@ async def clear_activities(
                 await _delete_wellness(athlete_id)
             if canonical == "intervals_icu":
                 await integrations.clear_sync_state(athlete_id, canonical)
+        await _delete_rejections(athlete_id, source)
         return await refresh_derived_after_raw_change(athlete_id)
 
     await repo.delete_all(athlete_id)
     await _delete_wellness(athlete_id)
     await integrations.clear_sync_state(athlete_id)
+    await _delete_rejections(athlete_id)
     return await refresh_derived_after_raw_change(athlete_id, "clear:all")
+
+
+async def _delete_rejections(athlete_id: UUID, source: str | None = None) -> None:
+    """清掉该来源的拒绝记录，重拉时才能重新写入。"""
+    async with get_pool().connection() as conn, conn.cursor() as cur:
+        if source is None:
+            _ = await cur.execute(
+                "DELETE FROM source_records WHERE athlete_id = %s", (athlete_id,)
+            )
+        else:
+            for canonical in bulk_delete_sources(source):
+                _ = await cur.execute(
+                    "DELETE FROM source_records WHERE athlete_id = %s AND source = %s",
+                    (athlete_id, canonical),
+                )
 
 
 async def _delete_wellness(athlete_id: UUID) -> None:

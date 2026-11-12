@@ -67,7 +67,7 @@ def as_sex(value: object) -> str | None:
 async def athlete_grade(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
 ) -> AthleteGradeResponse:
-    profile, _, _ = await AthleteProfileRepo().get_me(athlete.id)
+    profile = await AthleteProfileRepo().get(athlete.id)
     row = profile or {}
     dob = as_date(row.get("dob"))
     sex = as_sex(row.get("sex"))

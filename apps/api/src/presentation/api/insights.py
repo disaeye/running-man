@@ -14,18 +14,20 @@ from domain.insights.prs import (
     is_ride_sport,
     is_run_sport,
 )
+from domain.insights.session_domains import aggregate_domain_seconds, domain_share
 from domain.insights.taper import assess_taper
 from domain.insights.weekly_progress import compute_weekly_progress
 from domain.insights.zone_schemes import ZoneScheme, hr_zones_for_scheme, scheme_for
 from domain.insights.zones import (
     ActivityLike,
     Zone,
-    activity_distribution,
+    activity_distribution_from_counts,
     weekly_breakdown,
 )
 from domain.thresholds.resolver import ThresholdStep, resolve_all
 from domain.time import today_in_zone
 from infrastructure.auth.models import Athlete
+from infrastructure.repositories.insight_reads import InsightReadRepo
 from infrastructure.repositories.thresholds import ThresholdRepo
 from infrastructure.repositories.zone_scheme import get_hr_scheme
 from presentation.api.analytics_insight_contracts import (
@@ -39,19 +41,18 @@ from presentation.api.analytics_insight_contracts import (
     TrainingRecommendationResponse,
     WeeklyProgressResponse,
 )
-from presentation.api.insights_activity_queries import _activities_for_range, _all_activities
+from presentation.api.insights_activity_queries import _all_activities
 from presentation.api.insights_contracts import intensity_distribution_item
 from presentation.api.insights_helpers import (
     _activities_with_power,
     _ctl_value,
     _daily_loads_for_range,
     _date_range,
-    _planned_events,
+    _insight_inputs,
     _power_streams_for_activities,
     _quality_message,
     _ride_record,
     _run_record,
-    _streams_for_activities,
     _tss_value,
     _zone_seconds,
 )
@@ -106,30 +107,24 @@ async def get_intensity_distribution(
     reached. Non-running activities are excluded rather than mis-bucketed.
     """
     range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
-    activities = [
-        row
-        for row in await _activities_for_range(athlete.id, range_start, range_end)
-        if is_run_sport(str(row.get("sport")))
-    ]
-    activity_ids = [str(row["activity_id"]) for row in activities]
-    streams = await _streams_for_activities(athlete.id, activity_ids)
+    _, all_activities, classifications = await _insight_inputs(athlete.id, range_start, range_end)
+    activities = [row for row in all_activities if is_run_sport(str(row.get("sport")))]
+    counts = await InsightReadRepo().metric_value_counts(athlete.id, activities, ["heart_rate"])
     thresholds = await ThresholdRepo().history(athlete.id)
     scheme = scheme_for(await get_hr_scheme(athlete.id))
     distributions = [
-        activity_distribution(
+        activity_distribution_from_counts(
             cast(ActivityLike, cast(object, row)),
-            streams.get(str(row["activity_id"]), []),
+            counts.get(str(row["activity_id"]), {}),
             _zones_at(thresholds, scheme, row.get("start_time")),
             athlete.timezone,
         )
         for row in activities
     ]
+    weekly = weekly_breakdown(distributions, classifications)
     return [
-        intensity_distribution_item(
-            row,
-            _zone_seconds(cast(dict[str, float], row["by_zone"])),
-        )
-        for row in weekly_breakdown(distributions)
+        intensity_distribution_item(row, _zone_seconds(cast(dict[str, float], row["by_zone"])))
+        for row in weekly
     ]
 
 
@@ -151,8 +146,7 @@ async def get_personal_records(
             for row in compute_run_prs(run_activities)
         )
     if sport is None or any(is_ride_sport(str(row.get("sport"))) for row in activities):
-        ride_ids = [str(row["activity_id"]) for row in ride_activities]
-        powers = await _power_streams_for_activities(athlete.id, ride_ids)
+        powers = await _power_streams_for_activities(athlete.id, ride_activities)
         ride_prs = compute_ride_prs(_activities_with_power(ride_activities, powers))
         records.extend(
             RidePersonalRecordResponse.model_validate(_ride_record(row)) for row in ride_prs
@@ -167,9 +161,10 @@ async def get_weekly_progress(
     end: Annotated[date | None, Query(alias="to")] = None,
 ) -> list[WeeklyProgressResponse]:
     range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
-    events = await _planned_events(athlete.id, range_start, range_end)
-    activities = await _activities_for_range(athlete.id, range_start, range_end)
-    weekly_progress = compute_weekly_progress(events, activities, range_start, range_end)
+    events, activities, classifications = await _insight_inputs(athlete.id, range_start, range_end)
+    weekly_progress = compute_weekly_progress(
+        events, activities, range_start, range_end, classifications
+    )
     return [WeeklyProgressResponse.model_validate(row) for row in weekly_progress]
 
 
@@ -180,9 +175,9 @@ async def get_plan_quality(
     end: Annotated[date | None, Query(alias="to")] = None,
 ) -> PlanQualityResponse:
     range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
-    events = await _planned_events(athlete.id, range_start, range_end)
-    activities = await _activities_for_range(athlete.id, range_start, range_end)
-    quality = compute_plan_quality(events, activities, range_start, range_end)
+    events, activities, classifications = await _insight_inputs(athlete.id, range_start, range_end)
+    quality = compute_plan_quality(events, activities, range_start, range_end, classifications)
+    seconds = aggregate_domain_seconds(classifications)
     planned_tss = sum(_number(row.get("predicted_tss")) for row in events)
     actual_tss = sum(_number(row.get("tss")) for row in activities)
     planned_sessions = len(events)
@@ -196,6 +191,8 @@ async def get_plan_quality(
             "key_sessions_completed": actual_sessions,
             "key_sessions_total": planned_sessions,
             "concerns": quality["risks"] or quality["recommendations"],
+            "work_domain_seconds": seconds,
+            "work_domain_share": domain_share(seconds),
         }
     )
 

@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from presentation.api.domain_contracts import PhysiologicalDomains
 from presentation.api.readiness_contract import (
     ReadinessFactorResponse,
     WellnessReadingsResponse,
@@ -172,6 +173,8 @@ class CoachRecentLoadResponse(AnalysisAnalyticsResponse):
     current_tsb: float
     ctl_warming_up: bool = False
     ctl_history_days: int = 0
+    work_domain_seconds: PhysiologicalDomains = Field(default_factory=PhysiologicalDomains)
+    work_domain_share: PhysiologicalDomains = Field(default_factory=PhysiologicalDomains)
 
 
 class CoachRecoverySignalsResponse(AnalysisAnalyticsResponse):
@@ -187,6 +190,9 @@ class CoachPlanAdherenceResponse(AnalysisAnalyticsResponse):
     completed_tss_7d: float
     planned_tss_7d: float
     adherence_pct: float
+    type_match: float | None = None
+    structure_match: float | None = None
+    domain_match: float | None = None
 
 
 class CoachCaveatResponse(AnalysisAnalyticsResponse):

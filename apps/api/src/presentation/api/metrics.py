@@ -1,4 +1,5 @@
 from datetime import date
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -6,11 +7,15 @@ from domain.generated.metrics import Metric
 from domain.metric_series import (
     MetricSeriesGrain,
     MetricSeriesQuery,
+    MetricSeriesRecord,
     expected_period_count,
     metric_series_definition,
 )
 from infrastructure.auth.models import Athlete
-from infrastructure.repositories.metric_series import MetricSeriesRepo
+from infrastructure.repositories.metric_series import (
+    MetricSeriesBatchQuery,
+    MetricSeriesRepo,
+)
 from presentation.api.metric_schemas import (
     MetricSeriesBatchResponse,
     MetricSeriesCoverage,
@@ -19,6 +24,9 @@ from presentation.api.metric_schemas import (
 )
 from presentation.auth.deps import get_current_athlete
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 
 
@@ -26,25 +34,14 @@ def get_metric_series_repo() -> MetricSeriesRepo:
     return MetricSeriesRepo()
 
 
-async def _fetch_series(
+def _response(
     metric: Metric,
     grain: MetricSeriesGrain,
     start: date,
     end: date,
-    sport: str | None,
-    athlete_id: object,
-    repo: MetricSeriesRepo,
+    records: "Sequence[MetricSeriesRecord]",
 ) -> MetricSeriesResponse:
     definition = metric_series_definition(metric)
-    query = MetricSeriesQuery(
-        athlete_id=athlete_id,
-        metric=metric,
-        grain=grain,
-        start=start,
-        end=end,
-        sport=sport,
-    )
-    records = await repo.fetch(query)
     expected = expected_period_count(start, end, grain)
     observed = len(records)
     ratio = observed / expected if expected else 0.0
@@ -59,6 +56,27 @@ async def _fetch_series(
             for record in records
         ],
     )
+
+
+async def _fetch_series(
+    metric: Metric,
+    grain: MetricSeriesGrain,
+    start: date,
+    end: date,
+    sport: str | None,
+    athlete_id: object,
+    repo: MetricSeriesRepo,
+) -> MetricSeriesResponse:
+    query = MetricSeriesQuery(
+        athlete_id=athlete_id,
+        metric=metric,
+        grain=grain,
+        start=start,
+        end=end,
+        sport=sport,
+    )
+    records = await repo.fetch(query)
+    return _response(metric, grain, start, end, records)
 
 
 @router.get("/series", response_model=MetricSeriesResponse)
@@ -100,11 +118,27 @@ async def get_metric_series_batch(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="at least one metric required",
         )
-    series: list[MetricSeriesResponse] = []
+    valid: list[Metric] = []
     for raw in requested:
         try:
-            metric = Metric(raw)
+            valid.append(Metric(raw))
         except ValueError:
             continue
-        series.append(await _fetch_series(metric, grain, start, end, sport, athlete.id, repo))
-    return MetricSeriesBatchResponse(grain=grain.value, series=series)
+    if not valid:
+        return MetricSeriesBatchResponse(grain=grain.value, series=[])
+    query = MetricSeriesBatchQuery(
+        athlete_id=athlete.id,
+        metrics=tuple(valid),
+        grain=grain,
+        start=start,
+        end=end,
+        sport=sport,
+    )
+    grouped = await repo.fetch_batch(query)
+    return MetricSeriesBatchResponse(
+        grain=grain.value,
+        series=[
+            _response(metric, grain, start, end, grouped.get(metric.value, []))
+            for metric in valid
+        ],
+    )

@@ -29,6 +29,9 @@ class AccountExportResourceName(StrEnum):
     SHARES = "shares"
     STRENGTH = "strength"
     SYNC_RUNS = "sync_runs"
+    SESSION_CLASSIFICATIONS = "session_classifications"
+    ACTIVITY_INTERVALS = "activity_intervals"
+    WORKOUT_TEMPLATES = "workout_templates"
 
 
 class AccountExportResourceManifest(BaseModel):

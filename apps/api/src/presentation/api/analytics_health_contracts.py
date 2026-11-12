@@ -12,6 +12,7 @@ class HealthAnalyticsResponse(BaseModel):
 
 class DataHealthActivitiesResponse(HealthAnalyticsResponse):
     data_as_of: datetime | None
+    first_at: datetime | None = None
     total: int
     with_hr: int
     with_gps: int
@@ -20,6 +21,7 @@ class DataHealthActivitiesResponse(HealthAnalyticsResponse):
 
 class DataHealthWellnessResponse(HealthAnalyticsResponse):
     data_as_of: date | None
+    first_day: date | None = None
     total_days: int
     latest_day: date | None
 
@@ -48,12 +50,23 @@ class DataHealthActivityCoverageResponse(HealthAnalyticsResponse):
     with_gps: int
     with_power: int
     with_streams: int
+    # 近 30 天未关联跑鞋的跑步活动数量。
+    unassigned_run_activities_30d: int = 0
+    # 最早一条活动的开始时间，用于展示数据覆盖范围。
+    first_at: datetime | None = None
+
+
+class DataHealthSyncCoverageResponse(HealthAnalyticsResponse):
+    last_sync_at: datetime | None = None
+    last_sync_status: str | None = None
 
 
 class DataHealthWellnessCoverageResponse(HealthAnalyticsResponse):
     sleep_days_28d: int
     rhr_days_28d: int
     hrv_days_28d: int = 0
+    # 最早一天健康数据，用于展示数据覆盖范围。
+    first_day: date | None = None
 
 
 class DataHealthStrengthCoverageResponse(HealthAnalyticsResponse):
@@ -71,6 +84,7 @@ class DataHealthCoverageResponse(HealthAnalyticsResponse):
     wellness: DataHealthWellnessCoverageResponse
     strength: DataHealthStrengthCoverageResponse | None = None
     uploads: DataHealthUploadCoverageResponse | None = None
+    sync: DataHealthSyncCoverageResponse | None = None
 
 
 class DataHealthResponse(HealthAnalyticsResponse):
@@ -101,6 +115,7 @@ class DataQualityCoverageResponse(HealthAnalyticsResponse):
     wellness: DataHealthWellnessCoverageResponse
     strength: DataHealthStrengthCoverageResponse | None = None
     uploads: DataHealthUploadCoverageResponse | None = None
+    sync: DataHealthSyncCoverageResponse | None = None
 
 
 class DataQualityResponse(HealthAnalyticsResponse):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 from uuid import UUID
 
 from infrastructure.repositories.analytics import AnalyticsRepo
@@ -13,15 +14,15 @@ async def _streams_for_range(
 
 
 async def _streams_for_activities(
-    athlete_id: UUID, activity_ids: list[str], metric_types: list[str] | None = None
+    athlete_id: UUID, activities: list[dict[str, Any]], metric_types: list[str] | None = None
 ) -> dict[str, list[dict[str, object]]]:
-    return await AnalyticsRepo().streams_for_activities(athlete_id, activity_ids, metric_types)
+    return await AnalyticsRepo().streams_for_activities(athlete_id, activities, metric_types)
 
 
 async def _power_streams_for_activities(
-    athlete_id: UUID, activity_ids: list[str]
+    athlete_id: UUID, activities: list[dict[str, Any]]
 ) -> dict[str, list[float]]:
-    streams = await _streams_for_activities(athlete_id, activity_ids, ["power"])
+    streams = await _streams_for_activities(athlete_id, activities, ["power"])
     return {
         activity_id: [
             float(value)

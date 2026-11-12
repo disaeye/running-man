@@ -71,7 +71,7 @@ async def get_activity_analysis(
             )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="activity not found")
 
-    stream_rows = await _activity_streams(athlete.id, activity_id)
+    stream_rows = await _activity_streams(athlete.id, activity_id, _start_time(activity))
     streams = streams_by_metric(stream_rows)
     stream_times = stream_times_by_metric(stream_rows)
     duration_s = _duration(activity, streams)
@@ -153,8 +153,10 @@ def _float_or_none(value: object) -> float | None:
     return None
 
 
-async def _activity_streams(athlete_id: UUID, activity_id: str) -> list[dict[str, object]]:
-    return await AnalyticsRepo().activity_streams(athlete_id, activity_id)
+async def _activity_streams(
+    athlete_id: UUID, activity_id: str, start_time: datetime
+) -> list[dict[str, object]]:
+    return await AnalyticsRepo().activity_streams(athlete_id, activity_id, start_time)
 
 
 async def _hr_zones_for_activity(athlete: Athlete, activity: dict[str, object]) -> list[Zone]:
@@ -188,6 +190,13 @@ async def _hr_scheme_key(athlete_id: UUID) -> str | None:
 
 def _scheme_label(scheme: ZoneScheme) -> str:
     return scheme.label
+
+
+def _start_time(activity: dict[str, object]) -> datetime:
+    value = activity.get("start_time")
+    if not isinstance(value, datetime) or value.tzinfo is None:
+        raise ValueError("activity row must carry a timezone-aware start_time")
+    return value
 
 
 def _duration(activity: dict[str, object], streams: dict[str, list[float]]) -> int:

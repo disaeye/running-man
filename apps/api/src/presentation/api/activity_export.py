@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import HTTPException, Response, status
 
 from infrastructure.auth.models import Athlete
@@ -30,7 +32,10 @@ async def export_activity(
                 status_code=status.HTTP_403_FORBIDDEN, detail="activity belongs to another athlete"
             )
         raise NotFoundError("activity not found")
-    streams = await repo.get_streams(athlete.id, activity_id)
+    start_time = activity.get("start_time")
+    if not isinstance(start_time, datetime) or start_time.tzinfo is None:
+        raise ValueError("activity row must carry a timezone-aware start_time")
+    streams = await repo.get_streams(athlete.id, activity_id, start_time)
     samples = samples_from_streams(streams)
     if not samples:
         raise HTTPException(

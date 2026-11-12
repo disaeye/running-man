@@ -14,5 +14,15 @@ def intensity_distribution_item(
             "zone_seconds": zone_seconds,
             "by_zone": row["by_zone"],
             "distribution_type": row["distribution_type"],
+            "work_domain_seconds": row.get(
+                "work_domain_seconds",
+                {
+                    "below_mt1": 0.0,
+                    "mt1_mt2": 0.0,
+                    "mt2_wmax": 0.0,
+                    "above_wmax": 0.0,
+                    "low_unspecified": 0.0,
+                },
+            ),
         }
     )

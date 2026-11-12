@@ -5,6 +5,7 @@ Split out to keep insights.py under the 250 LOC cap (clean-code.md).
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping
 from datetime import date, timedelta
 from typing import Any
@@ -15,6 +16,8 @@ from domain.insights.plan_quality import PlanQuality
 from domain.insights.prs import PersonalRecord
 from infrastructure.repositories.insight_reads import InsightReadRepo
 from infrastructure.repositories.pmc import PmcRepo
+from presentation.api.insights_activity_queries import _activities_for_range
+from presentation.api.session_domain_queries import classifications_for_range
 
 
 async def _readiness_inputs(
@@ -48,20 +51,32 @@ async def _planned_events(athlete_id: UUID, start: date, end: date) -> list[dict
     return await InsightReadRepo().planned_events(athlete_id, start, end)
 
 
+async def _insight_inputs(
+    athlete_id: UUID, start: date, end: date
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, object]]]:
+    """Planned events, actual activities, and persisted session results."""
+    events, activities, classifications = await asyncio.gather(
+        _planned_events(athlete_id, start, end),
+        _activities_for_range(athlete_id, start, end),
+        classifications_for_range(athlete_id, start, end),
+    )
+    return events, activities, classifications
+
+
 async def _daily_loads_for_range(athlete_id: UUID, start: date, end: date) -> list[dict[str, Any]]:
     return await PmcRepo().get_daily_load_range(athlete_id, start, end)
 
 
 async def _streams_for_activities(
-    athlete_id: UUID, activity_ids: list[str]
+    athlete_id: UUID, activities: list[dict[str, Any]], metric_types: list[str] | None = None
 ) -> dict[str, list[dict[str, object]]]:
-    return await InsightReadRepo().streams(athlete_id, activity_ids)
+    return await InsightReadRepo().streams(athlete_id, activities, metric_types)
 
 
 async def _power_streams_for_activities(
-    athlete_id: UUID, activity_ids: list[str]
+    athlete_id: UUID, activities: list[dict[str, Any]]
 ) -> dict[str, list[float]]:
-    streams = await _streams_for_activities(athlete_id, activity_ids)
+    streams = await _streams_for_activities(athlete_id, activities, ["power"])
     return {
         activity_id: [
             _float_value(row["value"]) for row in rows if row.get("metric_type") == "power"

@@ -2,6 +2,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
+from application.run_classification.link import link_plan_to_activity
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.calendar import CalendarRepo
 from presentation.api.schemas import CalendarEvent
@@ -44,6 +45,21 @@ async def update_event(
     row = await repo.update(athlete.id, event_id, payload.model_dump(exclude_unset=True))
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="event not found")
+    return CalendarEvent.model_validate(row)
+
+
+@router.post("/{event_id}/link", response_model=CalendarEvent)
+async def link_event(
+    event_id: str,
+    activity_id: str = Query(alias="activity_id"),
+    athlete: Athlete = Depends(get_current_athlete),
+    repo: CalendarRepo = Depends(get_calendar_repo),
+) -> CalendarEvent:
+    linked = await link_plan_to_activity(athlete.id, event_id, activity_id)
+    if not linked:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="event not found")
+    row = await repo.get_by_id(athlete.id, event_id)
+    assert row is not None
     return CalendarEvent.model_validate(row)
 
 

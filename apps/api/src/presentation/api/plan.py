@@ -10,6 +10,11 @@ from infrastructure.auth.models import Athlete
 from infrastructure.db.pool import get_pool
 from infrastructure.repositories.goals import GoalsRepo
 from presentation.api.schemas_core import RunWorkoutSegment
+from presentation.api.schemas_run import (
+    IntensityAnchor,
+    PlanEvidencePayload,
+    QualityTarget,
+)
 from presentation.auth.deps import get_current_athlete
 
 router = APIRouter(prefix="/plan", tags=["plan"])
@@ -53,6 +58,18 @@ class PlanEventPreview(BaseModel):
     predicted_distance_m: float | None = None
     segments: list[RunWorkoutSegment]
     phase: str
+    structure: str | None = None
+    session_type: str | None = None
+    primary_stimulus: str | None = None
+    pacing_pattern: str | None = None
+    display_line: str | None = None
+    target_domain: str | None = None
+    source_refs: list[str] = Field(default_factory=list)
+    rationale: str | None = None
+    target_adaptation: str | None = None
+    intensity_anchor: IntensityAnchor | None = None
+    quality_target: QualityTarget | None = None
+    evidence: PlanEvidencePayload | None = None
 
 
 class PlanGenerateResponse(BaseModel):

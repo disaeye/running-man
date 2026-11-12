@@ -7,7 +7,12 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from presentation.api.json_contracts import JsonDocument
-from presentation.api.schemas_core import RunWorkoutPrescription
+from presentation.api.schemas_core import (
+    RunWorkoutPrescription,
+    SessionClassificationResponse,
+    SessionExecutionPayload,
+    SessionQualityPayload,
+)
 
 
 class NotificationPrefs(BaseModel):
@@ -23,6 +28,8 @@ class ThresholdHistoryEntry(BaseModel):
     resting_hr: int | None = None
     lthr: int | None = None
     threshold_pace: float | None = None
+    # "manual"（人工填写）或 "estimated"（算法估算）。
+    source: str | None = None
 
 
 class AthleteMe(BaseModel):
@@ -182,6 +189,9 @@ class CalendarEvent(BaseModel):
     completed_avg_hr: int | None = None
     completed_rpe: int | None = None
     actual_logged_at: datetime | None = None
+    execution: SessionExecutionPayload | None = None
+    quality: SessionQualityPayload | None = None
+    session_classification: SessionClassificationResponse | None = None
 
 
 class GoalCreate(BaseModel):

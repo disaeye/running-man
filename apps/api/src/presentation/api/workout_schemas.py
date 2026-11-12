@@ -8,10 +8,15 @@ workout prediction, the exercise library, and logged strength sets.
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from presentation.api.schemas_run import WorkoutTemplateSegment
+
+MODEL_CONFIG = ConfigDict(extra="ignore", frozen=True)
 
 
 class WorkoutPredictionRequest(BaseModel):
+    model_config = MODEL_CONFIG
     historical_daily_tss: dict[date, float]
     planned_workouts: dict[date, float]
     current_ctl: float
@@ -29,11 +34,6 @@ class WorkoutPredictionPoint(BaseModel):
     is_overtraining_risk: bool
     is_high_load_risk: bool
     is_fresh: bool
-
-
-class WorkoutTemplateSegment(BaseModel):
-    segment_type: str
-    duration_s: int
 
 
 class WorkoutTemplateCreate(BaseModel):

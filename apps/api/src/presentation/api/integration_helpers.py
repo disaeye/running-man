@@ -42,20 +42,9 @@ def decrypt_credentials(row: dict[str, object]) -> dict[str, object]:
 
 
 def public_integration(
-    row: dict[str, object], data_health: dict[str, object] | None = None
+    row: dict[str, object], data_as_of: datetime | None = None
 ) -> dict[str, object]:
-    data_as_of = activity_data_as_of(data_health)
     return {key: value for key, value in row.items() if key != "credentials"} | {
         "data_as_of": data_as_of,
         "staleness_bucket": staleness_bucket(data_as_of, datetime.now(timezone.utc).date()),
     }
-
-
-def activity_data_as_of(data_health: dict[str, object] | None) -> datetime | None:
-    if data_health is None:
-        return None
-    activities = data_health.get("activities")
-    if not isinstance(activities, dict):
-        return None
-    data_as_of = activities.get("data_as_of")
-    return data_as_of if isinstance(data_as_of, datetime) else None

@@ -1,12 +1,15 @@
+import asyncio
 from collections.abc import Sequence
 from datetime import date, datetime, time, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 
-from application.data_health import compute_data_health
+from application.data_health import compute_data_freshness
 from domain.insights.readiness import compute_readiness
 from domain.insights.recommendation import TrainingContext, compute_recommendation
+from domain.insights.session_domains import aggregate_domain_seconds, domain_share
+from domain.insights.session_quality import quality_matches
 from domain.load.pmc import warmup_days
 from infrastructure.auth.models import Athlete
 from infrastructure.db.pool import get_pool
@@ -21,6 +24,7 @@ from presentation.api.coach_context_recovery import (
     trend as _trend,
 )
 from presentation.api.insights_helpers import _readiness_inputs
+from presentation.api.session_domain_queries import classifications_for_range
 from presentation.api.staleness import staleness_bucket
 from presentation.auth.deps import get_current_athlete
 
@@ -51,26 +55,39 @@ async def get_coach_context(
     calendar_repo: Annotated[CalendarRepo, Depends(get_calendar_repo)],
     db_pool: Annotated[Any, Depends(get_data_health_pool)],
 ) -> CoachContextResponse:
-    wellness, readiness_loads = await _readiness_inputs(athlete.id, target_day)
-    pmc_loads = await pmc_repo.get_daily_load_range(
-        athlete.id, target_day - timedelta(days=89), target_day
+    # 五路都是独立读：并发拉取，串行时每次往返的池检出与查询延迟叠加
+    # 在一起，首页每次加载都要为此多等 100ms 以上。
+    (
+        (wellness, readiness_loads),
+        pmc_loads,
+        events,
+        freshness,
+        training_paces,
+        classifications,
+    ) = await asyncio.gather(
+        _readiness_inputs(athlete.id, target_day),
+        pmc_repo.get_daily_load_range(athlete.id, target_day - timedelta(days=89), target_day),
+        calendar_repo.list(
+            athlete.id,
+            datetime.combine(target_day - timedelta(days=6), time.min),
+            datetime.combine(target_day + timedelta(days=1), time.max),
+        ),
+        compute_data_freshness(athlete.id, db_pool),
+        training_paces_for(athlete.id),
+        classifications_for_range(
+            athlete.id, target_day - timedelta(days=WEEK_DAYS - 1), target_day
+        ),
     )
-    events = await calendar_repo.list(
-        athlete.id,
-        datetime.combine(target_day - timedelta(days=6), time.min),
-        datetime.combine(target_day + timedelta(days=1), time.max),
-    )
-    data_health = await compute_data_health(athlete.id, db_pool)
     readiness = compute_readiness(target_day, wellness, readiness_loads)
     completed_tss = _sum_tss(pmc_loads[-7:])
     planned_tss = _sum_planned_tss(events)
     return CoachContextResponse.model_validate(
         {
-            "data_freshness": _data_freshness(data_health, target_day),
-            "recent_load": _recent_load(pmc_loads),
+            "data_freshness": _data_freshness(freshness, target_day),
+            "recent_load": _recent_load(pmc_loads, classifications),
             "recovery_signals": _recovery_signals(wellness, readiness, target_day, pmc_loads),
-            "plan_adherence": _plan_adherence(completed_tss, planned_tss),
-            "missing_data_caveats": _missing_data_caveats(data_health, wellness, target_day),
+            "plan_adherence": _plan_adherence(completed_tss, planned_tss, classifications),
+            "missing_data_caveats": _missing_data_caveats(freshness, wellness, target_day),
             "recommendation": compute_recommendation(
                 readiness,
                 _events_for_target_day(events, target_day),
@@ -83,7 +100,7 @@ async def get_coach_context(
                 _training_days(pmc_loads[-WEEK_DAYS:]),
                 TrainingContext(
                     chronic_ctl=_chronic_ctl(pmc_loads),
-                    training_paces=await training_paces_for(athlete.id),
+                    training_paces=training_paces,
                     acwr=latest_acwr(pmc_loads),
                     has_plan_tomorrow=bool(
                         _events_for_target_day(events, target_day + timedelta(days=1))
@@ -126,7 +143,10 @@ def _freshness_entry(section: dict[str, object], target_day: date) -> dict[str, 
     }
 
 
-def _recent_load(loads: Sequence[dict[str, object]]) -> dict[str, object]:
+def _recent_load(
+    loads: Sequence[dict[str, object]],
+    classifications: Sequence[dict[str, object]] | None = None,
+) -> dict[str, object]:
     """Recent load totals plus whether CTL can be quoted yet.
 
     ``ctl_warming_up`` lets the UI say "still accumulating" rather than showing
@@ -139,6 +159,7 @@ def _recent_load(loads: Sequence[dict[str, object]]) -> dict[str, object]:
     years of history is never flagged.
     """
     current = loads[-1] if loads else {}
+    seconds = aggregate_domain_seconds(classifications or [])
     return {
         "d7_tss": _sum_tss(loads[-WEEK_DAYS:]),
         "d28_tss": _sum_tss(loads[-28:]),
@@ -148,6 +169,8 @@ def _recent_load(loads: Sequence[dict[str, object]]) -> dict[str, object]:
         "current_tsb": _num(current.get("tsb")),
         "ctl_warming_up": _ctl_warming_up(loads),
         "ctl_history_days": len(loads),
+        "work_domain_seconds": seconds,
+        "work_domain_share": domain_share(seconds),
     }
 
 
@@ -155,11 +178,17 @@ def _ctl_warming_up(loads: Sequence[dict[str, object]]) -> bool:
     return warmup_days(len(loads)) > 0
 
 
-def _plan_adherence(completed_tss: float, planned_tss: float) -> dict[str, float]:
+def _plan_adherence(
+    completed_tss: float,
+    planned_tss: float,
+    classifications: Sequence[dict[str, object]] | None = None,
+) -> dict[str, object]:
+    """TSS adherence plus per-segment quality from stored classifications."""
     return {
         "completed_tss_7d": completed_tss,
         "planned_tss_7d": planned_tss,
         "adherence_pct": round(completed_tss / planned_tss * 100, 1) if planned_tss > 0 else 0.0,
+        **quality_matches(classifications or []),
     }
 
 

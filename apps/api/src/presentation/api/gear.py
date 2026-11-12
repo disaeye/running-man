@@ -41,6 +41,9 @@ class ShoeResponse(BaseModel):
     current_mileage_m: float | None = None
     mileage_m: float
     retirement_alert: bool
+    # 关联的活动数量与最近一次使用时间。
+    total_activities: int = 0
+    last_used_at: datetime | None = None
     retired_at: datetime | None = None
     notes: str | None = None
     created_at: datetime
@@ -160,7 +163,14 @@ async def unassign_shoe(
 
 
 async def _with_mileage(repo: GearRepo, shoe: dict[str, object]) -> dict[str, object]:
-    mileage_m = await repo.compute_shoe_mileage(UUID(str(shoe["id"])))
-    result = {**shoe, "mileage_m": mileage_m}
+    shoe_id = UUID(str(shoe["id"]))
+    mileage_m = await repo.compute_shoe_mileage(shoe_id)
+    total_activities, last_used_at = await repo.compute_shoe_usage(shoe_id)
+    result = {
+        **shoe,
+        "mileage_m": mileage_m,
+        "total_activities": total_activities,
+        "last_used_at": last_used_at,
+    }
     result["retirement_alert"] = check_retirement(result, DEFAULT_RETIREMENT_THRESHOLD_M)
     return result

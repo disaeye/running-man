@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+from presentation.api.domain_contracts import PhysiologicalDomains, QualityMatchesResponse
 
 
 class InsightAnalyticsResponse(BaseModel):
@@ -27,6 +29,7 @@ class IntensityDistributionResponse(InsightAnalyticsResponse):
     zone_seconds: tuple[int, int, int, int, int]
     by_zone: dict[str, float]
     distribution_type: Literal["polarized", "pyramidal", "threshold", "high-volume"]
+    work_domain_seconds: PhysiologicalDomains = Field(default_factory=PhysiologicalDomains)
 
 
 class RunPersonalRecordResponse(InsightAnalyticsResponse):
@@ -64,6 +67,13 @@ class WeeklyProgressResponse(InsightAnalyticsResponse):
     avg_pace_s_per_km: float | None = None
     # 距离目标之差（米）：正数表示还差多少。
     remaining_distance_m: float = 0.0
+    work_domain_seconds: PhysiologicalDomains = Field(default_factory=PhysiologicalDomains)
+    work_domain_share: PhysiologicalDomains = Field(default_factory=PhysiologicalDomains)
+    quality_matches: QualityMatchesResponse = Field(default_factory=QualityMatchesResponse)
+    classification_count: int = 0
+    work_bouts: int = 0
+    work_distance_m: float = 0.0
+    work_duration_s: float = 0.0
 
 
 class PlanQualityResponse(InsightAnalyticsResponse):
@@ -78,6 +88,8 @@ class PlanQualityResponse(InsightAnalyticsResponse):
     key_sessions_completed: int
     key_sessions_total: int
     concerns: list[str]
+    work_domain_seconds: PhysiologicalDomains = Field(default_factory=PhysiologicalDomains)
+    work_domain_share: PhysiologicalDomains = Field(default_factory=PhysiologicalDomains)
 
 
 class TaperResponse(InsightAnalyticsResponse):

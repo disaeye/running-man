@@ -46,6 +46,8 @@ async def get_data_quality(
         quality = await compute_data_quality(athlete.id, connection)
     activities = cast(dict[str, object], health["activities"])
     coverage = cast(dict[str, object], health["coverage"])
+    coverage_activities = cast(dict[str, object], coverage["activities"])
+    coverage_wellness = cast(dict[str, object], coverage["wellness"])
     return DataQualityResponse.model_validate(
         {
             **quality,
@@ -56,10 +58,15 @@ async def get_data_quality(
                     "with_gps": activities["with_gps"],
                     "with_power": activities["with_power"],
                     "with_streams": activities["with_streams"],
+                    "unassigned_run_activities_30d": coverage_activities.get(
+                        "unassigned_run_activities_30d", 0
+                    ),
+                    "first_at": coverage_activities.get("first_at"),
                 },
-                "wellness": coverage["wellness"],
+                "wellness": coverage_wellness,
                 "strength": coverage["strength"],
                 "uploads": coverage["uploads"],
+                "sync": coverage.get("sync"),
             },
         }
     )

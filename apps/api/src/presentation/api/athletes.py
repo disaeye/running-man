@@ -18,7 +18,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from application.thresholds.effective import resolve_effective_thresholds
+from application.thresholds.effective import (
+    effective_from_inputs,
+    load_threshold_inputs,
+)
 from domain.thresholds.resolver import ThresholdField
 from domain.time import today_in_zone
 from infrastructure.auth.models import Athlete
@@ -61,6 +64,7 @@ async def threshold_history(
             resting_hr=step.resting_hr,
             lthr=step.lthr,
             threshold_pace=step.threshold_pace,
+            source=step.source,
         )
         for step in history
     ]
@@ -68,9 +72,10 @@ async def threshold_history(
 
 @router.get("/me", response_model=AthleteMe)
 async def me(athlete: Annotated[Athlete, Depends(get_current_athlete)]) -> AthleteMe:
-    row, wellness, _activity_hr = await AthleteProfileRepo().get_me(athlete.id)
-    thresholds = await resolve_effective_thresholds(athlete.id)
-    data: dict[str, object] = dict(row) if row else {}
+    inputs = await load_threshold_inputs(athlete.id, include_weight_fallback=True)
+    thresholds = effective_from_inputs(inputs)
+    row = inputs.profile or {}
+    data: dict[str, object] = dict(row)
     data["id"] = str(athlete.id)
     data.setdefault("email", athlete.email)
     data.update({field: getattr(thresholds, field).value for field in _THRESHOLD_COLS})
@@ -79,9 +84,8 @@ async def me(athlete: Annotated[Athlete, Depends(get_current_athlete)]) -> Athle
     # observed-HR fallbacks already live in the shared resolver, so they are not
     # re-applied here (that duplication is what made this endpoint and
     # /insights/zones disagree about HRmax).
-    measured = wellness or {}
     if data.get("weight_goal") is None:
-        data["weight_goal"] = measured.get("weight")
+        data["weight_goal"] = (inputs.wellness or {}).get("weight")
     return AthleteMe.model_validate(data)
 
 

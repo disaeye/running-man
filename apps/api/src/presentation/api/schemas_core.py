@@ -3,7 +3,25 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
+
+from presentation.api.schemas_run import (
+    RunWorkoutPrescription,
+    RunWorkoutSegment,
+    SessionClassificationResponse,
+    SessionExecutionPayload,
+    SessionQualityPayload,
+    WorkoutTemplateSegment,
+)
+
+__all__ = [
+    "RunWorkoutPrescription",
+    "RunWorkoutSegment",
+    "SessionClassificationResponse",
+    "SessionExecutionPayload",
+    "SessionQualityPayload",
+    "WorkoutTemplateSegment",
+]
 
 
 class CoreResponseModel(BaseModel):
@@ -67,57 +85,6 @@ class NotificationPrefsUpdate(BaseModel):
     plan_deviation_alert: bool | None = None
 
 
-class RunWorkoutSegment(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    type: Literal[
-        "easy", "recovery", "long", "tempo", "intervals", "threshold", "warmup", "cooldown"
-    ]
-    duration_min: int = Field(gt=0, le=600)
-    pace_min_s_km: int | None = Field(default=None, gt=0, le=1800)
-    pace_max_s_km: int | None = Field(default=None, gt=0, le=1800)
-    repetitions: int | None = Field(default=None, ge=1, le=100)
-    recovery_min: int | None = Field(default=None, gt=0, le=120)
-    rpe_min: int | None = Field(default=None, ge=1, le=10)
-    rpe_max: int | None = Field(default=None, ge=1, le=10)
-
-    @field_validator("pace_max_s_km")
-    @classmethod
-    def _pace_order(cls, value: int | None, info: object) -> int | None:
-        pace_min = info.data.get("pace_min_s_km")  # type: ignore[attr-defined]
-        if value is not None and pace_min is not None and pace_min > value:
-            raise ValueError("slower pace bound must not be faster than the minimum pace")
-        return value
-
-    @field_validator("pace_min_s_km")
-    @classmethod
-    def _pace_minimum_not_faster_than_maximum(cls, value: int | None, info: object) -> int | None:
-        pace_max = info.data.get("pace_max_s_km")  # type: ignore[attr-defined]
-        if value is not None and pace_max is not None and value > pace_max:
-            raise ValueError("slower pace bound must not be faster than the minimum pace")
-        return value
-
-    @field_validator("rpe_max")
-    @classmethod
-    def _rpe_order(cls, value: int | None, info: object) -> int | None:
-        rpe_min = info.data.get("rpe_min")  # type: ignore[attr-defined]
-        if value is not None and rpe_min is not None and rpe_min > value:
-            raise ValueError("minimum RPE must not exceed maximum RPE")
-        return value
-
-
-class RunWorkoutPrescription(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    version: Literal[1]
-    type: Literal["easy", "recovery", "long", "tempo", "intervals"]
-    duration_min: int = Field(ge=0, le=600)
-    pace_min_s_km: int | None = Field(default=None, gt=0, le=1800)
-    pace_max_s_km: int | None = Field(default=None, gt=0, le=1800)
-    segments: list[RunWorkoutSegment]
-    phase: str | None = None
-
-
 class CalendarEventCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -148,6 +115,9 @@ class CalendarEventUpdate(BaseModel):
     status: str | None = None
     done: bool | None = None
     workout_prescription: RunWorkoutPrescription | None = None
+    execution: SessionExecutionPayload | None = None
+    quality: SessionQualityPayload | None = None
+    session_classification: SessionClassificationResponse | None = None
     completed_distance_m: float | None = Field(default=None, gt=0)
     completed_duration_s: int | None = Field(default=None, gt=0)
     completed_avg_hr: int | None = Field(default=None, ge=25, le=260)

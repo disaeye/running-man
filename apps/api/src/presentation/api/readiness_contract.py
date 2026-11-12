@@ -21,12 +21,18 @@ class WellnessReadingResponse(BaseModel):
     ``baseline`` is the seven-day mean of the same reading; ``delta`` is the
     difference from it. A reading that was not measured is ``None`` at the
     field level, so the page can say "未记录" instead of showing a zero.
+
+    ``observed_on`` is the day the value was actually measured. Vitals arrive
+    independently — HRV overnight, resting heart rate after the next morning —
+    so a reading may come from an earlier day than the one being viewed, and
+    the page states which.
     """
 
     value: float
     unit: str
     baseline: float | None = None
     delta: float | None = None
+    observed_on: date | None = None
 
 
 class WellnessReadingsResponse(BaseModel):
