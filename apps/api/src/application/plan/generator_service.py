@@ -9,6 +9,15 @@ from zoneinfo import ZoneInfo
 from psycopg import AsyncConnection
 from psycopg.rows import DictRow
 
+from application.plan.plan_context_io import (
+    default_days_off,
+    goal_title,
+    load_goal,
+    sorted_events,
+    valid_days,
+    validate_goal,
+    validate_running_athlete,
+)
 from application.plan.plan_inputs import athlete_settings, recent_weekly_run_distance
 from application.plan.plan_records import (
     affected_dates,
@@ -22,15 +31,14 @@ from application.plan.plan_records import (
 from application.plan.training_paces import (
     TrainingPaceStep,
     goal_training_paces,
+    pace_anchors,
+    pace_step_for_date,
     paces_for_date,
     training_pace_history,
 )
-from domain.sports import is_running
 from domain.workout.periodization import Phase, generate_phases
 from domain.workout.plan_generator import WeekPlanOptions, generate_weekly_plan
 from domain.workout.prescription import REST
-
-WEEKDAY_MAX = 6
 
 
 @dataclass(frozen=True)
@@ -123,9 +131,9 @@ async def _plan_context(
     request: PlanRequest,
 ) -> PlanContext:
     """Read everything a generated plan depends on, and validate it."""
-    goal = await _load_goal(athlete_id, goal_id, db_conn)
-    target_date, race_distance_value = _validate_goal(goal)
-    await _validate_running_athlete(athlete_id, db_conn)
+    goal = await load_goal(athlete_id, goal_id, db_conn)
+    target_date, race_distance_value = validate_goal(goal)
+    await validate_running_athlete(athlete_id, db_conn)
 
     settings = await athlete_settings(athlete_id, db_conn)
     timezone = ZoneInfo(settings.timezone)
@@ -141,9 +149,9 @@ async def _plan_context(
         request.rest_days if request.rest_days is not None else 7 - settings.weekly_training_days
     )
     days_off = (
-        _valid_days(request.preferred_days_off)
+        valid_days(request.preferred_days_off)
         if request.preferred_days_off is not None
-        else _default_days_off(target_date, today, count_rest)
+        else default_days_off(target_date, today, count_rest)
     )
     if len(days_off) > count_rest:
         raise ValueError("偏好休息日数量不能超过每周休息日数量")
@@ -171,52 +179,12 @@ async def _plan_context(
         options,
         paces,
         target_date,
-        str(goal.get("title") or "比赛") if goal.get("type") == "event" else None,
+        goal_title(goal),
         datetime.now(UTC),
         request.dry_run,
         running_history_weeks,
         race_distance_value,
     )
-
-
-def _validate_goal(goal: dict[str, object]) -> tuple[date, float]:
-    if str(goal.get("type") or "").lower() != "event":
-        raise ValueError("训练计划只能用于跑步比赛目标")
-    target_date = goal.get("target_date")
-    if not isinstance(target_date, date):
-        raise ValueError("目标日期为必填项")
-    race_distance = goal.get("race_distance_m")
-    if isinstance(race_distance, bool) or not isinstance(race_distance, int | float):
-        raise ValueError("比赛距离为必填项")
-    race_distance_m = float(race_distance)
-    if race_distance_m <= 0:
-        raise ValueError("比赛距离为必填项")
-    return target_date, race_distance_m
-
-
-async def _validate_running_athlete(athlete_id: UUID, db_conn: AsyncConnection[DictRow]) -> None:
-    async with db_conn.cursor() as cur:
-        _ = await cur.execute("SELECT preferred_sport FROM athletes WHERE id = %s", (athlete_id,))
-        athlete_row = await cur.fetchone()
-    if athlete_row is None or not is_running(str(athlete_row.get("preferred_sport") or "")):
-        raise ValueError("训练计划只能用于跑步比赛目标")
-
-
-async def _load_goal(
-    athlete_id: UUID, goal_id: UUID, db_conn: AsyncConnection[DictRow]
-) -> dict[str, object]:
-    query = """
-    SELECT goal_id, athlete_id, type::text AS type, title, target_value,
-           unit::text AS unit, target_date, race_distance_m, race_target_time_s
-    FROM goals
-    WHERE athlete_id = %s AND goal_id = %s AND status <> 'abandoned'
-    """
-    async with db_conn.cursor() as cur:
-        _ = await cur.execute(query, (athlete_id, goal_id))
-        row = await cur.fetchone()
-    if row is None:
-        raise ValueError("找不到训练目标")
-    return dict(row)
 
 
 def _planned_events(context: PlanContext) -> list[dict[str, object]]:
@@ -230,6 +198,7 @@ def _planned_events(context: PlanContext) -> list[dict[str, object]]:
         while week_start <= phase.end_date:
             week_number = max((week_start - phase_week_start).days // 7, 0)
             weekly_distance = phase.weekly_distance_for(week_start)
+            pace_step = pace_step_for_date(context.paces, week_start)
             weekly_plan = generate_weekly_plan(
                 weekly_distance,
                 WeekPlanOptions(
@@ -240,6 +209,12 @@ def _planned_events(context: PlanContext) -> list[dict[str, object]]:
                     week_number=(phase_week_start - phase.start_date).days // 7 + week_number,
                     max_session_duration_min=context.options.max_session_duration_min,
                     long_run_day=context.options.long_run_day,
+                    pace_effective_from=(
+                        pace_step.effective_from.isoformat() if pace_step else None
+                    ),
+                    pace_source_refs=(pace_step.source_refs if pace_step else ()),
+                    pace_anchors=pace_anchors(pace_step) if pace_step else None,
+                    plan_date=week_start,
                 ),
             )
             for day_offset in range(7):
@@ -276,15 +251,4 @@ def _planned_events(context: PlanContext) -> list[dict[str, object]]:
                 context.timezone,
             )
         )
-    return sorted(planned, key=lambda event: cast(datetime, event["start_time"]))
-
-
-def _valid_days(days: list[int] | None) -> list[int]:
-    if days is None:
-        return []
-    return sorted({day for day in days if 0 <= day <= WEEKDAY_MAX})
-
-
-def _default_days_off(race_date: date, today: date, rest_days: int) -> list[int]:
-    _ = race_date, today
-    return [5, 2, 0, 4, 1, 3, 6][: min(max(rest_days, 0), 7)]
+    return sorted_events(planned)

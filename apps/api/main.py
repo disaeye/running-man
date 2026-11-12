@@ -14,6 +14,7 @@ from presentation.api import (
     activities,
     activity_analysis,
     activity_flags,
+    activity_rpe,
     activity_stats,
     athlete_grade,
     athletes,
@@ -36,6 +37,7 @@ from presentation.api import (
     pmc,
     race,
     race_results,
+    run_classifications,
     share,
     strength,
     sync_runs,
@@ -106,6 +108,8 @@ app.include_router(plan_state.router, prefix=API_V1_PREFIX)
 app.include_router(plan_adjustments.router, prefix=API_V1_PREFIX)
 app.include_router(activity_stats.router, prefix=API_V1_PREFIX)
 app.include_router(activity_flags.router, prefix=API_V1_PREFIX)
+app.include_router(activity_rpe.router, prefix=API_V1_PREFIX)
+app.include_router(run_classifications.router, prefix=API_V1_PREFIX)
 app.include_router(activities.router, prefix=API_V1_PREFIX)
 app.include_router(manual_activity.router, prefix=API_V1_PREFIX)
 app.include_router(activity_analysis.router, prefix=API_V1_PREFIX)

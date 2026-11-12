@@ -10,6 +10,7 @@ from psycopg import AsyncConnection
 from psycopg.rows import DictRow
 
 from domain.workout.periodization import Phase
+from domain.workout.plan_evidence import plan_science_payload, work_quality_target
 from domain.workout.plan_generator import PlannedDay
 from domain.workout.prescription import session_distance_m
 
@@ -28,6 +29,7 @@ def event_record(
     event_id = f"plan:{goal_id}:{uuid5(PLAN_NAMESPACE, f'{goal_id}:{event_day.isoformat()}')}"
     start_time = datetime.combine(event_day, time(hour=6), tzinfo=timezone)
     name = f"{day.description}（{day.duration_min} 分钟）" if day.duration_min else day.description
+    science_payload = plan_science_payload(day.science) if day.science else {}
     prescription = {
         "version": 1,
         "type": day.workout_type,
@@ -36,6 +38,9 @@ def event_record(
         "pace_max_s_km": day.pace_max_s_km,
         "segments": list(day.workout_segments),
         "phase": phase_name,
+        **science_payload,
+        "quality_target": work_quality_target(day.workout_segments),
+        "display_line": day.display_line,
     }
     # 目标距离：从步骤与配速区间算出。没有配速时算不出距离，
     # 课表因此不声明距离目标，而不是给一个编出来的数字。
@@ -64,6 +69,9 @@ def event_record(
             "pace_max_s_km": day.pace_max_s_km,
             "segments": list(day.workout_segments),
             "phase": phase_name,
+            **science_payload,
+            "quality_target": work_quality_target(day.workout_segments),
+            "display_line": day.display_line,
         },
     }
 

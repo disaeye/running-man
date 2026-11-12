@@ -3,8 +3,9 @@
 Runs the phases of a job in order:
   1. Activity windows (incremental or monthly backfill)
   2. Streams (downloads missing FIT samples, throttled progress)
-  3. Wellness (incremental from last stored day, or backfill window)
-  4. Weather (fills the weather of activities that carry a position)
+  3. Precise intervals (?intervals=true, when the client supports it)
+  4. Wellness (incremental from last stored day, or backfill window)
+  5. Weather (fills the weather of activities that carry a position)
 
 Each phase writes progress through ``sync_jobs.update_progress``, commits its
 step, and honours cancellation at phase and window boundaries.
@@ -13,12 +14,18 @@ step, and honours cancellation at phase and window boundaries.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from uuid import UUID
 
-import httpx
 from psycopg import Connection
 
+from application.integrations.sync_job_support import (
+    StreamReporter,
+    SyncCancelledError,
+    progress,
+    run_weather_phase,
+    set_job_window,
+)
 from infrastructure.integrations.intervals.client import IntervalsClient
+from infrastructure.integrations.intervals.history import resolve_initial_history_window
 from infrastructure.integrations.intervals.sync import (
     ActivityFitClient,
     backfill_activities,
@@ -26,13 +33,10 @@ from infrastructure.integrations.intervals.sync import (
     sync_activity_streams,
     sync_incremental_window,
 )
-from infrastructure.integrations.intervals.sync_helpers import (
-    athlete_today,
-    monthly_windows,
-)
-from infrastructure.integrations.intervals.sync_laps import (
-    activity_ids_in_window,
-)
+from infrastructure.integrations.intervals.sync_helpers import athlete_today, monthly_windows
+from infrastructure.integrations.intervals.sync_intervals import sync_activity_intervals
+from infrastructure.integrations.intervals.sync_laps import activity_ids_in_window
+from infrastructure.integrations.intervals.sync_types import ActivityIntervalsClient
 from infrastructure.integrations.intervals.wellness_sync import sync_wellness
 from infrastructure.repositories import sync_jobs
 from infrastructure.repositories.activity import ActivitySyncStats
@@ -44,17 +48,10 @@ from infrastructure.repositories.sync_jobs_types import (
     job_window_start,
 )
 from infrastructure.repositories.wellness import last_wellness_day
-from infrastructure.weather.service import (
-    activities_without_weather,
-    fetch_for_activity,
-)
 
-STREAM_PROGRESS_EVERY = 5
 INCREMENTAL_WELLNESS_DAYS = 90
 
-
-class SyncCancelledError(Exception):
-    """Raised at a phase boundary after the athlete asked to stop the job."""
+__all__ = ["SyncCancelledError", "run_phases"]
 
 
 async def run_phases(
@@ -67,9 +64,11 @@ async def run_phases(
         await _run_backfill(conn, job, client)
         await _run_streams_phase(conn, job, client, errors)
     else:
-        await _run_incremental(conn, job, client, errors)
+        # 初次导入分支返回补上窗口的任务行，后续阶段需要它。
+        job = await _run_incremental(conn, job, client, errors) or job
+    await _run_intervals_phase(conn, job, client, errors)
     await _run_wellness_phase(conn, job, client)
-    await _run_weather_phase(conn, job, errors)
+    await run_weather_phase(conn, job, errors)
 
 
 async def _run_incremental(
@@ -77,14 +76,21 @@ async def _run_incremental(
     job: dict[str, object],
     client: IntervalsClient,
     errors: list[dict[str, object]],
-) -> None:
+) -> dict[str, object] | None:
     job_id = job_id_of(job)
     athlete_id = athlete_id_of(job)
     window = incremental_window(athlete_id, conn)
+    if window is not None and window[0] > window[1]:
+        history = await resolve_initial_history_window(athlete_id, client, conn)
+        set_job_window(conn, job_id, history.start, history.end)
+        backfill_job = {**job, "window_start": history.start, "window_end": history.end}
+        await _run_backfill(conn, backfill_job, client)
+        await _run_streams_phase(conn, backfill_job, client, errors)
+        return backfill_job
     if window is None:
-        _progress(conn, job_id, JobProgress(phase="activities", windows_total=0, windows_done=0))
-        return
-    _progress(conn, job_id, JobProgress(phase="activities", windows_total=1, windows_done=0))
+        progress(conn, job_id, JobProgress(phase="activities", windows_total=0, windows_done=0))
+        return None
+    progress(conn, job_id, JobProgress(phase="activities", windows_total=1, windows_done=0))
     result = await sync_incremental_window(
         athlete_id,
         client,
@@ -92,7 +98,7 @@ async def _run_incremental(
         window[0],
         window[1],
         job_id,
-        _StreamReporter(conn, job_id),
+        StreamReporter(conn, job_id),
     )
     errors.extend(
         {"activity_id": error.activity_id, "message": error.message}
@@ -100,7 +106,7 @@ async def _run_incremental(
     )
     if errors:
         sync_jobs.store_errors(conn, job_id, errors)
-    _progress(
+    progress(
         conn,
         job_id,
         JobProgress(
@@ -113,6 +119,8 @@ async def _run_incremental(
             errors_count=len(result.stream_result.errors),
         ),
     )
+    set_job_window(conn, job_id, window[0], window[1])
+    return {**job, "window_start": window[0], "window_end": window[1]}
 
 
 async def _run_backfill(conn: Connection, job: dict[str, object], client: IntervalsClient) -> None:
@@ -121,18 +129,17 @@ async def _run_backfill(conn: Connection, job: dict[str, object], client: Interv
     start = job_window_start(job)
     end = job_window_end(job)
     windows = monthly_windows(start, end)
-    _progress(
+    progress(
         conn,
         job_id,
         JobProgress(phase="activities", windows_total=len(windows), windows_done=0),
     )
-
     done = 0
 
     def on_window(_oldest: date, _newest: date, stats: ActivitySyncStats) -> None:
         nonlocal done
         done += 1
-        _progress(
+        progress(
             conn,
             job_id,
             JobProgress(
@@ -160,20 +167,45 @@ async def _run_streams_phase(
     activity_ids = activity_ids_in_window(
         athlete_id, conn, job_window_start(job), job_window_end(job)
     )
-    _progress(conn, job_id, JobProgress(phase="streams"))
+    progress(conn, job_id, JobProgress(phase="streams"))
     result = await sync_activity_streams(
         athlete_id,
         client,
         conn,
         activity_ids,
-        on_progress=_StreamReporter(conn, job_id),
+        on_progress=StreamReporter(conn, job_id),
     )
     errors.extend(
         {"activity_id": error.activity_id, "message": error.message} for error in result.errors
     )
     if errors:
         sync_jobs.store_errors(conn, job_id, errors)
-    _progress(conn, job_id, JobProgress(phase="streams", errors_count=len(result.errors)))
+    progress(conn, job_id, JobProgress(phase="streams", errors_count=len(result.errors)))
+
+
+async def _run_intervals_phase(
+    conn: Connection,
+    job: dict[str, object],
+    client: IntervalsClient,
+    errors: list[dict[str, object]],
+) -> None:
+    if not isinstance(client, ActivityIntervalsClient):
+        return
+    if job.get("window_start") is None or job.get("window_end") is None:
+        return
+    job_id = job_id_of(job)
+    athlete_id = athlete_id_of(job)
+    activity_ids = activity_ids_in_window(
+        athlete_id, conn, job_window_start(job), job_window_end(job)
+    )
+    progress(conn, job_id, JobProgress(phase="intervals"))
+    result = await sync_activity_intervals(athlete_id, client, conn, activity_ids)
+    errors.extend(
+        {"activity_id": error.activity_id, "message": error.message} for error in result.errors
+    )
+    if errors:
+        sync_jobs.store_errors(conn, job_id, errors)
+    progress(conn, job_id, JobProgress(phase="intervals", errors_count=len(result.errors)))
 
 
 async def _run_wellness_phase(
@@ -188,70 +220,11 @@ async def _run_wellness_phase(
     else:
         stored = last_wellness_day(conn, athlete_id)
         oldest = stored if stored is not None else today - timedelta(days=INCREMENTAL_WELLNESS_DAYS)
+        if job.get("window_start") is not None:
+            oldest = min(oldest, job_window_start(job))
         newest = today
     if oldest > newest:
         return
-    _progress(conn, job_id, JobProgress(phase="wellness"))
+    progress(conn, job_id, JobProgress(phase="wellness"))
     days = await sync_wellness(athlete_id, client, conn, oldest.isoformat(), newest.isoformat())
-    _progress(conn, job_id, JobProgress(phase="wellness", wellness_days=days))
-
-
-async def _run_weather_phase(
-    conn: Connection, job: dict[str, object], errors: list[dict[str, object]]
-) -> None:
-    """Fill in the weather of activities that carry a position.
-
-    Intervals.icu supplies a weather block with an activity when its own
-    weather service has data for that place; this deployment's activities
-    carry none. The conditions are fetched from a reanalysis service instead,
-    using the activity's own GPS position and time.
-
-    The phase runs after the streams phase, because the position comes from
-    the GPS samples that phase downloads.
-    """
-    job_id = job_id_of(job)
-    athlete_id = athlete_id_of(job)
-    rows = activities_without_weather(conn, athlete_id)
-    if not rows:
-        return
-    written = 0
-    failed = 0
-    with httpx.Client() as client:
-        for row in rows:
-            result = fetch_for_activity(conn, row, client)
-            if result.error is not None:
-                failed += 1
-                errors.append({"activity_id": result.activity_id, "message": result.error})
-            elif result.written:
-                written += 1
-    conn.commit()
-    _progress(conn, job_id, JobProgress(phase="weather", errors_count=failed))
-    _ = written
-
-
-class _StreamReporter:
-    def __init__(self, conn: Connection, job_id: UUID) -> None:
-        self._conn = conn
-        self._job_id = job_id
-        self._seen = 0
-        self._pending = 0
-
-    def __call__(self, activity_id: str, inserted: int) -> None:
-        _ = activity_id
-        self._seen += 1
-        self._pending += inserted
-        if inserted == 0 and self._seen % STREAM_PROGRESS_EVERY != 0:
-            return
-        _progress(
-            self._conn,
-            self._job_id,
-            JobProgress(phase="streams", streams_inserted=self._pending),
-        )
-        self._pending = 0
-
-
-def _progress(conn: Connection, job_id: UUID, progress: JobProgress) -> None:
-    sync_jobs.update_progress(conn, job_id, progress)
-    conn.commit()
-    if sync_jobs.is_cancel_requested(conn, job_id):
-        raise SyncCancelledError()
+    progress(conn, job_id, JobProgress(phase="wellness", wellness_days=days))

@@ -13,6 +13,7 @@ from application.computation.runs import ComputationRunResult
 from application.load.pmc_facts import recompute_pmc_facts
 from application.load.recompute import recompute_activity_load_facts
 from application.physiology.service import calculate_physiology
+from application.run_classification.service import recompute_session_classifications
 from domain.algorithms import algorithm_contract
 from domain.generated.algorithms import Algorithm
 from infrastructure.db.pool import get_pool, open_pool
@@ -53,8 +54,16 @@ async def recompute_after_activity_change(
     await _prune_orphaned_activity_facts(athlete_id)
     pmc = await recompute_pmc_facts(athlete_id, trigger)
     await _prune_activity_facts_without_history(athlete_id)
+    await _recompute_classifications(athlete_id)
     staleness = await check_athlete_computation_staleness(athlete_id)
     return RecomputeChainResult(activity, pmc, staleness)
+
+
+async def _recompute_classifications(athlete_id: UUID) -> None:
+    await open_pool()
+    async with get_pool().connection() as conn:
+        await recompute_session_classifications(conn, athlete_id)
+        await conn.commit()
 
 
 async def _prune_orphaned_activity_facts(athlete_id: UUID) -> None:

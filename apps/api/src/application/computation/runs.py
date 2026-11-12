@@ -55,8 +55,19 @@ class ComputationRunRepository:
     async def successful_run_id(
         self, conn: psycopg.AsyncConnection[DictRow], spec: ComputationRunSpec
     ) -> UUID | None:
+        """The run whose result this input fingerprint can reuse, if any.
+
+        A matching run is not enough on its own. Raw data can be cleared and
+        re-imported unchanged, which empties the derived rows while leaving the
+        fingerprint identical; trusting the run row then skipped the rebuild
+        and left the athlete with no load facts at all. A skip therefore also
+        requires that the previous run's product still exists.
+
+        A run that wrote no rows is trusted as-is: there is nothing to lose by
+        skipping, and re-running it on every pass would rebuild nothing.
+        """
         query = """
-        SELECT id
+        SELECT id, rows_affected
         FROM computation_runs
         WHERE athlete_id = %s AND computation_kind = %s
           AND algorithm_version = %s AND input_fingerprint = %s AND status = 'success'
@@ -73,7 +84,30 @@ class ComputationRunRepository:
                 ),
             )
             row = await cur.fetchone()
-        return cast(UUID, row["id"]) if row else None
+        if row is None:
+            return None
+        run_id = cast(UUID, row["id"])
+        if int(cast(int, row["rows_affected"] or 0)) > 0 and not await self.run_products_present(
+            conn, run_id
+        ):
+            return None
+        return run_id
+
+    async def run_products_present(
+        self, conn: psycopg.AsyncConnection[DictRow], run_id: UUID
+    ) -> bool:
+        """Whether any stored result still points at this computation run."""
+        query = """
+        SELECT (
+            EXISTS (SELECT 1 FROM derived_metric_facts WHERE computation_run_id = %s)
+            OR EXISTS (SELECT 1 FROM athlete_thresholds WHERE computation_run_id = %s)
+            OR EXISTS (SELECT 1 FROM athletes WHERE physiology_computation_run_id = %s)
+        ) AS present
+        """
+        async with conn.cursor() as cur:
+            _ = await cur.execute(query, (run_id, run_id, run_id))
+            row = await cur.fetchone()
+        return bool(row and row["present"])
 
     async def insert_run(
         self,

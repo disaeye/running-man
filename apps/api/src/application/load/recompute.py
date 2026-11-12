@@ -202,7 +202,9 @@ def _activity_input(
     sport_str = _text(sport) if sport is not None else None
     # Pace-based load only applies to running-family sports.
     is_run = is_running(sport_str)
-    resolved = resolve_all(thresholds, target_date)
+    # 历史导入的活动可能早于阈值记录的起点：用最早的已知阈值近似，
+    # 否则那些会话永远没有负荷，导入的历史就白拉了。
+    resolved = resolve_all(thresholds, target_date, backfill_earlier=True)
     threshold_pace = resolved["threshold_pace"]
     return ActivityLoadInput(
         activity_id=_text(row["activity_id"]),

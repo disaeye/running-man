@@ -2,26 +2,34 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import cast
+from typing import Final, cast
 from uuid import UUID
 
 from psycopg import AsyncConnection
 from psycopg.rows import DictRow
 
 from domain.physiology.vdot import (
+    VDOT_ALGORITHM_VERSION,
+    VDOT_SOURCE_REFS,
     race_performance_paces,
+    vdot_from_threshold_pace,
+    vdot_pace_anchor,
 )
 from domain.physiology.vdot import (
     training_paces as compute_training_paces,
 )
 
 MIN_RACE_DISTANCE_FOR_PACE_M = 1500
+TRAINING_PACE_ANCHOR: Final = "Daniels-VDOT"
 
 
 @dataclass(frozen=True)
 class TrainingPaceStep:
     effective_from: date
     paces: dict[str, dict[str, float]]
+    intensity_anchor: str = TRAINING_PACE_ANCHOR
+    algorithm_version: str = VDOT_ALGORITHM_VERSION
+    source_refs: tuple[str, ...] = VDOT_SOURCE_REFS
 
 
 async def training_pace_history(
@@ -40,13 +48,47 @@ async def training_pace_history(
         threshold_pace = float(row["threshold_pace"])
         if threshold_pace <= 0:
             continue
-        threshold_m_per_min = 60.0 / threshold_pace * 1000.0
-        v_vo2max = threshold_m_per_min / 0.88
-        vdot = v_vo2max * 0.2 + 3.5
+        vdot = vdot_from_threshold_pace(threshold_pace)
+        if vdot is None:
+            continue
         paces = compute_training_paces(vdot)
         if paces:
-            steps.append(TrainingPaceStep(cast(date, row["effective_from"]), paces))
+            steps.append(
+                TrainingPaceStep(
+                    cast(date, row["effective_from"]),
+                    paces,
+                    intensity_anchor=TRAINING_PACE_ANCHOR,
+                    algorithm_version=VDOT_ALGORITHM_VERSION,
+                    source_refs=VDOT_SOURCE_REFS,
+                )
+            )
     return tuple(steps)
+
+
+def pace_anchor(step: TrainingPaceStep, pace_key: str) -> dict[str, object]:
+    """Bind one VDOT pace range to the step's date, model and source refs."""
+    anchor = {
+        **vdot_pace_anchor(
+            step.paces,
+            pace_key,
+            effective_from=(
+                step.effective_from.isoformat() if step.effective_from != date.min else None
+            ),
+            source_refs=step.source_refs,
+        ),
+        "model": step.intensity_anchor,
+        "intensity_anchor": step.intensity_anchor,
+        "algorithm_version": step.algorithm_version,
+    }
+    if step.effective_from == date.min:
+        anchor["effective_from"] = None
+        anchor["source_refs"] = [*dict.fromkeys((*step.source_refs, "user-goal-race-target"))]
+    return anchor
+
+
+def pace_anchors(step: TrainingPaceStep) -> dict[str, dict[str, object]]:
+    """One dated, source-bound anchor per VDOT pace key in a history step."""
+    return {key: pace_anchor(step, key) for key in step.paces}
 
 
 def goal_training_paces(goal: dict[str, object]) -> tuple[TrainingPaceStep, ...]:
@@ -61,11 +103,28 @@ def goal_training_paces(goal: dict[str, object]) -> tuple[TrainingPaceStep, ...]
     ):
         return ()
     paces = race_performance_paces(float(distance), target_time)
-    return (TrainingPaceStep(date.min, paces),) if paces else ()
+    if not paces:
+        return ()
+    return (
+        TrainingPaceStep(
+            date.min,
+            paces,
+            intensity_anchor=TRAINING_PACE_ANCHOR,
+            algorithm_version=VDOT_ALGORITHM_VERSION,
+            source_refs=VDOT_SOURCE_REFS,
+        ),
+    )
+
+
+def pace_step_for_date(
+    history: tuple[TrainingPaceStep, ...], target_date: date
+) -> TrainingPaceStep | None:
+    eligible = [step for step in history if step.effective_from <= target_date]
+    return max(eligible, key=lambda step: step.effective_from) if eligible else None
 
 
 def paces_for_date(
     history: tuple[TrainingPaceStep, ...], target_date: date
 ) -> dict[str, dict[str, float]] | None:
-    eligible = [step for step in history if step.effective_from <= target_date]
-    return max(eligible, key=lambda step: step.effective_from).paces if eligible else None
+    step = pace_step_for_date(history, target_date)
+    return step.paces if step else None
