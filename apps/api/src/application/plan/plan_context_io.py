@@ -49,7 +49,11 @@ async def validate_running_athlete(athlete_id: UUID, db_conn: AsyncConnection[Di
     async with db_conn.cursor() as cur:
         await cur.execute("SELECT preferred_sport FROM athletes WHERE id = %s", (athlete_id,))
         athlete_row = await cur.fetchone()
-    if athlete_row is None or not is_running(str(athlete_row.get("preferred_sport") or "")):
+    if athlete_row is None:
+        raise ValueError("找不到运动员资料")
+    preferred = str(athlete_row.get("preferred_sport") or "").strip()
+    # 未填写主运动时视为跑步：生成器只排跑步课，空值拦截没有意义。
+    if preferred and not is_running(preferred):
         raise ValueError("训练计划只能用于跑步比赛目标")
 
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime, time, timedelta
-from typing import cast
 from uuid import UUID, uuid5
 from zoneinfo import ZoneInfo
 
@@ -25,6 +24,7 @@ def event_record(
     day: PlannedDay,
     phase_name: str,
     timezone: ZoneInfo,
+    predicted_tss: float | None = None,
 ) -> dict[str, object]:
     event_id = f"plan:{goal_id}:{uuid5(PLAN_NAMESPACE, f'{goal_id}:{event_day.isoformat()}')}"
     start_time = datetime.combine(event_day, time(hour=6), tzinfo=timezone)
@@ -50,7 +50,7 @@ def event_record(
         "athlete_id": athlete_id,
         "start_time": start_time,
         "name": name,
-        "predicted_tss": None,
+        "predicted_tss": predicted_tss,
         "predicted_distance_m": distance_m,
         "sport_type": sport,
         "plan_goal_id": goal_id,
@@ -64,6 +64,7 @@ def event_record(
             "training_type": day.workout_type,
             "category": "workout",
             "duration_min": day.duration_min,
+            "predicted_tss": predicted_tss,
             "predicted_distance_m": distance_m,
             "pace_min_s_km": day.pace_min_s_km,
             "pace_max_s_km": day.pace_max_s_km,
@@ -114,15 +115,6 @@ def race_event_record(
             "segments": [],
             "phase": "race",
         },
-    }
-
-
-def phase_preview(phase: Phase) -> dict[str, object]:
-    return {
-        "name": phase.name,
-        "start_date": phase.start_date.isoformat(),
-        "end_date": phase.end_date.isoformat(),
-        "target_weekly_distance_m": round(phase.target_weekly_distance_m, 1),
     }
 
 
@@ -195,13 +187,17 @@ async def insert_phases(
             )
 
 
-async def insert_events(events: list[dict[str, object]], db_conn: AsyncConnection[DictRow]) -> int:
+async def insert_events(
+    events: list[dict[str, object]],
+    db_conn: AsyncConnection[DictRow],
+    revision_id: UUID | None = None,
+) -> int:
     query = """
     INSERT INTO training_calendar (
         event_id, athlete_id, start_time, category, sport_type, name, predicted_tss,
         predicted_distance_m, status, done, plan_goal_id, plan_source, training_type,
-        workout_prescription, athlete_edited
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'planned', false, %s, %s, %s, %s::jsonb, false)
+        workout_prescription, athlete_edited, revision_id
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'planned', false, %s, %s, %s, %s::jsonb, false, %s)
     ON CONFLICT (event_id) DO UPDATE SET
         start_time = EXCLUDED.start_time,
         sport_type = EXCLUDED.sport_type,
@@ -213,6 +209,7 @@ async def insert_events(events: list[dict[str, object]], db_conn: AsyncConnectio
         plan_source = EXCLUDED.plan_source,
         training_type = EXCLUDED.training_type,
         workout_prescription = EXCLUDED.workout_prescription,
+        revision_id = EXCLUDED.revision_id,
         status = 'planned'
     WHERE training_calendar.athlete_id = EXCLUDED.athlete_id
       AND training_calendar.plan_goal_id = EXCLUDED.plan_goal_id
@@ -240,13 +237,11 @@ async def insert_events(events: list[dict[str, object]], db_conn: AsyncConnectio
                     event["plan_source"],
                     event["training_type"],
                     json.dumps(event["workout_prescription"], ensure_ascii=True),
+                    revision_id,
                 ),
             )
             inserted += cur.rowcount
     return inserted
 
 
-def affected_dates(events: list[dict[str, object]], timezone: ZoneInfo) -> list[date]:
-    return sorted(
-        cast(datetime, event["start_time"]).astimezone(timezone).date() for event in events
-    )
+# affected_dates 与 phase_preview 已移至 plan_events.py。

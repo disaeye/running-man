@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from typing import cast
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -13,32 +13,25 @@ from application.plan.plan_context_io import (
     default_days_off,
     goal_title,
     load_goal,
-    sorted_events,
     valid_days,
     validate_goal,
     validate_running_athlete,
 )
+from application.plan.plan_events import affected_dates, phase_preview, planned_events
 from application.plan.plan_inputs import athlete_settings, recent_weekly_run_distance
 from application.plan.plan_records import (
-    affected_dates,
-    event_record,
     insert_events,
     insert_phases,
-    phase_preview,
-    race_event_record,
     replace_future_generated_plan,
 )
 from application.plan.training_paces import (
     TrainingPaceStep,
     goal_training_paces,
-    pace_anchors,
-    pace_step_for_date,
     paces_for_date,
     training_pace_history,
 )
 from domain.workout.periodization import Phase, generate_phases
-from domain.workout.plan_generator import WeekPlanOptions, generate_weekly_plan
-from domain.workout.prescription import REST
+from infrastructure.repositories.plan_revisions import PlanRevisionRepo
 
 
 @dataclass(frozen=True)
@@ -92,24 +85,46 @@ async def generate_plan(
     request: PlanRequest | None = None,
 ) -> dict[str, object]:
     context = await _plan_context(athlete_id, goal_id, db_conn, request or PlanRequest())
-    events = _planned_events(context)
-    planned_dates = affected_dates(events, context.timezone)
+    events = planned_events(context)
+    preserved = await _preserved_future_rows(athlete_id, goal_id, context.now, db_conn)
+    preserved_ids = {str(row["event_id"]) for row in preserved}
+    writable = [event for event in events if str(event["event_id"]) not in preserved_ids]
+    planned_dates = affected_dates(writable, context.timezone)
     result: dict[str, object] = {
         "phases_created": len(context.phases),
-        "events_created": len(events),
+        "events_created": len(writable),
         "affected_dates": planned_dates,
+        "preserved": [
+            {
+                "date": _iso_day(row["day"]),
+                "name": str(row["name"] or ""),
+                "reason": "done" if row["done"] else "athlete_edited",
+            }
+            for row in preserved
+        ],
     }
     if context.dry_run:
-        result.update(_preview_payload(context, events))
+        result.update(_preview_payload(context, writable))
         return result
 
+    revision_id = await insert_plan_revision(
+        athlete_id,
+        goal_id,
+        "generate",
+        cast(list[dict[str, object]], [event["preview"] for event in writable]),
+        [phase_preview(phase) for phase in context.phases],
+    )
     await replace_future_generated_plan(
-        athlete_id, goal_id, context.now, context.today, events, db_conn
+        athlete_id, goal_id, context.now, context.today, writable, db_conn
     )
     await insert_phases(athlete_id, goal_id, context.phases, context.today, db_conn)
-    inserted = await insert_events(events, db_conn)
+    inserted = await insert_events(writable, db_conn, revision_id)
     await db_conn.commit()
-    return {"phases_created": len(context.phases), "events_created": inserted}
+    return {
+        "phases_created": len(context.phases),
+        "events_created": inserted,
+        "preserved": result["preserved"],
+    }
 
 
 def _preview_payload(context: PlanContext, events: list[dict[str, object]]) -> dict[str, object]:
@@ -122,6 +137,46 @@ def _preview_payload(context: PlanContext, events: list[dict[str, object]]) -> d
         ),
         "running_history_weeks": context.running_history_weeks,
     }
+
+
+def _iso_day(value: object) -> str:
+    """行里的本地日期转 ISO 文本；类型不对时直接暴露错误。"""
+    if not isinstance(value, date):
+        raise ValueError("保留课表行的日期列不是日期")
+    return value.isoformat()
+
+
+async def _preserved_future_rows(
+    athlete_id: UUID,
+    goal_id: UUID,
+    now: datetime,
+    db_conn: AsyncConnection[DictRow],
+) -> list[dict[str, object]]:
+    """该目标未来已被手动修改或已完成的课表行，重生成时保留。"""
+    query = """
+    SELECT event_id, name, done, athlete_edited,
+           (start_time AT TIME ZONE (SELECT timezone FROM athletes WHERE id = athlete_id))::date
+               AS day
+    FROM training_calendar
+    WHERE athlete_id = %s AND plan_goal_id = %s AND status <> 'deleted'
+      AND start_time > %s AND (athlete_edited OR done)
+    ORDER BY start_time
+    """
+    async with db_conn.cursor() as cur:
+        _ = await cur.execute(query, (athlete_id, goal_id, now))
+        rows = await cur.fetchall()
+    return [dict(row) for row in rows]
+
+
+async def insert_plan_revision(
+    athlete_id: UUID,
+    goal_id: UUID,
+    reason: str,
+    events: list[dict[str, object]],
+    phases: list[dict[str, object]],
+) -> UUID:
+    """写入本次生成的完整快照。"""
+    return await PlanRevisionRepo().insert(athlete_id, goal_id, reason, events, phases)
 
 
 async def _plan_context(
@@ -185,70 +240,3 @@ async def _plan_context(
         running_history_weeks,
         race_distance_value,
     )
-
-
-def _planned_events(context: PlanContext) -> list[dict[str, object]]:
-    planned: list[dict[str, object]] = []
-    for phase in context.phases:
-        week_start = phase.start_date - timedelta(days=phase.start_date.weekday())
-        # Week number is phase-relative: the 4th week of a build block is where
-        # the recovery week belongs. Counting from the start of the whole plan
-        # put it at an arbitrary point inside a phase.
-        phase_week_start = week_start
-        while week_start <= phase.end_date:
-            week_number = max((week_start - phase_week_start).days // 7, 0)
-            weekly_distance = phase.weekly_distance_for(week_start)
-            pace_step = pace_step_for_date(context.paces, week_start)
-            weekly_plan = generate_weekly_plan(
-                weekly_distance,
-                WeekPlanOptions(
-                    sport=context.sport,
-                    rest_days=context.options.rest_days,
-                    preferred_days_off=context.options.preferred_days_off,
-                    training_paces=paces_for_date(context.paces, week_start),
-                    week_number=(phase_week_start - phase.start_date).days // 7 + week_number,
-                    max_session_duration_min=context.options.max_session_duration_min,
-                    long_run_day=context.options.long_run_day,
-                    pace_effective_from=(
-                        pace_step.effective_from.isoformat() if pace_step else None
-                    ),
-                    pace_source_refs=(pace_step.source_refs if pace_step else ()),
-                    pace_anchors=pace_anchors(pace_step) if pace_step else None,
-                    plan_date=week_start,
-                ),
-            )
-            for day_offset in range(7):
-                event_day = week_start + timedelta(days=day_offset)
-                if event_day < max(phase.start_date, context.today) or event_day > phase.end_date:
-                    continue
-                if context.race_title is not None and event_day == context.race_date:
-                    continue
-                day = weekly_plan[day_offset]
-                if day.workout_type == REST:
-                    continue
-                event = event_record(
-                    context.athlete_id,
-                    context.goal_id,
-                    context.sport,
-                    event_day,
-                    day,
-                    phase.name,
-                    context.timezone,
-                )
-                if cast(datetime, event["start_time"]) > context.now:
-                    planned.append(event)
-            week_start += timedelta(days=7)
-
-    if context.race_title is not None:
-        planned.append(
-            race_event_record(
-                context.athlete_id,
-                context.goal_id,
-                context.sport,
-                context.race_date,
-                context.race_title,
-                context.race_distance_m,
-                context.timezone,
-            )
-        )
-    return sorted_events(planned)

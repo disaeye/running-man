@@ -15,9 +15,7 @@ class AthleteSettings:
     max_session_duration_min: int
 
 
-async def athlete_settings(
-    athlete_id: UUID, db_conn: AsyncConnection[DictRow]
-) -> AthleteSettings:
+async def athlete_settings(athlete_id: UUID, db_conn: AsyncConnection[DictRow]) -> AthleteSettings:
     async with db_conn.cursor() as cur:
         _ = await cur.execute(
             "SELECT timezone, weekly_training_days, max_session_duration_min "
@@ -34,7 +32,7 @@ async def athlete_settings(
     )
 
 
-MIN_COMPLETE_RUN_WEEKS = 4
+MIN_COMPLETE_RUN_WEEKS = 2
 HISTORY_WEEKS = 6
 
 
@@ -43,6 +41,11 @@ async def recent_weekly_run_distance(
     today: date,
     db_conn: AsyncConnection[DictRow],
 ) -> tuple[float, int]:
+    """返回近期平均实际跑步距离和有记录的周数。
+
+    基线取活跃周（有有效跑步记录的周）的平均值：六周里只练了两周时，
+    拿六周平均会把基线压到真实水平的三分之一，后续阶梯全部失真。
+    """
     """返回近期完整本地周的平均实际跑步距离和有记录的周数。"""
     current_monday = today - timedelta(days=today.weekday())
     first_monday = current_monday - timedelta(weeks=HISTORY_WEEKS)
@@ -73,7 +76,8 @@ async def recent_weekly_run_distance(
         if 0 <= week_index < HISTORY_WEEKS:
             weekly_totals[week_index] += float(distance)
 
-    active_weeks = sum(distance > 0 for distance in weekly_totals)
+    active_totals = [distance for distance in weekly_totals if distance > 0]
+    active_weeks = len(active_totals)
     if active_weeks < MIN_COMPLETE_RUN_WEEKS:
-        raise ValueError("最近六个完整周的有效跑步距离不足四周，无法生成训练计划")
-    return sum(weekly_totals) / HISTORY_WEEKS, active_weeks
+        raise ValueError("最近六个完整周的有效跑步距离不足两周，无法生成训练计划")
+    return sum(active_totals) / active_weeks, active_weeks

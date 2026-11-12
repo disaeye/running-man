@@ -8,6 +8,13 @@ from application.plan.generator_service import PlanRequest, generate_plan
 
 
 @pytest.mark.no_db
+def _positive_number(value: object, ceiling: float = float("inf")) -> bool:
+    """值是正数且不超过上限（缺省只验正数）。"""
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        return False
+    return 0 < value <= ceiling
+
+
 async def test_generate_plan_dry_run_does_not_write_to_db() -> None:
     athlete_id = uuid4()
     goal_id = uuid4()
@@ -42,10 +49,17 @@ async def test_generate_plan_dry_run_does_not_write_to_db() -> None:
     assert race_events[0]["predicted_distance_m"] == 42195
     assert race_events[0]["segments"] == []
     training_events = [event for event in events if event["training_type"] != "race"]
-    assert all(event.get("predicted_tss") is None for event in training_events)
-    assert all(isinstance(event.get("predicted_distance_m"), int | float) for event in training_events)
-    assert all("predicted_tss" not in cast(dict[str, object], event["preview"]) for event in training_events)
-    assert all(event["duration_min"] <= 120 for event in training_events)
+    assert all(_positive_number(event.get("predicted_tss")) for event in training_events)
+    assert all(
+        isinstance(event.get("predicted_distance_m"), int | float) for event in training_events
+    )
+    assert all(
+        _positive_number(cast(dict[str, object], event["preview"]).get("predicted_tss"))
+        for event in training_events
+    )
+    assert all(
+        _positive_number(event.get("duration_min"), ceiling=120) for event in training_events
+    )
 
 
 class FakeConnection:

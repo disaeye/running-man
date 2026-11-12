@@ -85,22 +85,14 @@ class ThresholdInputs:
 async def load_threshold_inputs(
     athlete_id: UUID,
     target_date: date | None = None,
-    *,
-    include_weight_fallback: bool = False,
 ) -> ThresholdInputs:
-    """Read the profile and history once, then only the fallbacks still needed.
-
-    ``include_weight_fallback`` is for ``/athletes/me``: it also offers the
-    latest measured weight when the athlete has not set a weight goal.
-    """
+    """Read the profile and history once, then only the fallbacks still needed."""
     repo = AthleteProfileRepo()
     async with get_pool().connection() as conn:
         profile = await repo.get(athlete_id, conn=conn)
         history = await ThresholdRepo().history(athlete_id, conn=conn)
         recorded = resolve_all(history, target_date)
-        need_wellness, need_observed_hr = _required_fallbacks(
-            profile, recorded, target_date, include_weight_fallback
-        )
+        need_wellness, need_observed_hr = _required_fallbacks(profile, recorded, target_date)
         wellness, activity_hr = await repo.measured_fallbacks(
             athlete_id,
             wellness=need_wellness,
@@ -135,7 +127,6 @@ def _required_fallbacks(
     profile: dict[str, object] | None,
     recorded: dict[ThresholdField, int | float | None],
     target_date: date | None,
-    include_weight_fallback: bool,
 ) -> tuple[bool, bool]:
     """Which measured values can still change the answer.
 
@@ -144,18 +135,12 @@ def _required_fallbacks(
     only needed when both are absent.
     """
     row = profile or {}
-    need_wellness = recorded["resting_hr"] is None or (
-        include_weight_fallback and row.get("weight_goal") is None
-    )
-    need_observed_hr = (
-        recorded["hr_max"] is None and _age_estimate(row, target_date) is None
-    )
+    need_wellness = recorded["resting_hr"] is None
+    need_observed_hr = recorded["hr_max"] is None and _age_estimate(row, target_date) is None
     return need_wellness, need_observed_hr
 
 
-def _age_estimate(
-    row: dict[str, object], target_date: date | None
-) -> int | None:
+def _age_estimate(row: dict[str, object], target_date: date | None) -> int | None:
     dob = row.get("dob")
     if not isinstance(dob, date):
         return None

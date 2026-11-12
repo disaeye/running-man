@@ -7,7 +7,8 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from application.plan.generator_service import PlanContext, ScheduleOptions, _planned_events
+from application.plan.generator_service import PlanContext, ScheduleOptions
+from application.plan.plan_events import planned_events
 from application.plan.training_paces import (
     TrainingPaceStep,
     paces_for_date,
@@ -86,7 +87,7 @@ def test_partial_first_week_and_pace_threshold_changes_are_date_specific() -> No
         now=datetime(2026, 1, 7, 5, tzinfo=UTC),
     )
 
-    events = cast(list[dict[str, object]], _planned_events(plan_context))
+    events = cast(list[dict[str, object]], planned_events(plan_context))
 
     def preview_date(event: dict[str, object]) -> date:
         preview = cast(dict[str, object], event["preview"])
@@ -113,8 +114,11 @@ def test_partial_first_week_and_pace_threshold_changes_are_date_specific() -> No
     )
     assert early_segments[0]["pace_min_s_km"] == 350
     assert later_segments[0]["pace_min_s_km"] == 310
-    assert "predicted_tss" not in cast(dict[str, object], early["preview"])
-    assert cast(dict[str, object], early["preview"])["predicted_distance_m"] > 0
+    early_preview = cast(dict[str, object], early["preview"])
+    early_tss = early_preview["predicted_tss"]
+    early_distance = early_preview["predicted_distance_m"]
+    assert isinstance(early_tss, int | float) and early_tss > 0
+    assert isinstance(early_distance, int | float) and early_distance > 0
 
 
 def test_weekly_plan_honors_six_rest_days_and_session_time_ceiling() -> None:
