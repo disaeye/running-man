@@ -12,11 +12,7 @@ TRAINING_PACES = {
 
 
 def _hard_days(plan: list[PlannedDay]) -> list[int]:
-    return [
-        day.day_offset
-        for day in plan
-        if day.workout_type in {"long", "tempo", "intervals"}
-    ]
+    return [day.day_offset for day in plan if day.workout_type in {"long", "tempo", "intervals"}]
 
 
 def test_weekly_distance_plan_has_rest_and_real_pace_based_sessions() -> None:
@@ -28,9 +24,11 @@ def test_weekly_distance_plan_has_rest_and_real_pace_based_sessions() -> None:
     assert len(plan) == 7
     assert [day.day_offset for day in plan] == list(range(7))
     assert sum(1 for day in plan if day.workout_type == "rest") >= 1
+    assert all(day.target_distance_m is None for day in plan if day.workout_type == "rest")
     assert all(
-        day.target_distance_m is None if day.workout_type == "rest" else day.target_distance_m > 0
+        isinstance(day.target_distance_m, float) and day.target_distance_m > 0
         for day in plan
+        if day.workout_type != "rest"
     )
     assert all(day.duration_min > 0 for day in plan if day.workout_type != "rest")
     assert all(
@@ -116,3 +114,40 @@ def test_non_positive_weekly_distance_is_rejected() -> None:
         assert str(error) == "目标周跑量必须大于零"
     else:
         raise AssertionError("zero weekly distance must be rejected")
+
+
+MARATHON_PACES = {
+    **TRAINING_PACES,
+    "marathon": {"min": 295.0, "max": 320.0},
+}
+
+
+def test_long_run_uses_marathon_pace_for_endurance_races_in_build_phase() -> None:
+    plan = generate_weekly_plan(
+        60000.0,
+        WeekPlanOptions(
+            training_paces=MARATHON_PACES,
+            race_distance_m=42195.0,
+            phase_name="build",
+        ),
+    )
+    long_days = [day for day in plan if day.workout_type == "long"]
+    assert long_days, "长距离课必须存在"
+    assert all(day.pace_min_s_km == 295 for day in long_days)
+    assert all(day.pace_max_s_km == 320 for day in long_days)
+
+
+def test_long_run_keeps_easy_pace_for_base_phase_and_short_races() -> None:
+    for phase_name, race_distance_m in (("base", 42195.0), ("build", 10000.0)):
+        plan = generate_weekly_plan(
+            42000.0,
+            WeekPlanOptions(
+                training_paces=MARATHON_PACES,
+                race_distance_m=race_distance_m,
+                phase_name=phase_name,
+            ),
+        )
+        long_days = [day for day in plan if day.workout_type == "long"]
+        assert long_days, "长距离课必须存在"
+        assert all(day.pace_min_s_km == 340 for day in long_days)
+        assert all(day.pace_max_s_km == 390 for day in long_days)

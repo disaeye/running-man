@@ -56,6 +56,9 @@ class WeekPlanOptions:
     pace_source_refs: tuple[str, ...] = ()
     pace_anchors: dict[str, dict[str, object]] | None = None
     plan_date: date | None = None
+    # 比赛距离与阶段名：半马及以上的 build/peak 阶段长距离课改用马拉松配速。
+    race_distance_m: float | None = None
+    phase_name: str | None = None
 
 
 def generate_weekly_plan(
@@ -204,6 +207,17 @@ def _cap_flexible_days(
         distances[long_days[0]] += surplus
 
 
+def _long_run_pace_key(options: WeekPlanOptions) -> str:
+    """长距离课的配速键：半马及以上在 build/peak 用马拉松配速，其余用轻松配速。"""
+    if (
+        options.race_distance_m is not None
+        and options.race_distance_m >= 21097.5
+        and options.phase_name in ("build", "peak")
+    ):
+        return "marathon"
+    return "easy"
+
+
 def _planned_day(
     day: int,
     workout_type: str,
@@ -214,7 +228,7 @@ def _planned_day(
     if workout_type == REST:
         return PlannedDay(day, REST, None, 0, description(REST, options.sport))
 
-    pace_key = PACE_KEYS.get(workout_type)
+    pace_key = _long_run_pace_key(options) if workout_type == LONG else PACE_KEYS.get(workout_type)
     if pace_key is None:
         raise ValueError(f"workout type has no training pace: {workout_type}")
     pace = options.training_paces.get(pace_key) if options.training_paces else None
