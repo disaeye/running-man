@@ -35,8 +35,7 @@ export const AthleteMe = zod.object({
   "sex": zod.union([zod.string(),zod.null()]).optional(),
   "threshold_pace": zod.union([zod.number(),zod.null()]).optional(),
   "timezone": zod.string().default(athleteMeTimezoneDefault),
-  "weekly_training_days": zod.union([zod.number(),zod.null()]).default(athleteMeWeeklyTrainingDaysDefault),
-  "weight_goal": zod.union([zod.number(),zod.null()]).optional()
+  "weekly_training_days": zod.union([zod.number(),zod.null()]).default(athleteMeWeeklyTrainingDaysDefault)
 })
 
 export type AthleteMe = zod.input<typeof AthleteMe>;

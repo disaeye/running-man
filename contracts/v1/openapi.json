@@ -2118,17 +2118,6 @@
             ],
             "default": 5,
             "title": "Weekly Training Days"
-          },
-          "weight_goal": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weight Goal"
           }
         },
         "required": [
@@ -2287,18 +2276,6 @@
               }
             ],
             "title": "Weekly Training Days"
-          },
-          "weight_goal": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weight Goal"
           }
         },
         "title": "AthleteProfileUpdate",
@@ -3072,6 +3049,18 @@
             ],
             "title": "Plan Source"
           },
+          "predicted_distance_m": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Distance M"
+          },
           "predicted_tss": {
             "anyOf": [
               {
@@ -3272,6 +3261,18 @@
             ],
             "title": "Name"
           },
+          "predicted_distance_m": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Distance M"
+          },
           "predicted_tss": {
             "anyOf": [
               {
@@ -3337,6 +3338,17 @@
               }
             ],
             "title": "Status"
+          },
+          "training_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Type"
           },
           "workout_prescription": {
             "anyOf": [
@@ -4564,6 +4576,31 @@
         "title": "DetectionRequest",
         "type": "object"
       },
+      "DetectionResponse": {
+        "additionalProperties": false,
+        "description": "\u68c0\u6d4b\u7684\u7ed3\u679c\uff1a\u6ca1\u6709\u89e6\u53d1\u65f6 adjustment \u4e3a\u7a7a\uff0c\u9644\u4e00\u53e5\u8bf4\u660e\u3002",
+        "properties": {
+          "adjustment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanAdjustmentResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "DetectionResponse",
+        "type": "object"
+      },
       "DomainResidence": {
         "properties": {
           "above_wmax": {
@@ -4872,6 +4909,17 @@
       "GoalCreate": {
         "additionalProperties": false,
         "properties": {
+          "baseline_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Value"
+          },
           "current_value": {
             "anyOf": [
               {
@@ -4882,6 +4930,26 @@
               }
             ],
             "title": "Current Value"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "increase",
+                  "decrease"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "is_primary": {
+            "default": false,
+            "title": "Is Primary",
+            "type": "boolean"
           },
           "race_distance_m": {
             "anyOf": [
@@ -4909,9 +4977,37 @@
             ],
             "title": "Race Target Time S"
           },
+          "sport_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sport Key"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
           "status": {
             "anyOf": [
               {
+                "enum": [
+                  "active",
+                  "achieved",
+                  "abandoned"
+                ],
                 "type": "string"
               },
               {
@@ -4948,6 +5044,13 @@
             "type": "string"
           },
           "type": {
+            "enum": [
+              "event",
+              "distance",
+              "time",
+              "weight",
+              "consistency"
+            ],
             "title": "Type",
             "type": "string"
           },
@@ -4970,11 +5073,103 @@
         "title": "GoalCreate",
         "type": "object"
       },
+      "GoalRaceCandidate": {
+        "additionalProperties": false,
+        "description": "\u6bd4\u8d5b\u65e5\u9644\u8fd1\u53ef\u4f5c\u4e3a\u7ed3\u6848\u4f9d\u636e\u7684\u6d3b\u52a8\u3002",
+        "properties": {
+          "activity_id": {
+            "title": "Activity Id",
+            "type": "string"
+          },
+          "distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance M"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "is_race": {
+            "default": false,
+            "title": "Is Race",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sport": {
+            "title": "Sport",
+            "type": "string"
+          },
+          "start_time": {
+            "format": "date-time",
+            "title": "Start Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "activity_id",
+          "start_time",
+          "sport"
+        ],
+        "title": "GoalRaceCandidate",
+        "type": "object"
+      },
+      "GoalRaceCandidateList": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/GoalRaceCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "candidates"
+        ],
+        "title": "GoalRaceCandidateList",
+        "type": "object"
+      },
       "GoalResponse": {
         "properties": {
           "athlete_id": {
             "title": "Athlete Id",
             "type": "string"
+          },
+          "baseline_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Value"
           },
           "created_at": {
             "format": "date-time",
@@ -4985,9 +5180,41 @@
             "title": "Current Value",
             "type": "number"
           },
+          "direction": {
+            "default": "increase",
+            "title": "Direction",
+            "type": "string"
+          },
           "goal_id": {
             "title": "Goal Id",
             "type": "string"
+          },
+          "is_primary": {
+            "default": false,
+            "title": "Is Primary",
+            "type": "boolean"
+          },
+          "race_activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race Activity Id"
+          },
+          "race_actual_time_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race Actual Time S"
           },
           "race_distance_m": {
             "anyOf": [
@@ -5010,6 +5237,29 @@
               }
             ],
             "title": "Race Target Time S"
+          },
+          "sport_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sport Key"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
           },
           "status": {
             "title": "Status",
@@ -5076,9 +5326,52 @@
         "title": "GoalResponse",
         "type": "object"
       },
+      "GoalResultCreate": {
+        "additionalProperties": false,
+        "description": "\u6bd4\u8d5b\u7ed3\u6848\uff1a\u6d3b\u52a8\u4e0e\u5b8c\u8d5b\u7528\u65f6\u81f3\u5c11\u63d0\u4f9b\u4e00\u4e2a\u3002",
+        "properties": {
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id"
+          },
+          "finish_time_s": {
+            "anyOf": [
+              {
+                "maximum": 172800.0,
+                "minimum": 60.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish Time S"
+          }
+        },
+        "title": "GoalResultCreate",
+        "type": "object"
+      },
       "GoalUpdate": {
         "additionalProperties": false,
         "properties": {
+          "baseline_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Value"
+          },
           "current_value": {
             "anyOf": [
               {
@@ -5089,6 +5382,32 @@
               }
             ],
             "title": "Current Value"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "increase",
+                  "decrease"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "is_primary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Primary"
           },
           "race_distance_m": {
             "anyOf": [
@@ -5116,9 +5435,37 @@
             ],
             "title": "Race Target Time S"
           },
+          "sport_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sport Key"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
           "status": {
             "anyOf": [
               {
+                "enum": [
+                  "active",
+                  "achieved",
+                  "abandoned"
+                ],
                 "type": "string"
               },
               {
@@ -5164,6 +5511,13 @@
           "type": {
             "anyOf": [
               {
+                "enum": [
+                  "event",
+                  "distance",
+                  "time",
+                  "weight",
+                  "consistency"
+                ],
                 "type": "string"
               },
               {
@@ -6703,6 +7057,18 @@
             ],
             "title": "Achieved At"
           },
+          "phase_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Id"
+          },
           "result_text": {
             "anyOf": [
               {
@@ -6784,6 +7150,17 @@
           "milestone_id": {
             "title": "Milestone Id",
             "type": "string"
+          },
+          "phase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Id"
           },
           "result_text": {
             "anyOf": [
@@ -6869,6 +7246,18 @@
               }
             ],
             "title": "Achieved At"
+          },
+          "phase_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Id"
           },
           "result_text": {
             "anyOf": [
@@ -7668,6 +8057,17 @@
             ],
             "title": "Predicted Distance M"
           },
+          "predicted_tss": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Tss"
+          },
           "primary_stimulus": {
             "anyOf": [
               {
@@ -8016,6 +8416,13 @@
             "title": "Phases Created",
             "type": "integer"
           },
+          "preserved": {
+            "items": {
+              "$ref": "#/components/schemas/PlanPreservedPreview"
+            },
+            "title": "Preserved",
+            "type": "array"
+          },
           "running_history_weeks": {
             "anyOf": [
               {
@@ -8171,6 +8578,31 @@
         "title": "PlanPhaseView",
         "type": "object"
       },
+      "PlanPreservedPreview": {
+        "description": "\u91cd\u751f\u6210\u65f6\u4f1a\u88ab\u4fdd\u7559\u7684\u73b0\u6709\u8bfe\u8868\uff08\u5df2\u624b\u52a8\u4fee\u6539\u6216\u5df2\u5b8c\u6210\uff09\u3002",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "name",
+          "reason"
+        ],
+        "title": "PlanPreservedPreview",
+        "type": "object"
+      },
       "PlanQualityResponse": {
         "additionalProperties": false,
         "properties": {
@@ -8257,6 +8689,100 @@
           "concerns"
         ],
         "title": "PlanQualityResponse",
+        "type": "object"
+      },
+      "PlanRevisionDetail": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PlanEventPreview"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "events_created": {
+            "title": "Events Created",
+            "type": "integer"
+          },
+          "phases": {
+            "items": {
+              "$ref": "#/components/schemas/PlanPhasePreview"
+            },
+            "title": "Phases",
+            "type": "array"
+          },
+          "phases_created": {
+            "title": "Phases Created",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "revision_id": {
+            "title": "Revision Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision_id",
+          "reason",
+          "events_created",
+          "phases_created"
+        ],
+        "title": "PlanRevisionDetail",
+        "type": "object"
+      },
+      "PlanRevisionSummary": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "events_created": {
+            "title": "Events Created",
+            "type": "integer"
+          },
+          "phases_created": {
+            "title": "Phases Created",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "revision_id": {
+            "title": "Revision Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision_id",
+          "reason",
+          "events_created",
+          "phases_created"
+        ],
+        "title": "PlanRevisionSummary",
         "type": "object"
       },
       "PlanSessionView": {
@@ -13342,8 +13868,8 @@
           "soreness": {
             "anyOf": [
               {
-                "maximum": 100.0,
-                "minimum": 0.0,
+                "maximum": 4.0,
+                "minimum": 1.0,
                 "type": "integer"
               },
               {
@@ -17232,6 +17758,50 @@
         ]
       }
     },
+    "/api/v1/goals/{goal_id}/race-candidates": {
+      "get": {
+        "description": "\u6bd4\u8d5b\u65e5 \u00b11 \u5929\u5185\u53ef\u4f5c\u4e3a\u7ed3\u6848\u4f9d\u636e\u7684\u6d3b\u52a8\u3002",
+        "operationId": "list_race_candidates_api_v1_goals_goal_id_race-candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalRaceCandidateList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Race Candidates",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
     "/api/v1/goals/{goal_id}/refresh": {
       "post": {
         "operationId": "refresh_goal_api_v1_goals_goal_id_refresh_post",
@@ -17270,6 +17840,60 @@
           }
         },
         "summary": "Refresh Goal",
+        "tags": [
+          "goals"
+        ]
+      }
+    },
+    "/api/v1/goals/{goal_id}/result": {
+      "post": {
+        "description": "\u5199\u5165\u5b9e\u9645\u5b8c\u8d5b\u6210\u7ee9\u5e76\u628a\u76ee\u6807\u7ed3\u6848\u4e3a\u5df2\u8fbe\u6210\u3002",
+        "operationId": "record_race_result_api_v1_goals_goal_id_result_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalResultCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Race Result",
         "tags": [
           "goals"
         ]
@@ -19097,7 +19721,7 @@
     },
     "/api/v1/plan/adjustments/detect": {
       "post": {
-        "description": "Check a planned session and record a proposal for review.",
+        "description": "\u68c0\u67e5\u4e00\u8282\u8ba1\u5212\u8bfe\u5e76\u8bb0\u5f55\u5f85\u786e\u8ba4\u5efa\u8bae\uff1b\u6ca1\u6709\u89e6\u53d1\u8ff9\u8c61\u65f6\u6b63\u5e38\u8fd4\u56de\u7a7a\u7ed3\u679c\u3002",
         "operationId": "detect_adjustment_for_event_api_v1_plan_adjustments_detect_post",
         "requestBody": {
           "content": {
@@ -19114,7 +19738,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlanAdjustmentResponse"
+                  "$ref": "#/components/schemas/DetectionResponse"
                 }
               }
             },
@@ -19320,6 +19944,98 @@
           }
         },
         "summary": "Get Periodization",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/api/v1/plan/revisions": {
+      "get": {
+        "description": "\u4e00\u4e2a\u76ee\u6807\u7684\u5168\u90e8\u8ba1\u5212\u7248\u672c\uff0c\u6700\u65b0\u5728\u524d\u3002",
+        "operationId": "list_plan_revisions_api_v1_plan_revisions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Goal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlanRevisionSummary"
+                  },
+                  "title": "Response List Plan Revisions Api V1 Plan Revisions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Plan Revisions",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/api/v1/plan/revisions/{revision_id}": {
+      "get": {
+        "description": "\u5355\u4e2a\u7248\u672c\u7684\u5b8c\u6574\u5feb\u7167\uff1a\u5f53\u65f6\u6392\u5b9a\u7684\u5168\u90e8\u8bfe\u8868\u4e0e\u9636\u6bb5\u3002",
+        "operationId": "get_plan_revision_api_v1_plan_revisions_revision_id_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanRevisionDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Plan Revision",
         "tags": [
           "plan"
         ]

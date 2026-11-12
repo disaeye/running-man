@@ -6,6 +6,7 @@
  */
 import { z as zod } from 'zod';
 
+export const createGoalApiV1GoalsPostBodyIsPrimaryDefault = false;
 export const createGoalApiV1GoalsPostBodyRaceDistanceMOneMin = 1500;
 export const createGoalApiV1GoalsPostBodyRaceDistanceMOneMax = 1000000;
 
@@ -14,14 +15,19 @@ export const createGoalApiV1GoalsPostBodyRaceTargetTimeSOneMax = 172800;
 
 
 export const CreateGoalApiV1GoalsPostBody = zod.object({
+  "baseline_value": zod.union([zod.number(),zod.null()]).optional(),
   "current_value": zod.union([zod.number(),zod.null()]).optional(),
+  "direction": zod.union([zod.enum(['increase', 'decrease']),zod.null()]).optional(),
+  "is_primary": zod.boolean().default(createGoalApiV1GoalsPostBodyIsPrimaryDefault),
   "race_distance_m": zod.union([zod.number().min(createGoalApiV1GoalsPostBodyRaceDistanceMOneMin).max(createGoalApiV1GoalsPostBodyRaceDistanceMOneMax),zod.null()]).optional(),
   "race_target_time_s": zod.union([zod.number().min(createGoalApiV1GoalsPostBodyRaceTargetTimeSOneMin).max(createGoalApiV1GoalsPostBodyRaceTargetTimeSOneMax),zod.null()]).optional(),
-  "status": zod.union([zod.string(),zod.null()]).optional(),
+  "sport_key": zod.union([zod.string(),zod.null()]).optional(),
+  "start_date": zod.union([zod.iso.date(),zod.null()]).optional(),
+  "status": zod.union([zod.enum(['active', 'achieved', 'abandoned']),zod.null()]).optional(),
   "target_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "target_value": zod.union([zod.number(),zod.null()]).optional(),
   "title": zod.string(),
-  "type": zod.string(),
+  "type": zod.enum(['event', 'distance', 'time', 'weight', 'consistency']),
   "unit": zod.union([zod.string(),zod.null()]).optional()
 })
 

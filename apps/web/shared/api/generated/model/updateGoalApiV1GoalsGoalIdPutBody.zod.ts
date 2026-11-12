@@ -14,14 +14,19 @@ export const updateGoalApiV1GoalsGoalIdPutBodyRaceTargetTimeSOneMax = 172800;
 
 
 export const UpdateGoalApiV1GoalsGoalIdPutBody = zod.object({
+  "baseline_value": zod.union([zod.number(),zod.null()]).optional(),
   "current_value": zod.union([zod.number(),zod.null()]).optional(),
+  "direction": zod.union([zod.enum(['increase', 'decrease']),zod.null()]).optional(),
+  "is_primary": zod.union([zod.boolean(),zod.null()]).optional(),
   "race_distance_m": zod.union([zod.number().min(updateGoalApiV1GoalsGoalIdPutBodyRaceDistanceMOneMin).max(updateGoalApiV1GoalsGoalIdPutBodyRaceDistanceMOneMax),zod.null()]).optional(),
   "race_target_time_s": zod.union([zod.number().min(updateGoalApiV1GoalsGoalIdPutBodyRaceTargetTimeSOneMin).max(updateGoalApiV1GoalsGoalIdPutBodyRaceTargetTimeSOneMax),zod.null()]).optional(),
-  "status": zod.union([zod.string(),zod.null()]).optional(),
+  "sport_key": zod.union([zod.string(),zod.null()]).optional(),
+  "start_date": zod.union([zod.iso.date(),zod.null()]).optional(),
+  "status": zod.union([zod.enum(['active', 'achieved', 'abandoned']),zod.null()]).optional(),
   "target_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "target_value": zod.union([zod.number(),zod.null()]).optional(),
   "title": zod.union([zod.string(),zod.null()]).optional(),
-  "type": zod.union([zod.string(),zod.null()]).optional(),
+  "type": zod.union([zod.enum(['event', 'distance', 'time', 'weight', 'consistency']),zod.null()]).optional(),
   "unit": zod.union([zod.string(),zod.null()]).optional()
 })
 

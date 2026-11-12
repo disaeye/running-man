@@ -30,7 +30,9 @@ import {
   DataHealthResponse,
   DataQualityResponse,
   DecisionResponse,
+  DetectionResponse,
   ExerciseLibraryItem,
+  GoalRaceCandidateList,
   GoalResponse,
   HealthResponse,
   IgnoreResult,
@@ -45,9 +47,9 @@ import {
   NotificationScanResponse,
   PersonalRangeResponse,
   PhysiologyResponse,
-  PlanAdjustmentResponse,
   PlanGenerateResponse,
   PlanQualityResponse,
+  PlanRevisionDetail,
   PresentationApiAnalyticsInsightContractsRecomputeResponse,
   PresentationApiRunClassificationsRecomputeResponse,
   PublicActivityResponse,
@@ -117,6 +119,7 @@ import type {
   GetWeeklyProgressApiV1InsightsWeeklyProgressGetParams,
   GetWellnessApiV1WellnessGetParams,
   GoalCreate,
+  GoalResultCreate,
   GoalUpdate,
   HTTPValidationError,
   HardDayRangeResponse,
@@ -131,6 +134,7 @@ import type {
   ListClassificationsApiV1ActivitiesClassificationsGetParams,
   ListEventsApiV1CalendarGetParams,
   ListExercisesApiV1StrengthExercisesGetParams,
+  ListPlanRevisionsApiV1PlanRevisionsGetParams,
   ListStrengthActivitiesApiV1StrengthWorkoutsGetParams,
   ListSyncRunsApiV1IntegrationsSyncRunsGetParams,
   ListTemplatesApiV1WorkoutsTemplatesGetParams,
@@ -145,6 +149,7 @@ import type {
   MuscleVolumeResponse,
   NotificationResponse,
   PlanGenerateRequest,
+  PlanRevisionSummary,
   PmcPointResponse,
   PredictRequest,
   RaceFlagUpdate,
@@ -3406,6 +3411,58 @@ export const updateMilestoneApiV1GoalsGoalIdMilestonesMilestoneIdPut = async (go
 
 
 
+export type listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponse200 = {
+  data: GoalRaceCandidateList
+  status: 200
+}
+
+export type listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponseSuccess = (listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponse200) & {
+  headers: Headers;
+};
+export type listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponseError = (listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponse422) & {
+  headers: Headers;
+};
+
+export type listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponse = (listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponseSuccess | listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponseError)
+
+export const getListRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetUrl = (goalId: string,) => {
+
+
+
+
+  return `/api/v1/goals/${goalId}/race-candidates`
+}
+
+/**
+ * 比赛日 ±1 天内可作为结案依据的活动。
+ * @summary List Race Candidates
+ */
+export const listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGet = async (goalId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getListRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetUrl(goalId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? GoalRaceCandidateList.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as listRaceCandidatesApiV1GoalsGoalIdRaceCandidatesGetResponse
+}
+
+
+
 export type refreshGoalApiV1GoalsGoalIdRefreshPostResponse200 = {
   data: GoalResponse
   status: 200
@@ -3453,6 +3510,59 @@ export const refreshGoalApiV1GoalsGoalIdRefreshPost = async (goalId: string, opt
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? GoalResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as refreshGoalApiV1GoalsGoalIdRefreshPostResponse
+}
+
+
+
+export type recordRaceResultApiV1GoalsGoalIdResultPostResponse200 = {
+  data: GoalResponse
+  status: 200
+}
+
+export type recordRaceResultApiV1GoalsGoalIdResultPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type recordRaceResultApiV1GoalsGoalIdResultPostResponseSuccess = (recordRaceResultApiV1GoalsGoalIdResultPostResponse200) & {
+  headers: Headers;
+};
+export type recordRaceResultApiV1GoalsGoalIdResultPostResponseError = (recordRaceResultApiV1GoalsGoalIdResultPostResponse422) & {
+  headers: Headers;
+};
+
+export type recordRaceResultApiV1GoalsGoalIdResultPostResponse = (recordRaceResultApiV1GoalsGoalIdResultPostResponseSuccess | recordRaceResultApiV1GoalsGoalIdResultPostResponseError)
+
+export const getRecordRaceResultApiV1GoalsGoalIdResultPostUrl = (goalId: string,) => {
+
+
+
+
+  return `/api/v1/goals/${goalId}/result`
+}
+
+/**
+ * 写入实际完赛成绩并把目标结案为已达成。
+ * @summary Record Race Result
+ */
+export const recordRaceResultApiV1GoalsGoalIdResultPost = async (goalId: string,
+    goalResultCreate: GoalResultCreate, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<recordRaceResultApiV1GoalsGoalIdResultPostResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getRecordRaceResultApiV1GoalsGoalIdResultPostUrl(goalId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goalResultCreate)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? GoalResponse.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as recordRaceResultApiV1GoalsGoalIdResultPostResponse
 }
 
 
@@ -5489,7 +5599,7 @@ export const listAdjustmentsApiV1PlanAdjustmentsGet = async (params?: ListAdjust
 
 
 export type detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse200 = {
-  data: PlanAdjustmentResponse
+  data: DetectionResponse
   status: 200
 }
 
@@ -5516,7 +5626,7 @@ export const getDetectAdjustmentForEventApiV1PlanAdjustmentsDetectPostUrl = () =
 }
 
 /**
- * Check a planned session and record a proposal for review.
+ * 检查一节计划课并记录待确认建议；没有触发迹象时正常返回空结果。
  * @summary Detect Adjustment For Event
  */
 export const detectAdjustmentForEventApiV1PlanAdjustmentsDetectPost = async (detectionRequest: DetectionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse> => {
@@ -5534,7 +5644,7 @@ export const detectAdjustmentForEventApiV1PlanAdjustmentsDetectPost = async (det
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? PlanAdjustmentResponse.parse(parsedBody) : parsedBody
+  const data = contentType.includes('json') ? DetectionResponse.parse(parsedBody) : parsedBody
   return { data, status: res.status, headers: res.headers } as detectAdjustmentForEventApiV1PlanAdjustmentsDetectPostResponse
 }
 
@@ -5756,6 +5866,116 @@ export const getPeriodizationApiV1PlanPeriodizationGet = async (params: GetPerio
 
   const data: getPeriodizationApiV1PlanPeriodizationGetResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as getPeriodizationApiV1PlanPeriodizationGetResponse
+}
+
+
+
+export type listPlanRevisionsApiV1PlanRevisionsGetResponse200 = {
+  data: PlanRevisionSummary[]
+  status: 200
+}
+
+export type listPlanRevisionsApiV1PlanRevisionsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listPlanRevisionsApiV1PlanRevisionsGetResponseSuccess = (listPlanRevisionsApiV1PlanRevisionsGetResponse200) & {
+  headers: Headers;
+};
+export type listPlanRevisionsApiV1PlanRevisionsGetResponseError = (listPlanRevisionsApiV1PlanRevisionsGetResponse422) & {
+  headers: Headers;
+};
+
+export type listPlanRevisionsApiV1PlanRevisionsGetResponse = (listPlanRevisionsApiV1PlanRevisionsGetResponseSuccess | listPlanRevisionsApiV1PlanRevisionsGetResponseError)
+
+export const getListPlanRevisionsApiV1PlanRevisionsGetUrl = (params: ListPlanRevisionsApiV1PlanRevisionsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/plan/revisions?${stringifiedParams}` : `/api/v1/plan/revisions`
+}
+
+/**
+ * 一个目标的全部计划版本，最新在前。
+ * @summary List Plan Revisions
+ */
+export const listPlanRevisionsApiV1PlanRevisionsGet = async (params: ListPlanRevisionsApiV1PlanRevisionsGetParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<listPlanRevisionsApiV1PlanRevisionsGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getListPlanRevisionsApiV1PlanRevisionsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listPlanRevisionsApiV1PlanRevisionsGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listPlanRevisionsApiV1PlanRevisionsGetResponse
+}
+
+
+
+export type getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponse200 = {
+  data: PlanRevisionDetail
+  status: 200
+}
+
+export type getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponseSuccess = (getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponse200) & {
+  headers: Headers;
+};
+export type getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponseError = (getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponse422) & {
+  headers: Headers;
+};
+
+export type getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponse = (getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponseSuccess | getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponseError)
+
+export const getGetPlanRevisionApiV1PlanRevisionsRevisionIdGetUrl = (revisionId: string,) => {
+
+
+
+
+  return `/api/v1/plan/revisions/${revisionId}`
+}
+
+/**
+ * 单个版本的完整快照：当时排定的全部课表与阶段。
+ * @summary Get Plan Revision
+ */
+export const getPlanRevisionApiV1PlanRevisionsRevisionIdGet = async (revisionId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponse> => {
+
+  const res = await (fetchFn ?? fetch)(getGetPlanRevisionApiV1PlanRevisionsRevisionIdGetUrl(revisionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PlanRevisionDetail.parse(parsedBody) : parsedBody
+  return { data, status: res.status, headers: res.headers } as getPlanRevisionApiV1PlanRevisionsRevisionIdGetResponse
 }
 
 

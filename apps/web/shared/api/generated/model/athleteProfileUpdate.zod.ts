@@ -21,8 +21,6 @@ export const athleteProfileUpdateThresholdPaceOneExclusiveMin = 0;
 
 export const athleteProfileUpdateWeeklyTrainingDaysOneMax = 7;
 
-export const athleteProfileUpdateWeightGoalOneExclusiveMin = 0;
-
 
 export const AthleteProfileUpdate = zod.object({
   "dob": zod.union([zod.iso.date(),zod.null()]).optional(),
@@ -41,8 +39,7 @@ export const AthleteProfileUpdate = zod.object({
   "sex": zod.union([zod.enum(['male', 'female']),zod.null()]).optional(),
   "threshold_pace": zod.union([zod.number().gt(athleteProfileUpdateThresholdPaceOneExclusiveMin),zod.null()]).optional(),
   "timezone": zod.union([zod.string(),zod.null()]).optional(),
-  "weekly_training_days": zod.union([zod.number().min(1).max(athleteProfileUpdateWeeklyTrainingDaysOneMax),zod.null()]).optional(),
-  "weight_goal": zod.union([zod.number().gt(athleteProfileUpdateWeightGoalOneExclusiveMin),zod.null()]).optional()
+  "weekly_training_days": zod.union([zod.number().min(1).max(athleteProfileUpdateWeeklyTrainingDaysOneMax),zod.null()]).optional()
 }).describe('Partial profile update.\n\nThreshold fields (``hr_max``, ``resting_hr``, ``lthr``, ``threshold_pace``)\nare written as a new ``athlete_thresholds`` step dated today, so editing a\nthreshold does not retroactively change how past activities are scored.\n\n``lthr`` is accepted here because it is the reference for heart rate zones\nand for hrTSS; without a write path the value could only ever come from a\nseeded row, and the UI input for it silently discarded what the athlete\ntyped.')
 
 export type AthleteProfileUpdate = zod.input<typeof AthleteProfileUpdate>;

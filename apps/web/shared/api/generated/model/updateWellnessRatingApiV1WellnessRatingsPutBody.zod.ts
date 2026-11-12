@@ -6,13 +6,12 @@
  */
 import { z as zod } from 'zod';
 
-export const updateWellnessRatingApiV1WellnessRatingsPutBodySorenessOneMin = 0;
-export const updateWellnessRatingApiV1WellnessRatingsPutBodySorenessOneMax = 100;
+export const updateWellnessRatingApiV1WellnessRatingsPutBodySorenessOneMax = 4;
 
 
 export const UpdateWellnessRatingApiV1WellnessRatingsPutBody = zod.object({
   "day": zod.iso.date(),
-  "soreness": zod.union([zod.number().min(updateWellnessRatingApiV1WellnessRatingsPutBodySorenessOneMin).max(updateWellnessRatingApiV1WellnessRatingsPutBodySorenessOneMax),zod.null()]).optional()
+  "soreness": zod.union([zod.number().min(1).max(updateWellnessRatingApiV1WellnessRatingsPutBodySorenessOneMax),zod.null()]).optional()
 })
 
 export type UpdateWellnessRatingApiV1WellnessRatingsPutBody = zod.input<typeof UpdateWellnessRatingApiV1WellnessRatingsPutBody>;

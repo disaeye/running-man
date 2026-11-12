@@ -6,13 +6,22 @@
  */
 import { z as zod } from 'zod';
 
+export const goalResponseDirectionDefault = `increase`;
+export const goalResponseIsPrimaryDefault = false;
 export const GoalResponse = zod.object({
   "athlete_id": zod.string(),
+  "baseline_value": zod.union([zod.number(),zod.null()]).optional(),
   "created_at": zod.iso.datetime({"offset":true}),
   "current_value": zod.number(),
+  "direction": zod.string().default(goalResponseDirectionDefault),
   "goal_id": zod.string(),
+  "is_primary": zod.boolean().default(goalResponseIsPrimaryDefault),
+  "race_activity_id": zod.union([zod.string(),zod.null()]).optional(),
+  "race_actual_time_s": zod.union([zod.number(),zod.null()]).optional(),
   "race_distance_m": zod.union([zod.number(),zod.null()]).optional(),
   "race_target_time_s": zod.union([zod.number(),zod.null()]).optional(),
+  "sport_key": zod.union([zod.string(),zod.null()]).optional(),
+  "start_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "status": zod.string(),
   "target_date": zod.union([zod.iso.date(),zod.null()]).optional(),
   "target_value": zod.union([zod.number(),zod.null()]).optional(),

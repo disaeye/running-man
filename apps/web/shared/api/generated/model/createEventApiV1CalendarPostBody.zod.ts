@@ -8,6 +8,8 @@ import { z as zod } from 'zod';
 
 
 
+export const createEventApiV1CalendarPostBodyPredictedDistanceMOneMin = 0;
+
 export const createEventApiV1CalendarPostBodyPredictedTssOneMin = 0;
 
 export const createEventApiV1CalendarPostBodyWorkoutPrescriptionOneEvidenceOneSourceDetailsItemDoiDefault = ``;
@@ -24,6 +26,7 @@ export const CreateEventApiV1CalendarPostBody = zod.object({
   "name": zod.union([zod.string(),zod.null()]).optional(),
   "plan_goal_id": zod.union([zod.string(),zod.null()]).optional(),
   "plan_source": zod.union([zod.string(),zod.null()]).optional(),
+  "predicted_distance_m": zod.union([zod.number().min(createEventApiV1CalendarPostBodyPredictedDistanceMOneMin),zod.null()]).optional(),
   "predicted_tss": zod.union([zod.number().min(createEventApiV1CalendarPostBodyPredictedTssOneMin),zod.null()]).optional(),
   "sport_type": zod.union([zod.string(),zod.null()]).optional(),
   "start_time": zod.iso.datetime({"offset":true}),

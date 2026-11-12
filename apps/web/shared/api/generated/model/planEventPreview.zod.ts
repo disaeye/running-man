@@ -100,6 +100,7 @@ export const PlanEventPreview = zod.object({
   "pacing_pattern": zod.union([zod.string(),zod.null()]).optional(),
   "phase": zod.string(),
   "predicted_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "predicted_tss": zod.union([zod.number(),zod.null()]).optional(),
   "primary_stimulus": zod.union([zod.string(),zod.null()]).optional(),
   "quality_target": zod.union([zod.object({
   "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),

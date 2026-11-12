@@ -16,6 +16,8 @@ export const calendarEventUpdateCompletedDurationSOneExclusiveMin = 0;
 
 export const calendarEventUpdateCompletedRpeOneMax = 10;
 
+export const calendarEventUpdatePredictedDistanceMOneMin = 0;
+
 export const calendarEventUpdatePredictedTssOneMin = 0;
 
 export const calendarEventUpdateQualityOnePerSegmentDifferencesItemPairedDefault = true;
@@ -127,6 +129,7 @@ export const CalendarEventUpdate = zod.object({
 }),zod.null()]).optional(),
   "linked_activity_id": zod.union([zod.string(),zod.null()]).optional(),
   "name": zod.union([zod.string(),zod.null()]).optional(),
+  "predicted_distance_m": zod.union([zod.number().min(calendarEventUpdatePredictedDistanceMOneMin),zod.null()]).optional(),
   "predicted_tss": zod.union([zod.number().min(calendarEventUpdatePredictedTssOneMin),zod.null()]).optional(),
   "quality": zod.union([zod.object({
   "aerobic_decoupling_pct": zod.union([zod.number(),zod.null()]).optional(),
@@ -557,6 +560,7 @@ export const CalendarEventUpdate = zod.object({
   "sport_type": zod.union([zod.string(),zod.null()]).optional(),
   "start_time": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).optional(),
   "status": zod.union([zod.string(),zod.null()]).optional(),
+  "training_type": zod.union([zod.string(),zod.null()]).optional(),
   "workout_prescription": zod.union([zod.object({
   "display_line": zod.union([zod.string(),zod.null()]).optional(),
   "duration_min": zod.union([zod.number(),zod.null()]).optional(),

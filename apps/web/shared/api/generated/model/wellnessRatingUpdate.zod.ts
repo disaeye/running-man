@@ -6,13 +6,12 @@
  */
 import { z as zod } from 'zod';
 
-export const wellnessRatingUpdateSorenessOneMin = 0;
-export const wellnessRatingUpdateSorenessOneMax = 100;
+export const wellnessRatingUpdateSorenessOneMax = 4;
 
 
 export const WellnessRatingUpdate = zod.object({
   "day": zod.iso.date(),
-  "soreness": zod.union([zod.number().min(wellnessRatingUpdateSorenessOneMin).max(wellnessRatingUpdateSorenessOneMax),zod.null()]).optional()
+  "soreness": zod.union([zod.number().min(1).max(wellnessRatingUpdateSorenessOneMax),zod.null()]).optional()
 })
 
 export type WellnessRatingUpdate = zod.input<typeof WellnessRatingUpdate>;

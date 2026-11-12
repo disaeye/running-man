@@ -8,6 +8,8 @@ import { z as zod } from 'zod';
 
 
 
+export const calendarEventCreatePredictedDistanceMOneMin = 0;
+
 export const calendarEventCreatePredictedTssOneMin = 0;
 
 export const calendarEventCreateWorkoutPrescriptionOneEvidenceOneSourceDetailsItemDoiDefault = ``;
@@ -24,6 +26,7 @@ export const CalendarEventCreate = zod.object({
   "name": zod.union([zod.string(),zod.null()]).optional(),
   "plan_goal_id": zod.union([zod.string(),zod.null()]).optional(),
   "plan_source": zod.union([zod.string(),zod.null()]).optional(),
+  "predicted_distance_m": zod.union([zod.number().min(calendarEventCreatePredictedDistanceMOneMin),zod.null()]).optional(),
   "predicted_tss": zod.union([zod.number().min(calendarEventCreatePredictedTssOneMin),zod.null()]).optional(),
   "sport_type": zod.union([zod.string(),zod.null()]).optional(),
   "start_time": zod.iso.datetime({"offset":true}),

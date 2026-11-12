@@ -102,6 +102,7 @@ export const PlanGenerateResponse = zod.object({
   "pacing_pattern": zod.union([zod.string(),zod.null()]).optional(),
   "phase": zod.string(),
   "predicted_distance_m": zod.union([zod.number(),zod.null()]).optional(),
+  "predicted_tss": zod.union([zod.number(),zod.null()]).optional(),
   "primary_stimulus": zod.union([zod.string(),zod.null()]).optional(),
   "quality_target": zod.union([zod.object({
   "target_repetitions": zod.union([zod.number(),zod.null()]).optional(),
@@ -182,6 +183,11 @@ export const PlanGenerateResponse = zod.object({
   "target_weekly_distance_m": zod.number()
 })),zod.null()]).optional(),
   "phases_created": zod.number(),
+  "preserved": zod.array(zod.object({
+  "date": zod.iso.date(),
+  "name": zod.string(),
+  "reason": zod.string()
+}).describe('重生成时会被保留的现有课表（已手动修改或已完成）。')).optional(),
   "running_history_weeks": zod.union([zod.number(),zod.null()]).optional(),
   "training_paces_available": zod.union([zod.boolean(),zod.null()]).optional()
 })
