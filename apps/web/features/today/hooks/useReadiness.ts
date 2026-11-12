@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
+import { athleteToday, useAthleteTimezoneState } from "@shared/lib/training-day";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import { getReadinessApiV1InsightsReadinessGet } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
@@ -25,6 +25,8 @@ export interface WellnessReading {
   readonly baseline: number | null;
   /** 与七日均值的差。 */
   readonly delta: number | null;
+  /** 实际测量日：设备分开上报各项指标，读数可能来自前一日。 */
+  readonly observedOn: string | null;
 }
 
 export interface LocalReadiness {
@@ -77,6 +79,7 @@ function mapReading(
     unit: raw.unit,
     baseline: raw.baseline ?? null,
     delta: raw.delta ?? null,
+    observedOn: raw.observed_on ?? null,
   };
 }
 
@@ -120,11 +123,12 @@ function mapReadiness(
 }
 
 export function useReadiness(day?: string): UseReadinessResult {
-  const timezone = useAthleteTimezone();
+  const { timezone, resolved } = useAthleteTimezoneState();
   const target = day ?? athleteToday(timezone);
   const params = { date: target };
+  const ready = Boolean(day) || resolved;
   const { data, error, isLoading, mutate } = useSWR<ReadinessResponse>(
-    ["/insights/readiness", { date: target }],
+    ready ? ["/insights/readiness", { date: target }] : null,
     {
       fetcher: () =>
         callOrvalValidated(

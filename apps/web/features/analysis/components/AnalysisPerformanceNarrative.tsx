@@ -4,8 +4,7 @@ import { useMemo } from "react";
 import { Section } from "@shared/ui/Section";
 import { usePersonalRecords } from "@features/performance/hooks/usePersonalRecords";
 import { useProfile } from "@features/settings/hooks/useProfile";
-import { useWellness } from "@features/health/hooks/useWellness";
-import { computeRange, toISODate } from "@shared/lib/format";
+import { useWellnessHistory } from "@features/health/lib/physiology-display";
 import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 type WellnessSample = {
@@ -18,14 +17,13 @@ type WellnessSample = {
  * Keeps sport-specific labels for contract tests.
  */
 export function AnalysisPerformanceNarrative() {
-  const range = useMemo(() => computeRange(60), []);
   const monthAgo = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
-    return toISODate(d);
+    return d.toISOString().slice(0, 10);
   }, []);
   const { profile } = useProfile();
-  const { data: wellness } = useWellness(range.from, range.to);
+  const wellness = useWellnessHistory();
   const { data: records } = usePersonalRecords();
   const vo2 = latestVo2(wellness, monthAgo);
   const physiology = buildPhysiologyLine({

@@ -106,37 +106,94 @@ function rowFromRange(
   };
 }
 
-/** Split by distance: each row covers `strideM` meters (e.g. 1000 for km). */
+/** Split by distance: each row covers `strideM` meters (e.g. 1000 for km).
+ *
+ * 边界按距离插值切分，所以整公里行就是 1.00 km；最后一行是剩下的实际距离。
+ * 直接把样本点分段会丢掉跨过边界的那一步，全马跑完每公里都显示 0.99 km。
+ */
 export function splitByDistance(
   timeline: TsHr[],
   strideM: number,
 ): SplitRow[] {
-  if (timeline.length === 0) return [];
+  if (timeline.length < 2) return [];
   const first = timeline[0];
-  if (!first) return [];
-  const startDist = first.distanceM;
-  const rows: SplitRow[] = [];
-  let bucketStart = 0;
-  let nth = 1;
+  const last = timeline[timeline.length - 1];
+  if (!first || !last) return [];
 
-  for (let i = 1; i < timeline.length; i++) {
-    const cur = timeline[i];
-    if (!cur) continue;
-    const d = cur.distanceM - startDist;
-    if (d >= nth * strideM) {
-      const label = strideM >= 1000 ? `km ${nth}` : `${nth * (strideM)}m`;
-      const row = rowFromRange(timeline.slice(bucketStart, i), label);
-      if (row) rows.push(row);
-      bucketStart = i;
-      nth++;
+  const startDist = first.distanceM;
+  const totalM = last.distanceM - startDist;
+  if (totalM <= 0) return [];
+
+  const rows: SplitRow[] = [];
+  let previousTime = first.t;
+  let previousDist = 0;
+
+  // 每个边界对应的时间（在相邻两个样本之间按距离插值）
+  const boundaryTimes: { atM: number; time: number }[] = [];
+  let cursor = 1;
+  for (let boundary = strideM; boundary <= totalM; boundary += strideM) {
+    while (cursor < timeline.length) {
+      const cur = timeline[cursor];
+      if (!cur) break;
+      if (cur.distanceM - startDist >= boundary) {
+        const prev = timeline[cursor - 1];
+        if (!prev) break;
+        const spanM = cur.distanceM - prev.distanceM;
+        const ratio = spanM > 0 ? (boundary - (prev.distanceM - startDist)) / spanM : 0;
+        boundaryTimes.push({ atM: boundary, time: prev.t + ratio * (cur.t - prev.t) });
+        break;
+      }
+      cursor += 1;
     }
+    if (cursor >= timeline.length) break;
   }
-  // trailing bucket
-  const label = strideM >= 1000 ? `km ${nth}` : `${nth * strideM}m`;
-  const row = rowFromRange(timeline.slice(bucketStart), label);
-  if (row) rows.push(row);
+
+  let index = 1;
+  for (const boundary of boundaryTimes) {
+    const row = rangeRow(timeline, previousTime, boundary.time, strideM, labelFor(strideM, index));
+    if (row) rows.push(row);
+    previousTime = boundary.time;
+    previousDist = boundary.atM;
+    index += 1;
+  }
+
+  const remainingM = Math.max(0, totalM - previousDist);
+  if (remainingM > 1) {
+    const row = rangeRow(timeline, previousTime, last.t, remainingM, labelFor(strideM, index, true));
+    if (row) rows.push(row);
+  }
 
   return rows;
+}
+
+function labelFor(strideM: number, index: number, tail = false): string {
+  const unit = strideM >= 1000 ? `${strideM / 1000}km` : `${strideM}m`;
+  return tail ? `尾段 ${unit}` : `${unit} ${index}`;
+}
+
+/** 按时间区间汇总，距离取传入的实际值（边界已按距离插值） */
+function rangeRow(
+  timeline: TsHr[],
+  fromTime: number,
+  toTime: number,
+  distanceM: number,
+  label: string,
+): SplitRow | null {
+  const points = timeline.filter((point) => point.t >= fromTime && point.t <= toTime);
+  if (points.length === 0) return null;
+  const durationS = Math.max(0, toTime - fromTime);
+  const speeds = points.map((p) => p.speed).filter((v): v is number => v != null && v > 0);
+  const hrs = points.map((p) => p.hr).filter((v): v is number => v != null);
+  const cads = points.map((p) => p.cadence).filter((v): v is number => v != null);
+  const mean = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
+  return {
+    label,
+    distanceM,
+    durationS,
+    avgSpeed: durationS > 0 ? distanceM / durationS : speeds.length ? mean(speeds) : null,
+    avgHr: hrs.length ? mean(hrs) : null,
+    avgCadence: cads.length ? mean(cads) : null,
+  };
 }
 
 /** Split by time: each row covers `strideS` seconds (e.g. 300 for 5 min). */

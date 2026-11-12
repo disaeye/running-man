@@ -8,6 +8,7 @@ import { Button } from "@shared/ui/button";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import type { UserProfile } from "@shared/lib/auth";
 import { swrFetcher } from "@shared/lib/swr-fetcher";
+import { useCurrentReadings } from "@features/health/lib/physiology-display";
 import type { EstimateKey } from "../lib/physiology-estimate";
 import type { AutoCalcResult } from "./settings-training-params-model";
 import { PhysiologyEstimate } from "./PhysiologyEstimate";
@@ -45,7 +46,7 @@ export function SettingsTrainingParams({ profile, onSaved }: Props) {
     setDraft(draftFromProfile(profile));
   }
 
-  const [restingFetching, setRestingFetching] = useState(false);
+  const readings = useCurrentReadings();
   const [restingNote, setRestingNote] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -122,28 +123,15 @@ export function SettingsTrainingParams({ profile, onSaved }: Props) {
     });
   };
 
-  /** Pull the latest resting HR from synced wellness data (health_wellness). */
-  const fetchRestingHr = async () => {
-    setRestingFetching(true);
-    setRestingNote(null);
-    try {
-      const from = new Date(Date.now() - 6 * 86400_000).toISOString().slice(0, 10);
-      const to = new Date().toISOString().slice(0, 10);
-      const rows = await apiFetch<ReadonlyArray<{ day: string; resting_hr: number | null }>>(
-        `/wellness?from=${from}&to=${to}`,
-      );
-      const latest = [...rows].reverse().find((row) => row.resting_hr != null);
-      if (latest?.resting_hr != null) {
-        patch({ resting_hr: latest.resting_hr });
-        setRestingNote(`取自 ${latest.day} 的同步数据`);
-      } else {
-        setRestingNote("近 7 天没有静息心率记录，同步后再试");
-      }
-    } catch (err: unknown) {
-      setRestingNote(apiErrorMessage(err, "获取失败"));
-    } finally {
-      setRestingFetching(false);
+  /** 填入全历史最近一次设备读数；没有记录时如实说明，不用零值填充表单。 */
+  const fetchRestingHr = () => {
+    const reading = readings.restingHr;
+    if (reading == null) {
+      setRestingNote("没有静息心率记录，同步后再试");
+      return;
     }
+    patch({ resting_hr: Math.round(reading.value) });
+    setRestingNote(`取自 ${reading.day} 的同步数据`);
   };
 
   return (
@@ -171,30 +159,25 @@ export function SettingsTrainingParams({ profile, onSaved }: Props) {
         draft={draft}
         onChange={patch}
         resting={{
-          fetching: restingFetching,
+          fetching: readings.loading,
           note: restingNote,
-          onFetch: () => void fetchRestingHr(),
+          onFetch: fetchRestingHr,
         }}
       />
 
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border-subtle pt-4">
         <Button onClick={handleSave} disabled={saving || !dirty}>
-          {saving ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" /> 保存中…
-            </>
-          ) : (
-            "保存"
-          )}
+          <Loader2 className={`size-4 ${saving ? "animate-spin" : "hidden"}`} aria-hidden="true" />
+          {saving ? "保存中…" : "保存"}
         </Button>
         {saved && !dirty && (
-          <span className="text-subheadline text-success" role="status">
+          <span className="action-result text-subheadline text-success" role="status">
             已保存，区间已按新数值重算
           </span>
         )}
-        {dirty && !saving && <span className="text-caption1 text-text-muted">有未保存的改动</span>}
+        {dirty && !saving && <span className="action-result text-caption1 text-text-muted">有未保存的改动</span>}
         {saveError && (
-          <span className="text-subheadline text-error" role="alert">
+          <span className="action-result text-subheadline text-error" role="alert">
             {saveError}
           </span>
         )}

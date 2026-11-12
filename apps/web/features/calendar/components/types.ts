@@ -9,6 +9,107 @@ export interface WorkoutSegment {
   repetitions?: number | null;
 }
 
+export type SessionSegmentRole =
+  | "warmup"
+  | "work"
+  | "recovery"
+  | "cooldown"
+  | "transition";
+
+export interface SessionTargetDTO {
+  distance_m?: number | null;
+  duration_s?: number | null;
+  pace_s_km?: number | null;
+  pace_min_s_km?: number | null;
+  pace_max_s_km?: number | null;
+  hr_bpm?: number | null;
+  domain?: string | null;
+}
+
+export interface SessionMeasuredDTO {
+  distance_m?: number | null;
+  duration_s?: number | null;
+  pace_s_km?: number | null;
+  avg_hr?: number | null;
+  speed_m_s?: number | null;
+  rpe?: number | null;
+}
+
+export interface SessionSegmentDTO {
+  type: string;
+  duration_min: number;
+  pace_min_s_km?: number | null;
+  pace_max_s_km?: number | null;
+  repetitions?: number | null;
+  recovery_min?: number | null;
+  rpe_min?: number | null;
+  rpe_max?: number | null;
+  role?: string | null;
+  order?: number | null;
+  start_s?: number | null;
+  end_s?: number | null;
+  duration_s?: number | null;
+  distance_m?: number | null;
+  pace_s_km?: number | null;
+  avg_hr?: number | null;
+  domain?: string | null;
+  evidence_source?: string | null;
+  source_group?: string | null;
+  sets?: number | null;
+  recovery_duration_s?: number | null;
+  recovery_distance_m?: number | null;
+  intensity_domain?: string | null;
+  target_domain?: string | null;
+  source_refs?: string[];
+  rationale?: string | null;
+  target_adaptation?: string | null;
+  quality_target?: {
+    work_distance_m?: number | null;
+    work_duration_s?: number | null;
+    time_in_domain_s?: number | null;
+    target_repetitions?: number | null;
+  } | null;
+  target?: SessionTargetDTO | null;
+  measured?: SessionMeasuredDTO | null;
+  evidence?: {
+    source_refs?: string[];
+    measurement_sources?: string[];
+    limitations?: string[];
+    rationale?: string | null;
+  } | null;
+}
+
+export interface WorkoutPrescriptionDTO {
+  type: string;
+  duration_min: number;
+  pace_min_s_km?: number | null;
+  pace_max_s_km?: number | null;
+  segments: SessionSegmentDTO[];
+  phase?: string | null;
+  structure?: string | null;
+  session_type?: string | null;
+  primary_stimulus?: string | null;
+  pacing_pattern?: string | null;
+  display_line?: string | null;
+  target_domain?: string | null;
+  source_refs?: string[];
+  rationale?: string | null;
+  target_adaptation?: string | null;
+  quality_target?: {
+    work_distance_m?: number | null;
+    work_duration_s?: number | null;
+    time_in_domain_s?: number | null;
+    target_repetitions?: number | null;
+  } | null;
+  evidence?: {
+    source_refs?: string[];
+    measurement_sources?: string[];
+    limitations?: string[];
+    rationale?: string | null;
+    interval_summary?: string[] | null;
+  } | null;
+}
+
 export interface CalendarEventDTO {
   event_id: string;
   start_time: string;
@@ -23,25 +124,7 @@ export interface CalendarEventDTO {
   done?: boolean;
   training_type?: string | null;
   readonly external_id?: string | null;
-  workout_prescription?: {
-    type: string;
-    duration_min: number;
-    pace_min_s_km?: number | null;
-    pace_max_s_km?: number | null;
-    heart_rate_max_bpm?: number | null;
-    segments: {
-      type: string;
-      duration_min: number;
-      pace_min_s_km?: number | null;
-      pace_max_s_km?: number | null;
-      repetitions?: number;
-      recovery_min?: number;
-      rpe_min?: number;
-      rpe_max?: number;
-      heart_rate_max_bpm?: number | null;
-    }[];
-    phase?: string;
-  } | null;
+  workout_prescription?: WorkoutPrescriptionDTO | null;
   athlete_edited?: boolean;
   readonly linked_activity_id?: string | null;
   completed_distance_m?: number | null;
@@ -49,6 +132,63 @@ export interface CalendarEventDTO {
   completed_avg_hr?: number | null;
   completed_rpe?: number | null;
   actual_logged_at?: string | null;
+  execution?: {
+    activity_distance_m?: number | null;
+    work_distance_m?: number | null;
+    recovery_distance_m?: number | null;
+    segments?: SessionSegmentDTO[];
+    work_groups?: {
+      source_group: string;
+      sets: number;
+      repetitions?: number | null;
+      distance_range_m?: number[];
+      duration_range_s?: number[];
+      pace_range_s_km?: number[];
+    }[];
+  } | null;
+  quality?: {
+    work_distance_match?: number | null;
+    work_duration_match?: number | null;
+    pace_attainment?: number | null;
+    structure_match?: number | null;
+    evidence_grade?: string | null;
+    confidence?: number | null;
+  } | null;
+  session_classification?: {
+    session_classification: {
+      activity_id: string;
+      local_day: string;
+      context: string;
+      structure: string;
+      session_type?: string | null;
+      primary_stimulus: string;
+      secondary_stimuli?: string[];
+      pacing_pattern?: string | null;
+      modifiers?: string[];
+      display_name: string;
+      display_line: string;
+      evidence_grade: string;
+      confidence: number;
+    };
+    prescription?: WorkoutPrescriptionDTO | null;
+    execution?: {
+      activity_distance_m?: number | null;
+      work_distance_m?: number | null;
+      segments?: SessionSegmentDTO[];
+    } | null;
+    quality?: {
+      repetition_match?: number | null;
+      work_distance_match?: number | null;
+      work_duration_match?: number | null;
+      structure_match?: number | null;
+      evidence_grade?: string | null;
+    } | null;
+    evidence?: {
+      source_refs?: string[];
+      threshold_snapshot?: Record<string, unknown> | null;
+      limitations?: string[];
+    } | null;
+  } | null;
 }
 
 export const totalDurationMinutes = (segments: WorkoutSegment[]): number =>

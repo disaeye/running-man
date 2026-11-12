@@ -4,12 +4,11 @@ import { useMemo } from "react";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 import { Card } from "@shared/ui/Card";
 import { useProfile } from "@features/settings/hooks/useProfile";
-import { useWellness } from "@features/health/hooks/useWellness";
+import { useWellnessHistory } from "@features/health/lib/physiology-display";
 import {
   getAnalysisMetricTaxonomy,
   type AnalysisMetricDescriptor,
 } from "@features/analysis/lib/analysis-metric-taxonomy";
-import { computeRange, toISODate } from "@shared/lib/format";
 import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 type MetricValues = {
@@ -37,13 +36,12 @@ type WellnessRow = {
 };
 
 export function AbilityMetricsRow() {
-  const range = useMemo(() => computeRange(60), []);
+  const wellness = useWellnessHistory();
   const weekAgo = useMemo(() => {
     const date = new Date();
     date.setDate(date.getDate() - 7);
-    return toISODate(date);
+    return date.toISOString().slice(0, 10);
   }, []);
-  const { data: wellness } = useWellness(range.from, range.to);
   const { profile } = useProfile();
   const metricValues = useMemo(
     () => buildMetricValues({ profile, weekAgo, wellness }),
@@ -81,7 +79,7 @@ function buildMetricValues({ profile, weekAgo, wellness }: {
   readonly profile: { readonly lthr?: number | null; readonly sex?: string | null; readonly threshold_pace?: number | null } | null | undefined;
   readonly weekAgo: string;
   readonly wellness: readonly WellnessRow[];
-}): Omit<MetricValues, "family"> {
+}): MetricValues {
   return {
     lthr: profile?.lthr ?? null,
     thresholdPace: profile?.threshold_pace ?? null,

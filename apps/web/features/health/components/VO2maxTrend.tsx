@@ -12,18 +12,11 @@ import { Card } from "@shared/ui/Card";
 import { Badge } from "@shared/ui/Badge";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
+import { useWellnessHistory } from "@features/health/lib/physiology-display";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 
 echarts.use([LineChart, GridComponent, TooltipComponent, MarkLineComponent, CanvasRenderer]);
 
-interface VO2maxTrendProps {
-  data: WellnessPoint[];
-}
-
-/**
- * Map a VO₂max value + athlete sex to an aerobic capacity descriptor.
- * Bands follow ACSM fitness categories with a mixed-sex fallback.
- */
 type Sex = "male" | "female";
 
 function normalizeSex(value: string | null | undefined): Sex | null {
@@ -42,27 +35,13 @@ function vo2Level(value: number | null, sex: Sex | null): { label: string; varia
   return { label: "需提升", variant: "neutral" };
 }
 
-/** Difference between first and last non-null vo2max in the window. */
-function periodDelta(points: WellnessPoint[]): number | null {
-  const values = points
-    .filter((p) => p.vo2max != null)
-    .map((p) => p.vo2max as number);
-  if (values.length < 2) return null;
-  const first = values[0];
-  const last = values[values.length - 1];
-  if (first == null || last == null) return null;
-  return +(last - first).toFixed(1);
-}
-
 function buildOption(points: WellnessPoint[], chartConfig: ChartConfig): echarts.EChartsCoreOption {
   const c = chartConfig.colors;
   const days = points.map((p) => p.day.slice(5));
   const values = points.map((p) => p.vo2max);
   return {
     grid: { left: 40, right: 16, top: 16, bottom: 16 },
-    xAxis: {
-      data: days,
-    },
+    xAxis: { data: days },
     yAxis: {
       name: "ml/kg/min",
       nameTextStyle: { color: c.textMuted, fontSize: 10 },
@@ -89,72 +68,62 @@ function buildOption(points: WellnessPoint[], chartConfig: ChartConfig): echarts
   };
 }
 
-/**
- * VO₂max trend card: latest value, 30-day change, 90-day change,
- * and an aerobic capacity level badge based on ACSM fitness categories.
- */
-export function VO2maxTrend({ data }: VO2maxTrendProps) {
+/** VO₂max 全历史趋势：当前值取最近一条记录并标注日期，趋势只画实际记录点。 */
+export function VO2maxTrend() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartConfig = useChartConfig();
   const { profile } = useProfile();
   const sex = normalizeSex(profile?.sex);
+  // 生理指标不随页面时间窗口取数：全历史中最近的记录才代表当前水平。
+  const wellness = useWellnessHistory();
 
   const stats = useMemo(() => {
-    const sorted = [...data].sort((a, b) => a.day.localeCompare(b.day));
-    const last = [...sorted].reverse().find((p) => p.vo2max != null);
-    const last30 = sorted.slice(-30);
-    const last90 = sorted.slice(-90);
+    const sorted = [...wellness].sort((a, b) => a.day.localeCompare(b.day));
+    const records = sorted.filter((p) => p.vo2max != null);
+    const last = records[records.length - 1] ?? null;
+    const first = records[0] ?? null;
     return {
       last,
-      delta30: periodDelta(last30),
-      delta90: periodDelta(last90),
-      series: sorted.slice(-90).filter((p) => p.vo2max != null || true),
+      totalDelta: last && first && last !== first ? +(last.vo2max! - first.vo2max!).toFixed(1) : null,
+      firstDay: first?.day ?? null,
+      series: records,
     };
-  }, [data]);
+  }, [wellness]);
 
   useECharts(containerRef, () => buildOption(stats.series, chartConfig), [stats.series, chartConfig], {
     chartConfig,
   });
 
   const level = vo2Level(stats.last?.vo2max ?? null, sex);
-  const hasData = stats.series.some((p) => p.vo2max != null);
+  const hasData = stats.series.length > 0;
 
   return (
     <Card padding="md">
       <header className="mb-4 flex items-baseline justify-between">
-        <h3 className="text-caption1 font-semibold text-text-secondary">
-          VO₂max 趋势
-        </h3>
-        {level && (
-          <Badge variant={level.variant} className="text-subheadline">
-            有氧能力 · {level.label}
-          </Badge>
-        )}
+        <h3 className="text-caption1 font-semibold text-text-secondary">VO₂max 趋势</h3>
+        {level && <Badge variant={level.variant} className="text-subheadline">有氧能力 · {level.label}</Badge>}
       </header>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Vo2Stat
           label="当前 VO₂max"
-          value={stats.last?.vo2max != null ? `${stats.last.vo2max.toFixed(1)}` : "--"}
+          value={stats.last?.vo2max != null ? stats.last.vo2max.toFixed(1) : "--"}
           unit="ml/kg/min"
         />
-        <DeltaStat label="30日变化" delta={stats.delta30} />
-        <DeltaStat label="90日变化" delta={stats.delta90} />
+        <DeltaStat label={`自 ${stats.firstDay ?? "--"} 起变化`} delta={stats.totalDelta} />
+        <div className="flex flex-col gap-1">
+          <span className="text-caption1 text-text-secondary">最近记录</span>
+          <span className="font-mono text-title1 font-bold text-text-primary">{stats.last?.day ?? "--"}</span>
+        </div>
       </div>
-      {!sex && (
-        <p className="mt-3 text-caption1 text-text-muted">
-          未填写性别，分类按男女合并标准
-        </p>
-      )}
+      {!sex && <p className="mt-3 text-caption1 text-text-muted">未填写性别，分类按男女合并标准</p>}
+      <p className="mt-2 text-caption1 text-text-muted">设备在符合强度条件的训练日生成新的 VO₂max 估算，普通日常活动不产生新记录。</p>
 
       <div className="relative">
         <div ref={containerRef} className="mt-4 min-h-[200px] w-full lg:h-[180px]" data-testid="vo2max-trend-chart" />
         {!hasData && (
           <div className="absolute inset-0 flex items-center justify-center bg-surface-card">
-            <EmptyState
-              title={EMPTY_LABEL}
-              description="记录 VO₂max 后，这里将展示有氧能力趋势"
-            />
+            <EmptyState title={EMPTY_LABEL} description="记录 VO₂max 后，这里将展示有氧能力趋势" />
           </div>
         )}
       </div>
@@ -176,12 +145,9 @@ function Vo2Stat({ label, value, unit }: { label: string; value: string; unit?: 
 
 function DeltaStat({ label, delta }: { label: string; delta: number | null }) {
   const dot =
-    delta == null
-      ? "bg-text-muted"
-      : delta > 0.5
-        ? "bg-recovery-good"
-        : delta < -0.5
-          ? "bg-recovery-poor"
+    delta == null ? "bg-text-muted"
+      : delta > 0.5 ? "bg-recovery-good"
+        : delta < -0.5 ? "bg-recovery-poor"
           : "bg-text-primary";
   return (
     <div className="flex flex-col gap-1">

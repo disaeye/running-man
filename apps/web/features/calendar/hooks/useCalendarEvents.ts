@@ -12,8 +12,10 @@ interface UseCalendarEventsResult {
 
 /** SWR-based hook for fetching calendar events from the backend. */
 export function useCalendarEvents(from: string, to: string): UseCalendarEventsResult {
+  // 空范围代表「日期还没定」，不是请求全部：后端对缺参回答 422。
+  const hasRange = Boolean(from && to);
   const { data, error, isLoading } = useSWR<CalendarEventDTO[]>(
-    ["/calendar", { from, to }],
+    hasRange ? ["/calendar", { from, to }] : null,
   );
   const reload = () => mutate(["/calendar", { from, to }]);
   return {

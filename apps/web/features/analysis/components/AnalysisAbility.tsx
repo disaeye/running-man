@@ -10,12 +10,11 @@ import { PersonalRecordsList } from "@features/trends/components/PersonalRecords
 import { RacePredictor } from "@features/performance/components/RacePredictor";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { useAbility, formatPaceRange } from "@features/today/hooks/useAbility";
-import { useWellness } from "@features/health/hooks/useWellness";
+import { useCurrentReadings } from "@features/health/lib/physiology-display";
 import {
   getAnalysisMetricTaxonomy,
   type AnalysisMetricDescriptor,
 } from "@features/analysis/lib/analysis-metric-taxonomy";
-import { useAnalysisRange } from "../lib/analysis-range";
 import { AbilityRadar } from "./AbilityRadar";
 import { AbilityMetricsRow } from "./AnalysisAbilityMetrics";
 import { AnalysisPerformanceNarrative } from "./AnalysisPerformanceNarrative";
@@ -130,8 +129,7 @@ function RacePredictionPanel() {
 
 function AbilitySummary() {
   const { profile } = useProfile();
-  const { range } = useAnalysisRange();
-  const { data: wellness } = useWellness(range.from, range.to);
+  const vo2max = useCurrentReadings().vo2max;
 
   const text = useMemo(
     () =>
@@ -139,9 +137,9 @@ function AbilitySummary() {
         lthr: profile?.lthr ?? null,
         preferredSport: profile?.preferred_sport ?? null,
         thresholdPace: profile?.threshold_pace ?? null,
-        vo2max: latestWellnessValue(wellness, "vo2max"),
+        vo2max: vo2max?.value ?? null,
       }),
-    [wellness, profile],
+    [vo2max, profile],
   );
 
   if (!text) return null;
@@ -158,17 +156,6 @@ function AbilitySummary() {
       </p>
     </Card>
   );
-}
-
-function latestWellnessValue(
-  data: ReturnType<typeof useWellness>["data"],
-  key: "vo2max",
-): number | null {
-  for (let i = data.length - 1; i >= 0; i--) {
-    const v = data[i]?.[key];
-    if (v != null) return v;
-  }
-  return null;
 }
 
 type SummaryMetricValues = {

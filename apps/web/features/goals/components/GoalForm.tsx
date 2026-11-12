@@ -67,6 +67,24 @@ function defaults(): GoalFormData {
 }
 
 export function GoalForm({ open, onClose, onSubmit, editingGoal }: GoalFormProps) {
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <DialogHeader><DialogTitle>{editingGoal ? "编辑目标" : "创建目标"}</DialogTitle></DialogHeader>
+        {open ? (
+          <GoalFormFields
+            key={editingGoal?.goal_id ?? "create"}
+            editingGoal={editingGoal}
+            onClose={onClose}
+            onSubmit={onSubmit}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function GoalFormFields({ onClose, onSubmit, editingGoal }: Omit<GoalFormProps, "open">) {
   const [form, setForm] = useState<GoalFormData>(
     editingGoal
       ? {
@@ -131,10 +149,7 @@ export function GoalForm({ open, onClose, onSubmit, editingGoal }: GoalFormProps
   };
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
-        <DialogHeader><DialogTitle>{editingGoal ? "编辑目标" : "创建目标"}</DialogTitle></DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Type selector */}
         <label className="flex flex-col gap-1"><span className="text-subheadline font-medium text-text-secondary">目标类型</span><Select value={form.type} onValueChange={handleTypeChange}><SelectTrigger className="min-h-[44px] w-full bg-surface-overlay"><SelectValue /></SelectTrigger><SelectContent>{TYPE_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></label>
 
@@ -166,8 +181,6 @@ export function GoalForm({ open, onClose, onSubmit, editingGoal }: GoalFormProps
             {editingGoal ? "保存更改" : "创建目标"}
           </Button>
         </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+    </form>
   );
 }

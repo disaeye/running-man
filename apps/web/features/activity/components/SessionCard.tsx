@@ -13,6 +13,7 @@ import {
 } from "@shared/lib/format";
 import { getSportConfig } from "@shared/config/sport-config";
 import { RouteBackground } from "@features/today/components/RouteBackground";
+import { useSessionClassifications } from "@features/activity/hooks/useSessionClassifications";
 import {
   classifySession,
   type SessionEffort,
@@ -75,6 +76,8 @@ export function SessionCard({
   const router = useRouter();
   const sportConfig = getSportConfig(activity.sport);
   const { label, effort } = classifySession(activity);
+  const { byActivityId } = useSessionClassifications();
+  const stored = byActivityId.get(activity.activity_id);
   const metrics = buildMetrics(activity);
 
   const handleSelect = () => {
@@ -115,13 +118,18 @@ export function SessionCard({
               className="text-sm font-bold text-text-primary group-hover:text-accent-strong truncate"
               data-testid="session-card-label"
             >
-              {label}
+              {stored?.session_classification.display_name ?? label}
             </span>
             <span className="font-mono text-xs text-text-muted">
               {formatDate(activity.start_time)}
             </span>
           </div>
 
+          {stored && (
+            <p className="mt-1 line-clamp-2 text-caption2 leading-relaxed text-text-secondary" data-testid="session-card-course">
+              {stored.session_classification.display_line}
+            </p>
+          )}
           <div
             className="mt-1.5 flex flex-wrap items-baseline gap-x-3.5 gap-y-1 text-xs *:font-mono *:tabular-nums"
             data-testid="session-card-metrics"

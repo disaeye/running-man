@@ -2,6 +2,7 @@ import { Badge } from "@shared/ui/Badge";
 import { Card } from "@shared/ui/Card";
 import { SectionHeader } from "@shared/ui/SectionHeader";
 import { READINESS_LEVEL_LABEL } from "@features/today/lib/readiness-level";
+import { useCurrentReadings } from "@features/health/lib/physiology-display";
 import type { LocalReadiness } from "@features/today/hooks/useReadiness";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 import { buildRecoveryDrivers, type DriverStat } from "./recovery-diagnosis";
@@ -28,7 +29,8 @@ export function RecoveryDiagnosisCard({
 }: {
   readonly wellness: WellnessPoint[];
 }) {
-  const drivers = buildRecoveryDrivers(wellness);
+  const vo2max = useCurrentReadings().vo2max;
+  const drivers = buildRecoveryDrivers(wellness, vo2max);
   return (
     <Card
       padding="md"

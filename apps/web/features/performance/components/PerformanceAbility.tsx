@@ -17,7 +17,9 @@ import { Card } from "@shared/ui/Card";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { EMPTY_LABEL, LOADING_LABEL } from "@shared/lib/use-data-state";
 import { apiFetch } from "@shared/lib/api";
-import { computeRange, formatDate } from "@shared/lib/format";
+import { formatDate } from "@shared/lib/format";
+import { useWellnessHistory } from "@features/health/lib/physiology-display";
+import type { WellnessPoint } from "@features/health/hooks/useWellness";
 
 echarts.use([
   LineChart,
@@ -31,11 +33,6 @@ interface AbilityPoint {
   date: string;
   vo2max: number | null;
   avgPace: number | null;
-}
-
-interface WellnessAbilityPoint {
-  day: string;
-  vo2max?: number | null;
 }
 
 function buildOption(data: AbilityPoint[], chartConfig: ChartConfig): echarts.EChartsCoreOption {
@@ -97,6 +94,7 @@ function buildOption(data: AbilityPoint[], chartConfig: ChartConfig): echarts.EC
 export function PerformanceAbility() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartConfig = useChartConfig();
+  const wellnessHistory = useWellnessHistory();
   const [data, setData] = useState<AbilityPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +107,7 @@ export function PerformanceAbility() {
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    fetchAbilityData()
+    fetchAbilityData(wellnessHistory)
       .then((rows) => {
         if (!cancelled) setData(rows.filter(hasAnyAbilityValue));
       })
@@ -122,7 +120,7 @@ export function PerformanceAbility() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [wellnessHistory]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -156,12 +154,10 @@ export function PerformanceAbility() {
   );
 }
 
-async function fetchAbilityData(): Promise<AbilityPoint[]> {
-  const range = computeRange(365);
-  const [abilityRaw, wellness] = await Promise.all([
-    apiFetch<unknown>("/insights/ability").catch(() => []),
-    apiFetch<WellnessAbilityPoint[]>("/wellness", { params: { from: range.from, to: range.to } }).catch(() => []),
-  ]);
+async function fetchAbilityData(
+  wellness: readonly WellnessPoint[],
+): Promise<AbilityPoint[]> {
+  const abilityRaw = await apiFetch<unknown>("/insights/ability").catch(() => []);
   // Backend may return a list of points or a single snapshot object.
   const abilityList: AbilityPoint[] = Array.isArray(abilityRaw)
     ? (abilityRaw as AbilityPoint[])
@@ -186,8 +182,9 @@ async function fetchAbilityData(): Promise<AbilityPoint[]> {
   const byDate = new Map<string, AbilityPoint>();
   for (const row of abilityList) byDate.set(row.date, normalizeAbility(row));
   for (const row of wellness) {
+    if (row.vo2max == null) continue;
     const existing = byDate.get(row.day) ?? { date: row.day, vo2max: null, avgPace: null };
-    byDate.set(row.day, { ...existing, vo2max: row.vo2max ?? existing.vo2max });
+    byDate.set(row.day, { ...existing, vo2max: row.vo2max });
   }
   return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
 }

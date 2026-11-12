@@ -5,6 +5,7 @@ import { Card } from "@shared/ui/Card";
 import { LabelCaps } from "@shared/ui/LabelCaps";
 import { formatPaceFromSeconds } from "@shared/lib/format";
 import { decodePolyline } from "@shared/lib/decode-polyline";
+import { projectGpsTrack } from "@features/activity/lib/gps-projection";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 import { getSportConfig } from "@shared/config/sport-config";
 import type { ActivitySummary } from "@shared/types/activity";
@@ -171,31 +172,19 @@ function RouteThumbnail({ polyline }: { readonly polyline: string | null }) {
       </div>
     );
   }
-  // 经纬度投影到 0–100 的画布坐标：取包围盒，按比例缩放并翻转 y 轴。
-  const lats = points.map((point) => point.lat);
-  const lons = points.map((point) => point.lon);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLon = Math.min(...lons);
-  const maxLon = Math.max(...lons);
-  const spanLat = maxLat - minLat || 1;
-  const spanLon = maxLon - minLon || 1;
-  const path = points
-    .map((point, index) => {
-      const x = ((point.lon - minLon) / spanLon) * 100;
-      const y = 100 - ((point.lat - minLat) / spanLat) * 100;
-      return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
+  const projection = projectGpsTrack(points, { width: 100, height: 100, pad: 10 });
+  const path = projection.points
+    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x} ${point.y}`)
     .join(" ");
   return (
     <div className="relative h-[76px] overflow-hidden rounded-lg bg-surface-overlay">
       <svg
         aria-label="GPS 路线缩略图"
         viewBox="0 0 100 100"
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid meet"
         className="size-full"
       >
-        <path d={path} fill="none" stroke="var(--color-accent)" strokeWidth="2.5" />
+        <path d={path} fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <span className="absolute bottom-1 left-1 rounded bg-surface-card/80 px-1 font-mono text-caption1 text-accent">
         GPS 轨迹

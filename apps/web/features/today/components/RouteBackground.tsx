@@ -2,10 +2,11 @@
 
 import { useMemo } from "react";
 import { decodePolyline } from "@shared/lib/decode-polyline";
+import { projectGpsTrack } from "@features/activity/lib/gps-projection";
 
 const SVG_W = 600;
 const SVG_H = 200;
-const PAD = 8;
+const PAD = 16;
 
 /**
  * Decorative SVG route background for activity cards. Decodes a Google-encoded
@@ -24,20 +25,13 @@ export function RouteBackground({
     const pts = decodePolyline(polyline, 5);
     if (pts.length < 2) return null;
 
-    const minLat = Math.min(...pts.map((p) => p.lat));
-    const maxLat = Math.max(...pts.map((p) => p.lat));
-    const minLon = Math.min(...pts.map((p) => p.lon));
-    const maxLon = Math.max(...pts.map((p) => p.lon));
+    const projection = projectGpsTrack(pts, {
+      width: SVG_W,
+      height: SVG_H,
+      pad: PAD,
+    });
 
-    const scaleX = (SVG_W - PAD * 2) / (maxLon - minLon || 1);
-    const scaleY = (SVG_H - PAD * 2) / (maxLat - minLat || 1);
-
-    return pts
-      .map(
-        (p) =>
-          `${(PAD + (p.lon - minLon) * scaleX).toFixed(1)},${(SVG_H - PAD - (p.lat - minLat) * scaleY).toFixed(1)}`,
-      )
-      .join(" ");
+    return projection.points.map((p) => `${p.x},${p.y}`).join(" ");
   }, [polyline]);
 
   if (!pointsStr) return null;

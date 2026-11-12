@@ -74,6 +74,9 @@ const WELLNESS_METRICS = [
   "source_readiness",
 ] as const;
 
+/** 没有数据或范围未定时的稳定空数组，避免消费方的 effect 每次渲染重跑。 */
+const EMPTY_WELLNESS_POINTS: WellnessPoint[] = [];
+
 /**
  * Fetches wellness data via the EAV fact-stream API (/metrics/series/batch).
  *
@@ -81,10 +84,16 @@ const WELLNESS_METRICS = [
  * per-metric EAV series back into the WellnessPoint[] shape that consumers
  * expect. Metrics not present in the response default to null.
  */
-export function useWellness(from: string, to: string) {
-  const params = { metrics: WELLNESS_METRICS.join(","), grain: "daily", from, to };
+export function useWellness(
+  from: string,
+  to: string,
+  metrics: readonly string[] = WELLNESS_METRICS,
+) {
+  const params = { metrics: metrics.join(","), grain: "daily", from, to };
+  // 空范围代表「日期还没定」，不是请求全部：后端对缺参回答 422。
+  const hasRange = Boolean(from && to);
   const { data, error, isLoading, mutate } = useSWR<WellnessPoint[]>(
-    ["/metrics/series/batch", params],
+    hasRange ? ["/metrics/series/batch", params] : null,
     {
       fetcher: async () => {
         const search = new URLSearchParams({
@@ -101,7 +110,7 @@ export function useWellness(from: string, to: string) {
   );
 
   return {
-    data: data ?? [],
+    data: data ?? EMPTY_WELLNESS_POINTS,
     loading: isLoading,
     error: error?.message ?? null,
     reload: () => void mutate(),

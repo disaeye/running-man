@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@shared/ui/Toast";
 import { apiErrorMessage } from "@shared/lib/api";
+import { resyncIntegration } from "@features/data/hooks/useSyncJobs";
 import type { SyncResult } from "@features/data/components/SourceCardShared";
 
 interface UseIntervalsActionsOptions {
@@ -22,9 +23,10 @@ export function useIntervalsActions({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [backfillOpen, setBackfillOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [resyncOpen, setResyncOpen] = useState(false);
   const [athleteId, setAthleteId] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [busy, setBusy] = useState<"connect" | "sync" | "disconnect" | "backfill" | null>(null);
+  const [busy, setBusy] = useState<"connect" | "sync" | "disconnect" | "backfill" | "resync" | null>(null);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
 
   const handleConnect = useCallback(async () => {
@@ -96,6 +98,18 @@ export function useIntervalsActions({
     [onDisconnect, toast],
   );
 
+  const handleResync = useCallback(async () => {
+    setBusy("resync");
+    try {
+      await resyncIntegration("intervals_icu");
+      toast("已清空本地数据，全量历史同步已排队", "info");
+    } catch (error) {
+      toast(apiErrorMessage(error, "全量同步排队失败"), "error");
+    } finally {
+      setBusy(null);
+    }
+  }, [toast]);
+
   return {
     dialogOpen,
     setDialogOpen,
@@ -103,6 +117,8 @@ export function useIntervalsActions({
     setBackfillOpen,
     disconnectOpen,
     setDisconnectOpen,
+    resyncOpen,
+    setResyncOpen,
     athleteId,
     setAthleteId,
     apiKey,
@@ -113,5 +129,6 @@ export function useIntervalsActions({
     handleSync,
     handleStartBackfill,
     handleConfirmDisconnect,
+    handleResync,
   };
 }

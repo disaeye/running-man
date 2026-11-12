@@ -7,6 +7,7 @@ import {
   cancelSyncJobApiV1IntegrationsSourceJobsJobIdCancelPost,
   currentSyncJobApiV1IntegrationsSourceJobsCurrentGet,
   resyncActivityStreamsApiV1ActivitiesActivityIdStreamsSyncPost,
+  resyncIntegrationApiV1IntegrationsSourceResyncPost,
   sourceCoverageApiV1IntegrationsSourceCoverageGet,
 } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
@@ -32,7 +33,7 @@ export interface SyncJob {
   source: string;
   kind: "incremental" | "backfill";
   trigger: string;
-  phase: "activities" | "streams" | "wellness";
+  phase: "activities" | "streams" | "wellness" | "weather";
   status: SyncJobStatus;
   windowStart: string | null;
   windowEnd: string | null;
@@ -67,7 +68,7 @@ const JOB_STATUSES: readonly SyncJobStatus[] = [
   "failed",
   "cancelled",
 ];
-const PHASES: readonly SyncJob["phase"][] = ["activities", "streams", "wellness"];
+const PHASES: readonly SyncJob["phase"][] = ["activities", "streams", "wellness", "weather"];
 
 export function isJobActive(job: SyncJob | null | undefined): boolean {
   return job?.status === "queued" || job?.status === "running";
@@ -178,6 +179,17 @@ export async function startBackfill(
   const body: Generated.BackfillRequest = { from_date: fromDate };
   const raw = await callOrvalValidated(
     (f) => backfillIntegrationApiV1IntegrationsSourceBackfillPost(source, body, {}, f),
+    Generated.SyncJobResponse,
+  );
+  return mapJob(raw);
+}
+
+/** Clear the source's imported data and re-import the athlete's full history. */
+export async function resyncIntegration(
+  source: IntegrationSource,
+): Promise<SyncJob> {
+  const raw = await callOrvalValidated(
+    (f) => resyncIntegrationApiV1IntegrationsSourceResyncPost(source, {}, f),
     Generated.SyncJobResponse,
   );
   return mapJob(raw);

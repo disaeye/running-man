@@ -4,7 +4,10 @@ import Link from "next/link";
 import { Card } from "@shared/ui/Card";
 import { CardHeader } from "@shared/ui/CardHeader";
 import { cn } from "@shared/lib/utils";
-import type { CalendarEventDTO } from "@features/calendar/components/types";
+import type {
+  CalendarEventDTO,
+  SessionSegmentDTO,
+} from "@features/calendar/components/types";
 import {
   buildWeekTrainingRows,
   type WeekTrainingInput,
@@ -43,7 +46,7 @@ export function WeekTrainingCard({
     todayKey,
   });
 
-  const segments = prescription?.segments ?? [];
+  const segments: readonly SessionSegmentDTO[] = prescription?.segments ?? [];
 
   return (
     <Card data-testid="home-weekly-horizon" className="flex flex-col">

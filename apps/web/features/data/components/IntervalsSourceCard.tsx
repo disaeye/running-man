@@ -8,6 +8,7 @@ import { useSourceCoverage } from "@features/data/hooks/useSyncJobs";
 import { useIntervalsActions } from "@features/data/hooks/useIntervalsActions";
 import { IntervalsConnectDialog } from "./IntervalsConnectDialog";
 import { BackfillDialog } from "./BackfillDialog";
+import { ResyncDialog } from "./ResyncDialog";
 import { DisconnectConfirmDialog } from "./DisconnectConfirmDialog";
 import { formatRelativeTime } from "@shared/lib/format";
 import {
@@ -77,6 +78,7 @@ function DisconnectedView({ onOpen }: { onOpen: () => void }) {
 function ConnectedActions({
   onSync,
   onOpenBackfill,
+  onOpenResync,
   onOpenDisconnect,
   isBusy,
   integration,
@@ -84,6 +86,7 @@ function ConnectedActions({
 }: {
   onSync(): void;
   onOpenBackfill(): void;
+  onOpenResync(): void;
   onOpenDisconnect(): void;
   isBusy: string | null;
   integration: IntegrationStatus | null;
@@ -96,6 +99,9 @@ function ConnectedActions({
       </Button>
       <Button size="sm" variant="secondary" onClick={onOpenBackfill} disabled={isBusy !== null}>
         导入历史
+      </Button>
+      <Button size="sm" variant="secondary" onClick={onOpenResync} disabled={isBusy !== null} data-testid="resync-open">
+        {isBusy === "resync" ? "排队中…" : "全量重拉"}
       </Button>
       <Button size="sm" variant="ghost" onClick={onOpenDisconnect} disabled={isBusy !== null}>
         {isBusy === "disconnect" ? "断开中…" : "断开"}
@@ -129,6 +135,8 @@ export function IntervalsSourceCard({
     setBackfillOpen,
     disconnectOpen,
     setDisconnectOpen,
+    resyncOpen,
+    setResyncOpen,
     athleteId,
     setAthleteId,
     apiKey,
@@ -139,6 +147,7 @@ export function IntervalsSourceCard({
     handleSync,
     handleStartBackfill,
     handleConfirmDisconnect,
+    handleResync,
   } = useIntervalsActions({ onConnect, onDisconnect, onSync, onBackfill });
 
   const connected = integration?.status === "connected";
@@ -194,6 +203,7 @@ export function IntervalsSourceCard({
           <ConnectedActions
             onSync={handleSync}
             onOpenBackfill={() => setBackfillOpen(true)}
+            onOpenResync={() => setResyncOpen(true)}
             onOpenDisconnect={() => setDisconnectOpen(true)}
             isBusy={busy}
             integration={integration}
@@ -208,6 +218,7 @@ export function IntervalsSourceCard({
 
       <IntervalsConnectDialog open={dialogOpen} onClose={() => setDialogOpen(false)} athleteId={athleteId} setAthleteId={setAthleteId} apiKey={apiKey} setApiKey={setApiKey} isBusy={busy} onConnect={handleConnect} />
       <BackfillDialog open={backfillOpen} onClose={() => setBackfillOpen(false)} onStartBackfill={handleStartBackfill} isBusy={busy === "backfill"} />
+      <ResyncDialog open={resyncOpen} onClose={() => setResyncOpen(false)} onConfirm={handleResync} isBusy={busy === "resync"} />
       <DisconnectConfirmDialog open={disconnectOpen} onClose={() => setDisconnectOpen(false)} onConfirm={handleConfirmDisconnect} isBusy={busy === "disconnect"} />
     </Card>
   );

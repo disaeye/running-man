@@ -1,5 +1,6 @@
 import type { ActivitySummary } from "@shared/types/activity";
 import { SessionCard } from "@features/activity/components/SessionCard";
+import { useSessionClassifications } from "@features/activity/hooks/useSessionClassifications";
 import { ActivityTable } from "@features/activity/components/ActivityTable";
 import type { ViewMode } from "@features/activity/components/ViewToggle";
 import { EmptyState } from "@shared/ui/EmptyState";
@@ -21,6 +22,7 @@ export function ActivitiesContent({
   viewMode,
   onRetry,
 }: ActivitiesContentProps) {
+  const classifications = useSessionClassifications();
   if (error) {
     return (
       <EmptyState
@@ -39,7 +41,14 @@ export function ActivitiesContent({
     return <EmptyState title="暂无活动记录" description="所选范围内没有符合条件的活动，请调整筛选条件或上传活动数据。" />;
   }
   if (viewMode === "table") {
-    return <ActivityTable activities={supportedActivities} loading={false} error={null} />;
+    return (
+      <ActivityTable
+        activities={supportedActivities}
+        classifications={classifications.byActivityId}
+        loading={false}
+        error={null}
+      />
+    );
   }
   return <div className="flex flex-col gap-3" data-testid="activity-session-list">{supportedActivities.map((a) => <SessionCard key={a.activity_id} activity={a} showRoute />)}</div>;
 }

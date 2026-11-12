@@ -6,23 +6,27 @@ import { Card } from "@shared/ui/Card";
 import { ListPager } from "@shared/ui/ListPager";
 import { formatDistance, formatDuration, formatDate } from "@shared/lib/format";
 import type { ActivitySummary } from "@shared/types/activity";
+import type { SessionClassificationItem } from "@features/activity/hooks/useSessionClassifications";
 import { getSportConfig } from "@shared/config/sport-config";
 
 const PAGE_SIZE = 20;
 
 interface ActivityTableProps {
   activities: ActivitySummary[];
+  classifications?: ReadonlyMap<string, SessionClassificationItem>;
   loading: boolean;
   error: string | null;
 }
 
-export function ActivityTable({ activities, loading, error }: ActivityTableProps) {
+export function ActivityTable({ activities, classifications, loading, error }: ActivityTableProps) {
   const router = useRouter();
   const [page, setPage] = useState(0);
   const totalPages = Math.max(1, Math.ceil(activities.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const pageData = activities.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
   const openActivity = (activityId: string) => router.push(`/activities/${activityId}`);
+  const sessionLabel = (activityId: string) =>
+    classifications?.get(activityId)?.session_classification.display_name ?? "未分类";
 
   return (
     <Card padding="none" id="activities" data-testid="activity-table">
@@ -35,11 +39,11 @@ export function ActivityTable({ activities, loading, error }: ActivityTableProps
           <table className="w-full text-subheadline">
             <thead><tr className="border-b border-border-subtle text-left text-caption1 font-medium text-text-muted"><th className="px-6 py-3">日期</th><th className="px-6 py-3">类型</th><th className="px-6 py-3 text-right">距离</th><th className="px-6 py-3 text-right">时长</th><th className="px-6 py-3">分类</th><th className="px-6 py-3 text-right">心率</th></tr></thead>
             <tbody>{pageData.map((activity) => <tr key={activity.activity_id} onClick={() => openActivity(activity.activity_id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openActivity(activity.activity_id); } }} tabIndex={0} role="link" className="cursor-pointer border-b border-border-subtle/50 transition-colors last:border-b-0 hover:bg-surface-overlay focus-ring">
-              <td className="px-6 py-3 font-mono text-text-primary">{formatDate(activity.start_time)}</td><td className="px-6 py-3 text-text-secondary">{getSportConfig(activity.sport).label}</td><td className="px-6 py-3 text-right font-mono text-text-primary">{formatDistance(activity.distance_m)}</td><td className="px-6 py-3 text-right font-mono text-text-primary">{formatDuration(activity.duration_s)}</td><td className="px-6 py-3"><span className={activity.is_race ? "text-warm" : "text-text-muted"}>{activity.is_race ? "比赛" : "日常训练"}</span></td><td className="px-6 py-3 text-right font-mono text-text-primary">{activity.avg_hr ?? "--"}</td>
+              <td className="px-6 py-3 font-mono text-text-primary">{formatDate(activity.start_time)}</td><td className="px-6 py-3 text-text-secondary">{getSportConfig(activity.sport).label}</td><td className="px-6 py-3 text-right font-mono text-text-primary">{formatDistance(activity.distance_m)}</td><td className="px-6 py-3 text-right font-mono text-text-primary">{formatDuration(activity.duration_s)}</td><td className="px-6 py-3"><span className={activity.is_race ? "text-warm" : "text-text-muted"} data-testid="activity-table-classification">{sessionLabel(activity.activity_id)}</span></td><td className="px-6 py-3 text-right font-mono text-text-primary">{activity.avg_hr ?? "--"}</td>
             </tr>)}</tbody>
           </table>
         </div>
-        <div className="flex flex-col gap-2 p-3 sm:hidden">{pageData.map((activity) => <button key={activity.activity_id} type="button" onClick={() => openActivity(activity.activity_id)} className="min-h-[48px] w-full rounded-md border border-border-subtle bg-surface-overlay p-3 text-left transition-colors active:bg-surface-active"><div className="flex items-center justify-between"><span className="font-mono text-subheadline font-medium text-text-primary">{formatDate(activity.start_time)}</span><span className="text-caption1 text-text-secondary">{getSportConfig(activity.sport).label}</span></div><div className="mt-1.5 flex items-center gap-3 text-caption1 text-text-muted"><span>{activity.is_race ? "比赛" : "日常训练"}</span><span>{formatDistance(activity.distance_m)}</span><span>{formatDuration(activity.duration_s)}</span>{activity.avg_hr != null && <span>HR {activity.avg_hr}</span>}</div></button>)}</div>
+        <div className="flex flex-col gap-2 p-3 sm:hidden">{pageData.map((activity) => <button key={activity.activity_id} type="button" onClick={() => openActivity(activity.activity_id)} className="min-h-[48px] w-full rounded-md border border-border-subtle bg-surface-overlay p-3 text-left transition-colors active:bg-surface-active"><div className="flex items-center justify-between"><span className="font-mono text-subheadline font-medium text-text-primary">{formatDate(activity.start_time)}</span><span className="text-caption1 text-text-secondary">{getSportConfig(activity.sport).label}</span></div><div className="mt-1.5 flex items-center gap-3 text-caption1 text-text-muted"><span>{sessionLabel(activity.activity_id)}</span><span>{formatDistance(activity.distance_m)}</span><span>{formatDuration(activity.duration_s)}</span>{activity.avg_hr != null && <span>HR {activity.avg_hr}</span>}</div></button>)}</div>
         <ListPager page={safePage} totalPages={totalPages} totalItems={activities.length} onPageChange={setPage} />
       </>}
     </Card>

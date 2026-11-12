@@ -45,6 +45,7 @@ export function DemoDayPanel({
   const segments: DemoStep[] = (prescription?.segments ?? []).map((segment) => ({
     type: segment.type,
     duration_min: segment.duration_min,
+    distance_m: segment.distance_m,
     pace_min_s_km: segment.pace_min_s_km,
     pace_max_s_km: segment.pace_max_s_km,
     repetitions: segment.repetitions,

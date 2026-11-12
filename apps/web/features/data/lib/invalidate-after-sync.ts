@@ -18,6 +18,7 @@ const DATA_DEPENDENT_PREFIXES = [
   "/pmc",
   "/activities",
   "/wellness",
+  "/metrics/series",
   "/calendar",
   "/goals",
   "/insights/readiness",

@@ -47,8 +47,10 @@ function mapPmcPoint(row: PmcViewInput): PmcPoint {
 
 export function usePmcData(from: string, to: string): UsePmcDataResult {
   const params = { from, to };
+  // 空范围代表「日期还没定」，不是请求全部：后端对缺参回答 422。
+  const hasRange = Boolean(from && to);
   const { data, error, isLoading, mutate } = useSWR<PmcPoint[]>(
-    ["/pmc", params],
+    hasRange ? ["/pmc", params] : null,
     {
       fetcher: () =>
         callOrvalValidated(

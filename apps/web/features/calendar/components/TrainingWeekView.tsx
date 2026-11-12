@@ -1,26 +1,151 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Tag } from "@shared/ui/Lovable";
 import { getSportConfig } from "@shared/config/sport-config";
 import { formatDuration, formatPaceFromSeconds } from "@shared/lib/format";
 import { workoutTypeLabel } from "@features/today/lib/session-label";
-import type { ActivitySummary } from "@shared/types/activity";
-import type { CalendarEventDTO } from "@features/calendar/components/types";
-import { activityLocalDay, athleteToday } from "@shared/lib/training-day";
+import type { WeekDay, WeekModel } from "../lib/training-week";
+import { periodLabel } from "../lib/training-week";
 
-export function TrainingWeekView({ activities, events, timezone, onSelectDate }: {
-  activities: ActivitySummary[]; events: CalendarEventDTO[]; timezone: string; onSelectDate: (day: string) => void;
+const STATE_LABEL: Record<WeekDay["state"], string> = {
+  completed: "已完成",
+  upcoming: "待完成",
+  missed: "未完成",
+  unplanned: "没有安排",
+  empty: "没有安排",
+};
+
+const STATE_TONE: Record<WeekDay["state"], "info" | "primary" | "warn" | "outline"> = {
+  completed: "info",
+  upcoming: "primary",
+  missed: "warn",
+  unplanned: "outline",
+  empty: "outline",
+};
+
+/** 本周执行：只渲染有活动、有计划或今天的日子，不让空天铺满一屏。 */
+export function TrainingWeekView({ model, today, onWeekChange, onSelectDate }: {
+  model: WeekModel;
+  today: string;
+  onWeekChange: (delta: number) => void;
+  onSelectDate: (day: string) => void;
 }) {
-  const monday = new Date();
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  const days = Array.from({ length: 7 }, (_, index) => { const day = new Date(monday); day.setDate(day.getDate() + index); return day.toISOString().slice(0, 10); });
-  const today = athleteToday(timezone);
-  return <div className="space-y-1">{days.map((day, index) => {
-    const actual = activities.filter((activity) => activityLocalDay(activity.start_time, timezone) === day);
-    const planned = events.filter((event) => activityLocalDay(event.start_time, timezone) === day);
-    const activity = actual[0]; const event = planned[0];
-    return <div key={day} className={`flex w-full items-center gap-3 rounded-xl p-3 ${day === today ? "bg-secondary" : ""}`}><button type="button" onClick={() => onSelectDate(day)} aria-label={`编辑 ${day} 训练`} className="w-10 text-left"><div className="text-caption1 text-muted-foreground">周{"一二三四五六日"[index]}</div><div className="num text-lg font-semibold">{day.slice(8)}</div>{day === today ? <div className="text-caption1 text-accent-strong">今天</div> : null}</button><div className="flex-1">{activity ? <><div className="flex items-center gap-2"><Tag tone="primary">实际 · {getSportConfig(activity.sport).label}</Tag>{activity.is_race ? <Tag>比赛</Tag> : null}</div><div className="mt-1 font-medium">{activity.name?.trim() || getSportConfig(activity.sport).label}</div><div className="num mt-0.5 flex gap-3 text-xs text-muted-foreground">{activity.distance_m != null ? <span>{(activity.distance_m / 1000).toFixed(2)} km</span> : null}<span>{formatDuration(activity.duration_s ?? 0)}</span>{activity.avg_speed ? <span>{formatPaceFromSeconds(Math.round(1000 / activity.avg_speed))}/km</span> : null}</div></> : event ? <><Tag>计划</Tag><div className="mt-1 font-medium">{event.name || workoutTypeLabel(event.training_type ?? event.sport_type ?? "training")}</div><div className="num text-xs text-muted-foreground">{event.workout_prescription?.duration_min ?? 0}′ · TSS {Math.round(event.predicted_tss ?? 0)}</div></> : <span className="text-sm text-muted-foreground/60">休息</span>}</div>{activity ? <Link href={`/activities/${activity.activity_id}`} aria-label="查看活动"><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link> : event ? <button type="button" aria-label={`编辑 ${day} 训练`} onClick={() => onSelectDate(day)}><ArrowRight className="h-4 w-4 text-muted-foreground" /></button> : null}</div>;
-  })}</div>;
+  return (
+    <div className="space-y-2" data-testid="plan-week-grid">
+      <div className="flex items-center justify-between px-1">
+        <span className="num text-caption1 text-text-muted">
+          {periodLabel(model.comparison.from, model.comparison.to)}
+        </span>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => onWeekChange(-1)} aria-label="上一周" className="tactile flex h-11 w-11 items-center justify-center rounded-full text-text-muted hover:bg-secondary"><ChevronLeft className="h-4 w-4" /></button>
+          <button type="button" onClick={() => onWeekChange(1)} aria-label="下一周" className="tactile flex h-11 w-11 items-center justify-center rounded-full text-text-muted hover:bg-secondary"><ChevronRight className="h-4 w-4" /></button>
+        </div>
+      </div>
+
+      {model.days.map((day) => <DayRow key={day.day} day={day} today={today} onSelectDate={onSelectDate} />)}
+
+      {model.hiddenCount > 0 ? (
+        <p className="px-1 py-2 text-caption1 text-text-muted" data-testid="week-hidden-days">
+          本周另有 {model.hiddenCount} 天没有记录
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function DayRow({ day, today, onSelectDate }: {
+  readonly day: WeekDay;
+  readonly today: string;
+  readonly onSelectDate: (day: string) => void;
+}) {
+  const label = `周${"一二三四五六日"[weekdayOf(day.day)]}`;
+  return (
+    <div
+      data-testid={`plan-week-day-${day.day}`}
+      className={`surface p-3 ${day.isToday ? "ring-1 ring-primary" : ""}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => onSelectDate(day.day)}
+          aria-label={`编辑 ${day.day} 训练`}
+          className="tactile flex min-h-11 items-center gap-2 text-left"
+        >
+          <span className="text-caption1 text-text-muted">{label}</span>
+          <span className={`num text-lg font-semibold ${day.day === today ? "text-accent-strong" : ""}`}>
+            {day.day.slice(8)}
+          </span>
+        </button>
+        <Tag tone={STATE_TONE[day.state]}>{STATE_LABEL[day.state]}</Tag>
+      </div>
+
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <PlanColumn day={day} />
+        <ActualColumn day={day} />
+      </div>
+    </div>
+  );
+}
+
+function PlanColumn({ day }: { readonly day: WeekDay }) {
+  return (
+    <div className="rounded-lg bg-surface-overlay/50 p-2.5">
+      <div className="text-caption1 font-medium text-text-muted">计划</div>
+      {day.events.length === 0 ? (
+        <p className="mt-1 text-caption1 text-text-muted">没有编排</p>
+      ) : (
+        <ul className="mt-1 space-y-1">
+          {day.events.map((event) => {
+            const prescription = event.workout_prescription;
+            return (
+              <li key={event.event_id} data-testid={`week-plan-${event.event_id}`} className="text-caption1">
+                <div className="text-text-primary">{event.name || workoutTypeLabel(event.training_type ?? event.sport_type ?? "training")}</div>
+                <div className="num text-text-muted">
+                  {prescription ? `${Math.round(prescription.duration_min)} min` : "时长未记录"}
+                  {event.predicted_distance_m != null ? ` · ${(event.predicted_distance_m / 1000).toFixed(1)} km` : ""}
+                  {event.predicted_tss != null ? ` · TSS ${Math.round(event.predicted_tss)}` : ""}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ActualColumn({ day }: { readonly day: WeekDay }) {
+  return (
+    <div className="rounded-lg bg-surface-overlay/50 p-2.5">
+      <div className="text-caption1 font-medium text-text-muted">实际</div>
+      {day.activities.length === 0 ? (
+        <p className="mt-1 text-caption1 text-text-muted">
+          {day.state === "missed" ? "这一天没有完成记录" : "还没有记录"}
+        </p>
+      ) : (
+        <ul className="mt-1 space-y-1">
+          {day.activities.map((activity) => (
+            <li key={activity.activity_id} data-testid={`week-activity-${activity.activity_id}`}>
+              <Link href={`/activities/${activity.activity_id}`} className="text-caption1 text-text-primary hover:underline">
+                {activity.name?.trim() || getSportConfig(activity.sport).label}
+              </Link>
+              <div className="num text-text-muted">
+                {activity.distance_m != null ? `${(activity.distance_m / 1000).toFixed(2)} km · ` : ""}
+                {formatDuration(activity.duration_s)}
+                {activity.avg_speed ? ` · ${formatPaceFromSeconds(Math.round(1000 / activity.avg_speed))}/km` : ""}
+                {activity.tss != null ? ` · TSS ${Math.round(activity.tss)}` : ""}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function weekdayOf(day: string): number {
+  const [year, month, date] = day.split("-").map(Number) as [number, number, number];
+  return (new Date(Date.UTC(year, month - 1, date)).getUTCDay() + 6) % 7;
 }

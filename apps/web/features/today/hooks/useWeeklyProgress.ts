@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { athleteWeekRange, useAthleteTimezone } from "@shared/lib/training-day";
+import { athleteWeekRange, useAthleteTimezoneState } from "@shared/lib/training-day";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import { getWeeklyProgressApiV1InsightsWeeklyProgressGet } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
@@ -59,13 +59,16 @@ export function useWeeklyProgress(
   to?: string,
 ): UseWeeklyProgressResult {
   // Monday-anchored, so a host/athlete day disagreement shifts the whole week
-  // rather than one edge of it.
-  const timezone = useAthleteTimezone();
+  // rather than one edge of it. 时区未定前不请求，避免 UTC 一轮、真实时区再一轮。
+  const { timezone } = useAthleteTimezoneState();
   const week = athleteWeekRange(timezone);
   const range = { from: from ?? week.from, to: to ?? week.to };
   const params = { from: range.from, to: range.to };
+  // 调用方传入的范围可能来自尚未解析的日期（例如分析页门控前的空串），
+  // 未就绪时不发请求，避免 `?from=&to=` 被后端判为 422。
+  const hasRange = Boolean(range.from && range.to);
   const { data, error, isLoading, mutate } = useSWR<WeekProgress[]>(
-    ["/insights/weekly-progress", { from: range.from, to: range.to }],
+    hasRange ? ["/insights/weekly-progress", { from: range.from, to: range.to }] : null,
     {
       fetcher: () =>
         callOrvalValidated(

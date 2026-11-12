@@ -1,16 +1,18 @@
 import type { StreamMap } from "@shared/types/activity";
 import { Card } from "@shared/ui/Card";
-import { GpsTrack } from "@features/activity/components/GpsTrack";
-import { ColoredGpsTrack } from "@features/activity/components/ColoredGpsTrack";
+import { ActivityMap } from "@features/activity/components/map/ActivityMap";
 import type { GpsUiState } from "@features/activity/lib/activity-detail";
 
-export function GpsSection({ gpsState, streamMap }: { gpsState: GpsUiState; streamMap: StreamMap }) {
+export function GpsSection({ gpsState, streamMap, hoverTimeSec = null }: {
+  gpsState: GpsUiState;
+  streamMap: StreamMap;
+  hoverTimeSec?: number | null;
+}) {
   switch (gpsState) {
     case "valid":
       return (
-        <div className="grid gap-6 lg:grid-cols-2" data-testid="gps-valid-state">
-          <GpsTrack streams={streamMap} />
-          <ColoredGpsTrack streams={streamMap} />
+        <div data-testid="gps-valid-state">
+          <ActivityMap streams={streamMap} hoverTimeSec={hoverTimeSec} />
         </div>
       );
     case "partial":

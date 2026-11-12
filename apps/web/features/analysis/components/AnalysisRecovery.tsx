@@ -75,7 +75,7 @@ export function AnalysisRecovery() {
             </ChartShell>
           </div>
           <ChartShell title="最大摄氧量" subtitle="ml/kg/min">
-            <VO2maxTrend data={wellness} />
+            <VO2maxTrend />
           </ChartShell>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

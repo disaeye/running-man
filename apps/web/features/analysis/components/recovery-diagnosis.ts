@@ -1,5 +1,6 @@
 import type { LocalReadiness } from "@features/today/hooks/useReadiness";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
+import type { DatedValue } from "@features/health/lib/physiology-display";
 import { HEART_RATE_UNIT } from "@shared/config/terms";
 
 export type DriverStat = {
@@ -49,11 +50,14 @@ function pendingDiagnosis(sampleCount: number): Diagnosis {
   };
 }
 
-export function buildRecoveryDrivers(wellness: WellnessPoint[]): DriverStat[] {
+export function buildRecoveryDrivers(
+  wellness: WellnessPoint[],
+  vo2Record: DatedValue | null,
+): DriverStat[] {
   const latestSleep = latestValue(wellness, "sleep_secs");
   const latestRhr = latestValue(wellness, "resting_hr");
   const latestHrv = latestValue(wellness, "hrv");
-  const latestVo2 = latestValue(wellness, "vo2max");
+  // vo2max 是人的生理指标，由统一的全历史当前读数提供。
   return [
     {
       label: "睡眠",
@@ -75,8 +79,8 @@ export function buildRecoveryDrivers(wellness: WellnessPoint[]): DriverStat[] {
     },
     {
       label: "VO₂max",
-      value: latestVo2 != null ? latestVo2.toFixed(1) : "--",
-      detail: `90日变化 ${formatDelta(periodDelta(wellness, "vo2max"))}`,
+      value: vo2Record != null ? vo2Record.value.toFixed(1) : "--",
+      detail: vo2Record != null ? `记录于 ${vo2Record.day}` : "--",
       tone: "text-text-primary",
     },
   ];
@@ -101,21 +105,10 @@ function average(values: number[]): number | null {
   return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
 }
 
-function periodDelta(points: WellnessPoint[], key: WellnessNumericKey): number | null {
-  const values = recentValues(points, key, 90);
-  const first = values[0];
-  const last = values.at(-1);
-  return first != null && last != null && values.length >= 2 ? last - first : null;
-}
-
 function formatHours(value: number | null): string {
   return value != null ? `${(value / 3600).toFixed(1)}h` : "--";
 }
 
 function formatNumber(value: number | null, unit: string): string {
   return value != null ? `${Math.round(value)} ${unit}` : "--";
-}
-
-function formatDelta(value: number | null): string {
-  return value != null ? `${value > 0 ? "+" : ""}${value.toFixed(1)}` : "--";
 }

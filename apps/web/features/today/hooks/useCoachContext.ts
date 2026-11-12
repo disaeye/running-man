@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
+import { athleteToday, useAthleteTimezoneState } from "@shared/lib/training-day";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import { getCoachContextApiV1InsightsCoachContextGet } from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
@@ -110,6 +110,8 @@ export interface WellnessReading {
   readonly unit: string;
   readonly baseline: number | null;
   readonly delta: number | null;
+  /** 实际测量日：设备分开上报各项指标，读数可能来自前一日。 */
+  readonly observedOn: string | null;
 }
 
 export interface ReadinessFactor {
@@ -168,6 +170,7 @@ function mapReading(
     unit: raw.unit,
     baseline: raw.baseline ?? null,
     delta: raw.delta ?? null,
+    observedOn: raw.observed_on ?? null,
   };
 }
 
@@ -198,12 +201,14 @@ export function useCoachContext(day?: string): UseCoachContextResult {
   // The recommendation is for the athlete's training day. Using the host's
   // calendar instead means a traveller sees yesterday's plan for their
   // workout, and an athlete east of Greenwich gets tomorrow's advice on the
-  // evening before.
-  const timezone = useAthleteTimezone();
+  // evening before. The timezone source is the same gated one the other
+  // first-wave hooks use, so the date key is settled before the first fetch.
+  const { timezone, resolved } = useAthleteTimezoneState();
   const target = day ?? athleteToday(timezone);
   const params = { date: target };
+  const ready = Boolean(day) || resolved;
   const { data, error, isLoading, mutate } = useSWR<CoachContext>(
-    ["/insights/coach-context", { date: target }],
+    ready ? ["/insights/coach-context", { date: target }] : null,
     {
       fetcher: () =>
         callOrvalValidated(
