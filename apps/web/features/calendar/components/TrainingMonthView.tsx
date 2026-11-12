@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PageCard } from "@shared/ui/Lovable";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { ActivitySummary } from "@shared/types/activity";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 import { dayKeyOffset, weekdayIndex } from "@shared/lib/training-day";
@@ -26,18 +28,20 @@ const STATUS_TEXT: Record<string, string> = {
 };
 
 /**
- * 负荷回看。档位由近 8 周有值日的分位固定，跨月同一格高度代表同一负荷区间；
- * 状态只用圆点表达，取消渐变与高度叠加两套编码。
+ * 负荷回看。过去与今日只统计已记录实际负荷，未来日才展示计划预期负荷；
+ * 档位由近 8 周有值日的分位固定，选中任意日期可直达日详情与编排抽屉。
  */
-export function TrainingMonthView({ activities, events, timezone, today, month, scaleDays, onMonthChange }: {
+export function TrainingMonthView({
+  activities, events, timezone, today, month, scaleDays, onMonthChange, onSelectDate,
+}: {
   activities: readonly ActivitySummary[];
   events: readonly CalendarEventDTO[];
   timezone: string;
   today: string;
   month: string;
-  /** 近 8 周的每日 TSS，用于固定档位。 */
   scaleDays: readonly number[];
   onMonthChange: (delta: number) => void;
+  onSelectDate?: (day: string) => void;
 }) {
   const monthKey = month;
   const monthLabel = Number(monthKey.slice(5));
@@ -48,14 +52,24 @@ export function TrainingMonthView({ activities, events, timezone, today, month, 
   const grouped = groupTrainingByDay(activities, events, timezone);
   const scale = loadScale(scaleDays);
 
-  const loadOf = (iso: string): number => {
+  const loadInfo = (iso: string): { tss: number | null; known: boolean } => {
     const items = grouped.get(iso);
-    if (!items) return 0;
-    const actual = items.activities.reduce((sum, a) => sum + (a.tss ?? 0), 0);
-    const planned = items.events.reduce((sum, e) => sum + (e.predicted_tss ?? 0), 0);
-    return actual > 0 ? actual : planned;
+    if (!items) return { tss: 0, known: true };
+    if (items.activities.length > 0) {
+      const recorded = items.activities.filter((a) => a.tss != null);
+      if (recorded.length === 0) return { tss: null, known: false };
+      return { tss: recorded.reduce((sum, a) => sum + (a.tss ?? 0), 0), known: true };
+    }
+    if (iso > today && items.events.length > 0) {
+      const planned = items.events.filter((e) => e.predicted_tss != null);
+      if (planned.length === 0) return { tss: null, known: false };
+      return { tss: planned.reduce((sum, e) => sum + (e.predicted_tss ?? 0), 0), known: true };
+    }
+    return { tss: 0, known: true };
   };
+
   const selectedItems = selected ? grouped.get(selected) : undefined;
+  const selectedLoad = selected ? loadInfo(selected) : null;
 
   return <PageCard title={`${monthLabel} 月训练日历`} action={<div className="flex items-center gap-1">
     <button type="button" onClick={() => onMonthChange(-1)} aria-label="上一月" className="tactile flex h-11 w-11 items-center justify-center rounded-full text-text-muted hover:bg-secondary"><ChevronLeft className="h-4 w-4" /></button>
@@ -65,18 +79,20 @@ export function TrainingMonthView({ activities, events, timezone, today, month, 
       <span className="inline-flex items-center gap-1.5"><i className="size-2.5 rounded-full bg-success" />已完成</span>
       <span className="inline-flex items-center gap-1.5"><i className="size-2.5 rounded-full bg-fitness" />已计划</span>
       <span className="inline-flex items-center gap-1.5"><i className="size-2.5 rounded-full bg-accent" />完成 + 计划</span>
-      <span className="ml-auto">档位按近 8 周固定分位 · 0–4 档</span>
+      <span className="ml-auto">过去/今日记实际 · 未来日记计划 · 档位按近 8 周固定分位</span>
     </div>
     <div className="grid grid-cols-7 gap-1 text-center text-caption1 text-text-muted">{"一二三四五六日".split("").map((day) => <span key={day}>{day}</span>)}</div>
     <div className="mt-1 grid grid-cols-7 gap-1" data-testid="plan-month-grid">{days.map((iso) => {
       const items = grouped.get(iso);
       const status = trainingDayStatus(items);
-      const tss = loadOf(iso);
+      const info = loadInfo(iso);
+      const tss = info.tss ?? 0;
       const level = scale(tss);
       const count = (items?.activities.length ?? 0) + (items?.events.length ?? 0);
       const inMonth = iso.slice(0, 7) === monthKey;
-      const label = `${iso}，${STATUS_TEXT[status]}${count ? `，${count} 项` : ""}${tss ? `，TSS ${Math.round(tss)}，负荷 ${level} 档` : ""}`;
-      return <button type="button" key={iso} data-testid={`plan-month-day-${iso}`} data-status={status} data-tss={Math.round(tss)} data-level={level} title={label} aria-label={label} onClick={() => setSelected(iso)} aria-pressed={selected === iso} className={`tactile relative aspect-square overflow-hidden rounded-lg bg-surface-overlay/40 ${inMonth ? "" : "opacity-40"} ${iso === today ? "ring-1 ring-primary" : ""} ${selected === iso ? "ring-2 ring-primary" : ""}`}>
+      const tssLabel = !info.known ? "，TSS 未记录" : tss ? `，TSS ${Math.round(tss)}，负荷 ${level} 档` : "";
+      const label = `${iso}，${STATUS_TEXT[status]}${count ? `，${count} 项` : ""}${tssLabel}`;
+      return <button type="button" key={iso} data-testid={`plan-month-day-${iso}`} data-status={status} data-tss={info.known ? Math.round(tss) : ""} data-level={level} title={label} aria-label={label} onClick={() => setSelected(iso)} aria-pressed={selected === iso} className={`tactile relative min-h-11 aspect-square overflow-hidden rounded-lg bg-surface-overlay/40 ${inMonth ? "" : "opacity-40"} ${iso === today ? "ring-1 ring-primary" : ""} ${selected === iso ? "ring-2 ring-primary" : ""}`}>
         <span className="absolute inset-x-1 top-1 flex justify-end" aria-hidden>
           <i className={`size-1.5 rounded-full ${STATUS_DOT[status]}`} />
         </span>
@@ -87,16 +103,39 @@ export function TrainingMonthView({ activities, events, timezone, today, month, 
       </button>;
     })}</div>
     {selected ? <div className="mt-3 rounded-lg bg-secondary p-3 text-sm" data-testid="month-day-detail">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-medium">{monthLabel}月{Number(selected.slice(8))}日 · TSS {Math.round(loadOf(selected))}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium">
+          {Number(selected.slice(5, 7))}月{Number(selected.slice(8))}日 · {selectedLoad?.known ? `TSS ${Math.round(selectedLoad.tss ?? 0)}` : `TSS ${NO_VALUE}`}
+        </span>
         <span className="text-caption1 text-text-muted">{STATUS_TEXT[trainingDayStatus(selectedItems)]}</span>
       </div>
       {selectedItems && (selectedItems.activities.length + selectedItems.events.length) > 0 ? (
         <ul className="mt-2 space-y-1">
           {selectedItems.events.map((item) => <li key={item.event_id} className="flex items-center gap-2 text-text-muted"><i className="size-2 rounded-full bg-fitness" />计划 · {item.name || workoutTypeLabel(item.training_type ?? item.sport_type ?? "training")}</li>)}
-          {selectedItems.activities.map((item) => <li key={item.activity_id} className="flex items-center gap-2"><i className="size-2 rounded-full bg-success" />{item.name?.trim() || getSportConfig(item.sport).label} · TSS {Math.round(item.tss ?? 0)}</li>)}
+          {selectedItems.activities.map((item) => (
+            <li key={item.activity_id} className="flex items-center gap-2">
+              <i className="size-2 rounded-full bg-success" />
+              <Link href={`/activities/${item.activity_id}`} className="hover:underline">
+                {item.name?.trim() || getSportConfig(item.sport).label}
+              </Link>
+              <span className="num text-caption1 text-text-muted">
+                · {item.tss != null ? `TSS ${Math.round(item.tss)}` : `TSS ${NO_VALUE}`}
+              </span>
+            </li>
+          ))}
         </ul>
       ) : <p className="mt-1 text-caption1 text-text-muted">这一天没有记录或计划。</p>}
+      {onSelectDate ? (
+        <div className="mt-2 border-t border-border-subtle pt-2">
+          <button
+            type="button"
+            onClick={() => onSelectDate(selected)}
+            className="tactile inline-flex min-h-11 items-center text-caption1 font-medium text-accent-strong hover:underline"
+          >
+            查看详情 / 编排这一天
+          </button>
+        </div>
+      ) : null}
     </div> : null}
   </PageCard>;
 }

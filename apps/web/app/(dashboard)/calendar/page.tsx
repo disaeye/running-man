@@ -2,43 +2,23 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { Page } from "@shared/ui/Lovable";
-import { SlidingIndicator } from "@shared/ui/SlidingIndicator";
 import { useActivities } from "@features/activity/hooks/useActivities";
 import { useCalendarEvents } from "@features/calendar/hooks/useCalendarEvents";
-import {
-  activityLocalDay,
-  athleteToday,
-  useAthleteTimezoneState,
-} from "@shared/lib/training-day";
+import { activityLocalDay, athleteToday, useAthleteTimezoneState } from "@shared/lib/training-day";
 import { CalendarDaySheet } from "@features/calendar/components/CalendarDaySheet";
 import { TrainingAddSheet } from "@features/calendar/components/TrainingAddSheet";
+import { TrainingFilterTabs } from "@features/calendar/components/TrainingFilterTabs";
 import { TrainingViewPanels } from "@features/calendar/components/TrainingViewPanels";
 import { LIST_WINDOW_DAYS } from "@features/calendar/components/TrainingActivityList";
+import { PlanGenerateDialog } from "@features/plan/components/PlanGenerateDialog";
 import { useWellness } from "@features/health/hooks/useWellness";
-import { CALENDAR_VIEWS, resolveCalendarView } from "@features/calendar/lib/calendar-view";
-import {
-  monthScaleRangeOf,
-  shiftMonth,
-  viewRange,
-  weekRangeOf,
-} from "@features/calendar/lib/view-range";
-import {
-  buildWeekModel,
-  listLabel,
-  monthLabel,
-  periodLabel,
-  type WeekModel,
-} from "@features/calendar/lib/training-week";
+import { resolveCalendarView, type CalendarView } from "@features/calendar/lib/calendar-view";
+import { monthScaleRangeOf, shiftMonth, viewRange, weekRangeOf } from "@features/calendar/lib/view-range";
+import { buildWeekModel, eventFamily, listLabel, monthLabel, periodLabel, type WeekModel } from "@features/calendar/lib/training-week";
+import { defaultSportForFamily } from "@features/calendar/lib/workout-prescription";
 import { getSportConfig, type SportFamily } from "@shared/config/sport-config";
-
-const VIEW_LABELS = { week: "本周", month: "负荷", list: "流水" } as const;
-const SPORT_FILTERS: readonly { key: SportFamily | "all"; label: string }[] = [
-  { key: "all", label: "全部" },
-  { key: "running", label: "跑步" },
-  { key: "strength", label: "力量训练" },
-];
 
 /** `?view=` 是视图的唯一来源：链接可分享，浏览器后退可用。 */
 export default function CalendarPage() {
@@ -53,7 +33,7 @@ function TrainingPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const view = resolveCalendarView(searchParams.get("view"));
-  const setView = (next: string) => {
+  const setView = (next: CalendarView) => {
     const params = new URLSearchParams(searchParams);
     params.set("view", next);
     router.replace(`/calendar?${params.toString()}`);
@@ -61,6 +41,7 @@ function TrainingPageContent() {
   const [family, setFamily] = useState<SportFamily | "all">("all");
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const [listDays, setListDays] = useState(LIST_WINDOW_DAYS);
@@ -70,9 +51,7 @@ function TrainingPageContent() {
   const currentWeek = useMemo(() => weekRangeOf(today), [today]);
 
   const range = useMemo(
-    () => (resolved
-      ? viewRange(view, today, weekOffset, month, listDays)
-      : { from: "", to: "" }),
+    () => (resolved ? viewRange(view, today, weekOffset, month, listDays) : { from: "", to: "" }),
     [resolved, view, today, weekOffset, month, listDays],
   );
   const activities = useActivities(range.from, range.to);
@@ -84,19 +63,14 @@ function TrainingPageContent() {
     view === "month" && resolved ? scaleRange.from : "",
     view === "month" && resolved ? scaleRange.to : "",
   );
-  const scaleDays = useMemo(
-    () => dailyTss(scaleActivities.data, timezone),
-    [scaleActivities.data, timezone],
-  );
+  const scaleDays = useMemo(() => dailyTss(scaleActivities.data, timezone), [scaleActivities.data, timezone]);
 
   const scopedActivities = useMemo(
-    () => activities.data.filter((activity) =>
-      family === "all" || getSportConfig(activity.sport).family === family),
+    () => activities.data.filter((a) => family === "all" || getSportConfig(a.sport).family === family),
     [activities.data, family],
   );
   const scopedEvents = useMemo(
-    () => events.events.filter((event) =>
-      family === "all" || eventFamily(event) === family || eventFamily(event) === "all"),
+    () => events.events.filter((e) => family === "all" || eventFamily(e) === family || eventFamily(e) === "all"),
     [events.events, family],
   );
 
@@ -113,14 +87,24 @@ function TrainingPageContent() {
     [scopedActivities, scopedEvents, timezone, range.from, range.to, currentWeek.from, currentWeek.to, today, family],
   );
 
-  const todayEvent = scopedEvents.find((event) =>
-    activityLocalDay(event.start_time, timezone) === today) ?? null;
+  const todayEvent = scopedEvents.find((e) => activityLocalDay(e.start_time, timezone) === today) ?? null;
   const isCurrentWeek = weekOffset === 0;
+  const viewLoading = view === "list"
+    ? activities.loading && activities.data.length === 0
+    : (activities.loading && activities.data.length === 0) || (events.loading && events.events.length === 0);
+  const viewError = view === "list" ? activities.error : activities.error ?? events.error;
   const eyebrow = view === "week"
     ? `${isCurrentWeek ? "本周" : "该周"} · ${periodLabel(model.comparison.from, model.comparison.to)}`
     : view === "month" ? monthLabel(month) : listLabel(listDays);
 
-  const switchView = (next: string) => {
+  const defaultAddDate = view === "week" && !isCurrentWeek
+    ? model.comparison.from
+    : view === "month" && month !== today.slice(0, 7)
+      ? `${month}-01`
+      : today;
+  const defaultSport = defaultSportForFamily(family);
+
+  const switchView = (next: CalendarView) => {
     setWeekOffset(0);
     setMonthOffset(0);
     setView(next);
@@ -130,69 +114,48 @@ function TrainingPageContent() {
     events.reload();
     wellness.reload();
   };
-  const selectedItems = editingDate
-    ? model.days.find((item) => item.day === editingDate)
-    : undefined;
+
+  const selectedActivities = useMemo(
+    () => (editingDate ? scopedActivities.filter((a) => activityLocalDay(a.start_time, timezone) === editingDate) : []),
+    [editingDate, scopedActivities, timezone],
+  );
+  const selectedEvents = useMemo(
+    () => (editingDate ? scopedEvents.filter((e) => e.status !== "deleted" && activityLocalDay(e.start_time, timezone) === editingDate) : []),
+    [editingDate, scopedEvents, timezone],
+  );
 
   return (
     <Page
       title="训练"
       eyebrow={eyebrow}
       right={
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
-          aria-label="添加训练"
-          className="tactile flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-      }
-    >
-      {view !== "list" ? (
-        <div className="relative flex flex-wrap gap-2">
-          <SlidingIndicator
-            variant="underline"
-            options={SPORT_FILTERS.map((option) => ({ key: option.key, selected: family === option.key }))}
-          />
-          {SPORT_FILTERS.map((option) => (
-            <button
-              type="button"
-              key={option.key}
-              data-indicator-key={option.key}
-              onClick={() => setFamily(option.key)}
-              aria-pressed={family === option.key}
-              className={`tactile relative z-10 inline-flex min-h-11 items-center rounded-full border px-3.5 text-xs ${family === option.key ? "border-primary bg-primary/15 text-accent-strong" : "border-border-default text-text-muted"}`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="relative flex rounded-full bg-secondary p-1" role="tablist">
-        <SlidingIndicator
-          variant="accent-pill"
-          options={CALENDAR_VIEWS.map((value) => ({ key: value, selected: view === value }))}
-        />
-        {CALENDAR_VIEWS.map((value) => (
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            key={value}
-            data-indicator-key={value}
-            role="tab"
-            aria-selected={view === value}
-            onClick={() => switchView(value)}
-            className={`tactile relative z-10 inline-flex min-h-11 flex-1 items-center justify-center rounded-full bg-transparent px-3 text-xs font-medium ${view === value ? "text-primary-foreground" : "text-text-muted hover:text-text-primary"}`}
+            onClick={() => setGenerateOpen(true)}
+            className="tactile inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-default px-3.5 text-caption1 font-medium text-text-primary hover:bg-secondary"
           >
-            {VIEW_LABELS[value]}
+            <Sparkles className="h-3.5 w-3.5 text-accent-strong" aria-hidden />
+            <span>生成计划</span>
           </button>
-        ))}
-      </div>
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            aria-label="添加训练"
+            className="tactile flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      }
+    >
+      <TrainingFilterTabs view={view} family={family} onFamilyChange={setFamily} onViewChange={switchView} />
 
       <TrainingViewPanels
         view={view}
         resolved={resolved}
+        loading={viewLoading}
+        error={viewError}
         model={model}
         today={today}
         month={month}
@@ -203,38 +166,43 @@ function TrainingPageContent() {
         scopedEvents={scopedEvents}
         todayEvent={todayEvent}
         wellness={wellness.data[0] ?? null}
+        wellnessLoading={wellness.loading}
+        wellnessError={wellness.error}
         scaleDays={scaleDays}
         isCurrentWeek={isCurrentWeek}
+        weekOffset={weekOffset}
         onWeekChange={(delta) => setWeekOffset((value) => value + delta)}
         onMonthChange={(delta) => setMonthOffset((value) => value + delta)}
         onLoadEarlier={() => setListDays((value) => value + LIST_WINDOW_DAYS)}
         onSelectDate={setEditingDate}
         onPlanToday={() => setEditingDate(today)}
+        onPlanWeek={() => setEditingDate(model.comparison.from)}
+        onGeneratePlan={() => setGenerateOpen(true)}
+        onRetry={reloadAll}
+        onRetryWellness={wellness.reload}
         onSaved={reloadAll}
       />
 
       <TrainingAddSheet
         open={addOpen}
-        date={today}
+        date={defaultAddDate}
+        defaultSport={defaultSport}
         onOpenChange={setAddOpen}
+        onOpenGenerate={() => setGenerateOpen(true)}
         onSaved={reloadAll}
       />
       <CalendarDaySheet
         selectedDate={editingDate}
-        activities={selectedItems?.activities ?? []}
-        editingEvent={selectedItems?.events[0]}
+        activities={selectedActivities}
+        editingEvent={selectedEvents[0]}
+        defaultSport={defaultSport}
         onSave={reloadAll}
         onClose={() => setEditingDate(null)}
         onActivitySaved={reloadAll}
       />
+      <PlanGenerateDialog open={generateOpen} onClose={() => setGenerateOpen(false)} onGenerated={reloadAll} />
     </Page>
   );
-}
-
-function eventFamily(event: { readonly sport_type?: string }): SportFamily | "all" {
-  if (!event.sport_type) return "all";
-  const family = getSportConfig(event.sport_type).family;
-  return family === "unknown" ? "all" : family;
 }
 
 function dailyTss(

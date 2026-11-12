@@ -187,13 +187,19 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
     event.sport_type ? getSportConfig(event.sport_type).label : null,
   );
 
+  const effectiveRpe =
+    event.completed_rpe ??
+    compared.find((activity) => activity.rpe != null)?.rpe ??
+    null;
   const stripItems: MetricStripItem[] = [
     {
       label: "RPE",
-      value: event.completed_rpe == null ? UNRECORDED : String(event.completed_rpe),
-      note: event.completed_rpe == null ? "没有记录 RPE" : undefined,
+      value: effectiveRpe == null ? UNRECORDED : String(effectiveRpe),
+      note: effectiveRpe == null ? "没有记录 RPE" : undefined,
     },
   ];
+  const quality = event.session_classification?.quality ?? null;
+  const execution = event.session_classification?.execution ?? null;
 
   return (
     <div className="flex flex-col gap-3" data-testid="day-plan-actual">
@@ -202,11 +208,10 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
           <div className="min-w-0">
             <p className="text-caption1 font-semibold text-text-secondary">计划课表</p>
             <div className="mt-2 flex flex-col gap-2">
-              {/* 两个 DTO 都没有计划距离：处方只有时长、配速和分段，事件只有
-                  完成后的 `completed_distance_m`。这一格不用时长乘配速倒推。 */}
+              {/* 优先读取计划事件已计算保存的预计距离，缺值时不倒推。 */}
               <PlanActualRow
                 label="目标距离"
-                value={null}
+                value={event.predicted_distance_m != null && event.predicted_distance_m > 0 ? formatDistance(event.predicted_distance_m) : null}
                 note="课表和事件都没有距离"
               />
               <PlanActualRow
@@ -265,6 +270,40 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
       </InsetBlock>
 
       <MetricStrip items={stripItems} columns={3} testId="day-plan-actual-metrics" />
+
+      {quality ? <SegmentQuality quality={quality} workDistanceM={execution?.work_distance_m ?? null} /> : null}
     </div>
+  );
+}
+
+/** 课表完成度摘要：距离与时长达成率，来自后端五对象分类结果。 */
+function SegmentQuality({
+  quality,
+  workDistanceM,
+}: {
+  readonly quality: NonNullable<CalendarEventDTO["session_classification"]>["quality"];
+  readonly workDistanceM: number | null;
+}) {
+  const distanceMatch = quality?.work_distance_match ?? null;
+  const durationMatch = quality?.work_duration_match ?? null;
+  const items: MetricStripItem[] = [
+    {
+      label: "课表距离达成",
+      value: distanceMatch == null ? UNRECORDED : `${Math.round(distanceMatch * 100)}%`,
+      note: distanceMatch == null ? "没有对比数据" : undefined,
+    },
+    {
+      label: "课表时长达成",
+      value: durationMatch == null ? UNRECORDED : `${Math.round(durationMatch * 100)}%`,
+      note: durationMatch == null ? "没有对比数据" : undefined,
+    },
+    {
+      label: "质量段距离",
+      value: workDistanceM == null ? UNRECORDED : formatDistance(workDistanceM),
+      note: workDistanceM == null ? "未记录" : undefined,
+    },
+  ];
+  return (
+    <MetricStrip items={items} columns={3} testId="day-plan-actual-quality" />
   );
 }

@@ -17,10 +17,12 @@ export function useCalendarEvents(from: string, to: string): UseCalendarEventsRe
   const { data, error, isLoading } = useSWR<CalendarEventDTO[]>(
     hasRange ? ["/calendar", { from, to }] : null,
   );
-  const reload = () => mutate(["/calendar", { from, to }]);
+  const reload = () => {
+    if (hasRange) void mutate(["/calendar", { from, to }]);
+  };
   return {
     events: data ?? [],
-    loading: isLoading,
+    loading: hasRange && isLoading,
     error: error?.message ?? null,
     reload,
   };

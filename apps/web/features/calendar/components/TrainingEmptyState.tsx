@@ -11,11 +11,15 @@ import { useSyncDetail } from "@features/data/hooks/useSyncDetail";
 export function TrainingEmptyState({
   hasPlan,
   missingSessions,
+  isCurrentWeek = true,
   onPlan,
+  onGenerate,
 }: {
   readonly hasPlan: boolean;
   readonly missingSessions: readonly string[];
+  readonly isCurrentWeek?: boolean;
   readonly onPlan: () => void;
+  readonly onGenerate?: () => void;
 }) {
   const { data, loading } = useSyncDetail("intervals_icu");
   if (loading || (data && data.status === "unknown")) return null;
@@ -35,11 +39,18 @@ export function TrainingEmptyState({
   if (!hasPlan) {
     return (
       <PageCard testId="training-empty-state">
-        <h2 className="text-subheadline font-semibold">这周还没有安排</h2>
-        <p className="mt-1 text-caption1 text-text-muted">编排一节训练，或直接记录已经完成的活动。</p>
-        <button type="button" onClick={onPlan} className="tactile mt-2 min-h-11 text-caption1 text-accent-strong hover:underline">
-          编排本周
-        </button>
+        <h2 className="text-subheadline font-semibold">{isCurrentWeek ? "这周还没有安排" : "该周还没有安排"}</h2>
+        <p className="mt-1 text-caption1 text-text-muted">按比赛目标自动生成周期课表，或手动编排单节训练。</p>
+        <div className="mt-2 flex flex-wrap gap-4">
+          <button type="button" onClick={onPlan} className="tactile min-h-11 text-caption1 text-accent-strong hover:underline">
+            {isCurrentWeek ? "编排本周" : "编排该周"}
+          </button>
+          {onGenerate ? (
+            <button type="button" onClick={onGenerate} className="tactile min-h-11 text-caption1 text-text-primary hover:underline">
+              从目标生成计划
+            </button>
+          ) : null}
+        </div>
       </PageCard>
     );
   }

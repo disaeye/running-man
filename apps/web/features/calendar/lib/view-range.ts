@@ -58,3 +58,29 @@ export function viewRange(
   if (view === "month") return monthGridRangeOf(monthKey);
   return trailingRangeOf(today, listDays);
 }
+
+/** 按运动员时区把 YYYY-MM-DD 转为当天 06:00 的 UTC ISO 时间戳。 */
+export function athleteDayStartIso(day: string, timezone: string): string {
+  const [year, month, date] = day.split("-").map(Number);
+  if (!year || !month || !date) return new Date(`${day}T06:00:00Z`).toISOString();
+  const localAsUtc = Date.UTC(year, month - 1, date, 6, 0, 0);
+  let instant = localAsUtc;
+  for (let i = 0; i < 4; i += 1) {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: timezone || "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(instant));
+    const vals = Object.fromEntries(parts.map((p) => [p.type, Number(p.value)]));
+    if (vals.year === undefined) break;
+    const actualAsUtc = Date.UTC(vals.year, (vals.month ?? 1) - 1, vals.day ?? 1, vals.hour ?? 0, vals.minute ?? 0);
+    const diff = localAsUtc - actualAsUtc;
+    instant += diff;
+    if (diff === 0) break;
+  }
+  return new Date(instant).toISOString();
+}

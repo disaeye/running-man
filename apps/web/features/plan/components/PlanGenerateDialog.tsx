@@ -29,6 +29,7 @@ interface Goal {
   race_distance_m: number | null;
   race_target_time_s: number | null;
   status: string;
+  is_primary?: boolean;
 }
 
 interface Props {
@@ -53,6 +54,7 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
   const [preview, setPreview] = useState<GeneratePreview | null>(null);
   const [restDays, setRestDays] = useState(() => Math.max(0, 7 - trainingDays));
   const [preferredDaysOff, setPreferredDaysOff] = useState<number[]>([]);
+  const [longRunDay, setLongRunDay] = useState<number | null>(null);
   const [state, setState] = useState<DialogState>({ kind: "loading-goals" });
 
   useEffect(() => {
@@ -93,6 +95,7 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
     goal_id: selectedGoal,
     rest_days: restDays,
     preferred_days_off: preferredDaysOff,
+    long_run_day: longRunDay,
   });
 
   const toggleDayOff = (day: number) => {
@@ -101,7 +104,6 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
     );
     setPreview(null);
   };
-
   const handlePreview = async () => {
     if (!selectedGoal) return;
     setState({ kind: "previewing" });
@@ -200,8 +202,10 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
             <PlanGenerationSettings
               restDays={restDays}
               preferredDaysOff={preferredDaysOff}
+              longRunDay={longRunDay}
               onRestDaysChange={(value) => { setRestDays(value); setPreview(null); }}
               onToggleDayOff={toggleDayOff}
+              onLongRunDayChange={(value) => { setLongRunDay(value); setPreview(null); }}
             />
           )}
 

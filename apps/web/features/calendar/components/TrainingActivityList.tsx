@@ -6,7 +6,7 @@ import { formatDuration, formatPaceFromSeconds } from "@shared/lib/format";
 import type { ActivitySummary } from "@shared/types/activity";
 import { activityLocalDay } from "@shared/lib/training-day";
 import { useSessionClassifications } from "@features/activity/hooks/useSessionClassifications";
-import { qualityMetrics } from "@features/activity/lib/classification-metrics";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 import { listLabel } from "../lib/training-week";
 
 const PAGE_SIZE = 30;
@@ -20,7 +20,7 @@ const FAMILY_FILTERS: readonly { key: SportFamily | "all"; label: string }[] = [
   { key: "strength", label: "力量" },
 ];
 
-/** 全部活动流水。筛选只作用于活动，不改动课表或本周对照。 */
+/** 全部活动流水：保持列表扫读本质，仅展示日期、运动、名称、四核心读数与一句课型摘要。 */
 export function TrainingActivityList({ activities, timezone, days, onLoadEarlier }: {
   activities: readonly ActivitySummary[];
   timezone: string;
@@ -67,41 +67,39 @@ export function TrainingActivityList({ activities, timezone, days, onLoadEarlier
         <div className="space-y-1" data-testid="activity-list">
           {rows.slice(0, visible).map((activity) => {
             const classification = byActivityId.get(activity.activity_id);
+            const summaryLine = classificationSummary(classification);
             return (
-            <Link
-              key={activity.activity_id}
-              href={`/activities/${activity.activity_id}`}
-              className="tactile flex items-center gap-3 rounded-xl p-3 hover:bg-secondary/60"
-            >
-              <div className="num w-12 text-xs text-text-muted">
-                {activityLocalDay(activity.start_time, timezone).slice(5)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <Tag tone="primary">{getSportConfig(activity.sport).label}</Tag>
-                  {activity.is_race ? <Tag>比赛</Tag> : null}
-                  <span className="truncate text-sm font-medium">
-                    {activity.name?.trim() || getSportConfig(activity.sport).label}
-                  </span>
+              <Link
+                key={activity.activity_id}
+                href={`/activities/${activity.activity_id}`}
+                className="tactile flex min-h-11 items-center gap-3 rounded-xl p-3 hover:bg-secondary/60"
+              >
+                <div className="num w-12 shrink-0 text-xs text-text-muted">
+                  {activityLocalDay(activity.start_time, timezone).slice(5)}
                 </div>
-                <div className="num mt-1 flex flex-wrap gap-3 text-xs text-text-muted">
-                  {activity.distance_m != null ? <span>{(activity.distance_m / 1000).toFixed(2)} km</span> : null}
-                  <span>{formatDuration(activity.duration_s)}</span>
-                  {activity.avg_speed ? <span>{formatPaceFromSeconds(Math.round(1000 / activity.avg_speed))}/km</span> : null}
-                </div>
-                {classification ? (
-                  <div className="mt-1 min-w-0">
-                    <p className="line-clamp-1 text-caption1 text-text-secondary" data-testid="activity-list-course">
-                      {classification.session_classification.display_line}
-                    </p>
-                    <p className="line-clamp-1 text-caption1 text-text-muted" data-testid="activity-list-quality">
-                      {qualityMetrics(classification).join("；")}
-                    </p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Tag tone="primary">{getSportConfig(activity.sport).label}</Tag>
+                    {activity.is_race ? <Tag>比赛</Tag> : null}
+                    <span className="truncate text-sm font-medium">
+                      {activity.name?.trim() || getSportConfig(activity.sport).label}
+                    </span>
                   </div>
-                ) : null}
-              </div>
-              <span className="num text-xs text-text-muted">TSS {Math.round(activity.tss ?? 0)}</span>
-            </Link>
+                  <div className="num mt-1 flex flex-wrap gap-3 text-xs text-text-muted">
+                    {activity.distance_m != null ? <span>{(activity.distance_m / 1000).toFixed(2)} km</span> : null}
+                    <span>{formatDuration(activity.duration_s)}</span>
+                    {activity.avg_speed ? <span>{formatPaceFromSeconds(Math.round(1000 / activity.avg_speed))}/km</span> : null}
+                  </div>
+                  {summaryLine ? (
+                    <p className="mt-1 line-clamp-1 text-caption1 text-text-secondary" data-testid="activity-list-course">
+                      {summaryLine}
+                    </p>
+                  ) : null}
+                </div>
+                <span className="num shrink-0 text-xs text-text-muted">
+                  {activity.tss != null ? `TSS ${Math.round(activity.tss)}` : `TSS ${NO_VALUE}`}
+                </span>
+              </Link>
             );
           })}
         </div>
@@ -119,4 +117,17 @@ export function TrainingActivityList({ activities, timezone, days, onLoadEarlier
       </div>
     </PageCard>
   );
+}
+
+function classificationSummary(
+  item: ReturnType<typeof useSessionClassifications>["byActivityId"] extends ReadonlyMap<string, infer T> ? T | undefined : never,
+): string | null {
+  if (!item) return null;
+  const name = item.session_classification.display_name?.trim();
+  if (!name) return null;
+  const workMatch = item.quality.work_distance_match;
+  if (workMatch != null) {
+    return `${name} · 计划完成度 ${Math.round(workMatch * 100)}%`;
+  }
+  return name;
 }

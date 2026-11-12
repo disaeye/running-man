@@ -6,11 +6,14 @@ import { Tag } from "@shared/ui/Lovable";
 import { getSportConfig } from "@shared/config/sport-config";
 import { formatDuration, formatPaceFromSeconds } from "@shared/lib/format";
 import { workoutTypeLabel } from "@features/today/lib/session-label";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { WeekDay, WeekModel } from "../lib/training-week";
+import type { DayEventStatus } from "../lib/match";
 import { periodLabel } from "../lib/training-week";
 
 const STATE_LABEL: Record<WeekDay["state"], string> = {
   completed: "已完成",
+  partial: "部分完成",
   upcoming: "待完成",
   missed: "未完成",
   unplanned: "没有安排",
@@ -19,10 +22,18 @@ const STATE_LABEL: Record<WeekDay["state"], string> = {
 
 const STATE_TONE: Record<WeekDay["state"], "info" | "primary" | "warn" | "outline"> = {
   completed: "info",
+  partial: "warn",
   upcoming: "primary",
   missed: "warn",
   unplanned: "outline",
   empty: "outline",
+};
+
+const EVENT_STATUS_LABEL: Record<DayEventStatus, string> = {
+  completed: "已完成",
+  partial: "偏短",
+  upcoming: "待练",
+  missed: "未完成",
 };
 
 /** 本周执行：只渲染有活动、有计划或今天的日子，不让空天铺满一屏。 */
@@ -96,12 +107,21 @@ function PlanColumn({ day }: { readonly day: WeekDay }) {
       {day.events.length === 0 ? (
         <p className="mt-1 text-caption1 text-text-muted">没有编排</p>
       ) : (
-        <ul className="mt-1 space-y-1">
+        <ul className="mt-1 space-y-1.5">
           {day.events.map((event) => {
             const prescription = event.workout_prescription;
+            const match = day.eventMatches.get(event.event_id);
+            const showEventBadge = match && (day.events.length > 1 || day.state === "partial");
             return (
               <li key={event.event_id} data-testid={`week-plan-${event.event_id}`} className="text-caption1">
-                <div className="text-text-primary">{event.name || workoutTypeLabel(event.training_type ?? event.sport_type ?? "training")}</div>
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <span className="text-text-primary">{event.name || workoutTypeLabel(event.training_type ?? event.sport_type ?? "training")}</span>
+                  {showEventBadge && match ? (
+                    <span className={`text-caption1 ${match.ambiguous ? "text-warn" : "text-text-muted"}`}>
+                      {match.ambiguous ? "待确认" : EVENT_STATUS_LABEL[match.status]}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="num text-text-muted">
                   {prescription ? `${Math.round(prescription.duration_min)} min` : "时长未记录"}
                   {event.predicted_distance_m != null ? ` · ${(event.predicted_distance_m / 1000).toFixed(1)} km` : ""}
@@ -117,12 +137,13 @@ function PlanColumn({ day }: { readonly day: WeekDay }) {
 }
 
 function ActualColumn({ day }: { readonly day: WeekDay }) {
+  const hasMissed = day.events.some((e) => day.eventMatches.get(e.event_id)?.status === "missed");
   return (
     <div className="rounded-lg bg-surface-overlay/50 p-2.5">
       <div className="text-caption1 font-medium text-text-muted">实际</div>
       {day.activities.length === 0 ? (
         <p className="mt-1 text-caption1 text-text-muted">
-          {day.state === "missed" ? "这一天没有完成记录" : "还没有记录"}
+          {hasMissed ? "这一天没有完成记录" : "还没有记录"}
         </p>
       ) : (
         <ul className="mt-1 space-y-1">
@@ -135,7 +156,7 @@ function ActualColumn({ day }: { readonly day: WeekDay }) {
                 {activity.distance_m != null ? `${(activity.distance_m / 1000).toFixed(2)} km · ` : ""}
                 {formatDuration(activity.duration_s)}
                 {activity.avg_speed ? ` · ${formatPaceFromSeconds(Math.round(1000 / activity.avg_speed))}/km` : ""}
-                {activity.tss != null ? ` · TSS ${Math.round(activity.tss)}` : ""}
+                {activity.tss != null ? ` · TSS ${Math.round(activity.tss)}` : ` · TSS ${NO_VALUE}`}
               </div>
             </li>
           ))}

@@ -1,3 +1,4 @@
+import { formatDistance } from "@shared/lib/format";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 
 type PrescriptionSegment = {
@@ -47,11 +48,20 @@ export function PlanPacePrescription({ event }: { event: CalendarEventDTO }) {
   if (!prescription) return null;
   const overallPace = paceText(prescription.pace_min_s_km, prescription.pace_max_s_km);
 
+  const plannedDistance =
+    event.predicted_distance_m != null && event.predicted_distance_m > 0
+      ? ` · ${formatDistance(event.predicted_distance_m)}`
+      : "";
+
   return (
-    <section className="rounded-lg border border-border-subtle bg-surface-overlay/45 p-3" aria-label="跑步训练处方">
+    <section
+      className="rounded-lg border border-border-subtle bg-surface-overlay/45 p-3"
+      aria-label="跑步训练处方"
+      data-testid="plan-pace-prescription"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-subheadline font-semibold text-text-primary">
-          {LABELS[prescription.type] ?? "跑步训练"} · {prescription.duration_min} 分钟
+          {LABELS[prescription.type] ?? "跑步训练"} · {prescription.duration_min} 分钟{plannedDistance}
         </p>
         {overallPace && <p className="font-mono text-caption1 text-text-secondary">{overallPace}</p>}
       </div>

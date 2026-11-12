@@ -2,6 +2,7 @@ import type { ActivitySummary } from "@shared/types/activity";
 import { getSportConfig, type SportFamily } from "@shared/config/sport-config";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 import { groupTrainingByDay } from "./training-calendar";
+import { matchDayEvents, type DayEventMatch } from "./match";
 
 export type MetricKey = "sessions" | "distanceKm" | "durationMin" | "tss";
 
@@ -17,14 +18,23 @@ export interface PeriodComparison {
   readonly family: SportFamily | "all";
   readonly hasPlan: boolean;
   readonly metrics: Record<MetricKey, MetricComparison>;
+  readonly plannedKnown: Record<MetricKey, boolean>;
+  readonly actualKnown: Record<MetricKey, boolean>;
 }
 
-export type DayState = "completed" | "upcoming" | "missed" | "unplanned" | "empty";
+export type DayState =
+  | "completed"
+  | "partial"
+  | "upcoming"
+  | "missed"
+  | "unplanned"
+  | "empty";
 
 export interface WeekDay {
   readonly day: string;
   readonly activities: readonly ActivitySummary[];
   readonly events: readonly CalendarEventDTO[];
+  readonly eventMatches: ReadonlyMap<string, DayEventMatch>;
   readonly state: DayState;
   readonly isToday: boolean;
   readonly planned: MetricComparison | null;
@@ -81,6 +91,30 @@ function sumPlanned(events: readonly CalendarEventDTO[]): Record<MetricKey, numb
       0,
     ),
     tss: events.reduce((sum, e) => sum + (e.predicted_tss ?? 0), 0),
+  };
+}
+
+function resolveKnownActual(activities: readonly ActivitySummary[]): Record<MetricKey, boolean> {
+  if (activities.length === 0) {
+    return { sessions: true, distanceKm: true, durationMin: true, tss: true };
+  }
+  return {
+    sessions: true,
+    distanceKm: activities.some((a) => a.distance_m != null),
+    durationMin: activities.some((a) => a.duration_s != null),
+    tss: activities.some((a) => a.tss != null),
+  };
+}
+
+function resolveKnownPlanned(events: readonly CalendarEventDTO[]): Record<MetricKey, boolean> {
+  if (events.length === 0) {
+    return { sessions: false, distanceKm: false, durationMin: false, tss: false };
+  }
+  return {
+    sessions: true,
+    distanceKm: events.some((e) => e.predicted_distance_m != null),
+    durationMin: events.some((e) => e.workout_prescription?.duration_min != null),
+    tss: events.some((e) => e.predicted_tss != null),
   };
 }
 
@@ -145,9 +179,11 @@ export function buildWeekModel({
       continue;
     }
 
-    const state = resolveDayState(day, today, dayActivities, dayEvents);
-    if (state === "missed") {
-      for (const event of dayEvents) {
+    const eventMatches = matchDayEvents(day, today, dayEvents, dayActivities);
+    const state = resolveDayState(day, today, dayActivities, dayEvents, eventMatches);
+    for (const event of dayEvents) {
+      const match = eventMatches.get(event.event_id);
+      if (match?.status === "missed") {
         missingSessions.push(event.name || event.training_type || "计划课");
       }
     }
@@ -155,6 +191,7 @@ export function buildWeekModel({
       day,
       activities: dayActivities,
       events: dayEvents,
+      eventMatches,
       state,
       isToday,
       planned: dayEvents.length ? plannedMetrics(dayEvents) : null,
@@ -173,6 +210,8 @@ export function buildWeekModel({
       family,
       hasPlan: scopedEvents.length > 0,
       metrics,
+      plannedKnown: resolveKnownPlanned(scopedEvents),
+      actualKnown: resolveKnownActual(scopedActivities),
     },
     missingSessions,
   };
@@ -183,11 +222,16 @@ function resolveDayState(
   today: string,
   activities: readonly ActivitySummary[],
   events: readonly CalendarEventDTO[],
+  eventMatches: ReadonlyMap<string, DayEventMatch>,
 ): DayState {
-  if (activities.length > 0) return "completed";
-  if (events.length === 0) return day === today ? "unplanned" : "empty";
-  if (day < today) return "missed";
-  return "upcoming";
+  if (events.length === 0) {
+    if (activities.length > 0) return "completed";
+    return day === today ? "unplanned" : "empty";
+  }
+  const statuses = events.map((e) => eventMatches.get(e.event_id)?.status ?? "upcoming");
+  if (statuses.every((s) => s === "completed")) return "completed";
+  if (statuses.some((s) => s === "completed" || s === "partial")) return "partial";
+  return day < today ? "missed" : "upcoming";
 }
 
 function enumerateDays(from: string, to: string): string[] {

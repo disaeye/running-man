@@ -153,6 +153,59 @@ describe("buildWeekModel", () => {
     expect(model.comparison.metrics.tss.planned).toBe(0);
     expect(model.days.find((d) => d.day === "2026-11-03")).toBeUndefined();
   });
+
+  it("当天只有不同运动族活动时，未完成跑步计划不标为已完成", () => {
+    const model = buildWeekModel({
+      activities: [activity("gym-am", TODAY, { sport: "WeightTraining", duration_s: 2400, tss: 30 })],
+      events: [
+        event("run-pm", TODAY, {
+          sport_type: "Run",
+          workout_prescription: { type: "threshold", duration_min: 50, segments: [] },
+        }),
+      ],
+      timezone: TZ, from: FROM, to: TO, today: TODAY,
+    });
+    const todayRow = model.days.find((d) => d.day === TODAY);
+    expect(todayRow?.state).toBe("upcoming");
+    expect(todayRow?.eventMatches.get("run-pm")?.status).toBe("upcoming");
+  });
+
+  it("当天两节计划只完成一节时标记为部分完成，未完成的过去课进入 missingSessions", () => {
+    const model = buildWeekModel({
+      activities: [
+        activity("easy-am", "2026-11-03", { sport: "Run", duration_s: 1800 }),
+      ],
+      events: [
+        event("plan-pm", "2026-11-03", {
+          sport_type: "Run",
+          name: "晚间阈值跑",
+          workout_prescription: { type: "threshold", duration_min: 50, segments: [] },
+        }),
+        event("plan-am", "2026-11-03", {
+          sport_type: "Run",
+          name: "晨间轻松跑",
+          linked_activity_id: "easy-am",
+          workout_prescription: { type: "easy", duration_min: 30, segments: [] },
+        }),
+      ],
+      timezone: TZ, from: FROM, to: TO, today: TODAY,
+    });
+    const dayRow = model.days.find((d) => d.day === "2026-11-03");
+    expect(dayRow?.state).toBe("partial");
+    expect(dayRow?.eventMatches.get("plan-am")?.status).toBe("completed");
+    expect(dayRow?.eventMatches.get("plan-pm")?.status).toBe("missed");
+    expect(model.missingSessions).toEqual(["晚间阈值跑"]);
+  });
+
+  it("有活动但全部缺失 TSS 时 actualKnown.tss 为 false，不拿 0 顶替", () => {
+    const model = buildWeekModel({
+      activities: [activity("a1", "2026-11-03", { duration_s: 1800, tss: null })],
+      events: [],
+      timezone: TZ, from: FROM, to: TO, today: TODAY,
+    });
+    expect(model.comparison.actualKnown.tss).toBe(false);
+    expect(model.comparison.actualKnown.durationMin).toBe(true);
+  });
 });
 
 describe("loadScale", () => {

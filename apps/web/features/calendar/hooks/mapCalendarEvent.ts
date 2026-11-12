@@ -14,6 +14,7 @@ export function mapCalendarEvent(
     workout_xml: raw.workout_xml ?? undefined,
     predicted_tss: raw.predicted_tss ?? null,
     predicted_distance_m: raw.predicted_distance_m ?? null,
+    linked_activity_id: raw.linked_activity_id ?? null,
     status: raw.status ?? undefined,
     done: raw.done ?? undefined,
     training_type: raw.training_type ?? null,

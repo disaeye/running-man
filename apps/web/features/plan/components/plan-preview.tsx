@@ -28,10 +28,17 @@ export interface PreviewPhase {
   end_date: string;
 }
 
+export interface PreservedEvent {
+  date: string;
+  name: string;
+  reason: string;
+}
+
 export interface GeneratePreview {
   phases_created: number;
   events_created: number;
   affected_dates: readonly string[] | null;
+  preserved?: readonly PreservedEvent[] | null;
   phases?: readonly PreviewPhase[] | null;
   events?: readonly PreviewEvent[] | null;
   training_paces_available?: boolean | null;
@@ -91,6 +98,18 @@ export function PlanPreview({ preview }: { preview: GeneratePreview }) {
       )}
       {!preview.training_paces_available && (
         <p className="mt-1 text-caption1 text-text-muted">当前没有有效阈值配速；训练强度依据时长和 RPE 安排。</p>
+      )}
+      {preview.preserved && preview.preserved.length > 0 && (
+        <div className="mt-3 rounded-lg border border-warn/30 bg-warn/5 p-3">
+          <p className="text-caption1 font-semibold text-warn">以下训练会保留，不参与重排</p>
+          <ul className="mt-1.5 space-y-1">
+            {preview.preserved.map((item, index) => (
+              <li key={`${item.date}-${index}`} className="text-caption1 text-text-secondary">
+                {item.date} · {item.name || "计划课"} · {item.reason === "done" ? "已完成" : "已手动修改"}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {preview.phases && preview.phases.length > 0 && (
         <ul className="mt-3 space-y-1 border-t border-border-subtle pt-3">

@@ -11,15 +11,20 @@ const WEEKDAYS = [
 interface Props {
   restDays: number;
   preferredDaysOff: number[];
+  /** 长距离日（星期几）；不选＝由生成器自动安排。 */
+  longRunDay: number | null;
   onRestDaysChange: (value: number) => void;
   onToggleDayOff: (value: number) => void;
+  onLongRunDayChange: (value: number | null) => void;
 }
 
 export function PlanGenerationSettings({
   restDays,
   preferredDaysOff,
+  longRunDay,
   onRestDaysChange,
   onToggleDayOff,
+  onLongRunDayChange,
 }: Props) {
   return (
     <section className="flex flex-col gap-3" aria-label="训练安排设置">
@@ -39,7 +44,7 @@ export function PlanGenerationSettings({
       <div className="flex flex-wrap gap-2" aria-label="偏好休息日">
         {WEEKDAYS.map((day) => (
           <button
-            key={day.value}
+            key={`off-${day.value}`}
             type="button"
             aria-pressed={preferredDaysOff.includes(day.value)}
             onClick={() => onToggleDayOff(day.value)}
@@ -49,7 +54,37 @@ export function PlanGenerationSettings({
                 : "border-border-default bg-surface-card text-text-secondary"
             }`}
           >
-            {day.label}
+            周{day.label}休
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2" aria-label="长距离日">
+        <span className="text-caption1 text-text-muted">长距离日</span>
+        <button
+          type="button"
+          aria-pressed={longRunDay == null}
+          onClick={() => onLongRunDayChange(null)}
+          className={`min-h-11 rounded-full border px-3 text-caption1 transition-colors ${
+            longRunDay == null
+              ? "border-accent bg-accent/15 text-accent-strong"
+              : "border-border-default bg-surface-card text-text-secondary"
+          }`}
+        >
+          自动
+        </button>
+        {WEEKDAYS.map((day) => (
+          <button
+            key={`long-${day.value}`}
+            type="button"
+            aria-pressed={longRunDay === day.value}
+            onClick={() => onLongRunDayChange(longRunDay === day.value ? null : day.value)}
+            className={`min-h-11 rounded-full border px-3 text-caption1 transition-colors ${
+              longRunDay === day.value
+                ? "border-accent bg-accent/15 text-accent-strong"
+                : "border-border-default bg-surface-card text-text-secondary"
+            }`}
+          >
+            周{day.label}
           </button>
         ))}
       </div>

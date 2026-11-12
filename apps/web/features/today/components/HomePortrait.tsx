@@ -70,7 +70,9 @@ export function HomePortrait() {
   const reload = () => { coachQuery.reload(); weekActivities.reload(); recent.reload(); weekly.reload(); };
   const todayEvent = useMemo(() => {
     const withPrescription = weekEvents.events.filter((event) => event.workout_prescription);
-    return withPrescription.find((event) => activityLocalDay(event.start_time, timezone) === todayKey) ?? withPrescription[0] ?? null;
+    return (
+      withPrescription.find((event) => activityLocalDay(event.start_time, timezone) === todayKey) ?? null
+    );
   }, [weekEvents.events, timezone, todayKey]);
   const todayActivity = useMemo(
     () => recent.data.find((activity) => activityLocalDay(activity.start_time, timezone) === todayKey) ?? null,

@@ -1,4 +1,5 @@
 import { PageCard } from "@shared/ui/Lovable";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 import type { PeriodComparison, MetricKey } from "../lib/training-week";
 import { periodLabel } from "../lib/training-week";
 
@@ -9,14 +10,70 @@ const ROWS: readonly { key: MetricKey; label: string; unit: string; digits: numb
   { key: "tss", label: "TSS", unit: "", digits: 0 },
 ];
 
-/** 本周完成度。四项指标共用 comparison 的范围与运动类别口径。 */
-export function TrainingPeriodSummary({ comparison }: { comparison: PeriodComparison }) {
+/**
+ * 周期执行汇总。
+ *
+ * 有计划时展示「计划 / 实际 / 差值」三列对照；无计划时折叠对照表，只给单行实际汇总与编排入口。
+ */
+export function TrainingPeriodSummary({
+  comparison,
+  weekOffset = 0,
+  onPlan,
+}: {
+  readonly comparison: PeriodComparison;
+  readonly weekOffset?: number;
+  readonly onPlan?: () => void;
+}) {
   const rangeLabel = periodLabel(comparison.from, comparison.to);
   const familyLabel = comparison.family === "all" ? "全部运动" : familyText(comparison.family);
+  const title = summaryTitle(weekOffset, comparison.hasPlan);
+
+  if (!comparison.hasPlan) {
+    return (
+      <PageCard testId="training-period-summary">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="eyebrow">{title}</h2>
+          <span data-testid="period-range" className="num text-caption1 text-text-muted">
+            {rangeLabel} · {familyLabel}
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {ROWS.map((row) => {
+            const known = comparison.actualKnown[row.key];
+            const val = comparison.metrics[row.key].actual;
+            return (
+              <div key={row.key} className="min-w-0">
+                <div className="text-caption1 text-text-muted">{row.label}</div>
+                <div className="num text-subheadline font-semibold text-text-primary">
+                  {known ? `${val.toFixed(row.digits)}` : NO_VALUE}
+                  {known && row.unit ? (
+                    <span className="ml-0.5 text-caption1 font-normal text-text-muted">{row.unit}</span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2.5 text-caption1 text-text-muted">
+          <span>该周尚未编排计划</span>
+          {onPlan ? (
+            <button
+              type="button"
+              onClick={onPlan}
+              className="tactile inline-flex min-h-11 items-center font-medium text-accent-strong hover:underline"
+            >
+              {weekOffset === 0 ? "编排本周" : "编排该周"}
+            </button>
+          ) : null}
+        </div>
+      </PageCard>
+    );
+  }
+
   return (
     <PageCard testId="training-period-summary">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="eyebrow">本周完成度</h2>
+        <h2 className="eyebrow">{title}</h2>
         <span data-testid="period-range" className="num text-caption1 text-text-muted">
           {rangeLabel} · {familyLabel}
         </span>
@@ -30,13 +87,14 @@ export function TrainingPeriodSummary({ comparison }: { comparison: PeriodCompar
           <SummaryRow key={row.key} row={row} comparison={comparison} />
         ))}
       </div>
-      {!comparison.hasPlan ? (
-        <p className="mt-2 text-caption1 text-text-muted">
-          本周没有编排计划，实际数字照常统计；差值不适用。
-        </p>
-      ) : null}
     </PageCard>
   );
+}
+
+function summaryTitle(weekOffset: number, hasPlan: boolean): string {
+  if (weekOffset === 0) return hasPlan ? "本周完成度" : "本周训练汇总";
+  if (weekOffset > 0) return hasPlan ? "计划周概览" : "该周尚未排期";
+  return hasPlan ? "该周完成度" : "该周训练汇总";
 }
 
 function SummaryRow({ row, comparison }: {
@@ -44,20 +102,23 @@ function SummaryRow({ row, comparison }: {
   readonly comparison: PeriodComparison;
 }) {
   const metric = comparison.metrics[row.key];
+  const pKnown = comparison.plannedKnown[row.key];
+  const aKnown = comparison.actualKnown[row.key];
+  const bothKnown = pKnown && aKnown;
   const format = (value: number): string => value.toFixed(row.digits);
   return (
     <>
       <span className="text-text-secondary">{row.label}</span>
       <span className="num text-right text-text-primary">
-        {comparison.hasPlan ? format(metric.planned) : "未编排"}
-        {comparison.hasPlan && row.unit ? <span className="ml-0.5 text-text-muted">{row.unit}</span> : null}
+        {pKnown ? format(metric.planned) : NO_VALUE}
+        {pKnown && row.unit ? <span className="ml-0.5 text-text-muted">{row.unit}</span> : null}
       </span>
       <span className="num text-right text-text-primary">
-        {format(metric.actual)}
-        {row.unit ? <span className="ml-0.5 text-text-muted">{row.unit}</span> : null}
+        {aKnown ? format(metric.actual) : NO_VALUE}
+        {aKnown && row.unit ? <span className="ml-0.5 text-text-muted">{row.unit}</span> : null}
       </span>
       <span className="num text-right text-text-secondary">
-        {comparison.hasPlan ? signed(metric.delta, row.digits) : "--"}
+        {bothKnown ? signed(metric.delta, row.digits) : NO_VALUE}
       </span>
     </>
   );

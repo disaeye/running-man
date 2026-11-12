@@ -103,6 +103,9 @@ export function useWellness(
           to,
         });
         const res = await runtimeFetch(`/api/v1/metrics/series/batch?${search}`);
+        if (!res.ok) {
+          throw new Error(`健康数据加载失败 (${res.status})`);
+        }
         const batch: BatchResponse = await res.json();
         return pivotToWellnessPoints(batch.series);
       },
@@ -111,7 +114,7 @@ export function useWellness(
 
   return {
     data: data ?? EMPTY_WELLNESS_POINTS,
-    loading: isLoading,
+    loading: hasRange && isLoading,
     error: error?.message ?? null,
     reload: () => void mutate(),
   };
