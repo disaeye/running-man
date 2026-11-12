@@ -1,0 +1,62 @@
+{
+  "version": 2,
+  "session_path": "/home/ubuntu/.pi/agent/sessions/--home-ubuntu-workspace-code-running-man--/2026-11-09T15-29-59-469Z_01a1c0ee-36ad-727d-8e4d-fbf40ea497d9.jsonl",
+  "session_prefix_through_confirmation_sha256": "4fa9ecc6fa96d285de978e2393c777486328322eac3421cdbc34042fb34d241e",
+  "session_prefix_last_line": 798,
+  "design": {
+    "jsonl_line": 797,
+    "message_id": "a5c99ce1",
+    "parent_id": "8c8696dd",
+    "timestamp": "2026-11-10T02:18:33.171Z",
+    "role": "assistant",
+    "raw_line_sha256": "a0676b8a27fcd684e577a496db11c18b38a3654e81885ea97a2cec25755cf8f1",
+    "text_sha256": "c9c63b535046bf6804545076897dee95f3beb65d73be71b987a19eb5601781d4",
+    "text_length": 13300,
+    "text_file": "docs/confirmed-source-design.txt"
+  },
+  "confirmation": {
+    "jsonl_line": 798,
+    "message_id": "daa4e78e",
+    "parent_id": "a5c99ce1",
+    "timestamp": "2026-11-10T02:20:45.456Z",
+    "role": "user",
+    "raw_line_sha256": "cb35e6299ceeb6aff91a9411e9810f84c1b147927f1710682c1e3586ea74d915",
+    "text_sha256": "c2ec0cd7c2d80ab4c256bc02a54977e3934eb1015dec618bab3648c949bec32c",
+    "text_length": 18,
+    "text": "按这个方案生成goal，然后落地代码",
+    "text_file": "docs/confirmed-source-confirmation.txt"
+  },
+  "parent_chain": [
+    "a5c99ce1",
+    "daa4e78e"
+  ],
+  "source_examples": [
+    {
+      "index": 1,
+      "offset": 9377,
+      "text": "间歇跑 · VO₂max：8 × 1000 m（4:35–4:45/km，Daniels I 配速）[2 min 慢跑恢复]；热身 15 min；放松 10 min；工作里程 8.00 km；靶域 severe 累计 20–25 min；依据 ACSM/ESSA 2025、World Athletics 2022、Daniels VDOT。"
+    },
+    {
+      "index": 2,
+      "offset": 9586,
+      "text": "复杂课 · 有氧基础 + 速度动作：连续 6.00 km（4:47/km）；4 × 150–165 m（2:44–3:23/km）[2 min 恢复]；加速段 0.64 km；恢复段大约 0.58 km；整场 7.68 km；另有 11 s 短段，缺少距离数据。"
+    },
+    {
+      "index": 3,
+      "offset": 9739,
+      "text": "重复跑 · 跑步经济：12 × 200 m（35–38 s）[3 min 全恢复]；工作里程 2.40 km；热身 2.00 km；放松 1.50 km；整场 5.90 km。"
+    },
+    {
+      "index": 4,
+      "offset": 9849,
+      "text": "渐加速跑 · 有氧：连续 10.00 km；分段配速 6:10 → 5:45 → 5:20/km；低强度域占比 78%；后段进入中等强度域；刺激有氧耐力与配速控制。"
+    },
+    {
+      "index": 5,
+      "offset": 9222,
+      "text": "间歇跑 · 阈值，末段进入高强度：8 × 1.00 km（实测 0.93–1.00 km，4:49–5:50/km） + 1 × 0.57 km（4:28/km）[恢复 43 s / 0.11 km]；工作里程 8.41 km；整场 8.52 km；证据等级 B。"
+    }
+  ],
+  "verification_script": "scripts/verify_confirmed_source.py",
+  "examples_document": "docs/run-session-examples.md"
+}

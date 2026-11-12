@@ -10,6 +10,7 @@ class Algorithm(StrEnum):
     PHYSIOLOGY = "physiology"
     PMC = "pmc"
     RECOVERY_PROJECTION = "recovery_projection"
+    RUN_CLASSIFICATION = "run_classification"
     VDOT = "vdot"
 
 ALGORITHM_DEFINITIONS: Final = [{'input_window_days': 1,
@@ -47,6 +48,19 @@ ALGORITHM_DEFINITIONS: Final = [{'input_window_days': 1,
   'key': 'recovery_projection',
   'materialization': 'derived_on_read',
   'outputs': ['days_to_recovery', 'current_tsb', 'projected_tsb', 'reachable'],
+  'version': '1.0.0'},
+ {'input_window_days': 1,
+  'key': 'run_classification',
+  'materialization': 'derived_on_read',
+  'outputs': ['structure',
+              'session_type',
+              'primary_stimulus',
+              'pacing_pattern',
+              'display_name',
+              'display_line',
+              'evidence_grade',
+              'confidence',
+              'quality'],
   'version': '1.0.0'},
  {'input_window_days': 365,
   'key': 'vdot',

@@ -1,0 +1,167 @@
+代码保持现状。收到这条指令后，我没有改动 `apps/` 与 `apps/web/` 下的项目代码；`.analysis/run-types/` 下的调查脚本用于读取数据库和整理证据，属于分析产物。
+
+## 分类对象与权威依据
+
+一次跑步课程需要同时说明四项内容：训练刺激、课程结构、剂量、证据。ACSM/ESSA 联合声明把运动处方写成 FITT(VP)：频率、强度、时间、类型、总量、进阶；它把心肺运动强度按生理反应分为 `moderate`、`heavy`、`severe`、`extreme` 四个域，分界点是第一代谢阈值 MT1、第二代谢阈值 MT2、达到最大摄氧量的工作率 Wmax。同一声明明确指出，固定百分比的 `%HRmax`、`%HRR`、`%VO2max`、METs 无法让不同个体进入相同生理域；直接测量代谢阈值与 Wmax 属于优先方法，RPE 与谈话测试只能作为辅助。 Daniels 的 VDOT 把 E/M/T/I/R 配速建立在氧耗模型上；World Athletics 的间歇课示例使用 `8 × 1000 m（10 km 目标配速）[2 min 恢复]`；IAAF 1997 标准表示法使用 `sets × reps × distance (pace) [recovery]`。Intervals.icu 的官方接口在 `?intervals=true` 下能返回 `icu_intervals` 与 `icu_groups`，精确分段带有 `type`、`start_index`、`end_index`、`distance`、`moving_time`、`average_heartrate`、`group_id`。
+
+项目当前具备这些证据源：`activity_streams` 的 `speed`、`distance`、`heart_rate`、`altitude`；`activity_laps` 的逐圈距离与时长；`raw_data` 的 `icu_intervals`、`interval_summary`、区间秒数、区间边界；按 `effective_from` 生效的 `athlete_thresholds`；`derived_metric_facts` 里的 `intensity_factor`、`tss`、`gap_avg`、`aerobic_decoupling_pct`。`training_calendar.workout_prescription` 与 `linked_activity_id` 能把计划课程和已完成课程连接起来。
+
+## 当前规则审查
+
+当前 110 条结果覆盖 14 个标签，`continuous` 90 条、`interval` 14 条、`progression` 6 条。审查覆盖 `.analysis/run-types/classify_v3.py`、`helpers.py`、`run_classification_v3.py`、`db.py`，以及 `classification_v3.json` 的全部结果。
+
+| 模块 | 当前规则 | 数据证据 | 含糊点 |
+|---|---|---|---|
+| `classify_v3.py::_domain_seconds_from_zone_times` | 用整场 `pace_zone_times` 占 70%、`icu_hr_zone_times` 占 30% 加权，得到三域秒数 | `i184245195` 得到 `1298/914/524`；`i200470923` 得到 `30/478/2409` | 热身、恢复、放松、整场慢跑进入域占比；工作段刺激无法单独读取 |
+| `classify_v3.py::_combine_domain` | 配速域与心率域按序数均值合并，再经 35 秒多数平滑 | `i184591476` 声明 7 轮，检测 `work_blocks=1`、`recovery_blocks=0`；`i200470923` 声明 11 轮，检测 `work_blocks=1` | 短间歇与短恢复被平滑连接；心率在短负荷里存在滞后 |
+| `helpers.py::parse_interval_summary` | 统计 `Nx` 分组，忽略 `1x`，排除超过 1200 秒的分组 | `i185275552` 有 `7x 5m28s`，结果为 `稳态跑`；`i186565452` 有 `7x 5m50s`，结果为 `有氧跑`；`i189057820` 有 `4x 5m25s`，结果为 `稳态跑` | 描述性摘要被当作结构主证据；同类重复结构进入连续跑标签 |
+| `classify_v3.py::_structure` | `repetitions = max(repeats_hint, work_count)` | `i202148244` 输出 17 轮、10 个工作块；`i184245195` 输出 8 轮、3 个工作块 | 声明分组数与实际工作段数混用；轮数无法直接引用 |
+| `classify_v3.py::_primary` | 按固定 `if/else` 顺序决定单一标签 | `i161109961` 的 `structure=progression`，标签为 `高强度跑`；`i155951783` 速度增幅 135.2%，标签为 `恢复跑`；`i155951440` 速度增幅 39.9%，标签为 `稳态跑` | 结构、刺激、时长、目的处于不同维度，互斥性由规则顺序决定 |
+| `LABELS` | 14 个标签混合结构、强度、时长、地形、上下文 | `重复跑 / 短间歇` 合并两类结构；`高强度跑` 与 `混合强度跑` 来自整场域占比；`稳态跑` 承接多种分布；`变速跑` 由 `vi >= 0.42` 触发；`恢复跑` 由 `duration_s <= 600` 与低强度占比触发；`长距离有氧跑` 由时长或距离触发 | 单一标签无法承载课程全貌；同一活动存在多个合理名称时，其余信息进入备注或直接丢失 |
+| `classify_v3.py::_confidence` | 基础 0.45，按字段存在性累加到 0.60–0.72 | 账户缺少 MT1/MT2/Wmax 直接测量，缺少 RPE、比赛标记、计划关联 | 数值表达数据齐全度，无法表达标签正确性 |
+| `grade_median_in_blocks` | `hill_repeats` 由工作块坡度中位数触发 | 14 条间歇记录的 `grade_median_pct` 全为 0.0 | 地形标签缺少坡度与海拔数据支撑 |
+| `run_classification_v3.py` | 输出 `low_s/moderate_s/high_s`、`repetitions`、`work_blocks`、`recovery_blocks` | 缺少 `work_distance_m`、`recovery_distance_m`、`target_pace`、`source_refs`、`quality` | 无法逐段比较计划与完成，无法计算训练质量 |
+| `compute_interval_repetitions.py` 的调查结果 | 把声明分段时间铺满整场活动时间轴，并用整场距离校准速度积分 | `i202148244` 的 `icu_intervals` 有 173 秒 / 677 米、157 秒 / 446 米恢复段；`i184245195` 有 43 秒 / 115 米恢复段 | 整场里程进入单轮里程；热身、恢复、放松混入工作段 |
+
+与间歇里程混入属于同类的问题还有四处：整场域时间混入工作段强度；`interval_summary` 的时间分组混入工作与恢复；轮数混入声明分组数；单一标签混入多个正交维度。`i205063889` 的 `icu_intervals` 把 21 个 88 秒分段全部标记为 `WORK`，速度序列呈大约 400 米快跑与 200 米慢跑交替；精确边界提供时间骨架，速度与配速需要用于区分工作段和恢复段。`i204032054` 包含 28 分 46 秒连续跑、4 个 29 秒加速、4 个 2 分钟慢速段，当前标签为 `重复跑 / 短间歇`，结构上属于复杂课。
+
+## 统一分类规则
+
+1. **证据优先级**：`icu_intervals` 提供精确边界；`activity_laps` 提供回退边界；`speed`、`distance`、`heart_rate`、`altitude` stream 提供逐点测量；`interval_summary` 只作描述性交叉检查；`activity_summary.distance_m` 只作整场一致性校验。整场总里程进入总量字段，单轮里程只取工作段 `distance`。
+2. **分段角色**：每段固定为 `warmup`、`work`、`recovery`、`cooldown`、`transition`。每段记录 `order`、`start_s`、`end_s`、`duration_s`、`distance_m`、`pace_s_km`、`avg_hr`、`domain`、`evidence_source`。热身、恢复、放松里程单列。
+3. **结构取值**：`continuous`、`interval`、`progression`、`fartlek`、`complex`、`unclear`。`interval` 要求至少两个工作段和明确恢复段；`progression` 要求连续主段且分段速度单调递增；`fartlek` 要求快慢交替且无可重复等长工作段；`complex` 用于连续跑加短加速、多组不同结构等课程；证据不足进入 `unclear`。
+4. **主刺激计算**：`primary_stimulus` 只从工作段计算。短于数分钟的工作段以配速、距离、坡度为主；连续段可加入心率与心率漂移；心率恢复与心率区间进入辅助证据。`athlete_thresholds` 按活动当日 `effective_from` 取值，`raw_data` 的区间边界作为活动级快照。
+5. **强度域取值**：`below_mt1`、`mt1_mt2`、`mt2_wmax`、`above_wmax`。ACSM/ESSA 的五档 `Very Low / Low / Moderate / High / Very High` 与这四个域建立映射；`Very Low` 与 `Low` 缺少公认生理分界，项目保留 `low_unspecified`，RPE 与谈话测试作为辅助记录。
+6. **主刺激取值**：`aerobic_base`、`aerobic_endurance`、`lactate_threshold`、`vo2max`、`speed_economy`、`neuromuscular`、`pacing_skill`、`race_specific`、`recovery`、`unclear`。每个取值绑定 `target_adaptation`、`source_refs`、可量化指标。
+7. **修饰字段**：`long`、`progression`、`fast_finish`、`negative_split`、`hill`、`treadmill`、`race`、`linked_plan`。这些字段修饰主分类，主标签保持 `结构 + 主刺激`。
+8. **重复跑与间歇跑**：工作段不超过 2 分钟、速度达到或超过 Wmax 或 Daniels R 配速、恢复充分，进入 `repetition`；工作段 2–10 分钟、恢复不完整、靶域为阈值或 VO₂max，进入 `interval`。数据不足时输出 `interval_unspecified`，轮数字段留空并降级证据等级。
+9. **命名规则**：`display_name = 结构中文名 + 主刺激中文名 + 必要修饰`。取消 `重复跑 / 短间歇`、`高强度跑`、`混合强度跑`、`稳态跑` 这类跨维度标签。`高强度` 进入 `domain` 或 `secondary_stimuli`，`稳态` 进入 `pacing_pattern`，`混合` 进入 `complex` 与 `secondary_stimuli`。
+10. **间歇表达**：采用 IAAF 格式 `组数 × 轮数 × 单轮距离（目标配速）[恢复]`。轮数取实际工作段数；单轮距离取对应工作段实测距离，计划课程取处方距离；恢复时长、恢复距离单独列出；热身与放松单独列出。`8x 5m18s 163bpm` 进入证据字段，时间、心率不进入课程主体表达。
+11. **证据等级**：A 为直接 MT1/MT2/Wmax 测量、精确分段、计划关联齐全；B 为时间版本阈值、精确分段、stream、区间秒数齐全；C 为 `activity_laps`、stream、摘要齐全；D 为仅有区间秒数或摘要。当前账户上限为 B；缺少计划关联、RPE、比赛标记时，置信度按决定性证据覆盖度计算。
+12. **计划课程准入**：每门课程必须携带 `source_refs`、`rationale`、`target_adaptation`、`intensity_anchor`、`target_domain`、`quality_target`。数值需要绑定到 `athlete_thresholds`、VDOT 配速、IAAF 表达和 ACSM/ESSA 强度域；缺少这些内容的课程进入 `insufficient_evidence`。
+
+## 训练刺激与可量化质量
+
+| 主刺激 | 权威锚点 | 训练目标 | 计划目标字段 | 完成实测字段 | 质量指标 |
+|---|---|---|---|---|---|
+| `aerobic_base` | `below_mt1`；World Athletics 低强度跑可占周跑量大约 80% | 有氧基础、毛细血管与线粒体适应、骨骼耐受 | 低强度域时长、总距离、配速上限 | 工作段低强度域秒数、距离、心率漂移、`aerobic_decoupling_pct` | `domain_residence_s`、`distance_match`、`decoupling_pct` |
+| `lactate_threshold` | `mt1_mt2`；连续阈值跑与 3–10 分钟阈值间歇 | 乳酸清除、持续配速能力 | 连续段时长或 `N × distance`，阈值配速带 | 工作段配速、时长、距离、心率 | `pace_attainment`、`work_duration_match`、`work_distance_match` |
+| `vo2max` | `mt2_wmax`；2–4 分钟工作段、3–10 km 配速、恢复 2–3 分钟 | 最大摄氧量、心输出量、摄氧动力学 | `N × distance`、目标配速、恢复时长 | 每轮工作距离、配速、心率、恢复时长 | `time_in_domain_s`、`work_pace_cv`、`fade_pct`、`recovery_ratio` |
+| `speed_economy` | `above_wmax` 或 Daniels R；短于 2 分钟、充分恢复 | 跑步经济、神经肌肉协调、步频步幅 | `N × distance`、目标时间、全恢复 | 峰值速度、步频、步幅、触地时间 | `peak_speed_attainment`、`stride_consistency` |
+| `pacing_skill` | 连续分段速度递增；渐加速与变速跑 | 配速控制、疲劳下维持动作 | 分段配速序列、末段靶域 | 分段配速、心率、域迁移 | `monotonicity`、`speed_increase_pct`、`last_domain_match` |
+| `recovery` | 低强度、短时间、训练上下文 | 恢复与低负荷活动 | 时长、配速上限、RPE 上限 | 实测低强度域秒数、距离、心率 | `low_domain_share`、`duration_match` |
+
+训练质量统一由计划目标与完成实测逐段求差得到：`repetition_match`、`work_distance_match`、`work_duration_match`、`pace_attainment`、`hr_attainment`、`rpe_match`、`structure_match`、`domain_residence_s`、`work_pace_cv`、`fade_pct`、`recovery_ratio`、`tss`、`trimp`、`aerobic_decoupling_pct`。`quality` 对象同时保存 `confidence` 与 `evidence_grade`。
+
+## 分类结果格式
+
+```json
+{
+  "session_classification": {
+    "activity_id": "i184245195",
+    "local_day": "2026-09-07",
+    "context": "completed",
+    "structure": "interval",
+    "primary_stimulus": "lactate_threshold",
+    "secondary_stimuli": ["vo2max"],
+    "modifiers": ["negative_split"],
+    "display_name": "间歇跑 · 阈值，末段进入高强度",
+    "evidence_grade": "B",
+    "confidence": 0.72
+  },
+  "prescription": {
+    "target_segments": [
+      {"role": "warmup", "duration_s": 900, "target_domain": "below_mt1"},
+      {"role": "work", "sets": 1, "repetitions": 8, "distance_m": 1000, "target_pace_s_km": [275, 295], "target_domain": "mt1_mt2"},
+      {"role": "recovery", "repetitions": 7, "duration_s": 120, "target_domain": "below_mt1"},
+      {"role": "cooldown", "duration_s": 600, "target_domain": "below_mt1"}
+    ],
+    "quality_target": {"work_distance_m": 8000, "work_duration_s": 2400, "time_in_domain_s": 2100}
+  },
+  "execution": {
+    "actual_segments": [
+      {"role": "work", "repetitions": 8, "distance_m_range": [928, 1002], "pace_s_km_range": [289, 350], "domain": "mt1_mt2"},
+      {"role": "work", "repetitions": 1, "distance_m": 567, "pace_s_km": 268, "domain": "mt2_wmax"},
+      {"role": "recovery", "duration_s": 43, "distance_m": 115, "domain": "below_mt1"}
+    ],
+    "activity_distance_m": 8520,
+    "work_distance_m": 8405,
+    "recovery_distance_m": 115
+  },
+  "quality": {
+    "repetition_match": 1.0,
+    "work_distance_match": 1.05,
+    "pace_attainment": 0.86,
+    "domain_residence_s": {"below_mt1": 1298, "mt1_mt2": 914, "mt2_wmax": 524},
+    "work_pace_cv": 0.07,
+    "load": {"tss": 82.4, "trimp": 91.0}
+  },
+  "evidence": {
+    "threshold_snapshot": {"effective_from": "2026-09-01", "threshold_pace_s_km": 286, "lthr": 174, "hr_max": 192},
+    "source_refs": ["ACSM/ESSA-2025", "World-Athletics-2022", "IAAF-1997", "Daniels-VDOT"],
+    "measurement_sources": ["icu_intervals", "activity_laps", "activity_streams", "athlete_thresholds"],
+    "limitations": ["缺少直接 MT1/MT2/Wmax 测量", "缺少计划课程关联", "缺少 RPE"]
+  }
+}
+```
+
+展示层输出采用一行课程表达加一组质量指标：
+
+```text
+间歇跑 · 阈值，末段进入高强度：8 × 1.00 km（实测 0.93–1.00 km，4:49–5:50/km） + 1 × 0.57 km（4:28/km）[恢复 43 s / 0.11 km]；工作里程 8.41 km；整场 8.52 km；证据等级 B。
+```
+
+计划课程示例：
+
+```text
+间歇跑 · VO₂max：8 × 1000 m（4:35–4:45/km，Daniels I 配速）[2 min 慢跑恢复]；热身 15 min；放松 10 min；工作里程 8.00 km；靶域 severe 累计 20–25 min；依据 ACSM/ESSA 2025、World Athletics 2022、Daniels VDOT。
+```
+
+复杂课示例，取自 `i204032054`：
+
+```text
+复杂课 · 有氧基础 + 速度动作：连续 6.00 km（4:47/km）；4 × 150–165 m（2:44–3:23/km）[2 min 恢复]；加速段 0.64 km；恢复段大约 0.58 km；整场 7.68 km；另有 11 s 短段，缺少距离数据。
+```
+
+重复跑示例：
+
+```text
+重复跑 · 跑步经济：12 × 200 m（35–38 s）[3 min 全恢复]；工作里程 2.40 km；热身 2.00 km；放松 1.50 km；整场 5.90 km。
+```
+
+渐加速示例：
+
+```text
+渐加速跑 · 有氧：连续 10.00 km；分段配速 6:10 → 5:45 → 5:20/km；低强度域占比 78%；后段进入中等强度域；刺激有氧耐力与配速控制。
+```
+
+## 计划课程与已完成课程的共用结构
+
+计划课程与已完成课程共用同一套 `segments` schema。计划侧保存 `target`，完成侧保存 `measured`；`training_calendar.linked_activity_id` 连接两条记录；`quality` 由逐段差值计算。分类结果、`quality` 与 `evidence` 可以写入 `derived_metric_facts` 或独立的 `session_classification` 表，计划生成、完成记录比对、训练质量评估、周负荷统计、趋势分析共用同一份数据定义。
+
+现有计划模块需要补齐的字段如下：
+
+| 文件 | 当前字段 | 共用模型需要补齐 |
+|---|---|---|
+| `apps/api/src/domain/workout/prescription.py` | `duration_min`、`pace_min_s_km`、`pace_max_s_km`、`repetitions`、`recovery_min`、`rpe_min`、`rpe_max`、`heart_rate_max_bpm` | `role`、`distance_m`、`sets`、`recovery_duration_s`、`recovery_distance_m`、`intensity_domain`、`source_refs`、`rationale`、`target_adaptation`、`quality_target` |
+| `apps/api/src/presentation/api/workout_schemas.py` | `WorkoutTemplateSegment` 只有 `segment_type`、`duration_s` | `distance_m`、`repetitions`、`recovery_s`、`target_domain`、`anchor`、`source_refs` |
+| `apps/web/features/calendar/components/types.ts` | DTO 的 `segments` 只有 `duration_min`、配速、重复数、恢复分钟、RPE、心率上限 | `role`、`distance_m`、`sets`、`target_domain`、`evidence` |
+| `apps/api/src/domain/workout/plan_generator.py` | 按周跑量生成 `easy`、`recovery`、`long`、`tempo`、`intervals` | 每门课程生成 `source_refs`、`rationale`、`target_adaptation`、`quality_target` |
+| `apps/api/src/infrastructure/db/models/core.py` | `training_calendar` 只保存 `completed_distance_m`、`completed_duration_s`、`completed_avg_hr`、`completed_rpe` | 保存逐段 `execution` 与 `quality`；使用 `linked_activity_id` 连接计划和完成记录 |
+| `apps/api/src/application/plan/training_paces.py`、`apps/api/src/domain/physiology/vdot.py` | 已具备时间版本阈值与 E/M/T/I/R 配速 | 配速数值绑定到 `intensity_anchor`、`effective_from`、`source_refs` |
+
+数据库里现有 2 条计划记录，均有 `workout_prescription`，`linked_activity_id` 为空；处方内容是 `6 × 30 s` 加 2 分钟恢复、配速 270–283 s/km、RPE 6–8，缺少 `distance_m`、权威依据、靶域、训练目标和质量目标。`workout_templates` 的内置模板使用 `power_low`、`power_high`，这些字段来自 FTP 比例，跑步课程需要改用 `athlete_thresholds` 与 VDOT 配速，并增加 `distance_m`，才能与 `icu_intervals` 的 `distance`、`moving_time` 建立逐段对应。
+
+## 资料
+
+- [ACSM/ESSA 联合声明：Physical Activity and Exercise Intensity Terminology](https://www.jsams.org/article/S1440-2440(24)00559-0/fulltext)：FITT(VP)、四个生理强度域、五档强度术语、MT1/MT2/Wmax、固定百分比与 RPE 的局限。
+- [World Athletics：The benefits and limits of speed training for endurance runners](https://worldathletics.org/personal-best/performance/speed-training-endurance-runners-benefits-limits)：`8 × 1000 m`、两分钟恢复、重复距离与目标配速。
+- [World Athletics：How to build aerobic fitness](https://worldathletics.org/personal-best/performance/how-build-aerobic-fitness-tips-advice-running)：低强度跑与周跑量大约 80% 的关系。
+- [Running Interval Notation](https://www.chaser.me.uk/wordpress/coaching/2018/01/04/running-interval-notation/)：IAAF 1997 标准表示法与 `reps × distance (pace) [recovery]`。
+- [Interval Sessions Explained](https://www.jopavey.com/interval-sessions-explained)：工作轮次、恢复、组间休息的记号与恢复时长对配速的影响。
+- [Runner’s World：The Different Types of Runs Everyone Should Know About](https://www.runnersworld.com/training/a20852351/types-of-runs/)：恢复跑、间歇跑、节奏跑、渐加速跑、变速跑的定义与训练目的。
+- [Intervals.icu 官方论坛：获取精确 Lap/Interval 数据](https://forum.intervals.icu/t/solved-how-to-fetch-lap-interval-data-via-api-similar-to-csv-export/126341)：`?intervals=true` 返回逐段数据。
+- Haugen 等，*Sports Medicine* 2021，DOI `10.1007/s40279-021-01481-2`：阈值间歇、VO₂max 间歇、短冲刺间歇的工作时长、恢复时长与典型总量。
+- Daniels，*Daniels’ Running Formula* 与 VDOT 模型：E/M/T/I/R 配速；项目内实现见 `apps/api/src/domain/physiology/vdot.py`。
+
+规则确认后再实施代码。
