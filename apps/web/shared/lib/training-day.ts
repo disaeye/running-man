@@ -27,10 +27,54 @@
  *   profile must still see their own training day.
  */
 
+import { useEffect, useSyncExternalStore } from "react";
 import { useProfile } from "@features/settings/hooks/useProfile";
 
 /** Fallback when the profile has no usable timezone. Matches the API default. */
 export const DEFAULT_TIMEZONE = "UTC";
+
+const TIMEZONE_CACHE_KEY = "running-man:athlete-timezone";
+
+/** 跨页面与跨会话复用的时区，避免每次打开页面都等 profile 往返。 */
+let cachedTimezone: string | null = null;
+
+export function readCachedTimezone(): string {
+  if (cachedTimezone !== null) return cachedTimezone;
+  if (typeof window === "undefined") return DEFAULT_TIMEZONE;
+  let stored: string | null = null;
+  try {
+    stored = window.localStorage.getItem(TIMEZONE_CACHE_KEY);
+  } catch {
+    stored = null;
+  }
+  // 首次访问没有缓存时，浏览器时区就是注册时写入 profile 的值。
+  const guessed = stored || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  cachedTimezone = guessed || DEFAULT_TIMEZONE;
+  return cachedTimezone;
+}
+
+export function rememberTimezone(timezone: string): void {
+  if (!timezone || timezone === cachedTimezone) return;
+  cachedTimezone = timezone;
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(TIMEZONE_CACHE_KEY, timezone);
+  } catch {
+    // 隐私模式下 localStorage 不可写，进程内的缓存仍然生效。
+  }
+}
+
+function subscribeNoop(): () => void {
+  return () => {};
+}
+
+function snapshotMounted(): boolean {
+  return true;
+}
+
+function snapshotHydrating(): boolean {
+  return false;
+}
 
 /**
  * Format a Date as `YYYY-MM-DD` in a specific IANA timezone.
@@ -149,6 +193,23 @@ export function rangeEndingOn(
 }
 
 /**
+ * Shift a day key by whole days.
+ *
+ * Calendar arithmetic on the key itself, so a DST transition cannot add or
+ * drop a day the way adding 86400000 milliseconds to an instant can.
+ */
+export function dayKeyOffset(key: string, deltaDays: number): string {
+  const [year, month, day] = key.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(year, month - 1, day + deltaDays)).toISOString().slice(0, 10);
+}
+
+/** Weekday of a day key, Monday = 0 … Sunday = 6. */
+export function weekdayIndex(key: string): number {
+  const [year, month, day] = key.split("-").map(Number) as [number, number, number];
+  return (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+}
+
+/**
  * Group a timestamp by the athlete's local day, for bucketing lists and charts.
  *
  * Returns `"unknown"` for an unparseable timestamp so a bad row is visibly
@@ -162,17 +223,33 @@ export function groupKeyByLocalDay(
 }
 
 /**
- * The athlete's IANA timezone, for use at day-keying call sites.
+ * 运动员时区，附带是否可以开始发数据请求。
  *
- * Kept separate from the pure helpers so components can call it directly
- * without threading a prop through every layer. SWR dedupes the underlying
- * request, so using it in several components costs one fetch.
+ * 服务端渲染与水合首帧统一用 UTC、`resolved = false`，这样服务端 HTML 和
+ * 浏览器首帧不会因时区不同而报错。水合结束后立即用缓存时区（或浏览器时区）
+ * 置 `resolved = true`，依赖时区的 SWR key 在第一波就成立，业务请求与
+ * `/athletes/me` 并发发出，不再等 profile 回来才能开始。
  *
- * Returns UTC while the profile loads. That is the same fallback the API uses,
- * so an early render is consistent with what the backend would compute — not a
- * third convention.
+ * profile 返回后写入缓存并成为权威值；只有它和缓存不一致时才会换 key 重发。
  */
-export function useAthleteTimezone(): string {
+export function useAthleteTimezoneState(): { timezone: string; resolved: boolean } {
   const { profile } = useProfile();
-  return profile?.timezone || DEFAULT_TIMEZONE;
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    snapshotMounted,
+    snapshotHydrating,
+  );
+
+  useEffect(() => {
+    if (profile?.timezone) rememberTimezone(profile.timezone);
+  }, [profile?.timezone]);
+
+  return {
+    timezone: profile?.timezone || (mounted ? readCachedTimezone() : DEFAULT_TIMEZONE),
+    resolved: mounted,
+  };
+}
+
+export function useAthleteTimezone(): string {
+  return useAthleteTimezoneState().timezone;
 }

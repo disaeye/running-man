@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { cn } from "@shared/lib/utils";
+import { SlidingIndicator } from "@shared/ui/SlidingIndicator";
 import { NAV_ENTRIES, activeNavFromPath } from "@shared/config/nav-config";
 
 export { activeNavFromPath as activeTabFromPath } from "@shared/config/nav-config";
@@ -46,12 +47,17 @@ export function MobileTabBar() {
     <nav
       ref={navRef}
       aria-label="移动端主导航"
+      data-indicator-container="mobile"
       data-layout-token="mobile-nav"
       data-shell-region="bottom"
       data-safe-area="bottom"
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.09] bg-card pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border-subtle bg-surface-card/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
     >
-      <div className="mx-auto grid h-14 max-w-2xl grid-cols-5">
+      <div className="relative mx-auto grid h-14 max-w-2xl grid-cols-5">
+        <SlidingIndicator
+          variant="underline"
+          options={NAV_ENTRIES.map((tab) => ({ key: tab.id, selected: tab.id === activeId }))}
+        />
         {NAV_ENTRIES.map((tab) => {
           const isActive = tab.id === activeId;
           const Icon = tab.Icon;
@@ -59,21 +65,16 @@ export function MobileTabBar() {
             <Link
               key={tab.id}
               href={tab.href}
+              data-indicator-key={tab.id}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "focus-ring relative flex min-w-0 flex-col items-center justify-center gap-1 select-none transition-colors",
+                "tactile focus-ring relative z-10 flex min-w-0 flex-col items-center justify-center gap-1 select-none",
                 isActive
                   ? "text-accent-strong"
                   : "text-text-muted hover:text-text-primary",
               )}
             >
-              <Icon
-                aria-hidden="true"
-                className={cn(
-                  "size-5",
-                  isActive ? "stroke-[2.1]" : "stroke-[1.7]",
-                )}
-              />
+              <Icon aria-hidden="true" className="size-5 stroke-[2]" />
               <span
                 className={cn(
                   "text-caption1 leading-tight",

@@ -47,7 +47,7 @@ function ToastItemComp({
     <div
       role="alert"
       className={`
-        animate-in slide-in-from-right-2
+        animate-in duration-200 ease-enter slide-in-from-right-2 fade-in-0
         rounded-lg border border-border-default px-4 py-3 text-subheadline shadow-elevated
         ${variantStyles[item.variant]}
       `.trim()}

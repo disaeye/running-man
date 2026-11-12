@@ -71,8 +71,8 @@ export function MetricStrip({
                 className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-active"
               >
                 <div
-                  className="h-full rounded-full bg-accent"
-                  style={{ width: `${percent}%` }}
+                  className="fill-motion h-full rounded-full bg-accent"
+                  style={{ transform: `scaleX(${percent / 100})` }}
                 />
               </div>
             ) : null}

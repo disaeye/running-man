@@ -30,6 +30,11 @@ export function formatDuration(value: number | null): string {
 export function buildBaseOption({ colors, seriesHints = [] }: BuildBaseOptionParams): EChartsOption {
   return {
     backgroundColor: "transparent",
+    // 时间范围切换时由 ECharts 自己插值，外层不再叠加淡入。
+    animationDuration: 260,
+    animationDurationUpdate: 260,
+    animationEasing: "cubicOut",
+    animationEasingUpdate: "cubicOut",
     textStyle: {
       color: colors.textSecondary,
       fontFamily: "system-ui, -apple-system, Segoe UI, Noto Sans SC, sans-serif",

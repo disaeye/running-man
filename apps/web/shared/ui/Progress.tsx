@@ -58,10 +58,10 @@ export function Progress({
       >
         <div
           className={`
-            h-full rounded-full transition-all duration-300 ease-out
+            fill-motion h-full rounded-full
             ${barClass ?? "bg-accent"}
           `.trim()}
-          style={{ width: `${percent}%` }}
+          style={{ transform: `scaleX(${percent / 100})` }}
         />
       </div>
     </div>

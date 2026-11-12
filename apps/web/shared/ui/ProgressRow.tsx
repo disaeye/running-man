@@ -46,8 +46,8 @@ export function ProgressRow({
         className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-active"
       >
         <div
-          className={`h-full rounded-full ${TONE_FILL[tone]}`}
-          style={{ width: `${percent}%` }}
+          className={`fill-motion h-full rounded-full ${TONE_FILL[tone]}`}
+          style={{ transform: `scaleX(${percent / 100})` }}
         />
       </div>
       {detail && (

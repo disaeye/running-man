@@ -32,6 +32,7 @@ const PROTECTED_PATHS = [
   "/goals",
   "/profile",
   "/settings",
+  "/strength",
   // Developer gallery of primitives. Nothing links to it, and it is part of
   // the platform rather than a public page.
   "/showcase",

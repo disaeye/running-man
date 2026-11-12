@@ -73,9 +73,11 @@ export function useECharts(
   useEffect(() => {
     if (!chartRef.current) return;
     const option = buildOption();
+    // replaceMerge 让 ECharts 按系列 id 插值，切换时间范围时线条连续变化；
+    // 同时清掉本次不再存在的系列，避免旧曲线留在画布上。
     chartRef.current.setOption(
       options.chartConfig ? mergeChartOption(options.chartConfig.baseOption, option) : option,
-      true,
+      { notMerge: false, lazyUpdate: true, replaceMerge: ["series"] },
     );
     // deps is the caller-supplied dependency array (e.g. [data])
     // eslint-disable-next-line react-hooks/exhaustive-deps

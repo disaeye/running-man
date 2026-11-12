@@ -1,22 +1,145 @@
-export function LovableChart({ lines = [], bars, h = 140, zero = false }: {
-  lines?: { data: number[]; cls: string; dashed?: boolean }[];
-  bars?: { data: number[]; cls: string };
+"use client";
+
+import { useId, useMemo, useState } from "react";
+
+/**
+ * 通用折线/柱状图。
+ *
+ * 所有序列图共用的交互：横轴刻度、指针跟随的竖直虚线与读数。
+ * 调用方传 `labels`（每个点的横轴文字，通常是日期）与每条线的
+ * `format`，悬停时读数行按图例顺序列出各序列在该点的值。
+ */
+
+export interface ChartLine {
+  data: number[];
+  cls: string;
+  dashed?: boolean;
+  label?: string;
+  format?: (value: number) => string;
+}
+
+export interface ChartBars {
+  data: number[];
+  cls: string;
+  label?: string;
+  format?: (value: number) => string;
+}
+
+interface LovableChartProps {
+  lines?: ChartLine[];
+  bars?: ChartBars;
   h?: number;
   zero?: boolean;
-}) {
-  const width = 320;
+  /** 数值越小越靠上（配速） */
+  invertY?: boolean;
+  /** 每个点的横轴文字；给了才显示横轴与悬停读数 */
+  labels?: readonly string[];
+}
+
+const VIEW_W = 320;
+const PAD_X = 6;
+const PAD_Y = 6;
+const TICKS = 5;
+
+export function LovableChart({ lines = [], bars, h = 140, zero = false, invertY = false, labels }: LovableChartProps) {
+  const [hover, setHover] = useState<number | null>(null);
+  const gradientId = useId();
   const all = [...lines.flatMap((line) => line.data), ...(zero ? [0] : [])];
   const min = Math.min(...all, 0);
   const max = Math.max(...all, 1);
   const count = Math.max(lines[0]?.data.length ?? 0, bars?.data.length ?? 0, 1);
-  const x = (index: number) => (index / Math.max(1, count - 1)) * width;
-  const y = (value: number) => h - ((value - min) / (max - min || 1)) * (h - 8) - 4;
+  const x = (index: number) => PAD_X + (index / Math.max(1, count - 1)) * (VIEW_W - PAD_X * 2);
+  const y = (value: number) => {
+    const ratio = (value - min) / (max - min || 1);
+    return invertY ? PAD_Y + ratio * (h - PAD_Y * 2) : h - PAD_Y - ratio * (h - PAD_Y * 2);
+  };
   const barMax = bars ? Math.max(...bars.data, 1) : 1;
-  return <svg viewBox={`0 0 ${width} ${h}`} className="w-full" preserveAspectRatio="none" style={{ height: h }} aria-hidden="true">
-    {bars?.data.map((value, index) => <rect key={index} x={x(index) - width / count / 2.6} width={width / count / 1.3} y={h - (value / barMax) * h * 0.55} height={(value / barMax) * h * 0.55} className={bars.cls} rx={1} />)}
-    {zero && min < 0 ? <line x1={0} x2={width} y1={y(0)} y2={y(0)} className="stroke-border" strokeWidth={1} /> : null}
-    {lines.map((line, index) => <polyline key={index} fill="none" strokeWidth={2} strokeLinejoin="round" strokeDasharray={line.dashed ? "4 4" : undefined} className={line.cls} points={line.data.map((value, point) => `${x(point)},${y(value)}`).join(" ")} vectorEffect="non-scaling-stroke" />)}
-  </svg>;
+
+  const series = useMemo(
+    () => [
+      ...(bars ? [{ kind: "bar" as const, bars }] : []),
+      ...lines.map((line) => ({ kind: "line" as const, line })),
+    ],
+    [bars, lines],
+  );
+
+  const readout = useMemo(() => {
+    if (hover == null || !labels) return null;
+    const entries = series
+      .map((item) => {
+        const data = item.kind === "bar" ? item.bars.data : item.line.data;
+        const label = (item.kind === "bar" ? item.bars.label : item.line.label) ?? "";
+        const format = (item.kind === "bar" ? item.bars.format : item.line.format) ?? ((value: number) => value.toFixed(1));
+        const value = data[hover];
+        if (value == null || !label) return null;
+        return { label, text: format(value), cls: item.kind === "bar" ? item.bars.cls : item.line.cls };
+      })
+      .filter((entry): entry is { label: string; text: string; cls: string } => entry != null);
+    return entries.length ? { at: labels[hover] ?? "", entries } : null;
+  }, [hover, labels, series]);
+
+  const tickIndexes = useMemo(() => {
+    if (!labels || labels.length === 0) return [];
+    const step = Math.max(1, Math.ceil(labels.length / TICKS));
+    const indexes: number[] = [];
+    for (let i = 0; i < labels.length; i += step) indexes.push(i);
+    if (indexes[indexes.length - 1] !== labels.length - 1) indexes.push(labels.length - 1);
+    return indexes;
+  }, [labels]);
+
+  return (
+    <div className="space-y-1">
+      {readout ? (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-caption1">
+          <span className="text-text-secondary">{readout.at}</span>
+          {readout.entries.map((entry) => (
+            <span key={entry.label} className="num text-text-secondary">
+              <span className={`mr-1 inline-block h-2 w-2 rounded-full align-middle ${entry.cls.replace(/^(stroke|fill|bg)-/, "bg-")}`} />
+              {entry.label} {entry.text}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div
+        className="relative w-full"
+        onPointerMove={(event) => {
+          if (!labels || labels.length === 0) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const xView = Math.min(VIEW_W - PAD_X, Math.max(PAD_X, ((event.clientX - rect.left) / rect.width) * VIEW_W));
+          const position = (xView - PAD_X) / (VIEW_W - PAD_X * 2);
+          setHover(Math.round(position * (labels.length - 1)));
+        }}
+        onPointerLeave={() => setHover(null)}
+      >
+        <svg viewBox={`0 0 ${VIEW_W} ${h}`} className="w-full" preserveAspectRatio="none" style={{ height: h }} aria-hidden="true">
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {bars?.data.map((value, index) => <rect key={index} x={x(index) - VIEW_W / count / 2.6} width={VIEW_W / count / 1.3} y={h - (value / barMax) * h * 0.55} height={(value / barMax) * h * 0.55} className={bars.cls} rx={1} />)}
+          {zero && min < 0 ? <line x1={0} x2={VIEW_W} y1={y(0)} y2={y(0)} className="stroke-border" strokeWidth={1} /> : null}
+          {lines.map((line, index) => <polyline key={index} fill="none" strokeWidth={2} strokeLinejoin="round" strokeDasharray={line.dashed ? "4 4" : undefined} className={line.cls} points={line.data.map((value, point) => `${x(point)},${y(value)}`).join(" ")} vectorEffect="non-scaling-stroke" />)}
+          {hover != null && count > 1 ? (
+            <g>
+              <line x1={x(hover)} x2={x(hover)} y1={0} y2={h} stroke="var(--color-text-secondary)" strokeWidth={1} strokeDasharray="3 3" opacity={0.7} vectorEffect="non-scaling-stroke" />
+              {lines.map((line, index) =>
+                line.data[hover] != null ? <circle key={index} cx={x(hover)} cy={y(line.data[hover]!)} r={2.5} className={line.cls.replace(/^stroke-/, "fill-")} /> : null,
+              )}
+            </g>
+          ) : null}
+        </svg>
+      </div>
+      {labels && labels.length > 0 ? (
+        <div className="flex justify-between text-caption2 text-text-muted">
+          {tickIndexes.map((index) => (
+            <span key={index} className="num">{labels[index]}</span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function LovableLegend({ items }: { items: { label: string; cls: string }[] }) {

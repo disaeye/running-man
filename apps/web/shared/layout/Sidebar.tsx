@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, User } from "lucide-react";
 import { cn } from "@shared/lib/utils";
+import { SlidingIndicator } from "@shared/ui/SlidingIndicator";
 import { NAV_ENTRIES, activeNavFromPath } from "@shared/config/nav-config";
 
 const STORAGE_KEY = "rm.sidebar.collapsed";
@@ -102,8 +103,12 @@ export function Sidebar({
         )}
       </div>
 
-      <nav className="flex-1 px-2.5 pt-2" aria-label="工作区">
-        <ul className="space-y-0.5">
+      <nav className="relative flex-1 px-2.5 pt-2" aria-label="工作区">
+        <SlidingIndicator
+          variant="surface-pill"
+          options={NAV_ENTRIES.map((entry) => ({ key: entry.id, selected: entry.id === activeId }))}
+        />
+        <ul className="relative z-10 space-y-0.5">
           {NAV_ENTRIES.map((item) => {
             const active = activeId === item.id;
             const Icon = item.Icon;
@@ -111,14 +116,15 @@ export function Sidebar({
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  data-indicator-key={item.id}
                   aria-current={active ? "page" : undefined}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "focus-ring flex h-11 items-center rounded-lg transition-colors",
+                    "tactile focus-ring flex h-11 items-center rounded-lg bg-transparent",
                     collapsed ? "justify-center px-2" : "gap-3 px-3",
                     active
-                      ? "bg-surface-base font-medium text-accent-strong"
-                      : "text-text-secondary hover:bg-surface-base/70 hover:text-text-primary",
+                      ? "font-medium text-accent-strong"
+                      : "text-text-secondary hover:bg-surface-base/40 hover:text-text-primary",
                   )}
                 >
                   <Icon

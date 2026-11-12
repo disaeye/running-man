@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -167,6 +168,7 @@
   --duration-fast: 180ms;
   --duration-normal: 300ms;
   --duration-slow: 600ms;
+  --duration-focal: 520ms;
   --ease-default: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
@@ -210,6 +212,9 @@
 }
 
 @theme inline {
+  --ease-default: var(--ease-default);
+  --ease-enter: var(--ease-enter);
+  --ease-exit: var(--ease-exit);
   --color-surface-base: var(--color-surface-base);
   --color-rail: var(--color-rail);
   --color-surface: var(--color-surface-card);
@@ -344,7 +349,8 @@
   --text-title2: 1.375rem;
   --text-title3: 1.25rem;
   --text-headline: 0.9375rem;
-  --text-body: 0.875rem;
+  /* 正文 16px：参考稿用浏览器默认字号，中文正文 14px 偏小。 */
+  --text-body: 1rem;
   --text-callout: 0.875rem;
   --text-subheadline: 0.8125rem;
   --text-footnote: 0.8125rem;
@@ -387,10 +393,7 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
 .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
 
 @keyframes ring-sweep { from { stroke-dashoffset: var(--ring-circumference, 100); } to { stroke-dashoffset: var(--ring-target-offset, 0); } }
-@keyframes rm-rise { from { opacity: 0; transform: translate3d(0, 16px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
-@keyframes rm-scan { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(100%, 0, 0); } }
-@keyframes rm-pulse { 0%, 100% { opacity: 0.48; } 50% { opacity: 1; } }
-@keyframes rm-glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes rm-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 
 .focus-ring:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 3px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-ring) 20%, transparent); }
 ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); color: var(--color-text-primary); }
@@ -399,8 +402,22 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { background: var(--color-border-default); border-radius: 999px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
+/* 动效分级：保留颜色与透明度反馈，去掉位移、缩放和遮罩。 */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: color, background-color, border-color, opacity !important;
+    transition-duration: var(--duration-instant) !important;
+    scroll-behavior: auto !important;
+  }
+  .motion-indicator, .page-arrival, .focal-reveal, ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
+  .motion-indicator { opacity: 1 !important; }
 }
 
 /* Panels and chrome are flat surfaces: one hairline edge, no blur, no glow. */
@@ -444,18 +461,18 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
 @utility surface-hero {
   border: 1px solid oklch(0.9 0.19 122 / 25%);
   border-radius: 18px;
-  background: radial-gradient(120% 120% at 0% 0%, oklch(0.9 0.19 122 / 10%), transparent 55%), var(--color-card);
+  background: radial-gradient(120% 90% at 100% 0%, oklch(0.9 0.19 122 / 16%), transparent 60%), var(--color-card);
 }
 @utility eyebrow {
   font-size: 0.68rem;
   letter-spacing: 0.14em;
   color: var(--color-muted-foreground);
-  font-weight: 500;
+  font-weight: 600;
 }
-.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
 
 
-.card-interactive { cursor: pointer; transition: background-color var(--duration-fast) var(--ease-default), transform var(--duration-fast) var(--ease-default); }
+.card-interactive { cursor: pointer; transition: background-color var(--duration-fast) var(--ease-default), transform var(--duration-instant) var(--ease-default); }
 .card-interactive:hover { transform: translateY(-2px); }
 .card-interactive:active { transform: translateY(0) scale(.99); }
 
@@ -468,9 +485,84 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
 @media (hover: none) and (pointer: coarse) {
   .card-interactive:active {
     transform: scale(0.985);
-    transition: transform 120ms cubic-bezier(0.2, 0.8, 0.4, 1);
   }
 }
+
+/* 触屏与键盘共用的点按反馈：颜色先到，缩放只给可交互的控件。 */
+.tactile {
+  transition: background-color var(--duration-instant) var(--ease-default),
+    color var(--duration-instant) var(--ease-default),
+    transform var(--duration-instant) var(--ease-default);
+}
+.tactile:active { transform: scale(0.975); }
+.tactile:focus-visible { transform: none; }
+
+/* 异步操作的进行态只改变颜色与图标转速，不改变控件尺寸。 */
+.action-busy { color: var(--color-text-muted); }
+.action-busy svg { animation: spin 900ms linear infinite; }
+.action-result {
+  animation: result-in var(--duration-fast) var(--ease-enter) both;
+}
+@keyframes result-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* 进度条只动 transform，不触发逐帧布局。 */
+.fill-motion {
+  width: 100%;
+  transform-origin: left center;
+  transition: transform var(--duration-normal) var(--ease-enter);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fill-motion { transition-duration: var(--duration-instant); }
+}
+
+/* 分段控件的选中指示条在入口之间滑动，不在每次渲染重新出现。 */
+.motion-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 999px;
+  transition: transform var(--duration-fast) var(--ease-enter),
+    width var(--duration-fast) var(--ease-enter),
+    height var(--duration-fast) var(--ease-enter),
+    background-color var(--duration-fast) var(--ease-default),
+    opacity var(--duration-instant) var(--ease-default);
+}
+.motion-indicator[data-variant="surface-pill"] { background: var(--color-surface-base); }
+.motion-indicator[data-variant="accent-pill"] { background: var(--color-primary); }
+.motion-indicator[data-variant="underline"] { background: var(--color-accent-strong); border-radius: 999px; }
+
+/* 首页唯一主决策数字：一道从左向右擦开的遮罩，不做通用入场。 */
+.focal-reveal {
+  clip-path: inset(0 0 0 0);
+  animation: rm-reveal var(--duration-focal) var(--ease-enter) both;
+}
+
+/* 路由连续性：只给内容列，导航外壳在切换期间保持静止。 */
+.page-arrival {
+  animation: page-in var(--duration-fast) var(--ease-enter) both;
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+::view-transition-old(root) { animation: page-out var(--duration-instant) var(--ease-exit) both; }
+::view-transition-new(root) { animation: page-in var(--duration-fast) var(--ease-enter) both; }
+@keyframes page-out { to { opacity: 0; } }
+/* View Transition 接管导航时收起 template 的入场，避免两段动画叠加。 */
+html[data-route-vt] .page-arrival { animation: none; }
+/* 查询参数切换不重挂载 template，由内容区自己做一次短淡入。 */
+.view-swap { animation: view-swap var(--duration-fast) var(--ease-enter) both; }
+@keyframes view-swap { from { opacity: 0.4; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .view-swap { animation: none; }
+}
+/* 导航外壳在捕获新快照时保持静止，只让内容列交叉淡入。 */
+[data-shell-region="bottom"] { view-transition-name: mobile-nav; }
+[data-testid="sidebar"] { view-transition-name: desktop-nav; }
+::view-transition-group(mobile-nav),
+::view-transition-group(desktop-nav) { animation-duration: 0s; }
 
 .nav-pill-active { background: var(--color-surface-base); color: var(--color-accent); }
 .shell-title { letter-spacing: normal; }

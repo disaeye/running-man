@@ -42,8 +42,8 @@ export function ProgressBar({
       className={`w-full overflow-hidden rounded-full bg-surface-active ${height} ${className}`.trim()}
     >
       <div
-        className={`h-full rounded-full ${TONE_FILL[tone]}`}
-        style={{ width: `${clamped}%` }}
+        className={`fill-motion h-full rounded-full ${TONE_FILL[tone]}`}
+        style={{ transform: `scaleX(${clamped / 100})` }}
       />
     </div>
   );

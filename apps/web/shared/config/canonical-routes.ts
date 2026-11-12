@@ -17,16 +17,14 @@
  * and initial-load alias settling never duplicate string conditionals.
  */
 
-export type AnalysisTabId = "load" | "performance" | "intensity";
+export type AnalysisTabId = "load" | "performance" | "body";
 /**
- * 分析页的模式。
+ * 分析页的标签。
  *
- * `session` 是跑步单次战报；`strength` 是按动作、训练量和 e1RM 组织的力量训练分析。
- * 其余模式是周期训练趋势。
- *
- * 跑步单次战报是默认，现有 `?tab=` 深链接继续有效。
+ * 单次战报不再是一个分析标签：跑步战报在活动详情页，力量分析在力量页与活动详情页。
+ * 旧链接 `?tab=session` 与 `?tab=strength` 作为别名落到负荷与恢复。
  */
-export type AnalysisPageTab = "session" | "strength" | "overview" | AnalysisTabId;
+export type AnalysisPageTab = AnalysisTabId;
 
 /** Canonical `/calendar?view=` values. Legacy `strength` resolves to `list` via `CALENDAR_VIEW_ALIASES`. */
 export type CalendarViewId = "week" | "month" | "list";
@@ -35,6 +33,12 @@ export type SettingsSectionId = "data" | "training" | "account";
 const ANALYSIS_TAB_ALIASES: Readonly<Record<string, AnalysisTabId>> = {
   ability: "performance",
   recovery: "load",
+  // 强度分布并入了负荷与恢复；总览并入同一页，两者都不再是独立视图
+  intensity: "load",
+  overview: "load",
+  // 单次战报在活动详情页，力量分析在力量页；旧标签回到默认视图
+  session: "load",
+  strength: "load",
 };
 
 const DEFAULT_ANALYSIS_TAB: AnalysisPageTab = "load";
@@ -42,7 +46,7 @@ const DEFAULT_ANALYSIS_TAB: AnalysisPageTab = "load";
 const CANONICAL_ANALYSIS_TABS: ReadonlySet<AnalysisTabId> = new Set([
   "load",
   "performance",
-  "intensity",
+  "body",
 ]);
 
 const CALENDAR_VIEW_ALIASES: Readonly<Record<string, CalendarViewId>> = {
@@ -80,7 +84,6 @@ function isSettingsSectionId(value: string): value is SettingsSectionId {
  */
 export function resolveAnalysisPageTab(raw: string | null): AnalysisPageTab {
   if (raw == null || raw === "") return DEFAULT_ANALYSIS_TAB;
-  if (raw === "session" || raw === "strength" || raw === "overview") return raw;
   if (isAnalysisTabId(raw)) return raw;
   const aliasTarget = ANALYSIS_TAB_ALIASES[raw];
   if (aliasTarget) return aliasTarget;
@@ -321,14 +324,15 @@ export function canonicalSettingsSearch(
  * paths (the route matrix checks canonical tab references).
  */
 export const ANALYSIS_TAB_ALL_INPUTS: readonly string[] = [
-  "session",
-  "strength",
-  "overview",
   "load",
   "performance",
-  "intensity",
+  "body",
   "ability",
   "recovery",
+  "intensity",
+  "overview",
+  "session",
+  "strength",
 ] as const;
 
 export const CALENDAR_VIEW_ALL_INPUTS: readonly string[] = [
