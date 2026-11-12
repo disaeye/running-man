@@ -54,9 +54,7 @@ async def test_plan_preview_generation_and_regeneration_preserve_athlete_data(
     seed_goal(db_conn, athlete_id, other_goal_id, race_date)
     seed_goal(db_conn, other_athlete_id, other_athlete_goal_id, race_date)
     seed_phase(db_conn, athlete_id, other_goal_id, "other-goal", today - timedelta(days=2))
-    seed_phase(
-        db_conn, other_athlete_id, other_athlete_goal_id, "other-athlete", today + timedelta(days=2)
-    )
+    seed_phase(db_conn, other_athlete_id, other_athlete_goal_id, "other-athlete", today + timedelta(days=2))
     app.dependency_overrides.clear()
     app.dependency_overrides[get_current_athlete] = lambda: athlete
 
@@ -87,12 +85,10 @@ async def test_plan_preview_generation_and_regeneration_preserve_athlete_data(
                 "比赛日 · 目标比赛",
                 race_date,
             )
+            day = race_date.isoformat()
             calendar = await client.get(
                 "/api/v1/calendar",
-                params={
-                    "from": f"{race_date.isoformat()}T00:00:00+00:00",
-                    "to": f"{race_date.isoformat()}T23:59:59+00:00",
-                },
+                params={"from": f"{day}T00:00:00+00:00", "to": f"{day}T23:59:59+00:00"},
             )
             assert calendar.status_code == 200
             race_calendar_events = [
@@ -117,23 +113,19 @@ async def test_plan_preview_generation_and_regeneration_preserve_athlete_data(
             assert active_generated_count(db_conn, athlete_id, goal_id) == active_count
             assert calendar_status(db_conn, athlete_id, "stale-plan") == "deleted"
             assert calendar_row(db_conn, athlete_id, str(preview["events"][1]["event_id"]))[2:] == (
-                "manual",
-                True,
-                "运动员调整的训练",
+                "manual", True, "运动员调整的训练",
             )
             assert calendar_row(db_conn, athlete_id, str(preview["events"][2]["event_id"]))[
                 0:3
             ] == ("completed", True, "generator")
-            assert count_future_phases(db_conn, athlete_id, goal_id, today) == len(
-                preview["phases"]
-            )
+            assert count_future_phases(db_conn, athlete_id, goal_id, today) == len(preview["phases"])
             # 每次生成写一份版本快照；重生成后活动课表指向最新版本。
-            assert _plan_revision_count(db_conn, athlete_id, goal_id) == 2
-            latest_revision = _latest_revision_id(db_conn, athlete_id, goal_id)
-            assert latest_revision is not None
-            assert _stamped_rows(db_conn, athlete_id, goal_id, latest_revision) == (
-                active_generated_count(db_conn, athlete_id, goal_id)
+            revision_count, latest_revision, stamped = _revision_state(
+                db_conn, athlete_id, goal_id
             )
+            assert revision_count == 2
+            assert latest_revision is not None
+            assert stamped == active_generated_count(db_conn, athlete_id, goal_id)
     finally:
         app.dependency_overrides.pop(get_current_athlete, None)
         delete_athlete(db_conn, athlete_id)
@@ -152,19 +144,13 @@ def _ensure_activity_schema(conn: psycopg.Connection) -> None:
         cur.execute("ALTER TABLE training_calendar ADD COLUMN IF NOT EXISTS revision_id UUID")
         cur.execute(
             "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS "
-            "is_race BOOLEAN NOT NULL DEFAULT false"
-        )
-        cur.execute(
+            "is_race BOOLEAN NOT NULL DEFAULT false;"
             "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS "
-            "is_ignored BOOLEAN NOT NULL DEFAULT false"
-        )
-        cur.execute("ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ")
-        cur.execute("ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS ignored_at TIMESTAMPTZ")
-        cur.execute(
+            "is_ignored BOOLEAN NOT NULL DEFAULT false;"
+            "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;"
+            "ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS ignored_at TIMESTAMPTZ;"
             "INSERT INTO sport_definitions (sport_key, display_name, family) "
-            "VALUES ('run', 'Run', 'running') ON CONFLICT DO NOTHING"
-        )
-        cur.execute(
+            "VALUES ('run', 'Run', 'running') ON CONFLICT DO NOTHING;"
             "INSERT INTO sport_definitions (sport_key, display_name, family) "
             "VALUES ('Run', 'Run', 'running') ON CONFLICT DO NOTHING"
         )
@@ -191,8 +177,7 @@ async def _preview_plan(client: AsyncClient, goal_id: object) -> Any:
 async def _generate_plan(client: AsyncClient, goal_id: object) -> Any:
     response = await client.post("/api/v1/plan/generate", json={"goal_id": str(goal_id)})
     assert response.status_code == 200, response.text
-    generated: Any = response.json()
-    return generated
+    return response.json()
 
 
 def _assert_replacement_state(
@@ -211,40 +196,31 @@ def _assert_replacement_state(
     assert calendar_status(conn, athlete_id, "past-generated") == "planned"
     assert count(conn, "training_calendar", athlete_id) == len(events) + 2
     assert calendar_row(conn, athlete_id, str(events[0]["event_id"]))[0:3] == (
-        "planned",
-        False,
-        "generator",
+        "planned", False, "generator",
     )
     assert calendar_row(conn, athlete_id, str(events[1]["event_id"])) == (
-        "planned",
-        False,
-        "manual",
-        True,
-        "运动员调整的训练",
+        "planned", False, "manual", True, "运动员调整的训练",
     )
     assert calendar_row(conn, athlete_id, str(events[2]["event_id"]))[0:3] == (
-        "completed",
-        True,
-        "generator",
+        "completed", True, "generator",
     )
     assert phase_row(conn, athlete_id, goal_id, "past-phase") == (
-        today - timedelta(days=30),
-        today - timedelta(days=10),
+        today - timedelta(days=30), today - timedelta(days=10),
     )
     assert phase_row(conn, athlete_id, goal_id, "current-phase") == (
-        today - timedelta(days=7),
-        today - timedelta(days=1),
+        today - timedelta(days=7), today - timedelta(days=1),
     )
     assert phase_row(conn, athlete_id, goal_id, "future-phase") is None
     assert phase_row(conn, athlete_id, other_goal_id, "other-goal") == (
-        today - timedelta(days=2),
-        today + timedelta(days=12),
+        today - timedelta(days=2), today + timedelta(days=12),
     )
     assert phase_name_count(conn, other_athlete_id, "other-athlete") == 1
     assert count_future_phases(conn, athlete_id, goal_id, today) == len(preview["phases"])
 
-
-def _plan_revision_count(conn: psycopg.Connection, athlete_id: UUID, goal_id: UUID) -> int:
+def _revision_state(
+    conn: psycopg.Connection, athlete_id: UUID, goal_id: UUID
+) -> tuple[int, UUID | None, int]:
+    """版本数、最新版本号、以及最新版本盖章的生成行数。"""
     with conn.cursor() as cur:
         cur.execute(
             "SELECT count(*) FROM plan_revisions WHERE athlete_id = %s AND goal_id = %s",
@@ -252,31 +228,22 @@ def _plan_revision_count(conn: psycopg.Connection, athlete_id: UUID, goal_id: UU
         )
         row = cur.fetchone()
         assert row is not None, "count(*) 必然返回一行"
-        return int(row[0])
-
-
-def _latest_revision_id(conn: psycopg.Connection, athlete_id: UUID, goal_id: UUID) -> UUID | None:
-    with conn.cursor() as cur:
+        revision_count = int(row[0])
         cur.execute(
-            "SELECT revision_id FROM plan_revisions WHERE athlete_id = %s AND goal_id = %s "
-            "ORDER BY created_at DESC LIMIT 1",
+            "SELECT revision_id FROM plan_revisions WHERE athlete_id = %s AND goal_id = %s"
+            " ORDER BY created_at DESC LIMIT 1",
             (athlete_id, goal_id),
         )
-        row = cur.fetchone()
-        return row[0] if row else None
-
-
-def _stamped_rows(
-    conn: psycopg.Connection, athlete_id: UUID, goal_id: UUID, revision_id: UUID
-) -> int:
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT count(*) FROM training_calendar "
-            "WHERE athlete_id = %s AND plan_goal_id = %s AND revision_id = %s "
-            "AND status = 'planned' AND plan_source = 'generator' "
-            "AND athlete_edited = false AND done = false",
-            (athlete_id, goal_id, revision_id),
-        )
-        row = cur.fetchone()
-        assert row is not None, "count(*) 必然返回一行"
-        return int(row[0])
+        latest = cur.fetchone()
+        stamped = 0
+        if latest is not None:
+            cur.execute(
+                "SELECT count(*) FROM training_calendar WHERE athlete_id = %s AND plan_goal_id = %s"
+                " AND revision_id = %s AND status = 'planned' AND plan_source = 'generator'"
+                " AND athlete_edited = false AND done = false",
+                (athlete_id, goal_id, latest[0]),
+            )
+            row = cur.fetchone()
+            assert row is not None, "count(*) 必然返回一行"
+            stamped = int(row[0])
+        return revision_count, latest[0] if latest else None, stamped
