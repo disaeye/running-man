@@ -5,8 +5,6 @@ Revises: k5a6b7c8d9e0
 Create Date: 2026-10-30
 """
 
-import sqlalchemy as sa
-
 from alembic import op
 
 revision = "k6b7c8d9e0f1"
@@ -16,9 +14,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "activity_summary",
-        sa.Column("is_race", sa.Boolean(), nullable=False, server_default=sa.false()),
+    op.execute(
+        "ALTER TABLE activity_summary "
+        "ADD COLUMN IF NOT EXISTS is_race BOOLEAN NOT NULL DEFAULT false"
     )
     op.execute(
         """

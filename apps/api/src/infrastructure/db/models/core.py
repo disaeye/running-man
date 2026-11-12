@@ -223,6 +223,9 @@ class TrainingCalendar(Base):
     completed_avg_hr = Column(SmallInteger, nullable=True)
     completed_rpe = Column(SmallInteger, nullable=True)
     actual_logged_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    execution = Column(JSONB, nullable=True)
+    quality = Column(JSONB, nullable=True)
+    session_classification = Column(JSONB, nullable=True)
 
 
 class ActivityRecomputeJob(Base):

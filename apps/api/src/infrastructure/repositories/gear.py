@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import date
+from datetime import date, datetime
 from typing import cast
 from uuid import UUID
 
@@ -161,6 +161,42 @@ class GearRepo:
             row = await cur.fetchone()
             value = row["mileage_m"] if row else 0.0
             return float(value) if isinstance(value, int | float | str) else 0.0
+
+    async def compute_shoe_usage(self, shoe_id: UUID) -> tuple[int, datetime | None]:
+        """Number of assigned activities and the date of the most recent one."""
+        query = """
+        SELECT count(*)::int AS total_activities, max(a.start_time) AS last_used_at
+        FROM gear_assignments ga
+        JOIN activity_summary a ON a.activity_id = ga.activity_id
+        WHERE ga.shoe_id = %s
+        """
+        async with _connect() as conn, conn.cursor() as cur:
+            _ = await cur.execute(query, (shoe_id,))
+            row = await cur.fetchone()
+        total = row["total_activities"] if row else 0
+        last_used = row["last_used_at"] if row else None
+        return (
+            int(total) if isinstance(total, int | float | str) else 0,
+            last_used if isinstance(last_used, datetime) else None,
+        )
+
+    async def count_unassigned_run_activities(self, athlete_id: UUID, days: int) -> int:
+        """Running activities in the window that have no shoe assigned."""
+        query = """
+        SELECT count(*)::int AS unassigned
+        FROM activity_compute ac
+        WHERE ac.athlete_id = %s
+          AND ac.sport = ANY(%s)
+          AND ac.start_time >= now() - make_interval(days => %s)
+          AND NOT EXISTS (
+              SELECT 1 FROM gear_assignments ga WHERE ga.activity_id = ac.activity_id
+          )
+        """
+        async with _connect() as conn, conn.cursor() as cur:
+            _ = await cur.execute(query, (athlete_id, list(_RUN_SPORTS), days))
+            row = await cur.fetchone()
+        value = row["unassigned"] if row else 0
+        return int(value) if isinstance(value, int | float | str) else 0
 
     async def get_activity(self, athlete_id: UUID, activity_id: str) -> dict[str, object] | None:
         query = """

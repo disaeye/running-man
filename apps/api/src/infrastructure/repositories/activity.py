@@ -1,15 +1,17 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any, cast
 from uuid import UUID
 
 from domain.time import local_day_sql
+from domain.time.partition_bounds import coarse_utc_bounds_for_instant
 from infrastructure.db.pool import ConnectionContext, get_pool
 from infrastructure.repositories.activity_manual import create_manual_activity
 from infrastructure.repositories.activity_reads import ActivityReadRepo
 from infrastructure.repositories.activity_sql import (
     _INSERT_STREAM_SQL,
+    _SELECT_STREAMS_SQL,
     _UPSERT_UPLOAD_SQL,
     _stream_params,
     _summary_params,
@@ -83,19 +85,18 @@ class ActivityRepo:
             )
             return await cur.fetchone() is not None
 
-    async def get_streams(self, athlete_id: UUID, activity_id: str) -> list[dict[str, object]]:
+    async def get_streams(
+        self, athlete_id: UUID, activity_id: str, start_time: datetime
+    ) -> list[dict[str, object]]:
         # No LIMIT: a silent cap here would truncate long activities' streams
         # (e.g. 10h at 1 Hz × several metrics ≫ 50k rows) and corrupt the
         # downstream charts. A single activity's rows are bounded by its
         # duration, so fetching all of them is safe.
-        query = """
-        SELECT sample_time, metric_type, value, lat, lon, alt
-        FROM activity_streams
-        WHERE athlete_id = %s AND activity_id = %s
-        ORDER BY sample_time, metric_type
-        """
+        #
+        # sample_time 是分区键，补一条宽松边界让规划器只打开该活动附近的分区。
+        bounds = coarse_utc_bounds_for_instant(start_time)
         async with _connect() as conn, conn.cursor() as cur:
-            _ = await cur.execute(query, (athlete_id, activity_id))
+            _ = await cur.execute(_SELECT_STREAMS_SQL, (athlete_id, activity_id, *bounds))
             return [dict(row) for row in await cur.fetchall()]
 
     async def get_laps(self, athlete_id: UUID, activity_id: str) -> list[dict[str, object]]:

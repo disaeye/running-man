@@ -74,3 +74,14 @@ async def create_manual_activity(
                 raise LookupError("计划训练不存在")
         await conn.commit()
         return dict(row)
+
+
+async def set_activity_rpe(athlete_id: UUID, activity_id: str, rpe: int | None) -> bool:
+    """写入自评用力程度；返回该活动是否属于这名运动员。"""
+    query = (
+        "UPDATE activity_summary SET rpe = %s "
+        "WHERE athlete_id = %s AND activity_id = %s RETURNING activity_id"
+    )
+    async with _connect() as conn, conn.cursor() as cur:
+        _ = await cur.execute(query, (rpe, athlete_id, activity_id))
+        return await cur.fetchone() is not None

@@ -56,10 +56,36 @@ class ActivityFitClient(Protocol):
     async def download_fit(self, activity_id: str) -> bytes: ...
 
 
+@runtime_checkable
+class ActivityIntervalsClient(Protocol):
+    async def get_activity(
+        self, activity_id: str, *, intervals: bool = False
+    ) -> Mapping[str, object]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class IntervalSyncError:
+    activity_id: str
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
+class IntervalSyncResult:
+    fetched: int = 0
+    errors: tuple[IntervalSyncError, ...] = ()
+
+
+IntervalProgress = Callable[[str, int], None]
+
+
 __all__ = [
     "ActivitiesClient",
     "ActivityFitClient",
+    "ActivityIntervalsClient",
     "IncrementalSyncResult",
+    "IntervalProgress",
+    "IntervalSyncError",
+    "IntervalSyncResult",
     "StreamProgress",
     "StreamSyncError",
     "StreamSyncResult",

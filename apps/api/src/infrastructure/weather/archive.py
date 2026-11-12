@@ -98,10 +98,12 @@ def build_archive_url(position: ActivityPosition) -> str:
 
     The window is the activity's own day, widened by one day when the session
     runs past midnight in the athlete's local time so a late-evening run
-    still has its own hours.
+    still has its own hours. The window never reaches past today: the archive
+    service rejects a range that contains a future day with a 400.
     """
-    start = position.day - timedelta(days=1)
-    end = position.day + timedelta(days=1)
+    today = datetime.now(timezone.utc).date()
+    start = min(position.day - timedelta(days=1), today)
+    end = max(start, min(position.day + timedelta(days=1), today))
     span = (end - start).days
     if span > _MAX_RANGE_DAYS:
         end = start + timedelta(days=_MAX_RANGE_DAYS)

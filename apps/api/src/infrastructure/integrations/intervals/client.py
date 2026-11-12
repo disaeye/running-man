@@ -94,8 +94,9 @@ class IntervalsClient:
         data = await self._request_json("GET", f"/athlete/{external_id}/activities", params)
         return _as_list(data)
 
-    async def get_activity(self, activity_id: str) -> JsonObject:
-        data = await self._request_json("GET", f"/activity/{activity_id}")
+    async def get_activity(self, activity_id: str, *, intervals: bool = False) -> JsonObject:
+        params = {"intervals": "true"} if intervals else None
+        data = await self._request_json("GET", f"/activity/{activity_id}", params)
         return _as_dict(data)
 
     async def get_streams(self, activity_id: str, types: Sequence[str]) -> list[JsonObject]:

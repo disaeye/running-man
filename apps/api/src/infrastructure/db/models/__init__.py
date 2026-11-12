@@ -34,6 +34,10 @@ from infrastructure.db.models.platform import (
     WorkoutTemplate,
     ZoneOverride,
 )
+from infrastructure.db.models.session_models import (
+    ActivityInterval,
+    SessionClassification,
+)
 from infrastructure.db.models.sharing import (
     GearAssignment,
     GearShoe,
@@ -44,6 +48,7 @@ from infrastructure.db.models.strength import ExerciseLibrary, WorkoutExercise, 
 from infrastructure.db.models.sync import IntegrationSyncError, IntegrationSyncRun, SourceRecord
 
 __all__ = [
+    "ActivityInterval",
     "ActivityLap",
     "ActivityRecomputeJob",
     "ActivitySummary",
@@ -65,6 +70,7 @@ __all__ = [
     "NotificationRule",
     "PlanAdjustment",
     "RevokedToken",
+    "SessionClassification",
     "ShareToken",
     "SourceDefinition",
     "SourceRecord",

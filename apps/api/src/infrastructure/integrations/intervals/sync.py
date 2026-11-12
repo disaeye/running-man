@@ -8,13 +8,16 @@ from uuid import UUID
 import psycopg
 
 from domain.ingestion import IngestionError
+from infrastructure.integrations.intervals.history import (
+    incremental_start_or_none,
+    resolve_initial_history_window,
+)
 from infrastructure.integrations.intervals.reconcile import reconcile_ghosts
 from infrastructure.integrations.intervals.sync_helpers import (
     activity_params,
     as_date,
     athlete_today,
     monthly_windows,
-    next_sync_date,
 )
 from infrastructure.integrations.intervals.sync_laps import (
     activity_ids_in_window,
@@ -68,21 +71,22 @@ _activity_params = activity_params
 _athlete_today = athlete_today
 
 _RECONCILE_LOOKBACK_DAYS = 14
-# How far back an athlete with no stored activity starts syncing from.
-_INITIAL_LOOKBACK_DAYS = 30
 
 
 def incremental_window(
     athlete_id: int | str, db_conn: psycopg.Connection
 ) -> tuple[date, date] | None:
-    """The single activity window an incremental sync has to request.
+    """The activity window an incremental sync has to request.
 
     ``None`` means the stored activities already reach the athlete's current
-    day, so there is nothing to fetch. The window is widened backwards by the
-    reconcile lookback so late edits and deletions upstream are picked up.
+    day, so there is nothing to fetch. A first import (or a cleared account)
+    returns ``(today + 1, today)``: the caller recognizes that marker and
+    takes the full-history path instead of a fixed lookback.
     """
     newest = _athlete_today(db_conn, athlete_id)
-    oldest = _next_sync_date(athlete_id, db_conn)
+    oldest = incremental_start_or_none(db_conn, str(athlete_id))
+    if oldest is None:
+        return newest + timedelta(days=1), newest
     if oldest > newest:
         return None
     return oldest - timedelta(days=_RECONCILE_LOOKBACK_DAYS), newest
@@ -134,6 +138,14 @@ async def sync_activities_incremental(
     window = incremental_window(athlete_id, db_conn)
     if window is None:
         return IncrementalSyncResult(activity_stats=ActivitySyncStats())
+    if window[0] > window[1]:
+        # First import: discover the athlete's whole history rather than
+        # assuming a fixed lookback covers it.
+        history = await resolve_initial_history_window(str(athlete_id), client, db_conn)
+        stats = await backfill_activities(
+            athlete_id, client, db_conn, history.start, history.end, job_id
+        )
+        return IncrementalSyncResult(activity_stats=stats)
     return await sync_incremental_window(
         athlete_id,
         client,
@@ -161,18 +173,16 @@ async def backfill_activities(
 
     stats = ActivitySyncStats()
     for oldest, newest in monthly_windows(start, end):
-        window_stats, _remote_activities = await sync_activity_window(
+        window_stats, remote_activities = await sync_activity_window(
             athlete_id, client, db_conn, oldest, newest, job_id
         )
         stats += window_stats
+        # Reconcile against the window just listed so edits and deletions
+        # upstream are picked up by a full-history re-import as well.
+        reconcile_ghosts(db_conn, str(athlete_id), oldest, newest, remote_activities)
         if on_window is not None:
             on_window(oldest, newest, window_stats)
     return stats
-
-
-def _next_sync_date(athlete_id: int | str, db_conn: psycopg.Connection) -> date:
-    today = athlete_today(db_conn, athlete_id)
-    return next_sync_date(athlete_id, db_conn, today, _INITIAL_LOOKBACK_DAYS)
 
 
 async def sync_activity_window(

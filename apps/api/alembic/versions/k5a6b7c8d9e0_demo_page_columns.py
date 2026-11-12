@@ -29,7 +29,6 @@ changes. Everything else is copied from the source payload.
 from typing import Any
 
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB
 
 from alembic import op
 
@@ -97,9 +96,25 @@ WHERE raw_data IS NOT NULL AND avg_lr_balance_pct IS NULL AND raw_data ? 'avg_lr
 """
 
 
+_ACTIVITY_COLUMN_SQL: dict[str, str] = {
+    "name": "TEXT",
+    "rpe": "SMALLINT",
+    "trimp": "DOUBLE PRECISION",
+    "avg_stride_length_m": "DOUBLE PRECISION",
+    "avg_lr_balance_pct": "DOUBLE PRECISION",
+    "aerobic_te": "DOUBLE PRECISION",
+    "anaerobic_te": "DOUBLE PRECISION",
+    "is_bookmarked": "BOOLEAN",
+    "weather_source": "TEXT",
+    "weather_fetched_at": "TIMESTAMPTZ",
+}
+
+
 def upgrade() -> None:
-    for column_name, column_type in _ACTIVITY_COLUMNS:
-        op.add_column("activity_summary", sa.Column(column_name, column_type))
+    for column_name, column_sql in _ACTIVITY_COLUMN_SQL.items():
+        op.execute(
+            f"ALTER TABLE activity_summary ADD COLUMN IF NOT EXISTS {column_name} {column_sql}"
+        )
     op.execute("UPDATE activity_summary SET is_bookmarked = false WHERE is_bookmarked IS NULL")
     op.execute("ALTER TABLE activity_summary ALTER COLUMN is_bookmarked SET NOT NULL")
     op.execute("ALTER TABLE activity_summary ALTER COLUMN is_bookmarked SET DEFAULT false")
@@ -118,9 +133,15 @@ def upgrade() -> None:
         """
     )
 
-    op.add_column("training_calendar", sa.Column("predicted_distance_m", sa.Double()))
-    op.add_column("training_phases", sa.Column("target_weekly_distance_m", sa.Double()))
-    op.add_column("athletes", sa.Column("height_cm", sa.Double()))
+    op.execute(
+        "ALTER TABLE training_calendar "
+        "ADD COLUMN IF NOT EXISTS predicted_distance_m DOUBLE PRECISION"
+    )
+    op.execute(
+        "ALTER TABLE training_phases "
+        "ADD COLUMN IF NOT EXISTS target_weekly_distance_m DOUBLE PRECISION"
+    )
+    op.execute("ALTER TABLE athletes ADD COLUMN IF NOT EXISTS height_cm DOUBLE PRECISION")
 
     op.execute(_BACKFILL_NAME)
     op.execute(_BACKFILL_RPE)
@@ -128,62 +149,31 @@ def upgrade() -> None:
     op.execute(_BACKFILL_STRIDE)
     op.execute(_BACKFILL_LR_BALANCE)
 
-    op.create_table(
-        "plan_adjustments",
-        sa.Column(
-            "adjustment_id",
-            sa.Uuid(),
-            primary_key=True,
-            server_default=sa.text("gen_random_uuid()"),
-        ),
-        sa.Column(
-            "athlete_id",
-            sa.Uuid(),
-            sa.ForeignKey("athletes.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-        sa.Column("event_id", sa.Text(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        sa.Column(
-            "decided_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-        ),
-        # 触发类型：hrv_drop / hr_drift / high_atl / low_tsb。
-        sa.Column("trigger_type", sa.Text(), nullable=False),
-        # 触发说明：用一句话写清依据，含具体数字。
-        sa.Column("trigger_summary", sa.Text(), nullable=False),
-        # 原处方与调整后处方，两份都留着，课表本身在运动员接受前不改动。
-        sa.Column("original_prescription", JSONB(), nullable=True),
-        sa.Column("adjusted_prescription", JSONB(), nullable=True),
-        sa.Column("load_delta_pct", sa.Double(), nullable=True),
-        # applied：运动员接受并已写入课表；reverted：运动员选择保持原计划；
-        # pending：只是建议，尚未决定。
-        sa.Column(
-            "status",
-            sa.Text(),
-            nullable=False,
-            server_default="pending",
-        ),
-        sa.CheckConstraint(
-            "status IN ('pending', 'applied', 'reverted')",
-            name="ck_plan_adjustments_status",
-        ),
+    op.execute(
+        """
+        CREATE TABLE IF NOT EXISTS plan_adjustments (
+            adjustment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+            event_id TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            decided_at TIMESTAMPTZ,
+            trigger_type TEXT NOT NULL,
+            trigger_summary TEXT NOT NULL,
+            original_prescription JSONB,
+            adjusted_prescription JSONB,
+            load_delta_pct DOUBLE PRECISION,
+            status TEXT NOT NULL DEFAULT 'pending',
+            CONSTRAINT ck_plan_adjustments_status
+                CHECK (status IN ('pending', 'applied', 'reverted'))
+        )
+        """
     )
-    op.create_index(
-        "idx_plan_adjustments_athlete_created",
-        "plan_adjustments",
-        ["athlete_id", sa.text("created_at DESC")],
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_plan_adjustments_athlete_created "
+        "ON plan_adjustments (athlete_id, created_at DESC)"
     )
-    op.create_index(
-        "idx_plan_adjustments_event",
-        "plan_adjustments",
-        ["event_id"],
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_plan_adjustments_event ON plan_adjustments (event_id)"
     )
 
 

@@ -9,18 +9,25 @@ is still recoverable. See ``domain.thresholds.resolver`` for the read rules.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import nullcontext
 from datetime import date
 from typing import cast
 from uuid import UUID
+
+from psycopg import AsyncConnection
+from psycopg.rows import DictRow
 
 from domain.thresholds.resolver import ThresholdStep, threshold_from_row
 from infrastructure.db.pool import ConnectionContext, get_pool
 
 _COLUMNS = ("hr_max", "resting_hr", "lthr", "threshold_pace", "source", "algorithm_version")
-_SELECT_COLUMNS = "effective_from, hr_max, resting_hr, lthr, threshold_pace"
+_SELECT_COLUMNS = "effective_from, hr_max, resting_hr, lthr, threshold_pace, source"
+ThresholdConnection = AsyncConnection[DictRow]
 
 
-def _connect() -> ConnectionContext:
+def _connect(conn: ThresholdConnection | None = None) -> ConnectionContext:
+    if conn is not None:
+        return cast(ConnectionContext, nullcontext(conn))
     return get_pool().connection()
 
 
@@ -29,7 +36,9 @@ def _row(row: object) -> dict[str, object]:
 
 
 class ThresholdRepo:
-    async def history(self, athlete_id: UUID) -> list[ThresholdStep]:
+    async def history(
+        self, athlete_id: UUID, conn: ThresholdConnection | None = None
+    ) -> list[ThresholdStep]:
         """All threshold steps for an athlete, oldest first."""
         query = f"""
         SELECT {_SELECT_COLUMNS}
@@ -37,7 +46,7 @@ class ThresholdRepo:
         WHERE athlete_id = %s
         ORDER BY effective_from
         """
-        async with _connect() as conn, conn.cursor() as cur:
+        async with _connect(conn) as connection, connection.cursor() as cur:
             _ = await cur.execute(query, (athlete_id,))
             return [threshold_from_row(_row(row)) for row in await cur.fetchall()]
 

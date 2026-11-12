@@ -76,12 +76,19 @@ def record_rejection(
     if not _tables_exist(conn, "source_records"):
         return False
     with conn.cursor() as cur:
+        # 幂等写入：同一条源记录再次被拒绝（例如清空重拉后）时更新既有行，
+        # 裸 INSERT 会撞 uq_source_records_dedup 唯一约束。
         _ = cur.execute(
             """
             INSERT INTO source_records (
                 athlete_id, source, entity_type, source_record_id, raw_payload,
                 payload_hash, sync_run_id, status
             ) VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s, %s)
+            ON CONFLICT (athlete_id, source, entity_type, source_record_id)
+            DO UPDATE SET raw_payload = EXCLUDED.raw_payload,
+                payload_hash = EXCLUDED.payload_hash,
+                sync_run_id = EXCLUDED.sync_run_id,
+                status = EXCLUDED.status
             """,
             (
                 athlete_id,

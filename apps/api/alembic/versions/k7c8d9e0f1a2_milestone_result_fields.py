@@ -5,8 +5,6 @@ Revises: k6b7c8d9e0f1
 Create Date: 2026-10-30
 """
 
-import sqlalchemy as sa
-
 from alembic import op
 
 revision = "k7c8d9e0f1a2"
@@ -16,10 +14,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("milestones", sa.Column("unit", sa.Text(), nullable=True))
-    op.add_column("milestones", sa.Column("result_text", sa.Text(), nullable=True))
+    op.execute("ALTER TABLE milestones ADD COLUMN IF NOT EXISTS unit TEXT")
+    op.execute("ALTER TABLE milestones ADD COLUMN IF NOT EXISTS result_text TEXT")
 
 
 def downgrade() -> None:
-    op.drop_column("milestones", "result_text")
-    op.drop_column("milestones", "unit")
+    op.execute("ALTER TABLE milestones DROP COLUMN IF EXISTS result_text")
+    op.execute("ALTER TABLE milestones DROP COLUMN IF EXISTS unit")

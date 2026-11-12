@@ -186,6 +186,14 @@ SELECT * FROM inserted
 """
 
 
+_SELECT_STREAMS_SQL = """
+SELECT sample_time, metric_type, value, lat, lon, alt
+FROM activity_streams
+WHERE athlete_id = %s AND activity_id = %s
+  AND sample_time >= %s AND sample_time < %s
+ORDER BY sample_time, metric_type
+"""
+
 _INSERT_STREAM_SQL = """
 INSERT INTO activity_streams
     (sample_time, activity_id, athlete_id, metric_type, value, lat, lon, alt)

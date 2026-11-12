@@ -34,11 +34,9 @@ def _to_phase(value: object) -> object:
         name = value.strip().upper()
         if not name:
             return None
-        code = _MENSTRUAL_PHASE_CODES.get(name)
-        if code is None:
-            msg = f"unknown Intervals.icu menstrual phase {name!r}"
-            raise ValueError(msg)
-        return code
+        # 未知名称记为 NULL：上游会新增阶段名（如 OVULATING），
+        # 一个枚举字段不能毁掉整天的 wellness 记录。
+        return _MENSTRUAL_PHASE_CODES.get(name)
     return _to_int(value)
 
 
