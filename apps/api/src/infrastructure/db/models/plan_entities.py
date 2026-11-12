@@ -35,6 +35,14 @@ class Goal(Base):
             "race_target_time_s IS NULL OR race_target_time_s BETWEEN 180 AND 172800",
             name="ck_goals_race_target_time_s",
         ),
+        CheckConstraint(
+            "type IN ('event', 'distance', 'time', 'weight', 'consistency')",
+            name="ck_goals_type",
+        ),
+        CheckConstraint(
+            "direction IN ('increase', 'decrease')",
+            name="ck_goals_direction",
+        ),
     )
 
     goal_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
@@ -47,6 +55,13 @@ class Goal(Base):
     target_date = Column(Date, nullable=True)
     race_distance_m = Column(Double, nullable=True)
     race_target_time_s = Column(Integer, nullable=True)
+    direction = Column(String, nullable=False, server_default="increase")
+    start_date = Column(Date, nullable=True)
+    sport_key = Column(String, nullable=True)
+    is_primary = Column(Boolean, nullable=False, server_default=text("false"))
+    baseline_value = Column(Double, nullable=True)
+    race_actual_time_s = Column(Integer, nullable=True)
+    race_activity_id = Column(Text, nullable=True)
     status = Column(String, nullable=False, server_default="active")
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
@@ -86,6 +101,26 @@ class PlanAdjustment(Base):
     status = Column(Text, nullable=False, server_default="pending")
 
 
+class PlanRevision(Base):
+    """One whole-plan snapshot, written by each generation run."""
+
+    __tablename__ = "plan_revisions"
+
+    revision_id = Column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    athlete_id = Column(
+        UUID(as_uuid=True), ForeignKey("athletes.id", ondelete="CASCADE"), nullable=False
+    )
+    goal_id = Column(
+        UUID(as_uuid=True), ForeignKey("goals.goal_id", ondelete="CASCADE"), nullable=False
+    )
+    reason = Column(String, nullable=False)
+    events = Column(JSONB, nullable=False)
+    phases = Column(JSONB, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+
+
 class Milestone(Base):
     __tablename__ = "milestones"
 
@@ -95,6 +130,7 @@ class Milestone(Base):
     goal_id = Column(
         UUID(as_uuid=True), ForeignKey("goals.goal_id", ondelete="CASCADE"), nullable=False
     )
+    phase_id = Column(UUID(as_uuid=True), ForeignKey("training_phases.phase_id"), nullable=True)
     title = Column(Text, nullable=False)
     target_date = Column(Date, nullable=True)
     target_value = Column(Double, nullable=True)

@@ -18,7 +18,6 @@ class Athlete(Base):
     resting_hr = Column(Integer, nullable=True)
     dob = Column(Date, nullable=True)
     sex = Column(String(6), nullable=True)
-    weight_goal = Column(Double, nullable=True)
     weekly_training_days = Column(Integer, nullable=True, server_default="5")
     max_session_duration_min = Column(Integer, nullable=True, server_default="120")
     preferred_sport = Column(String, nullable=True, server_default="Run")

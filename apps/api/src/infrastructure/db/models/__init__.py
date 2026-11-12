@@ -3,9 +3,7 @@
 from infrastructure.db.models import domain_constraints as domain_constraints
 from infrastructure.db.models.athlete import Athlete, LoginAttempt, RevokedToken
 from infrastructure.db.models.core import (
-    ActivityRecomputeJob,
     ActivitySummary,
-    AthleteThreshold,
     HealthWellness,
     TrainingCalendar,
     UserIntegration,
@@ -20,6 +18,10 @@ from infrastructure.db.models.derived_metrics import (
     ComputationRun,
     DerivedMetricFact,
     MetricDefinition,
+)
+from infrastructure.db.models.job_models import (
+    ActivityRecomputeJob,
+    AthleteThreshold,
 )
 from infrastructure.db.models.plan_entities import (
     Goal,
