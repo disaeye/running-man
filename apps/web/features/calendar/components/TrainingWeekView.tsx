@@ -42,7 +42,7 @@ export function TrainingWeekView({ model, today, onWeekChange, onSelectDate, onB
 }) {
   return (
     <div className="space-y-2" data-testid="plan-week-grid">
-      <div className="sticky top-0 z-20 -mx-1 flex items-center justify-between gap-2 bg-surface-card px-1 py-1">
+      <div className="sticky top-0 z-20 flex items-center justify-between gap-2 bg-surface-card px-1 py-1">
         <span className="num text-caption1 text-text-muted">
           {periodLabel(model.comparison.from, model.comparison.to)}
         </span>
