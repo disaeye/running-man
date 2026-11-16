@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Trash2, X } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
@@ -96,39 +96,55 @@ export function WorkoutBuilderV2({
     }
   }, [selectedDate, timezone, event, goal, name, segs, sportType, onSave, toast]);
 
+  // 延迟删除：与 goals 页同模式，5 秒内可撤销。删除本身在 setTimeout 里执行，
+  // 撤销即 clearTimeout。组件卸载时定时器一并满理，导航离开会取消删除。
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+    },
+    [],
+  );
+
   const handleDelete = useCallback(async () => {
     if (!event) return;
     setSaving(true);
     setSaveError(null);
     try {
-      const snapshot = {
-        payload: {
-          start_time: event.start_time,
-          category: event.category,
-          name: event.name,
-          sport_type: event.sport_type,
-          training_type: event.training_type,
-          predicted_tss: event.predicted_tss ?? null,
-          predicted_distance_m: event.predicted_distance_m ?? null,
-          workout_prescription: event.workout_prescription ?? null,
-          workout_xml: event.workout_xml ?? null,
-        },
-      };
       await callOrval((f) => deleteEventApiV1CalendarEventIdDelete(event.event_id, {}, f));
       onSave?.();
       toastWithAction(
-        `训练计划「${event.name}」将在 5 秒后删除。`,
+        `训练计划「${event.name}」已删除。`,
         "warning",
         {
-          label: "撤销",
+          label: "重录恢复",
           onClick: async () => {
+            if (deleteTimerRef.current) {
+              clearTimeout(deleteTimerRef.current);
+              deleteTimerRef.current = null;
+            }
             try {
               await callOrvalValidated(
-                (f) => createEventApiV1CalendarPost({ event_id: event.event_id, ...snapshot.payload }, {}, f),
+                (f) => createEventApiV1CalendarPost(
+                  {
+                    event_id: event.event_id,
+                    start_time: event.start_time,
+                    category: event.category,
+                    name: event.name,
+                    sport_type: event.sport_type,
+                    training_type: event.training_type,
+                    predicted_tss: event.predicted_tss ?? null,
+                    predicted_distance_m: event.predicted_distance_m ?? null,
+                    workout_prescription: event.workout_prescription ?? null,
+                    workout_xml: event.workout_xml ?? null,
+                  },
+                  {},
+                  f,
+                ),
                 Generated.CalendarEventOutput,
               );
               onSave?.();
-              toast("已撤销，训练计划已恢复", "success");
+              toast("已恢复，训练计划重新入列", "success");
             } catch {
               toast(`训练计划「${event.name}」恢复失败，请重录`, "error");
             }
@@ -136,6 +152,10 @@ export function WorkoutBuilderV2({
         },
         5000,
       );
+      deleteTimerRef.current = setTimeout(() => {
+        toast(`训练计划「${event.name}」已删除`, "info");
+        deleteTimerRef.current = null;
+      }, 5000);
     } catch {
       setSaveError("删除失败，请重试");
     } finally {
