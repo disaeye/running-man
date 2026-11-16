@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { AlertTriangle, Dumbbell, ChevronRight } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { PageCard } from "@shared/ui/Lovable";
 import { BrowseAllLink } from "@shared/ui/BrowseAllLink";
 import { Skeleton } from "@shared/ui/Skeleton";
@@ -135,14 +134,6 @@ export function TrainingViewPanels(props: ViewPanelsProps) {
           />
         </div>
       )}
-      <Link href="/strength" className="surface tactile flex items-center gap-3 p-4">
-        <Dumbbell className="h-6 w-6 text-accent-strong" />
-        <div className="flex-1">
-          <div className="font-semibold">力量训练</div>
-          <div className="text-xs text-text-muted">日志、动作库、肌群负荷与 e1RM 趋势</div>
-        </div>
-        <ChevronRight className="h-5 w-5 text-text-muted" />
-      </Link>
     </>
   );
 }
