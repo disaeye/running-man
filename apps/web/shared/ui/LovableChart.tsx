@@ -156,6 +156,26 @@ export function LovableChart({ lines = [], bars, h = 140, zero = false, invertY 
           ))}
         </div>
       ) : null}
+      {/* 文本摘要层：SVG 对读屏与键盘不可达（aria-hidden），这里给每条线
+       * 的首尾值一个文本替代，PMC/ACWR/EF 的核心读数不依赖悬停。 */}
+      {lines.some((line) => line.label != null) ? (
+        <dl className="sr-only" aria-label="图表数据摘要">
+          {lines.map((line, index) => {
+            const defined = line.data.filter((v): v is number => v != null);
+            if (!line.label || defined.length === 0) return null;
+            const format = line.format ?? ((value: number) => value.toFixed(1));
+            return (
+              <div key={`${line.label}-${index}`}>
+                <dt>{line.label}</dt>
+                <dd>
+                  起点 {format(defined[0]!)}，终点 {format(defined[defined.length - 1]!)}，
+                  共 {defined.length} 个数据点
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+      ) : null}
     </div>
   );
 }
