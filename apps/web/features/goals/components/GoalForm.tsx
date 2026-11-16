@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shared/ui/dia
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { apiFetch } from "@shared/lib/api";
-import type { Goal, GoalStatus, GoalType } from "@shared/types/goals";
+import type { Goal, GoalType } from "@shared/types/goals";
 import { EventFields, WeightFields, AccumulationFields, TypeSelector, typePatch, type GoalFormData, type FormPatch } from "./goal-form-fields";
 
 export type { GoalFormData } from "./goal-form-fields";
@@ -138,18 +138,6 @@ function GoalFormFields({ editingGoal, onClose, onSubmit, submitting, submitErro
         <Input type="date" value={form.target_date ?? ""} onChange={(e) => update({ target_date: e.target.value || null })} />
         {errors.date && <span className="text-caption1 text-error">{errors.date}</span>}
       </label>
-
-      {editingGoal ? (
-        <label className="flex flex-col gap-1">
-          <span className="text-subheadline font-medium text-text-secondary">目标状态</span>
-          <select value={form.status} onChange={(e) => update({ status: e.target.value as GoalStatus })}
-            className="min-h-11 rounded-lg border border-border-default bg-surface-card px-3 text-subheadline">
-            <option value="active">进行中</option>
-            <option value="achieved">已达成</option>
-            <option value="abandoned">已放弃</option>
-          </select>
-        </label>
-      ) : null}
 
       {submitError ? <p role="alert" className="text-caption1 text-error">{submitError}</p> : null}
 

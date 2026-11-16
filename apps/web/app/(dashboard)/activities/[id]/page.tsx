@@ -11,7 +11,7 @@ import { useActivityReportPrefetch } from "@features/activity/hooks/useActivityR
 import { groupStreams } from "@shared/types/activity";
 import { computeAvailability, extractId } from "@features/activity/lib/activity-detail";
 import { DataAvailabilityCard } from "@features/activity/components/DataAvailabilityCard";
-import { DemoActivityReport } from "@features/activity/components/DemoActivityReport";
+import { ActivityReport } from "@features/activity/components/ActivityReport";
 import { SessionClassificationPanel } from "@features/activity/components/SessionClassificationPanel";
 
 export default function ActivityDetailPage() {
@@ -60,7 +60,7 @@ export default function ActivityDetailPage() {
     >
       <div data-testid="activity-detail-page" className="space-y-4">
         <SessionClassificationPanel activityId={id} />
-        <DemoActivityReport activityId={id} />
+        <ActivityReport activityId={id} />
 
         {/* 隐藏的元数据流可用性节点，用于后台分析与测试审计 */}
         <div className="hidden" aria-hidden="true">

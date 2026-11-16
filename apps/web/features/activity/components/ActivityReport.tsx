@@ -18,7 +18,7 @@ import { NO_VALUE } from "@shared/lib/use-data-state";
 import { ActivityGearCard } from "@features/activity/components/ActivityGearCard";
 import { ActivityLoadLevels } from "@features/activity/components/ActivityLoadLevels";
 
-export function DemoActivityReport({ activityId }: { activityId: string }) {
+export function ActivityReport({ activityId }: { activityId: string }) {
   const query = useActivityDetail(activityId);
   if (query.loading) {
     return <p role="status" className="text-sm text-muted-foreground">正在加载这次训练…</p>;

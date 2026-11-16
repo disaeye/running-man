@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Page, PageCard } from "@shared/ui/Lovable";
 import { Button } from "@shared/ui/button";
@@ -8,10 +8,6 @@ import { apiErrorMessage } from "@shared/lib/api";
 import { saveStrengthWorkout } from "../lib/strength-session-save";
 import { useExercises, type Exercise } from "@features/strength/hooks/useExercises";
 import { useStrengthAnalytics } from "@features/strength/hooks/useStrengthAnalytics";
-import { listStrengthActivitiesApiV1StrengthWorkoutsGet } from "@shared/api/generated/clients";
-import { callOrvalValidated } from "@shared/api/orval-adapter";
-import * as Generated from "@shared/api/generated/model";
-import { z } from "zod";
 import { StrengthExerciseLibraryCard } from "./StrengthExerciseLibraryCard";
 import { StrengthExerciseCard } from "./StrengthExerciseCard";
 import { StrengthMuscleLoad } from "./StrengthMuscleLoad";
@@ -40,9 +36,10 @@ function formatLocalDate(d: Date): string {
 
 export function StrengthSessionEditor() {
   const router = useRouter();
-  const [workoutDate, setWorkoutDate] = useState(() => formatLocalDate(new Date()));
-  const [workoutName, setWorkoutName] = useState("力量训练");
-  const [durationMin, setDurationMin] = useState<number | null>(45);
+  // 不预填上一次训练：挂载落在今天，存错日的根源在预填。
+  const [workoutDate] = useState(() => formatLocalDate(new Date()));
+  const [workoutName] = useState("力量训练");
+  const [durationMin] = useState<number | null>(45);
   const [drafts, setDrafts] = useState<DraftExercise[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -50,41 +47,6 @@ export function StrengthSessionEditor() {
 
   const { data: exercises, loading: exercisesLoading } = useExercises();
   const analytics = useStrengthAnalytics();
-
-  useEffect(() => {
-    let cancelled = false;
-    const today = new Date();
-    const past = new Date(today);
-    past.setDate(past.getDate() - 90);
-
-    void callOrvalValidated(
-      (fetchFn) =>
-        listStrengthActivitiesApiV1StrengthWorkoutsGet(
-          {
-            from_date: past.toISOString().slice(0, 10),
-            to_date: today.toISOString().slice(0, 10),
-          },
-          {},
-          fetchFn,
-        ),
-      z.array(Generated.StrengthActivityResponse),
-    ).then((activities) => {
-      if (cancelled || activities.length === 0) return;
-      const latest = activities[0];
-      if (!latest) return;
-      if (latest.name) setWorkoutName(latest.name);
-      if (latest.start_time) {
-        setWorkoutDate(latest.start_time.slice(0, 10));
-      }
-      if (latest.duration_s) {
-        setDurationMin(Math.round(latest.duration_s / 60));
-      }
-    }).catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const handleSelectExercise = useCallback((exercise: Exercise) => {
     setDrafts((prev) => {
@@ -232,7 +194,16 @@ export function StrengthSessionEditor() {
         </PageCard>
 
         {statusMessage ? (
-          <p className="text-sm font-medium text-accent-strong">{statusMessage}</p>
+          <p
+            role="status"
+            className={`text-sm font-medium ${
+              statusMessage.includes("失败") || statusMessage.includes("请至少")
+                ? "text-error"
+                : "text-accent-strong"
+            }`}
+          >
+            {statusMessage}
+          </p>
         ) : null}
 
         <div className="flex justify-end pt-2">

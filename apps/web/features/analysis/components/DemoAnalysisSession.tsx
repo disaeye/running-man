@@ -7,14 +7,14 @@ import { EmptyState } from "@shared/ui/EmptyState";
 import { LabelCaps } from "@shared/ui/LabelCaps";
 import { athleteRange, useAthleteTimezone } from "@shared/lib/training-day";
 import { useActivities } from "@features/activity/hooks/useActivities";
-import { DemoActivityReport } from "@features/activity/components/DemoActivityReport";
+import { ActivityReport } from "@features/activity/components/ActivityReport";
 import { getAnalysisActivityKind } from "@features/analysis/lib/activity-type";
 
 /**
  * 分析页的「单次战报」模式。
  *
  * 参考稿的第三个导航项（分析）打开就是最近一场训练的完整回顾，所以这里是
- * 默认模式。战报主体用的是 `DemoActivityReport`——和活动详情页同一块，
+ * 默认模式。战报主体用的是 `ActivityReport`——和活动详情页同一块，
  * 两处显示的内容不会各自走样。
  *
  * 最近一次训练取最近 90 天里的最新一条；这 90 天没有训练时，页面说明
@@ -66,7 +66,7 @@ export function DemoAnalysisSession({ sportLabel }: { readonly sportLabel: strin
           打开完整详情
         </Link>
       </div>
-      <DemoActivityReport activityId={latest.activity_id} />
+      <ActivityReport activityId={latest.activity_id} />
     </div>
   );
 }
