@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSWRConfig } from "swr";
 import { Archive, Pencil, Target } from "lucide-react";
 import { Page, PageCard, Tag } from "@shared/ui/Lovable";
 import { Button } from "@shared/ui/button";
+import { useToast } from "@shared/ui/Toast";
 import {
   useGoals,
   createGoal,
@@ -27,7 +28,6 @@ export default function GoalsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [abandoningGoal, setAbandoningGoal] = useState<Goal | null>(null);
-  const [abandoning, setAbandoning] = useState(false);
   const [abandonError, setAbandonError] = useState<string | null>(null);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -75,20 +75,42 @@ export default function GoalsPage() {
     }
   };
 
+  const { toast, toastWithAction } = useToast();
+  const abandonTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const confirmAbandon = async () => {
     if (!abandoningGoal) return;
-    setAbandoning(true);
+    const goal = abandoningGoal;
+    // 先关对话框，再给 5 秒撤销窗口：没撤销才真正删除。
+    setAbandoningGoal(null);
     setAbandonError(null);
-    try {
-      await deleteGoal(abandoningGoal.goal_id);
-      if (selectedId === abandoningGoal.goal_id) setSelectedId(null);
-      setAbandoningGoal(null);
-      await refresh();
-    } catch (cause) {
-      setAbandonError(cause instanceof Error ? cause.message : "放弃目标失败，请重试。");
-    } finally {
-      setAbandoning(false);
-    }
+    if (abandonTimerRef.current) clearTimeout(abandonTimerRef.current);
+    abandonTimerRef.current = setTimeout(() => {
+      void (async () => {
+        try {
+          await deleteGoal(goal.goal_id);
+          if (selectedId === goal.goal_id) setSelectedId(null);
+          await refresh();
+        } catch {
+          // 延迟删除失败时如实报告，不再提供二次撤销。
+          toast(`目标「${goal.title}」删除失败，请重试。`, "error");
+        }
+      })();
+    }, 5000);
+    toastWithAction(
+      `目标「${goal.title}」将在 5 秒后删除。`,
+      "warning",
+      {
+        label: "撤销",
+        onClick: () => {
+          if (abandonTimerRef.current) {
+            clearTimeout(abandonTimerRef.current);
+            abandonTimerRef.current = null;
+          }
+        },
+      },
+      5000,
+    );
   };
 
   return (
@@ -151,9 +173,9 @@ export default function GoalsPage() {
       <GoalAbandonDialog
         open={abandoningGoal != null}
         goalTitle={abandoningGoal?.title ?? ""}
-        abandoning={abandoning}
+        abandoning={false}
         error={abandonError}
-        onCancel={() => { if (!abandoning) setAbandoningGoal(null); }}
+        onCancel={() => setAbandoningGoal(null)}
         onConfirm={() => void confirmAbandon()}
       />
       <PlanGenerateDialog

@@ -15,10 +15,19 @@ interface ToastItem {
   id: string;
   message: string;
   variant: ToastVariant;
+  /** 可选操作按钮（如「撤销」）；点击后自动关闭提示。 */
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastContextValue {
   toast: (message: string, variant?: ToastVariant) => void;
+  /** 带操作按钮的提示：撤销等场景用；自动关闭时长可覆盖。 */
+  toastWithAction: (
+    message: string,
+    variant: ToastVariant,
+    action: { label: string; onClick: () => void },
+    durationMs?: number,
+  ) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -54,13 +63,27 @@ function ToastItemComp({
     >
       <div className="flex items-center justify-between gap-3">
         <span>{item.message}</span>
-        <button
-          onClick={() => onRemove(item.id)}
-          className="focus-ring -me-2 flex size-[44px] shrink-0 items-center justify-center text-current/60 hover:text-current"
-          aria-label="关闭提示"
-        >
-          <X className="size-4" aria-hidden />
-        </button>
+        <div className="flex items-center gap-1">
+          {item.action ? (
+            <button
+              onClick={() => {
+                item.action?.onClick();
+                onRemove(item.id);
+              }}
+              className="focus-ring tactile min-h-11 shrink-0 rounded-full px-2 text-subheadline font-semibold underline-offset-4 hover:underline"
+              aria-label={item.action.label}
+            >
+              {item.action.label}
+            </button>
+          ) : null}
+          <button
+            onClick={() => onRemove(item.id)}
+            className="focus-ring -me-2 flex size-[44px] shrink-0 items-center justify-center text-current/60 hover:text-current"
+            aria-label="关闭提示"
+          >
+            <X className="size-4" aria-hidden />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -93,8 +116,22 @@ export function ToastProvider({
     [duration, removeToast],
   );
 
+  const toastWithAction = useCallback(
+    (
+      message: string,
+      variant: ToastVariant,
+      action: { label: string; onClick: () => void },
+      durationMs?: number,
+    ) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      setToasts((prev) => [...prev, { id, message, variant, action }]);
+      setTimeout(() => removeToast(id), durationMs ?? duration);
+    },
+    [duration, removeToast],
+  );
+
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={{ toast, toastWithAction }}>
       {children}
       {toasts.length > 0 && (
         <div
