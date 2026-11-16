@@ -157,19 +157,42 @@ export function LovableChart({ lines = [], bars, h = 140, zero = false, invertY 
         </div>
       ) : null}
       {/* 文本摘要层：SVG 对读屏与键盘不可达（aria-hidden），这里给每条线
-       * 的首尾值一个文本替代，PMC/ACWR/EF 的核心读数不依赖悬停。 */}
+       * 的首尾值与最显著拐点一个文本替代，PMC/ACWR/EF 的核心读数不依赖悬停。 */}
       {lines.some((line) => line.label != null) ? (
         <dl className="sr-only" aria-label="图表数据摘要">
           {lines.map((line, index) => {
             const defined = line.data.filter((v): v is number => v != null);
             if (!line.label || defined.length === 0) return null;
             const format = line.format ?? ((value: number) => value.toFixed(1));
+            // 拐点：相邻差值序列里方向反转的局部极值中，前后幅差最大的那个；
+            // 单调序列无拐点，不提。
+            let turning = "";
+            if (defined.length >= 3) {
+              let best = -1;
+              let bestSwing = 0;
+              for (let i = 1; i < defined.length - 1; i++) {
+                const prevDelta = defined[i]! - defined[i - 1]!;
+                const nextDelta = defined[i + 1]! - defined[i]!;
+                const swing = Math.abs(prevDelta) + Math.abs(nextDelta);
+                if (
+                  ((prevDelta > 0 && nextDelta < 0) || (prevDelta < 0 && nextDelta > 0))
+                  && swing > bestSwing
+                ) {
+                  bestSwing = swing;
+                  best = i;
+                }
+              }
+              if (best > 0) {
+                const at = labels && labels.length === line.data.length ? labels[best] ?? "" : "";
+                turning = `，拐点${at ? ` ${at} 处` : ""} ${format(defined[best]!)}`;
+              }
+            }
             return (
               <div key={`${line.label}-${index}`}>
                 <dt>{line.label}</dt>
                 <dd>
                   起点 {format(defined[0]!)}，终点 {format(defined[defined.length - 1]!)}，
-                  共 {defined.length} 个数据点
+                  共 {defined.length} 个数据点{turning}
                 </dd>
               </div>
             );
