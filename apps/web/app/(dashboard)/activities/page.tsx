@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useActivities } from "@features/activity/hooks/useActivities";
 import { useClientDayRange } from "@shared/lib/client-date";
 import { ReadingStrip } from "@shared/ui/ReadingStrip";
@@ -20,6 +21,30 @@ import { RecomputeStatusCard } from "@features/data/components/RecomputeStatusCa
 const DEFAULT_RANGE_DAYS = 90;
 
 /**
+ * 从 URL 查询参数解析筛选状态：URL 是筛选的单一真源，可分享、可后退。
+ * 参数缺失或非法时取该维度的默认值；from/to 缺失时视为「未自定义范围」，
+ * 页面回退到最近 90 天。
+ */
+function filtersFromParams(searchParams: URLSearchParams): ActivityFilterState {
+  const sport = searchParams.get("sport") ?? "all";
+  const race = searchParams.get("race") ?? "all";
+  const intensity = searchParams.get("intensity") ?? "all";
+  const source = searchParams.get("source") ?? "all";
+  return {
+    from: searchParams.get("from") ?? "",
+    to: searchParams.get("to") ?? "",
+    sport,
+    race: race === "race" || race === "training" ? race : "all",
+    intensity: ["easy", "moderate", "hard", "unknown"].includes(intensity)
+      ? (intensity as ActivityFilterState["intensity"])
+      : "all",
+    gpsOnly: searchParams.get("gps") === "1",
+    source,
+    q: searchParams.get("q") ?? "",
+  };
+}
+
+/**
  * Browse-density training log: header → filters → one-line totals → table.
  * The table is the default; cards are the alternate view for scanning a short
  * list, not the shape of the page.
@@ -29,20 +54,34 @@ export default function ActivitiesPage() {
   // which runs during static pre-render and wrote the build machine's dates into
   // the HTML.
   const defaultRange = useClientDayRange(DEFAULT_RANGE_DAYS);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const filters = useMemo(
+    () => filtersFromParams(new URLSearchParams(searchParams.toString())),
+    [searchParams],
+  );
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState<ActivityFilterState>({
-    from: "",
-    to: "",
-    sport: "all",
-    race: "all",
-    intensity: "all",
-    gpsOnly: false,
-    source: "all",
-  });
   const activeFilters = useMemo(
     () => (filters.from ? filters : { ...filters, ...defaultRange }),
     [filters, defaultRange],
+  );
+
+  const setFilters = useCallback(
+    (next: ActivityFilterState) => {
+      const params = new URLSearchParams();
+      if (next.from) params.set("from", next.from);
+      if (next.to) params.set("to", next.to);
+      if (next.sport !== "all") params.set("sport", next.sport);
+      if (next.race && next.race !== "all") params.set("race", next.race);
+      if (next.intensity !== "all") params.set("intensity", next.intensity);
+      if (next.gpsOnly) params.set("gps", "1");
+      if (next.source !== "all") params.set("source", next.source);
+      if (next.q) params.set("q", next.q);
+      const query = params.toString();
+      router.replace(query ? `?${query}` : "?", { scroll: false });
+    },
+    [router],
   );
 
   const { data, loading, error, reload } = useActivities(activeFilters.from, activeFilters.to);
