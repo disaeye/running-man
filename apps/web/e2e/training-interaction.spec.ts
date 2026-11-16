@@ -54,7 +54,8 @@ test.describe("training interactions", () => {
     await expect(page.getByTestId("training-period-summary")).toBeVisible({ timeout: 15000 });
     await page.getByRole("button", { name: "上一周" }).click();
     await expect(page.getByTestId("training-period-summary")).toContainText("该周训练汇总");
-    await page.getByLabel("添加训练").click();
+    await page.getByLabel("展开训练操作").click();
+    await page.getByRole("menuitem", { name: /记录训练/ }).click();
     await page.getByRole("button", { name: /编排训练计划/ }).click();
     await expect(page.locator("#wb-date")).toHaveValue("2026-10-26");
   });
@@ -140,6 +141,8 @@ test.describe("training interactions", () => {
 
     await page.goto("/calendar");
     await page.getByLabel("编辑 2026-11-04 训练").click();
+    // 编辑计划落「编排」段；旧流直接出表单，新流先切段。
+    await page.getByRole("tab", { name: "编排" }).click();
     await page.locator("#wb-name").fill("间歇节奏测试");
     await page.getByLabel("段落类型").click();
     await page.getByRole("option", { name: "间歇" }).click();
@@ -158,6 +161,7 @@ test.describe("training interactions", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
 
     await page.getByLabel("编辑 2026-11-04 训练").click();
+    // 保存后重开：当天已有计划，默认落「回顾」段，处方与计划实际对照都在回顾段。
     await expect(page.getByTestId("plan-pace-prescription")).toContainText("3.6 km");
     await expect(page.getByTestId("plan-pace-prescription")).toContainText("4:20–4:30 /公里");
     await expect(page.getByTestId("day-plan-actual")).toContainText("3.6 km");

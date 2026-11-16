@@ -60,14 +60,23 @@ export function CalendarDaySheet({
         : `新建训练 · ${selectedDate}`;
   // 当天没记录时补录就是来意：默认落「补录」；有记录时先回顾结果。
   const defaultMode: DaySheetMode = hasActivities ? "review" : "log";
-  // 模式状态携带它所属的日期：换日期打开抽屉时在渲染期重置一次，
-  // 不需要 effect 同步，也不会在旧日期的模式里渲染新日期的内容。
+  // 模式与上一次的日期都存在 state 里：渲染期对比当前 selectedDate 与上一次的值，
+  // 不一致就重置模式。抽屉关过再开同一日期（null → 日期）也是一次新会话，
+  // 回到默认模式；这是 React 文档的「渲染期调整状态」模式，无 effect 同步。
   const [modeByDate, setMode] = useState<{ date: string; mode: DaySheetMode }>(
     selectedDate ? { date: selectedDate, mode: defaultMode } : { date: "", mode: "review" },
   );
-  const mode = selectedDate != null && modeByDate.date !== selectedDate
-    ? defaultMode
-    : modeByDate.mode;
+  const [prevDate, setPrevDate] = useState<string | null>(selectedDate);
+  let mode: DaySheetMode = selectedDate != null && modeByDate.date === selectedDate
+    ? modeByDate.mode
+    : defaultMode;
+  if (selectedDate !== prevDate) {
+    setPrevDate(selectedDate);
+    if (selectedDate != null) {
+      setMode({ date: selectedDate, mode: defaultMode });
+    }
+    mode = selectedDate != null ? defaultMode : mode;
+  }
 
   return (
     <Sheet

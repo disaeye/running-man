@@ -34,7 +34,7 @@ test.describe("training workflow", () => {
     test("list view renders the activity stream", async ({ page }) => {
       await page.goto("/calendar?view=list");
       await expect(page).toHaveURL(/view=list/);
-      await expect(page.getByRole("tab", { name: "流水" })).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByRole("tab", { name: "记录" })).toHaveAttribute("aria-selected", "true");
       await expect(page.getByText("全部活动")).toBeVisible({ timeout: 15000 });
       await expect(page.getByRole("button", { name: /加载更早/ })).toBeVisible();
     });
@@ -93,11 +93,18 @@ test.describe("training workflow", () => {
       expect(await dayCells.count()).toBeLessThanOrEqual(7);
     });
 
-    test("creation actions sit behind one add button", async ({ page }) => {
+    test("creation actions sit behind one FAB button", async ({ page }) => {
       await gotoCalendar(page);
-      await expect(page.getByLabel("添加训练")).toBeVisible();
+      const fab = page.getByLabel("展开训练操作");
+      await expect(fab).toBeVisible();
       await expect(page.getByLabel("导入文件")).toHaveCount(0);
       await expect(page.getByLabel("手动添加")).toHaveCount(0);
+      // 展开后三个动作项都在菜单里。
+      await fab.click();
+      const menu = page.getByRole("menu", { name: "训练操作" });
+      await expect(menu).toBeVisible();
+      await expect(menu.getByRole("menuitem", { name: /记录训练/ })).toBeVisible();
+      await expect(menu.getByRole("menuitem", { name: /生成计划/ })).toBeVisible();
     });
   });
 });

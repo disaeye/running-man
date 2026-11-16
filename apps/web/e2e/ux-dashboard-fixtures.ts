@@ -37,6 +37,16 @@ const EMPTY_PLAN = {
 };
 
 export const DASHBOARD_FIXTURES: Readonly<Record<string, JsonFixture>> = {
+  "/api/v1/notifications": [],
+  "/api/v1/data/recompute-status": {
+    status: "succeeded",
+    requested_at: "2026-01-01T00:00:00Z",
+    finished_at: "2026-01-01T00:00:08Z",
+    attempts: 0,
+    generation: 1,
+    last_error: null,
+    trigger: "manual",
+  },
   "/api/v1/activities": [],
   "/api/v1/activities/ignored": [],
   "/api/v1/activities/stats": {

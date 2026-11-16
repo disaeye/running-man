@@ -37,7 +37,6 @@ const ALIAS_REDIRECTS: readonly AliasCase[] = [
   { source: "/trends", canonical: "/analysis?tab=load", note: "/trends maps to load adaptation" },
   { source: "/data", canonical: "/settings?section=data", note: "/data maps to settings data section" },
   { source: "/export", canonical: "/settings?section=data", note: "/export maps to settings data section" },
-  { source: "/activities", canonical: "/calendar?view=list", note: "/activities maps to calendar list view" },
   { source: "/plan", canonical: "/calendar", note: "/plan maps to calendar default view" },
 ];
 

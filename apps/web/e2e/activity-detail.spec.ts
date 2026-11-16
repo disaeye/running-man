@@ -76,14 +76,11 @@ async function mockActivityDetail(page: Page, hasGps: boolean, streams: readonly
 
 test.describe("activity workflow", () => {
   test("renders activities list page", async ({ page }) => {
-    // /activities redirects to the training log (/calendar?view=list).
+    // /activities 是训练记录真实页：时间范围 + 名称搜索 + 来源/强度筛选。
     await page.goto("/activities");
-    await page.waitForURL(/\/calendar\?view=list/);
-
-    // 流水视图是活动记录的默认入口，运动类型筛选只在这里生效。
-    await expect(page.getByRole("tab", { name: "流水" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("button", { name: "全部" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "力量", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/activities/);
+    await expect(page.getByRole("heading", { name: "训练记录" })).toBeVisible();
+    await expect(page.getByLabel("搜索训练名称")).toBeVisible();
 
     // Wait for the activity list to leave its loading state.
     await expect(page.getByRole("status")).not.toBeVisible({ timeout: 15000 });
@@ -93,12 +90,13 @@ test.describe("activity workflow", () => {
     page,
   }) => {
     await page.goto("/activities");
-    await page.waitForURL(/\/calendar\?view=list/);
+    await page.waitForURL(/\/activities/);
 
-    // 取列表里第一条活动：数据来自真实库，活动名称不是固定的
-    const activityLink = page.locator('a[href^="/activities/"]').first();
-    await expect(activityLink).toBeVisible({ timeout: 15000 });
-    await activityLink.click();
+    // 取列表里第一条活动：数据来自真实库，活动名称不是固定的。
+    // 表格视图行是 role=link 的 tr（键盘可达），点击后路由进详情。
+    const activityRow = page.locator('tbody tr[role="link"]').first();
+    await expect(activityRow).toBeVisible({ timeout: 15000 });
+    await activityRow.click();
     await page.waitForURL(/\/activities\//);
 
     await expect(page.getByTestId("activity-detail-page")).toBeVisible({ timeout: 10000 });
@@ -147,10 +145,11 @@ test.describe("activity workflow", () => {
       timeout: 15000,
     });
 
-    await expect(page.getByRole("button", { name: "GPS" })).toHaveCount(0);
-    for (const name of ["全部", "跑步", "力量"]) {
-      await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
-    }
+    // 真实页的筛选控件：名称搜索 + 类型/分类/强度下拉 + GPS 钮。
+    await expect(page.getByLabel("搜索训练名称")).toBeVisible();
+    await expect(page.getByRole("button", { name: "GPS", exact: true })).toBeVisible();
+    await expect(page.getByLabel("活动类型")).toBeVisible();
+    await expect(page.getByLabel("训练强度")).toBeVisible();
   });
 
   test("analysis and laps start in the same wave as the activity", async ({ page }) => {
