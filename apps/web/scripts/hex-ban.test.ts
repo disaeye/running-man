@@ -33,6 +33,7 @@ const HEX_RE = /#[0-9A-Fa-f]{3,8}\b/g;
 const PERMANENT_EXEMPT = new Set<string>([
   "app/globals.css", // token source of truth
   "app/layout.tsx", // viewport themeColor mirrors --color-surface-sunken; meta tags cannot resolve CSS vars
+  "app/manifest.ts", // manifest colors mirror the same token; manifests cannot resolve CSS vars
   "shared/lib/chart-tokens.ts", // reads --color-* CSS vars at runtime
 ]);
 

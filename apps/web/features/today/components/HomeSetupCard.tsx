@@ -49,15 +49,15 @@ export function HomeSetupCard({ connection, lastSync, profile }: Props) {
     steps.push({
       title: "Intervals.icu 已连接",
       body: lastSync
-        ? `最后同步 ${lastSync.slice(0, 10)}。还没读到训练记录，可以在数据页手动同步一次。`
-        : "还没有同步过。在数据页发起一次同步，训练记录会填进这里。",
+        ? `最后同步 ${lastSync.slice(0, 10)}。还没读到训练记录，可以在数据页手动同步一次。首次同步只覆盖最近 30 天，更早的历史需要用数据页的历史回填工具导入。`
+        : "还没有同步过。在数据页发起一次同步，训练记录会填进这里。首次同步只覆盖最近 30 天，更早的历史需要用数据页的历史回填工具导入。",
       href: "/settings?section=data",
       action: "去同步",
     });
   } else {
     steps.push({
       title: "连接数据源",
-      body: "用 Intervals.icu 把历史活动、心率和睡眠同步进来。",
+      body: "用 Intervals.icu 把历史活动、心率和睡眠同步进来。首次同步覆盖最近 30 天，更早的历史用数据页的历史回填工具补齐。",
       href: "/settings?section=data",
       action: "去连接",
     });
