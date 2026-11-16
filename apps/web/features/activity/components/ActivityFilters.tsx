@@ -15,6 +15,8 @@ export interface ActivityFilterState {
   intensity: Intensity;
   gpsOnly: boolean;
   source: string;
+  /** 名称关键词，空串不过滤 */
+  q?: string;
 }
 
 interface ActivityFiltersProps {
@@ -57,6 +59,15 @@ export function ActivityFilters({ filters, onChange, activities }: ActivityFilte
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <input
+        type="search"
+        aria-label="搜索训练名称"
+        placeholder="搜索名称…"
+        value={filters.q ?? ""}
+        onChange={(e) => set({ q: e.target.value })}
+        className="focus-ring min-h-[44px] min-w-[10rem] flex-1 rounded-lg border border-border-default bg-surface-card px-3 py-2 text-subheadline text-text-primary sm:max-w-56"
+      />
+
       <DateRangePicker from={filters.from} to={filters.to} onChange={(from, to) => set({ from, to })} />
 
       <select

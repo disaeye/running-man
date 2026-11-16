@@ -68,6 +68,12 @@ export function filterActivities(
   if (filters.source !== "all") {
     result = result.filter((a) => a.source === filters.source);
   }
+  if (filters.q) {
+    const needle = filters.q.trim().toLowerCase();
+    if (needle) {
+      result = result.filter((a) => (a.name ?? "").toLowerCase().includes(needle));
+    }
+  }
 
   return result;
 }
