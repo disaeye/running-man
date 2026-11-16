@@ -40,6 +40,9 @@ export interface ViewPanelsProps {
   readonly onMonthChange: (delta: number) => void;
   readonly onLoadEarlier: () => void;
   readonly onSelectDate: (day: string) => void;
+  /** 周视图的「回到今天」与「跳到日期」：都直接落成单日抽屉。 */
+  readonly onBackToToday: () => void;
+  readonly onJumpToDate: (day: string) => void;
   readonly onPlanToday: () => void;
   readonly onPlanWeek: () => void;
   readonly onGeneratePlan: () => void;
@@ -97,6 +100,8 @@ export function TrainingViewPanels(props: ViewPanelsProps) {
             today={props.today}
             onWeekChange={props.onWeekChange}
             onSelectDate={props.onSelectDate}
+            onBackToToday={props.onBackToToday}
+            onJumpToDate={props.onJumpToDate}
           />
           <TrainingEmptyState
             hasPlan={props.model.comparison.hasPlan}

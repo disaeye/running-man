@@ -7,6 +7,7 @@ import { getSportConfig } from "@shared/config/sport-config";
 import { formatDuration, formatPaceFromSeconds } from "@shared/lib/format";
 import { workoutTypeLabel } from "@features/today/lib/session-label";
 import { NO_VALUE } from "@shared/lib/use-data-state";
+import { JumpToDate } from "./JumpToDate";
 import { periodLabel } from "../lib/training-week";
 import type { WeekDay, WeekModel } from "../lib/training-week";
 
@@ -29,19 +30,25 @@ const STATE_TONE: Record<WeekDay["state"], "info" | "primary" | "warn" | "outlin
 };
 
 /** 本周执行：只渲染有活动、有计划或今天的日子，不让空天铺满一屏。 */
-export function TrainingWeekView({ model, today, onWeekChange, onSelectDate }: {
+export function TrainingWeekView({ model, today, onWeekChange, onSelectDate, onBackToToday, onJumpToDate }: {
   model: WeekModel;
   today: string;
   onWeekChange: (delta: number) => void;
   onSelectDate: (day: string) => void;
+  /** 周视图的「回到今天」：直接打开今天的单日抽屉。 */
+  onBackToToday: () => void;
+  /** 跳到任意日期：同样落成单日抽屉，比逐周翻页快得多。 */
+  onJumpToDate: (day: string) => void;
 }) {
   return (
     <div className="space-y-2" data-testid="plan-week-grid">
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between gap-2 px-1">
         <span className="num text-caption1 text-text-muted">
           {periodLabel(model.comparison.from, model.comparison.to)}
         </span>
         <div className="flex items-center gap-1">
+          <JumpToDate onJump={onJumpToDate} />
+          <button type="button" onClick={() => onBackToToday()} aria-label="回到今天" data-testid="week-back-to-today" className="tactile flex h-11 items-center rounded-full px-2 text-caption1 text-text-muted hover:bg-secondary">今天</button>
           <button type="button" onClick={() => onWeekChange(-1)} aria-label="上一周" className="tactile flex h-11 w-11 items-center justify-center rounded-full text-text-muted hover:bg-secondary"><ChevronLeft className="h-4 w-4" /></button>
           <button type="button" onClick={() => onWeekChange(1)} aria-label="下一周" className="tactile flex h-11 w-11 items-center justify-center rounded-full text-text-muted hover:bg-secondary"><ChevronRight className="h-4 w-4" /></button>
         </div>

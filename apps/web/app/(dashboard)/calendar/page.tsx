@@ -158,6 +158,8 @@ function TrainingPageContent() {
         onRetry={reloadAll}
         onRetryWellness={wellness.reload}
         onSaved={reloadAll}
+        onBackToToday={() => setEditingDate(today)}
+        onJumpToDate={(day) => setEditingDate(day)}
       />
 
       <TrainingAddSheet
