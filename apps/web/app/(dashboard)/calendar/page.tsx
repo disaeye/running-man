@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Sparkles } from "lucide-react";
+import { CalendarFab } from "@features/calendar/components/CalendarFab";
 import { Page } from "@shared/ui/Lovable";
 import { useActivities } from "@features/activity/hooks/useActivities";
 import { useCalendarEvents } from "@features/calendar/hooks/useCalendarEvents";
@@ -125,30 +125,7 @@ function TrainingPageContent() {
   );
 
   return (
-    <Page
-      title="训练"
-      eyebrow={eyebrow}
-      right={
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setGenerateOpen(true)}
-            className="tactile inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border-default px-3.5 text-caption1 font-medium text-text-primary hover:bg-secondary"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-accent-strong" aria-hidden />
-            <span>生成计划</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            aria-label="添加训练"
-            className="tactile flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        </div>
-      }
-    >
+    <Page title="训练" eyebrow={eyebrow}>
       <TrainingFilterTabs view={view} family={family} onFamilyChange={setFamily} onViewChange={switchView} />
 
       <TrainingViewPanels
@@ -201,6 +178,7 @@ function TrainingPageContent() {
         onActivitySaved={reloadAll}
       />
       <PlanGenerateDialog open={generateOpen} onClose={() => setGenerateOpen(false)} onGenerated={reloadAll} />
+      <CalendarFab onAddAction={() => { setAddOpen(true); }} onGenerateAction={() => setGenerateOpen(true)} />
     </Page>
   );
 }
