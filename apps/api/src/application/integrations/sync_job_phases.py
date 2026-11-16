@@ -198,14 +198,16 @@ async def _run_intervals_phase(
     activity_ids = activity_ids_in_window(
         athlete_id, conn, job_window_start(job), job_window_end(job)
     )
-    progress(conn, job_id, JobProgress(phase="intervals"))
+    # 活动区间属于流数据范畴：相位契约里没有独立的 intervals 值
+    # （数据库 CHECK 与前端 PHASES 均只有四档），进度归入 streams。
+    progress(conn, job_id, JobProgress(phase="streams"))
     result = await sync_activity_intervals(athlete_id, client, conn, activity_ids)
     errors.extend(
         {"activity_id": error.activity_id, "message": error.message} for error in result.errors
     )
     if errors:
         sync_jobs.store_errors(conn, job_id, errors)
-    progress(conn, job_id, JobProgress(phase="intervals", errors_count=len(result.errors)))
+    progress(conn, job_id, JobProgress(phase="streams", errors_count=len(errors)))
 
 
 async def _run_wellness_phase(
