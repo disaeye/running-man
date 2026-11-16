@@ -25,13 +25,15 @@ const TABS: readonly { value: AnalysisTabId; label: string }[] = [
   { value: "body", label: "身体与生活" },
 ];
 
-/** `?tab=` 决定当前视图，链接可分享、浏览器后退可用。 */
+/** `?tab=` 决定当前视图，`?days=` 决定时间范围；链接可分享、浏览器后退可用。 */
 export function AnalysisContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tab: AnalysisTabId = resolveAnalysisPageTab(searchParams.get("tab"));
+  const daysParam = Number(searchParams.get("days"));
+  const validPreset = RANGES.some((preset) => preset.days === daysParam);
   const { timezone, resolved } = useAthleteTimezoneState();
-  const [presetDays, setPresetDays] = useState(84);
+  const [presetDays, setPresetDays] = useState(validPreset ? daysParam : 84);
   // 时区未定前不请求：UTC 一轮、真实时区再一轮只会让首屏多等一整轮。
   const presetRange = useMemo(
     () => (resolved ? athleteRange(presetDays, timezone) : { from: "", to: "" }),
@@ -44,6 +46,9 @@ export function AnalysisContent() {
   function pickPreset(days: number) {
     setPresetDays(days);
     setCustom(false);
+    const params = new URLSearchParams(searchParams);
+    params.set("days", String(days));
+    router.replace(`?${params.toString()}`, { scroll: false });
   }
 
   return <>
