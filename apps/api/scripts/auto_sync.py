@@ -23,9 +23,7 @@ async def main() -> int:
         synced = 0
         failures: list[str] = []
         for target in targets:
-            job = await create_sync_job(
-                target.athlete_id, target.source, "incremental", "schedule"
-            )
+            job = await create_sync_job(target.athlete_id, target.source, "incremental", "schedule")
             outcome = await run_sync_job(
                 UUID(str(job["id"])),
                 target.athlete_id,
@@ -35,9 +33,7 @@ async def main() -> int:
             if outcome.status == "success":
                 synced += 1
             else:
-                failures.append(
-                    f"{target.source}:{outcome.status}:{outcome.error or '未知原因'}"
-                )
+                failures.append(f"{target.source}:{outcome.status}:{outcome.error or '未知原因'}")
         # 数据刚变过，顺手重评估通知规则；连接退出即提交。
         async with get_pool().connection() as conn:
             scan_report = await scan_all_athletes(conn)
