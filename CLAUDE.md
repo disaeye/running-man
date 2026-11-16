@@ -130,7 +130,7 @@ apps/web/
     auth/              # LoginForm, RegisterForm
   shared/              # Cross-feature primitives (depended on BY features/, never depends on features/)
     ui/                # Card, Button, Dialog, Tabs, KpiCard, Sparkline, ZoneScale (shadcn/ui)
-    layout/            # AppShell, PageHeader, Sidebar, TopTabBar
+    layout/            # AppShell, TopTabBar（MobileTabBar 通吃全断点）
     lib/               # format, api, auth, swr, utils, chart-tokens, motion
     types/             # TypeScript type definitions
     config/            # sport-config, nav-config, terms
@@ -159,11 +159,11 @@ Backend (`apps/api/src/`) keeps its 4-layer architecture. External integrations 
 
 - **Frontend**: all sport labels go through `getSportConfig()` in `apps/web/shared/config/sport-config.ts` — never hardcode sport label maps
 - **File size**: no file > 250 LOC (enforced by `scripts/lint_file_size.py`, see [docs/clean-code.md](docs/clean-code.md))
-- **Navigation**: PC editorial sidebar (`apps/web/shared/layout/Sidebar.tsx`) with 5 pill entries: 今天/训练/分析/目标/设置. Mobile bottom tab bar (`apps/web/shared/layout/TopTabBar.tsx` MobileTabBar export) matches the same 5 tabs. Single source of truth: `apps/web/shared/config/nav-config.ts`.
+- **Navigation**: bottom tab bar (`apps/web/shared/layout/TopTabBar.tsx` MobileTabBar export) serves all breakpoints with 5 entries: 今天/训练/分析/目标/我的. Single source of truth: `apps/web/shared/config/nav-config.ts`.
 - **Today page**: Dashboard-merged status bar (readiness ring + PMC CTL/ATL/TSB/ACWR chips, see `apps/web/features/today/components/TodayHero.tsx` and `apps/web/features/pmc/components/PmcChipRow.tsx`)
 - **Data hooks**: all data hooks use SWR (`useSWR`). Mutation hooks (useIntegrations, useStrengthWorkout) use `apiFetch` for mutations + `mutate()` for cache invalidation. Global `revalidateOnFocus: false`.
 - **Auth**: cookie-based (HttpOnly, SameSite=lax), middleware at `apps/web/middleware.ts` checks `access_token`
-- **Design system**: `apps/web/DESIGN.md` is normative and machine-checked. Tokens and the cinematic shell live in `apps/web/app/globals.css` (`.shell-atmosphere` / orbs / horizon / grain, chrome-only `.glass-surface`). Winter Sky Indigo `#5a6f9a` accent, dusk-paper canvas `#f4f6f8`, content column `64rem`. **AppShell is the fixed PC/mobile layout framework** (`--shell-content-max`, `.shell-main`, `.page-stack`); pages do not re-declare max-width/safe-area/tab padding. `scripts/check_design_tokens.py` fails the gate when DESIGN.md disagrees with the stylesheet; `scripts/check_web_tokens.py` fails it on panel glass, off-scale radii, raw palette colours and Chinese at `text-caption2`. `apps/web/scripts/hex-ban.test.ts` bans raw hex.
+- **Design system**: `apps/web/DESIGN.md` is normative and machine-checked. Tokens and the cinematic shell live in `apps/web/app/globals.css` (`.shell-atmosphere` / orbs / horizon / grain, chrome-only `.glass-surface`). Dark single theme with accent `#caf300` (oklch(0.9 0.19 122)), sunken canvas `oklch(0.16 0.012 250)`, content column `42rem`. **AppShell is the fixed mobile/desktop layout framework** (`--shell-content-max`, `.shell-main`, `.page-stack`); pages do not re-declare max-width/safe-area/tab padding. `scripts/check_design_tokens.py` fails the gate when DESIGN.md disagrees with the stylesheet; `scripts/check_web_tokens.py` fails it on panel glass, off-scale radii, raw palette colours and Chinese at `text-caption2`. `apps/web/scripts/hex-ban.test.ts` bans raw hex.
 - **Strength training**: exercise library (`exercise_library` table) is read-only; workout CRUD via `/api/strength/*` endpoints; physiology auto-calculation via `POST /api/athletes/me/auto-calculate`
 - **Physiology estimation**: `apps/api/src/domain/physiology/` contains pure-Python algorithms (tangent method KDE for HRmax, best-effort window for LTHR, critical speed model for threshold pace). No numpy/scipy dependency.
 

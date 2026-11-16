@@ -41,12 +41,12 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 | 活动详情 | 这一次跑得怎么样 | 分段、配速、心率、区间分布 |
 | 分析 | 这段时间的训练哪里对、哪里不对 | 多指标对照图，图下一句结论 |
 | 目标 | 离目标还有多远，现有训练撑不撑得住 | 环形完成度加剩余周数与预测 |
-| 档案 | 我目前的训练水平和身体状态如何 | 身份、成绩、生理指标、负荷与设备信息，只读查看 |
+| 我的 | 我目前的训练水平和身体状态如何 | 身份、成绩、生理指标、负荷与设备信息，只读查看 |
 | 设置 | 怎样调整系统使用的个人信息与训练参数 | 生理参数、训练区间、数据源、账户与偏好 |
 
-首页、日历、分析、目标、档案是五个导航入口（`shared/config/nav-config.ts`）。档案页只展示跑者信息与训练数据，设置页通过档案页的「设置」入口进入。训练记录与活动详情是从属页：训练记录从日历与图表区进入，活动详情从训练记录与日历的课表行进入，两者都不占导航位。
+首页、日历、分析、目标、我的是五个导航入口（`shared/config/nav-config.ts`）。我的页只展示跑者信息与训练数据，设置页通过我的页的「设置」入口进入。训练记录与活动详情是从属页：训练记录从日历与图表区进入，活动详情从训练记录与日历的课表行进入，两者都不占导航位。
 
-档案仅展示训练与身体信息，数据源连接、同步状态、训练参数编辑和账户设置均属于设置。
+^我的页仅展示训练与身体信息，数据源连接、同步状态、训练参数编辑和账户设置均属于设置。
 
 ### 2.2 身份层伸缩
 
@@ -240,8 +240,8 @@ Running Man 是一个人的训练中台。数据从 Intervals.icu 读进来，�
 | 分段表行 | `features/activity/components/SplitRow.tsx`，`SegmentAnalysis.tsx` 与 `LapAnalysis.tsx` 共用 | 活动详情里一段跑得怎么样：距离、用时、配速、心率一列一格，计圈表多一格爬升。行与行对得齐，手机上收起用时与爬升两列，不横向滚动。 |
 | 月历格 | `features/plan/components/MonthDayCell.tsx`（`PlanMonthView.tsx` 使用） | 月视图里的单日：日号、当天负荷、完成标记与比赛标记。一格只表达一天有没有量、做没做完。 |
 | 计划实际双列块 | `features/calendar/components/DayPlanActual.tsx`（`CalendarDaySheet.tsx` 使用） | 同一天的课表与记录左右并排，配速区间、时长、TSS 上下对齐，回答「计划的和做的差在哪」。 |
-| 装备行 | `features/settings/components/GearSection.tsx` | 档案页里一双鞋一行：累计里程，加上退役或建议更换的状态，回答「这双鞋还能不能用」。 |
-| PB 四格 | `features/settings/components/PersonalRecordsGrid.tsx` | 档案页里 5K、10K、半马、全马各占一格，回答「我现在是什么水平」。没跑过的距离写「未记录」，不留空格也不写 0。 |
+| 装备行 | `features/settings/components/GearSection.tsx` | 我的页里一双鞋一行：累计里程，加上退役或建议更换的状态，回答「这双鞋还能不能用」。 |
+| PB 四格 | `features/settings/components/PersonalRecordsGrid.tsx` | 我的页里 5K、10K、半马、全马各占一格，回答「我现在是什么水平」。没跑过的距离写「未记录」，不留空格也不写 0。 |
 | 编号步骤卡 | `features/today/components/WorkoutStepList.tsx`（`WorkoutSegments.tsx` 转交给它，首页 `WeekTrainingCard.tsx` 使用） | 今日课表里一节课从热身到放松按序号一步一行：序号只表示顺序不表示组数，组数写成贴在步骤名后的 `×N`，组间恢复缩进一行不占序号。行间只用发丝线，不铺底色；「进行到的那一步单独高亮」仍缺数据（没有「进行到第几步」），所以不做高亮。 |
 
 ---
