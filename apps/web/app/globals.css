@@ -481,6 +481,24 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
   .shell-header-inner { height: 3.5rem; }
 }
 
+/* 横屏手机：导航压缩成图标条（约 40px），把纵向空间还给内容；
+ * 底部抽屉式弹窗转居中模态（矮屏贴底抽屉不剩阅读空间）。
+ * 高度阈值 500px 排除横屏平板——它们有足够纵向空间，维持完整形态。 */
+@media (orientation: landscape) and (max-height: 500px) {
+  [data-shell-region="bottom"] .grid.h-14 { height: 2.5rem; }
+  [data-shell-region="bottom"] [data-indicator-key] span { display: none; }
+  [data-shell-region="bottom"] [data-indicator-key] svg { width: 1.25rem; height: 1.25rem; }
+  [data-slot="dialog-content"] {
+    inset: auto;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: min(28rem, calc(100vw - 4rem));
+    max-height: calc(100dvh - 4rem);
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-border-default);
+  }
+}
+
 /* Touch-optimized tactile response and micro-transitions for mobile devices */
 @media (hover: none) and (pointer: coarse) {
   .card-interactive:active {
