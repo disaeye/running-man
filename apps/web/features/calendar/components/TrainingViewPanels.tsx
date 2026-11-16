@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, Dumbbell, ChevronRight } from "lucide-react";
 import { PageCard } from "@shared/ui/Lovable";
+import { BrowseAllLink } from "@shared/ui/BrowseAllLink";
 import { Skeleton } from "@shared/ui/Skeleton";
 import { Button } from "@shared/ui/button";
 import { TrainingFocus } from "./TrainingFocus";
@@ -119,7 +120,8 @@ export function TrainingViewPanels(props: ViewPanelsProps) {
           />
         </div>
       ) : (
-        <div key="list" className="view-swap">
+        <div key="list" className="view-swap flex flex-col gap-4">
+          <BrowseAllLink />
           <TrainingActivityList
             activities={props.activities}
             timezone={props.timezone}

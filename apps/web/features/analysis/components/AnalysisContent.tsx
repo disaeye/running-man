@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PageCard, Segmented } from "@shared/ui/Lovable";
 import { SlidingIndicator } from "@shared/ui/SlidingIndicator";
 import { DateRangePicker } from "@shared/ui/DateRangePicker";
+import { BrowseAllLink } from "@shared/ui/BrowseAllLink";
 import { athleteRange, useAthleteTimezoneState } from "@shared/lib/training-day";
 import { analysisTabUrl, resolveAnalysisPageTab, type AnalysisTabId } from "@shared/config/canonical-routes";
 import { AnalysisLoadRecovery } from "./AnalysisLoadRecovery";
@@ -60,6 +61,7 @@ export function AnalysisContent() {
     <div key={tab} className="view-swap">
       {tab === "load" ? <AnalysisLoadRecovery from={activeRange.from} to={activeRange.to} /> : tab === "performance" ? <AnalysisPerformance from={activeRange.from} to={activeRange.to} /> : <AnalysisBodyLife from={activeRange.from} to={activeRange.to} />}
     </div>
+    <BrowseAllLink />
   </>;
 }
 
