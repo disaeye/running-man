@@ -11,7 +11,8 @@ import { useId, useMemo, useState } from "react";
  */
 
 export interface ChartLine {
-  data: number[];
+  /** null 表示该点未记录：线在此断开，不画成 0。 */
+  data: (number | null)[];
   cls: string;
   dashed?: boolean;
   label?: string;
@@ -44,7 +45,7 @@ const TICKS = 5;
 export function LovableChart({ lines = [], bars, h = 140, zero = false, invertY = false, labels }: LovableChartProps) {
   const [hover, setHover] = useState<number | null>(null);
   const gradientId = useId();
-  const all = [...lines.flatMap((line) => line.data), ...(zero ? [0] : [])];
+  const all = [...lines.flatMap((line) => line.data.filter((value): value is number => value != null)), ...(zero ? [0] : [])];
   const min = Math.min(...all, 0);
   const max = Math.max(...all, 1);
   const count = Math.max(lines[0]?.data.length ?? 0, bars?.data.length ?? 0, 1);
@@ -120,7 +121,24 @@ export function LovableChart({ lines = [], bars, h = 140, zero = false, invertY 
           </defs>
           {bars?.data.map((value, index) => <rect key={index} x={x(index) - VIEW_W / count / 2.6} width={VIEW_W / count / 1.3} y={h - (value / barMax) * h * 0.55} height={(value / barMax) * h * 0.55} className={bars.cls} rx={1} />)}
           {zero && min < 0 ? <line x1={0} x2={VIEW_W} y1={y(0)} y2={y(0)} className="stroke-border" strokeWidth={1} /> : null}
-          {lines.map((line, index) => <polyline key={index} fill="none" strokeWidth={2} strokeLinejoin="round" strokeDasharray={line.dashed ? "4 4" : undefined} className={line.cls} points={line.data.map((value, point) => `${x(point)},${y(value)}`).join(" ")} vectorEffect="non-scaling-stroke" />)}
+          {lines.map((line, index) => {
+            // 连续段：null 处断开，未记录的点不画成 0。
+            const runs: string[][] = [];
+            let current: string[] = [];
+            for (let point = 0; point < line.data.length; point++) {
+              const value = line.data[point];
+              if (value == null) {
+                if (current.length > 1) runs.push(current);
+                current = [];
+                continue;
+              }
+              current.push(`${x(point)},${y(value)}`);
+            }
+            if (current.length > 1) runs.push(current);
+            return runs.map((points, runIndex) => (
+              <polyline key={`${index}-${runIndex}`} fill="none" strokeWidth={2} strokeLinejoin="round" strokeDasharray={line.dashed ? "4 4" : undefined} className={line.cls} points={points.join(" ")} vectorEffect="non-scaling-stroke" />
+            ));
+          })}
           {hover != null && count > 1 ? (
             <g>
               <line x1={x(hover)} x2={x(hover)} y1={0} y2={h} stroke="var(--color-text-secondary)" strokeWidth={1} strokeDasharray="3 3" opacity={0.7} vectorEffect="non-scaling-stroke" />

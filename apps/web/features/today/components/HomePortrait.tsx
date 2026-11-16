@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ChevronRight, RefreshCw } from "lucide-react";
 import { Page } from "@shared/ui/Lovable";
 import { apiFetch } from "@shared/lib/api";
@@ -12,6 +12,7 @@ import { useProfile } from "@features/settings/hooks/useProfile";
 import { useActivities } from "@features/activity/hooks/useActivities";
 import { useCalendarEvents } from "@features/calendar/hooks/useCalendarEvents";
 import { useSyncDetail } from "@features/data/hooks/useSyncDetail";
+import { isJobActive, useSyncJob, type SyncJob } from "@features/data/hooks/useSyncJobs";
 import { useCoachContext } from "@features/today/hooks/useCoachContext";
 import { useWeeklyProgress } from "@features/today/hooks/useWeeklyProgress";
 import { usePmcData } from "@features/pmc/hooks/usePmcData";
@@ -25,6 +26,20 @@ import { LovableRecovery } from "./LovableRecovery";
 import { LovableWeekProgress } from "./LovableWeekProgress";
 import { TodayLoadCard } from "./TodayLoadCard";
 import { HomeSetupCard } from "./HomeSetupCard";
+
+/** 同步任务阶段的中文标签，进度行展示用。 */
+const PHASE_LABEL: Record<SyncJob["phase"], string> = {
+  activities: "活动导入",
+  streams: "轨迹流",
+  wellness: "健康数据",
+  weather: "天气",
+};
+
+function jobProgressNote(job: SyncJob): string {
+  const phase = PHASE_LABEL[job.phase] ?? job.phase;
+  const windows = job.windowsTotal > 0 ? ` · 窗口 ${job.windowsDone}/${job.windowsTotal}` : "";
+  return `同步中 · ${phase}${windows}`;
+}
 
 export function HomePortrait() {
   const { timezone, resolved } = useAthleteTimezoneState();
@@ -43,21 +58,28 @@ export function HomePortrait() {
   const weekly = useWeeklyProgress();
   const pmc = usePmcData(resolved ? recentRange.from : "", resolved ? recentRange.to : "");
   const wellness = useWellness(resolved ? todayKey : "", resolved ? todayKey : "");
-  const [syncing, setSyncing] = useState(false);
-  const [syncNote, setSyncNote] = useState<string | null>(null);
+  const [posting, setPosting] = useState(false);
+  const [postNote, setPostNote] = useState<string | null>(null);
+  // 由点击发起的同步任务 id：POST 返回的就是排队成功的任务本身，
+  // 结果提示只挂在这个 id 上。
+  const [trackedJobId, setTrackedJobId] = useState<string | null>(null);
+  const syncJob = useSyncJob("intervals_icu");
+  const job = syncJob.job;
+  const jobRunning = isJobActive(job);
   const startSync = async () => {
-    setSyncing(true);
-    setSyncNote(null);
+    setPosting(true);
+    setPostNote(null);
     try {
-      await apiFetch("/integrations/intervals_icu/sync", { method: "POST" });
-      setSyncNote("同步已开始，后台导入完成后数据自动刷新。");
-      reload();
+      const created = await apiFetch<{ id: string }>("/integrations/intervals_icu/sync", { method: "POST" });
+      setTrackedJobId(created.id);
+      await syncJob.reload();
     } catch (caught) {
-      setSyncNote(caught instanceof Error ? caught.message : "同步请求失败");
+      setPostNote(caught instanceof Error ? caught.message : "同步请求失败");
     } finally {
-      setSyncing(false);
+      setPosting(false);
     }
   };
+  const syncing = posting || jobRunning;
   const dateLabel = useClientDateLabel({ month: "long", day: "numeric" });
   const weekdayLabel = useClientDateLabel({ weekday: "long" });
   const readiness = coachQuery.data?.readiness ?? null;
@@ -67,7 +89,28 @@ export function HomePortrait() {
   const connection: ConnectionState = integration.error ? "error" : integration.loading || !integration.data ? "loading" : integration.data.status === "connected" ? "connected" : "disconnected";
   const caption = freshnessCaption(asOf, connection);
   const error = [coachQuery.error, weekActivities.error, recent.error, weekly.error].find((value): value is string => Boolean(value)) ?? null;
-  const reload = () => { coachQuery.reload(); weekActivities.reload(); recent.reload(); weekly.reload(); };
+  const reload = useCallback(() => { coachQuery.reload(); weekActivities.reload(); recent.reload(); weekly.reload(); pmc.reload(); wellness.reload(); integration.reload(); }, [coachQuery, weekActivities, recent, weekly, pmc, wellness, integration]);
+  // 提示全部从任务状态派生：进行中报进度；只有点击发起的任务才报最终结果，
+  // 页面打开时早已完成的旧任务不报捷。
+  const trackedSettled = job != null && trackedJobId === job.id && !jobRunning;
+  const syncNote = jobRunning && job ? jobProgressNote(job)
+    : trackedSettled && job?.status === "success" ? `同步完成，已更新 ${job.activitiesUpserted} 条活动。`
+    : trackedSettled && job?.status === "failed" ? (job.error ?? "同步失败，可在设置页查看详情。")
+    : trackedSettled && job?.status === "cancelled" ? "同步已取消。"
+    : postNote;
+  // 数据刷新面向所有结束的任务（含后台定时同步）：见过它运行，结束后重拉一次。
+  // reload 每渲染都是新引用，重复触发由 ref 防重兼为空跑。
+  const seenRunningRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!job) return;
+    if (jobRunning) {
+      seenRunningRef.current = job.id;
+      return;
+    }
+    if (seenRunningRef.current !== job.id) return;
+    seenRunningRef.current = null;
+    if (job.status === "success") reload();
+  }, [job, jobRunning, reload]);
   const todayEvent = useMemo(() => {
     const withPrescription = weekEvents.events.filter((event) => event.workout_prescription);
     return (

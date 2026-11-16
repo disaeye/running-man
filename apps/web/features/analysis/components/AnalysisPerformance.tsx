@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import useSWR from "swr";
 import { ChevronRight } from "lucide-react";
 import { PageCard } from "@shared/ui/Lovable";
 import { LovableChart } from "@shared/ui/LovableChart";
+import { callOrvalValidated } from "@shared/api/orval-adapter";
+import { physiologyApiV1AthletesMePhysiologyGet } from "@shared/api/generated/clients";
+import * as Generated from "@shared/api/generated/model";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { formatPace } from "@features/today/hooks/useAbility";
 import { useThresholdHistory } from "@features/settings/hooks/useThresholdHistory";
@@ -18,6 +22,11 @@ export function AnalysisPerformance({ from, to }: { from: string; to: string }) 
   const { entries } = useThresholdHistory();
   const activities = useActivities(from, to).data;
   const vo2max = useCurrentReadings().vo2max;
+  // 估算体系的样本门控：接口明确说不足才拦，读不到时按已满足处理。
+  const physiology = useSWR("/athletes/me/physiology", {
+    fetcher: () => callOrvalValidated((f) => physiologyApiV1AthletesMePhysiologyGet({}, f), Generated.PhysiologyResponse),
+  });
+  const insufficient = physiology.data != null && physiology.data.data_sufficient === false;
   // 活动列表是新到旧；时间序列从旧到新画，横轴才不会反向
   const efPoints = activities
     .map((activity) => ({
@@ -27,9 +36,10 @@ export function AnalysisPerformance({ from, to }: { from: string; to: string }) 
     .filter((point) => point.value != null)
     .reverse();
   const metrics = [
-    { label: "最大摄氧量", value: vo2max != null ? vo2max.value.toFixed(1) : NO_VALUE, unit: "ml/kg/min", source: vo2max != null ? "设备" : "未记录", note: vo2max != null ? `记录于 ${vo2max.day} · 特定训练日由设备估算` : "设备未同步最大摄氧量" },
-    { label: "乳酸阈心率 LTHR", value: profile?.lthr ?? NO_VALUE, unit: "bpm", source: "估算", note: "由阈值课表现反推" },
-    { label: "阈值配速", value: formatPace(profile?.threshold_pace), unit: "/km", source: "估算", note: "由长距离与阈值课样本反推" },
+    // 样本不足时不把数字当结论：与首页就绪分数同一规则，说明缺什么。
+    { label: "最大摄氧量", value: insufficient ? "样本不足" : vo2max != null ? vo2max.value.toFixed(1) : NO_VALUE, unit: insufficient ? "" : "ml/kg/min", source: insufficient ? "估算" : vo2max != null ? "设备" : "未记录", note: insufficient ? "最大强度课样本还不够，跑几次全力课后才会给出读数" : vo2max != null ? `记录于 ${vo2max.day} · 特定训练日由设备估算` : "设备未同步最大摄氧量" },
+    { label: "乳酸阈心率 LTHR", value: insufficient ? "样本不足" : profile?.lthr ?? NO_VALUE, unit: insufficient ? "" : "bpm", source: "估算", note: insufficient ? "需要更多阈值课样本才能反推" : "由阈值课表现反推" },
+    { label: "阈值配速", value: insufficient ? "样本不足" : formatPace(profile?.threshold_pace), unit: insufficient ? "" : "/km", source: "估算", note: insufficient ? "需要更多长距离与阈值课样本" : "由长距离与阈值课样本反推" },
     { label: "最大心率 HRmax", value: profile?.hr_max ?? NO_VALUE, unit: "bpm", source: "设置", note: "按设置值或年龄估算" },
   ];
   const paces = entries.filter((entry) => entry.threshold_pace != null);

@@ -7,9 +7,8 @@ import { getSportConfig } from "@shared/config/sport-config";
 import { formatDuration, formatPaceFromSeconds } from "@shared/lib/format";
 import { workoutTypeLabel } from "@features/today/lib/session-label";
 import { NO_VALUE } from "@shared/lib/use-data-state";
-import type { WeekDay, WeekModel } from "../lib/training-week";
-import type { DayEventStatus } from "../lib/match";
 import { periodLabel } from "../lib/training-week";
+import type { WeekDay, WeekModel } from "../lib/training-week";
 
 const STATE_LABEL: Record<WeekDay["state"], string> = {
   completed: "已完成",
@@ -27,13 +26,6 @@ const STATE_TONE: Record<WeekDay["state"], "info" | "primary" | "warn" | "outlin
   missed: "warn",
   unplanned: "outline",
   empty: "outline",
-};
-
-const EVENT_STATUS_LABEL: Record<DayEventStatus, string> = {
-  completed: "已完成",
-  partial: "偏短",
-  upcoming: "待练",
-  missed: "未完成",
 };
 
 /** 本周执行：只渲染有活动、有计划或今天的日子，不让空天铺满一屏。 */
@@ -118,7 +110,7 @@ function PlanColumn({ day }: { readonly day: WeekDay }) {
                   <span className="text-text-primary">{event.name || workoutTypeLabel(event.training_type ?? event.sport_type ?? "training")}</span>
                   {showEventBadge && match ? (
                     <span className={`text-caption1 ${match.ambiguous ? "text-warn" : "text-text-muted"}`}>
-                      {match.ambiguous ? "待确认" : EVENT_STATUS_LABEL[match.status]}
+                      {match.ambiguous ? "待确认" : STATE_LABEL[match.status]}
                     </span>
                   ) : null}
                 </div>

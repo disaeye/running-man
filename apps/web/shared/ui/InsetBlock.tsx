@@ -1,6 +1,6 @@
 import { type HTMLAttributes, type ReactNode } from "react";
 
-type InsetBlockTone = "default" | "accent";
+type InsetBlockTone = "default" | "accent" | "warn";
 
 interface InsetBlockProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
@@ -10,6 +10,7 @@ interface InsetBlockProps extends HTMLAttributes<HTMLDivElement> {
 const TONE_STYLES: Record<InsetBlockTone, string> = {
   default: "bg-surface-overlay",
   accent: "bg-accent/8",
+  warn: "bg-warn/10",
 };
 
 /**

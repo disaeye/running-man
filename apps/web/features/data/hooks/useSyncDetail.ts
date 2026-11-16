@@ -23,7 +23,7 @@ export interface SyncDetail extends IntegrationStatus {
  */
 export function useSyncDetail(source: IntegrationSource) {
   const query = integrationQuery(source);
-  const { data, error, isLoading } = useSWR<IntegrationStatus>(query.key, {
+  const { data, error, isLoading, mutate } = useSWR<IntegrationStatus>(query.key, {
     shouldRetryOnError: false,
     fetcher: query.fetcher,
   });
@@ -40,5 +40,6 @@ export function useSyncDetail(source: IntegrationSource) {
     data: detail,
     loading: isLoading,
     error: error?.message ?? null,
+    reload: () => mutate(),
   };
 }

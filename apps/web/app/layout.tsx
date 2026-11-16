@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, JetBrains_Mono, Noto_Sans_SC, Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -45,6 +45,19 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Running Man",
   description: "个人耐力训练系统：训练负荷、恢复状态与训练计划。",
+};
+
+/*
+ * viewport-fit=cover 是全局安全区代码的开关：没有它，iOS 上所有
+ * env(safe-area-inset-*) 恒为 0，底部导航与刘海补偿全部失效。
+ * themeColor 镜像 --color-surface-sunken（oklch(0.16 0.012 250)），
+ * meta 标签不解析 CSS 变量，只能写具体色值。
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#090e12",
 };
 
 export default function RootLayout({

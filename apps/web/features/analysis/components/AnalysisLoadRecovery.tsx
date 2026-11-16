@@ -18,7 +18,7 @@ export function AnalysisLoadRecovery({ from, to }: { from: string; to: string })
   const pmcLabels = pmc.data.map((point) => point.day.slice(5));
   return <div className="space-y-4" data-testid="analysis-load">
     <PageCard title="训练负荷 PMC"><LovableChart h={170} zero labels={pmcLabels} bars={{ data: pmc.data.map((point) => point.tss), cls: "fill-muted-foreground/25", label: "TSS", format: (v) => v.toFixed(0) }} lines={[{ data: pmc.data.map((point) => point.ctl), cls: "stroke-fitness", label: "CTL", format: (v) => v.toFixed(1) }, { data: pmc.data.map((point) => point.atl), cls: "stroke-fatigue", label: "ATL", format: (v) => v.toFixed(1) }, { data: pmc.data.map((point) => point.tsb), cls: "stroke-form", dashed: true, label: "TSB", format: (v) => v.toFixed(1) }]} /><LovableLegend items={[{ label: "CTL 体能", cls: "bg-fitness" }, { label: "ATL 疲劳", cls: "bg-fatigue" }, { label: "TSB 状态", cls: "bg-form" }, { label: "每日 TSS", cls: "bg-muted-foreground/40" }]} /></PageCard>
-    <PageCard title="ACWR 负荷变化比" action={<Tag>急性7天 / 慢性28天 EWMA</Tag>}><LovableChart h={90} labels={pmcLabels} lines={[{ data: pmc.data.map((point) => point.acwr ?? 0), cls: "stroke-warn", label: "ACWR", format: (v) => v.toFixed(2) }]} /><p className="mt-1 text-caption1 text-muted-foreground">仅作负荷变化参考，不作伤病风险判断</p></PageCard>
+    <PageCard title="ACWR 负荷变化比" action={<Tag>急性7天 / 慢性28天 EWMA</Tag>}><LovableChart h={90} labels={pmcLabels} lines={[{ data: pmc.data.map((point) => point.acwr ?? null), cls: "stroke-warn", label: "ACWR", format: (v) => v.toFixed(2) }]} /><p className="mt-1 text-caption1 text-muted-foreground">仅作负荷变化参考，不作伤病风险判断</p></PageCard>
     <PageCard title="强度分布 · 心率区间" action={<Tag>按活动发生时阈值</Tag>}>
       <div className="flex h-3 overflow-hidden rounded-full">{zones.map((zone, index) => <div key={index} style={{ width: `${zone}%` }} className={`bg-z${index + 1}`} />)}</div>
       <div className="mt-3 grid grid-cols-5 text-center">{zones.map((zone, index) => <div key={index}><div className="num text-lg font-semibold">{zone}%</div><div className="text-caption1 leading-tight text-muted-foreground">Z{index + 1}<br />{zoneRangeLabel(hrZones[index])}</div></div>)}</div>
@@ -50,10 +50,12 @@ function RecoveryCharts({ wellness, tss }: { wellness: ReturnType<typeof useWell
   const loads = new Map(tss.map((point) => [point.day, point.tss]));
   const labels = wellness.map((point) => point.day.slice(5));
   const rows = [
+    // 每日 TSS 缺记录就是零负荷（休息日），保留 0；
+    // 生理指标没测到就是未记录，画 0 会把未测当成测了零，全部断线。
     { label: "每日 TSS", data: wellness.map((point) => loads.get(point.day) ?? 0), cls: "stroke-primary", format: (v: number) => v.toFixed(0) },
-    { label: "HRV ms", data: wellness.map((point) => point.hrv ?? 0), cls: "stroke-form", format: (v: number) => v.toFixed(0) },
-    { label: "静息心率 bpm", data: wellness.map((point) => point.resting_hr ?? 0), cls: "stroke-fatigue", format: (v: number) => v.toFixed(0) },
-    { label: "睡眠 h", data: wellness.map((point) => (point.sleep_secs ?? 0) / 3600), cls: "stroke-fitness", format: (v: number) => v.toFixed(1) },
+    { label: "HRV ms", data: wellness.map((point) => point.hrv ?? null), cls: "stroke-form", format: (v: number) => v.toFixed(0) },
+    { label: "静息心率 bpm", data: wellness.map((point) => point.resting_hr ?? null), cls: "stroke-fatigue", format: (v: number) => v.toFixed(0) },
+    { label: "睡眠 h", data: wellness.map((point) => point.sleep_secs != null ? point.sleep_secs / 3600 : null), cls: "stroke-fitness", format: (v: number) => v.toFixed(1) },
   ];
   return <div>{rows.map((row) => <div key={row.label} className="border-b py-2 last:border-0"><div className="text-caption1 text-muted-foreground">{row.label}</div><LovableChart h={40} labels={labels} lines={[{ data: row.data, cls: row.cls, label: row.label.split(" ")[0], format: row.format }]} /></div>)}</div>;
 }
