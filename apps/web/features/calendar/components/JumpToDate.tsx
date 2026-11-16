@@ -31,7 +31,7 @@ export function JumpToDate({ onJump }: { onJump: (day: string) => void }) {
         <span className="hidden sm:inline">跳到</span>
       </button>
       {open ? (
-        <div className="absolute right-0 top-12 z-20 flex items-center gap-2 rounded-xl border border-border-default bg-surface-card p-3 shadow-elevated">
+        <div className="absolute right-0 top-12 z-20 flex items-center gap-2 rounded-2xl border border-border-default bg-surface-card p-3 shadow-elevated">
           <input
             type="date"
             autoFocus
