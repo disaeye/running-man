@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
-import { Bell, RefreshCw } from "lucide-react";
+import { RefreshCw, Settings } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { useZoneOverrides } from "@features/settings/hooks/useZoneOverrides";
@@ -104,11 +104,12 @@ function ProfileContent() {
               </div>
             </div>
             <Link
-              href="/settings?section=account"
-              className="rounded-full bg-secondary p-2"
-              aria-label="通知与偏好"
+              href="/settings"
+              className="flex min-h-11 items-center gap-1 rounded-full bg-secondary px-3 text-caption1 text-text-secondary"
+              aria-label="设置"
             >
-              <Bell className="h-4 w-4" />
+              <Settings className="h-4 w-4" aria-hidden />
+              设置
             </Link>
           </div>
         </PageCard>
