@@ -12,6 +12,7 @@ import { groupTrainingByDay, trainingDayStatus } from "@features/calendar/lib/tr
 import { loadScale } from "@features/calendar/lib/training-week";
 import { getSportConfig } from "@shared/config/sport-config";
 import { workoutTypeLabel } from "@features/today/lib/session-label";
+import { JumpToDate } from "@features/calendar/components/JumpToDate";
 
 const STATUS_DOT: Record<string, string> = {
   empty: "bg-transparent",
@@ -71,7 +72,28 @@ export function TrainingMonthView({
   const selectedItems = selected ? grouped.get(selected) : undefined;
   const selectedLoad = selected ? loadInfo(selected) : null;
 
+  // 「跳到日期」落在其他月份时需要切月：delta 语义是相对当前月的偏移量。
+  const monthDelta = (targetDay: string) =>
+    (Number(targetDay.slice(0, 4)) - Number(month.slice(0, 4))) * 12
+    + (Number(targetDay.slice(5, 7)) - Number(month.slice(5, 7)));
+
+  const returnToToday = () => {
+    const delta = monthDelta(today);
+    if (delta !== 0) onMonthChange(delta);
+    setSelected(today);
+    onSelectDate?.(today);
+  };
+
+  const jumpTo = (day: string) => {
+    const delta = monthDelta(day);
+    if (delta !== 0) onMonthChange(delta);
+    setSelected(day);
+    onSelectDate?.(day);
+  };
+
   return <PageCard title={`${monthLabel} 月训练日历`} action={<div className="flex items-center gap-1">
+    <button type="button" onClick={returnToToday} aria-label="回到今天" data-testid="month-back-to-today" className="tactile flex h-11 items-center rounded-full px-2 text-caption1 text-text-muted hover:bg-secondary">今天</button>
+    <JumpToDate onJump={jumpTo} />
     <button type="button" onClick={() => onMonthChange(-1)} aria-label="上一月" className="tactile flex h-11 w-11 items-center justify-center rounded-full text-text-muted hover:bg-secondary"><ChevronLeft className="h-4 w-4" /></button>
     <button type="button" onClick={() => onMonthChange(1)} aria-label="下一月" className="tactile flex h-11 w-11 items-center justify-center rounded-full text-text-muted hover:bg-secondary"><ChevronRight className="h-4 w-4" /></button>
   </div>}>

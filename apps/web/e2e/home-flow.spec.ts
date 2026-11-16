@@ -84,3 +84,34 @@ test.describe("home page information flow", () => {
     }
   });
 });
+
+test.describe("home notices", () => {
+  // 通知区呈现：未读通知从 notifications API 进首页，一条一行，看了即消。
+  // 走真实 API（本套件全部真库运行），先读接口拿当前未读数再断言页面行为。
+  test("unread notices render in the strip and dismiss on read", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(4000);
+
+    const strip = page.getByTestId("home-notices");
+    const response = await page.request.get("/api/v1/notifications?unread_only=true");
+    expect(response.status()).toBe(200);
+    const unread = (await response.json()) as unknown[];
+
+    if (unread.length === 0) {
+      // 没有未读时通知区不渲染——空态诚实。
+      await expect(strip).toHaveCount(0);
+      return;
+    }
+
+    // 有未读时逐条呈现，最多三条；「知道了」标记已读后该条消失。
+    await expect(strip).toBeVisible();
+    const items = strip.getByRole("listitem");
+    expect(await items.count()).toBe(Math.min(unread.length, 3));
+
+    const first = items.first();
+    await first.getByRole("button", { name: "知道了" }).click();
+    await expect(strip.getByRole("listitem")).toHaveCount(
+      Math.min(unread.length, 3) - 1,
+    );
+  });
+});
