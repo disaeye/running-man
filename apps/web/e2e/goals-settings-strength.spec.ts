@@ -51,8 +51,8 @@ test.describe("goals settings strength", () => {
   test.describe("strength workflow (own route, linked from the calendar)", () => {
     test("calendar links to the strength route", async ({ page }) => {
       await page.goto("/calendar?view=list");
-      // 真实数据里可能存在名为「力量训练」的活动行（链到活动详情），
-      // 入口接 href 定位，不受同名活动干扰。
+      // 入口已收进 FAB 菜单：展开后按 href 定位，不受同名活动干扰。
+      await page.getByRole("button", { name: "展开训练操作" }).click();
       const entry = page.locator('a[href="/strength"]');
       await expect(entry).toBeVisible({ timeout: 10000 });
       await entry.click();
