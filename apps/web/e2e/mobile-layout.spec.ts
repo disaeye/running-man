@@ -140,3 +140,37 @@ for (const path of PAGES) {
     });
   });
 }
+
+test.describe("landscape phone (844x390)", () => {
+  test.use({ viewport: { width: 844, height: 390 } });
+
+  test("chrome ≤ 12% viewport height, no overflow", async ({ page }) => {
+    await page.goto("/", { waitUntil: "load" });
+    await page.locator('[data-shell-region="main"] h1').first().waitFor({ state: "visible" });
+    const nav = page.locator('[data-shell-region="bottom"]');
+    const navBox = await nav.boundingBox();
+    expect(navBox).not.toBeNull();
+    // 压缩后的导航应 ≤ 12% 屏高（390 * 0.12 = 46.8px）
+    expect(navBox!.height).toBeLessThanOrEqual(47);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe("new affordances", () => {
+  test("calendar week view has jump-to-date", async ({ page }) => {
+    await page.goto("/calendar?view=week", { waitUntil: "load" });
+    const jump = page.getByTestId("jump-to-date");
+    await expect(jump).toBeVisible({ timeout: 10000 });
+  });
+
+  test("calendar list view links to /activities", async ({ page }) => {
+    await page.goto("/calendar?view=list", { waitUntil: "load" });
+    const entry = page.getByTestId("browse-all-activities");
+    await expect(entry).toBeVisible({ timeout: 10000 });
+    await entry.click();
+    await page.waitForURL(/\/activities$/);
+  });
+});
