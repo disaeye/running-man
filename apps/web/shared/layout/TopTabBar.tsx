@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { cn } from "@shared/lib/utils";
 import { SlidingIndicator } from "@shared/ui/SlidingIndicator";
@@ -17,9 +17,12 @@ const CSS_VAR = "--mobile-nav-height";
  * 五个入口对应今天、训练、分析、目标和我的。
  * Measures its own height and publishes it as a CSS custom property
  * so the main scroll region can compute bottom padding dynamically.
+ *
+ * 数字键 1-5 直接切换五个主导航页；输入控件获得焦点时不拦截。
  */
 export function MobileTabBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const activeId = activeNavFromPath(pathname);
   const navRef = useRef<HTMLElement>(null);
 
@@ -42,6 +45,29 @@ export function MobileTabBar() {
       document.documentElement.style.removeProperty(CSS_VAR);
     };
   }, []);
+
+  // 数字键 1-5 切换主导航。
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        !/^[1-5]$/.test(event.key) ||
+        (target &&
+          (target.isContentEditable ||
+            ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)))
+      ) {
+        return;
+      }
+      const entry = NAV_ENTRIES[Number(event.key) - 1];
+      if (!entry || entry.href === pathname) return;
+      router.push(entry.href);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pathname, router]);
 
   return (
     <nav
