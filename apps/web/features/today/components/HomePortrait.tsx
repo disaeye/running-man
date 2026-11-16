@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { mutate } from "swr";
 import { CheckCircle2, ChevronRight, RefreshCw } from "lucide-react";
 import { Page } from "@shared/ui/Lovable";
 import { apiFetch } from "@shared/lib/api";
@@ -13,6 +14,7 @@ import { useActivities } from "@features/activity/hooks/useActivities";
 import { useCalendarEvents } from "@features/calendar/hooks/useCalendarEvents";
 import { useSyncDetail } from "@features/data/hooks/useSyncDetail";
 import { isJobActive, useSyncJob, type SyncJob } from "@features/data/hooks/useSyncJobs";
+import { NOTIFICATIONS_KEY } from "@features/today/hooks/useNotifications";
 import { useCoachContext } from "@features/today/hooks/useCoachContext";
 import { useWeeklyProgress } from "@features/today/hooks/useWeeklyProgress";
 import { usePmcData } from "@features/pmc/hooks/usePmcData";
@@ -22,6 +24,7 @@ import { assessReadiness } from "@features/today/lib/readiness-presentation";
 import { freshnessCaption, hasHistory, type ConnectionState } from "@features/today/lib/freshness-caption";
 import { useClientDateLabel } from "@shared/lib/client-date";
 import { LovableTodayWorkout } from "./LovableTodayWorkout";
+import { HomeNoticeStrip } from "./HomeNoticeStrip";
 import { LovableRecovery } from "./LovableRecovery";
 import { LovableWeekProgress } from "./LovableWeekProgress";
 import { TodayLoadCard } from "./TodayLoadCard";
@@ -89,7 +92,7 @@ export function HomePortrait() {
   const connection: ConnectionState = integration.error ? "error" : integration.loading || !integration.data ? "loading" : integration.data.status === "connected" ? "connected" : "disconnected";
   const caption = freshnessCaption(asOf, connection);
   const error = [coachQuery.error, weekActivities.error, recent.error, weekly.error].find((value): value is string => Boolean(value)) ?? null;
-  const reload = useCallback(() => { coachQuery.reload(); weekActivities.reload(); recent.reload(); weekly.reload(); pmc.reload(); wellness.reload(); integration.reload(); }, [coachQuery, weekActivities, recent, weekly, pmc, wellness, integration]);
+  const reload = useCallback(() => { coachQuery.reload(); weekActivities.reload(); recent.reload(); weekly.reload(); pmc.reload(); wellness.reload(); integration.reload(); void mutate(NOTIFICATIONS_KEY); }, [coachQuery, weekActivities, recent, weekly, pmc, wellness, integration]);
   // 提示全部从任务状态派生：进行中报进度；只有点击发起的任务才报最终结果，
   // 页面打开时早已完成的旧任务不报捷。
   const trackedSettled = job != null && trackedJobId === job.id && !jobRunning;
@@ -126,6 +129,7 @@ export function HomePortrait() {
   return <Page eyebrow={<span className="flex items-baseline gap-2"><span className="num text-lg font-semibold tracking-tight text-text-secondary">{dateLabel}</span><span className="text-caption1 text-text-muted">{weekdayLabel}</span></span>} title="今天">
     <div data-testid="home-portrait" className="space-y-4">
       {error ? <div role="alert" className="flex items-center justify-between rounded-xl border border-error/30 p-3 text-xs text-error"><span>{error}</span><button type="button" onClick={reload}>重试</button></div> : null}
+      <HomeNoticeStrip />
       <div className="tactile flex items-center justify-between rounded-full bg-secondary px-3 py-1.5 text-xs"><span className="flex items-center gap-1.5 text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5 text-accent-strong" />{"Intervals.icu"} {caption}{integration.data?.last_sync ? ` · 最近同步 ${new Date(integration.data.last_sync).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}` : null}</span><button type="button" onClick={() => void startSync()} disabled={syncing} className={`tactile flex min-h-11 items-center gap-1 px-1 text-accent-strong disabled:opacity-60 ${syncing ? "action-busy" : ""}`}><RefreshCw className="h-3.5 w-3.5" />{syncing ? "同步中" : "同步"}</button></div>
       {syncNote ? <p role="status" className="action-result text-caption1 text-muted-foreground">{syncNote}</p> : null}
       {!hasData ? <HomeSetupCard connection={connection} lastSync={integration.data?.last_sync ?? null} profile={profileQuery.profile} /> : <>

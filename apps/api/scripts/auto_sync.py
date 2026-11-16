@@ -12,7 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from application.integrations.scheduler import collect_targets
 from application.integrations.sync_jobs import create_sync_job, run_sync_job
-from infrastructure.db.pool import close_pool, open_pool
+from application.notifications.scanner import scan_all_athletes
+from infrastructure.db.pool import close_pool, get_pool, open_pool
 
 
 async def main() -> int:
@@ -37,6 +38,13 @@ async def main() -> int:
                 failures.append(
                     f"{target.source}:{outcome.status}:{outcome.error or '未知原因'}"
                 )
+        # 数据刚变过，顺手重评估通知规则；连接退出即提交。
+        async with get_pool().connection() as conn:
+            scan_report = await scan_all_athletes(conn)
+        print(
+            f"通知扫描：athletes={scan_report['athletes_scanned']} "
+            f"generated={scan_report['notifications_generated']}"
+        )
         print(
             f"自动同步：considered={len(targets) + len(skipped)} "
             f"due={len(targets)} synced={synced} failed={len(failures)}"
