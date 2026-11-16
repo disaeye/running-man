@@ -209,8 +209,9 @@ journalctl --user -u running-man-api.service -f   # tail logs
 curl -X POST http://localhost:31001/api/integrations/intervals_icu/sync -b "access_token=<token>"
 
 # Full quality gates (web eslint/tsc/vitest, api ruff/mypy/openapi/pytest,
-# contract registries — run in parallel, memoised by content hash):
-python3 scripts/run_gates.py            # default: fast checks, seconds when cached
+# contract registries, browser smoke tier — run in parallel, memoised by
+# content hash):
+python3 scripts/run_gates.py            # default: fast groups + browser smoke
 python3 scripts/run_gates.py web        # one fast group
 python3 scripts/run_gates.py e2e        # next build + @smoke browser subset
 python3 scripts/run_gates.py e2e-full   # next build + every browser test

@@ -124,9 +124,20 @@ function TrainingPageContent() {
     [editingDate, scopedEvents, timezone],
   );
 
+  // 家族筛选联动视图：力量训练不属于日历视图，它有自己的页面（日志、动作库、
+  // 肌群负荷、e1RM 趋势），所以选「力量训练」直接去力量视图；其余家族在日历
+  // 内筛选。
+  const changeFamily = (next: SportFamily | "all") => {
+    if (next === "strength") {
+      router.push("/strength");
+      return;
+    }
+    setFamily(next);
+  };
+
   return (
     <Page title="训练" eyebrow={eyebrow}>
-      <TrainingFilterTabs view={view} family={family} onFamilyChange={setFamily} onViewChange={switchView} />
+      <TrainingFilterTabs view={view} family={family} onFamilyChange={changeFamily} onViewChange={switchView} />
 
       <TrainingViewPanels
         view={view}

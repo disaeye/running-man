@@ -100,7 +100,7 @@ export function HomeSetupCard({ connection, lastSync, profile }: Props) {
             <span className="text-caption1 text-text-muted">{step.body}</span>
             <Link
               href={step.href}
-              className="focus-ring ml-auto rounded text-caption1 font-medium text-accent-strong underline-offset-4 hover:underline"
+              className="focus-ring tactile ml-auto inline-flex min-h-11 items-center rounded px-2 text-caption1 font-medium text-accent-strong underline-offset-4 hover:underline"
             >
               {step.action}
             </Link>

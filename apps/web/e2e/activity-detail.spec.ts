@@ -152,6 +152,24 @@ test.describe("activity workflow", () => {
     await expect(page.getByLabel("训练强度")).toBeVisible();
   });
 
+  test("filters live in the URL so a filtered view can be shared", async ({ page }) => {
+    await page.goto("/activities");
+    await expect(page.getByRole("status")).not.toBeVisible({ timeout: 15000 });
+
+    // GPS 开关进 URL。
+    await page.getByRole("button", { name: "GPS", exact: true }).click();
+    await expect(page).toHaveURL(/[?&]gps=1/);
+
+    // 名称关键词进 URL。
+    await page.getByLabel("搜索训练名称").fill("间歇");
+    await expect(page).toHaveURL(/[?&]q=/);
+
+    // 直接访问带参数的 URL，筛选控件读回同一状态。
+    await page.goto("/activities?intensity=hard");
+    await expect(page.getByLabel("训练强度")).toHaveValue("hard");
+    await expect(page).toHaveURL(/intensity=hard/);
+  });
+
   test("analysis and laps start in the same wave as the activity", async ({ page }) => {
     const starts: Record<string, number> = {};
     page.on("request", (request) => {

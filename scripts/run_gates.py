@@ -13,8 +13,9 @@ script executes the equivalent checks against the local environment:
 Gates run in parallel (bounded by the core count) and are memoised: a gate whose
 inputs hash to the same content as its last pass is reported CACHED and skipped,
 so an unchanged tree finishes in seconds. Failures are never cached. The
-default selection finishes within half a minute on this host; the browser tiers
-are separate groups because a real browser suite cannot fit that budget. The
+default selection includes the browser smoke tier, because the browser
+assertions accumulate into the quality gate as the stages land; the full
+browser suite stays a separate group since it takes minutes. The
 registry generator runs first and everything else waits for it, because it
 rewrites files the other gates read. pytest's DSN comes from TEST_DATABASE_URL,
 failing that `wind_runner_test` is derived by `apps/api/testsupport.py`; the
@@ -22,9 +23,8 @@ database is probed before a cached pytest pass is honoured. Exit code is
 non-zero when any gate fails or is blocked by a failed dependency.
 
 Usage:
-  scripts/run_gates.py            # web + api + contract, seconds when cached
+  scripts/run_gates.py            # web + api + contract + browser smoke
   scripts/run_gates.py web api    # selected fast groups
-  scripts/run_gates.py e2e        # next build + smoke browser subset
   scripts/run_gates.py e2e-full   # next build + full browser suite
   scripts/run_gates.py --no-cache # re-run every gate and refresh stored passes
 """
@@ -242,7 +242,8 @@ def main() -> int:
     ensure_node_on_path()
     selected = set(args.groups) or {"all"}
     if "all" in selected:
-        selected = {"web", "api", "contract"}
+        # 浏览器冒烟层进默认选择：e2e 断言随阶段累加进质量门。
+        selected = {"web", "api", "contract", "e2e"}
 
     gates: list[Gate] = []
     if "contract" in selected:

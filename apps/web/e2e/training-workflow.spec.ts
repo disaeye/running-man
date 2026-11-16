@@ -106,5 +106,12 @@ test.describe("training workflow", () => {
       await expect(menu.getByRole("menuitem", { name: /记录训练/ })).toBeVisible();
       await expect(menu.getByRole("menuitem", { name: /生成计划/ })).toBeVisible();
     });
+
+    test("the strength family chip leads to the strength view", async ({ page }) => {
+      await gotoCalendar(page);
+      await page.getByRole("button", { name: "力量训练" }).click();
+      await page.waitForURL(/\/strength$/);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    });
   });
 });

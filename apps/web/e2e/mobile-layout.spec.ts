@@ -157,6 +157,32 @@ test.describe("landscape phone (844x390)", () => {
     );
     expect(overflow).toBeLessThanOrEqual(1);
   });
+
+  test("touch targets in the content column are at least 44px", async ({ page }) => {
+    await page.goto("/", { waitUntil: "load" });
+    await page.locator('[data-shell-region="main"] h1').first().waitFor({ state: "visible" });
+    const small = await page.evaluate(() => {
+      const scope = document.querySelector<HTMLElement>('[data-shell-region="main"]');
+      if (!scope) return [];
+      return Array.from(scope.querySelectorAll<HTMLElement>('button, a[href], [role="button"]'))
+        .filter((el) => {
+          const style = getComputedStyle(el);
+          if (style.display === "none" || style.visibility === "hidden") return false;
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        })
+        .map((el) => {
+          const rect = el.getBoundingClientRect();
+          return {
+            label: (el.getAttribute("aria-label") || el.textContent || "").trim().replace(/\s+/g, " ").slice(0, 24),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          };
+        })
+        .filter((item) => item.width < 44 || item.height < 44);
+    });
+    expect(small, "every control in the content column keeps a 44px touch target").toEqual([]);
+  });
 });
 
 test.describe("new affordances", () => {

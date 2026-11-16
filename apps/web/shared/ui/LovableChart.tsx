@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
+import { ChartDataSummary, type ChartSummaryItem } from "@shared/ui/ChartDataSummary";
 
 /**
  * 通用折线/柱状图。
@@ -88,6 +89,47 @@ export function LovableChart({ lines = [], bars, h = 140, zero = false, invertY 
     return indexes;
   }, [labels]);
 
+  // 每条线的文字摘要：首尾值、点数与最显著拐点。
+  // 拐点是相邻差值方向反转的局部极值中前后幅差最大的那个；单调序列无拐点。
+  const summaryItems = useMemo<ChartSummaryItem[]>(() => {
+    const items: ChartSummaryItem[] = [];
+    lines.forEach((line) => {
+      if (!line.label) return;
+      const points = line.data
+        .map((value, index) => ({ value, index }))
+        .filter((point): point is { value: number; index: number } => point.value != null);
+      if (points.length === 0) return;
+      const format = line.format ?? ((value: number) => value.toFixed(1));
+      let turning: string | null = null;
+      if (points.length >= 3) {
+        let best = -1;
+        let bestSwing = 0;
+        for (let i = 1; i < points.length - 1; i++) {
+          const prevDelta = points[i]!.value - points[i - 1]!.value;
+          const nextDelta = points[i + 1]!.value - points[i]!.value;
+          const swing = Math.abs(prevDelta) + Math.abs(nextDelta);
+          const reverses = (prevDelta > 0 && nextDelta < 0) || (prevDelta < 0 && nextDelta > 0);
+          if (reverses && swing > bestSwing) {
+            bestSwing = swing;
+            best = i;
+          }
+        }
+        if (best > 0) {
+          const at = labels?.[points[best]!.index];
+          turning = `${at ? `${at} ` : ""}${format(points[best]!.value)}`;
+        }
+      }
+      items.push({
+        label: line.label,
+        start: format(points[0]!.value),
+        turning,
+        end: format(points[points.length - 1]!.value),
+        points: points.length,
+      });
+    });
+    return items;
+  }, [lines, labels]);
+
   return (
     <div className="space-y-1">
       {readout ? (
@@ -158,47 +200,7 @@ export function LovableChart({ lines = [], bars, h = 140, zero = false, invertY 
       ) : null}
       {/* 文本摘要层：SVG 对读屏与键盘不可达（aria-hidden），这里给每条线
        * 的首尾值与最显著拐点一个文本替代，PMC/ACWR/EF 的核心读数不依赖悬停。 */}
-      {lines.some((line) => line.label != null) ? (
-        <dl className="sr-only" aria-label="图表数据摘要">
-          {lines.map((line, index) => {
-            const defined = line.data.filter((v): v is number => v != null);
-            if (!line.label || defined.length === 0) return null;
-            const format = line.format ?? ((value: number) => value.toFixed(1));
-            // 拐点：相邻差值序列里方向反转的局部极值中，前后幅差最大的那个；
-            // 单调序列无拐点，不提。
-            let turning = "";
-            if (defined.length >= 3) {
-              let best = -1;
-              let bestSwing = 0;
-              for (let i = 1; i < defined.length - 1; i++) {
-                const prevDelta = defined[i]! - defined[i - 1]!;
-                const nextDelta = defined[i + 1]! - defined[i]!;
-                const swing = Math.abs(prevDelta) + Math.abs(nextDelta);
-                if (
-                  ((prevDelta > 0 && nextDelta < 0) || (prevDelta < 0 && nextDelta > 0))
-                  && swing > bestSwing
-                ) {
-                  bestSwing = swing;
-                  best = i;
-                }
-              }
-              if (best > 0) {
-                const at = labels && labels.length === line.data.length ? labels[best] ?? "" : "";
-                turning = `，拐点${at ? ` ${at} 处` : ""} ${format(defined[best]!)}`;
-              }
-            }
-            return (
-              <div key={`${line.label}-${index}`}>
-                <dt>{line.label}</dt>
-                <dd>
-                  起点 {format(defined[0]!)}，终点 {format(defined[defined.length - 1]!)}，
-                  共 {defined.length} 个数据点{turning}
-                </dd>
-              </div>
-            );
-          })}
-        </dl>
-      ) : null}
+      {summaryItems.length > 0 ? <ChartDataSummary items={summaryItems} /> : null}
     </div>
   );
 }
