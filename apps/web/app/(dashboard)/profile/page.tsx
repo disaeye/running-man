@@ -131,7 +131,7 @@ function ProfileContent() {
             </button>
           }
         >
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border pb-2">
             {parameters.map((parameter) => (
               <ParameterRow key={parameter.key} parameter={parameter} />
             ))}
