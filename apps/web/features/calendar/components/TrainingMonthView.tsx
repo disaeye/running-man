@@ -91,7 +91,10 @@ export function TrainingMonthView({
     onSelectDate?.(day);
   };
 
-  return <PageCard title={`${monthLabel} 月训练日历`} action={<div className="flex items-center gap-1">
+  // 翻页行吸顶：月网格加当日详情区整体高庄可视区，滚动时导航常驻视野；
+  // PageCard 的 action 插槽在卡片头部行内，所以吸顶的目标是这一行自身，
+  // 不透明卡片背景防叠字。
+  return <PageCard title={`${monthLabel} 月训练日历`} action={<div className="sticky top-0 z-20 flex items-center gap-1 -mt-1 bg-surface-card py-1">
     <button type="button" onClick={returnToToday} aria-label="回到今天" data-testid="month-back-to-today" className="tactile flex h-11 items-center rounded-full px-2 text-caption1 text-text-muted hover:bg-secondary">今天</button>
     <JumpToDate onJump={jumpTo} />
     <button type="button" onClick={() => onMonthChange(-1)} aria-label="上一月" className="tactile flex h-11 w-11 items-center justify-center rounded-full text-text-muted hover:bg-secondary"><ChevronLeft className="h-4 w-4" /></button>
