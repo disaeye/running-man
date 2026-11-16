@@ -55,7 +55,6 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      { source: "/activities", destination: "/calendar?view=list", permanent: true },
       { source: "/plan", destination: "/calendar", permanent: true },
       { source: "/calendar/full", destination: "/calendar", permanent: true },
       { source: "/health", destination: "/analysis?tab=load", permanent: true },
