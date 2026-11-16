@@ -157,8 +157,8 @@ export function SyncStatusOverview({
             : stats.latestRun
               ? `来源: ${stats.latestRun.source === "intervals_icu" ? "Intervals" : stats.latestRun.source} · 新增 +${stats.latestRun.activities_upserted} 条`
               : lastSyncAt
-                ? "这次同步没有留下流水记录"
-                : "暂无同步流水"}
+                ? "这次同步没有留下运行记录"
+                : "暂无同步记录"}
         </div>
       </div>
 

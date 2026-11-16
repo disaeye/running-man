@@ -56,7 +56,7 @@ export function DataSources() {
       <Tabs defaultValue="sources" className="w-full">
         <TabsList className="grid w-full max-w-2xl grid-cols-4 rounded-xl bg-surface-sunken p-1">
           <TabsTrigger value="sources" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">数据源集成</TabsTrigger>
-          <TabsTrigger value="history" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">同步历史流水</TabsTrigger>
+          <TabsTrigger value="history" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">同步历史记录</TabsTrigger>
           <TabsTrigger value="health" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">健康度与质量</TabsTrigger>
           <TabsTrigger value="import_export" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">文件导入与导出</TabsTrigger>
         </TabsList>
