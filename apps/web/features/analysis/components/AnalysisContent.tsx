@@ -9,6 +9,7 @@ import { BrowseAllLink } from "@shared/ui/BrowseAllLink";
 import { athleteRange, useAthleteTimezoneState } from "@shared/lib/training-day";
 import { analysisTabUrl, resolveAnalysisPageTab, type AnalysisTabId } from "@shared/config/canonical-routes";
 import { AnalysisLoadRecovery } from "./AnalysisLoadRecovery";
+import { PeriodReadingPanel } from "./PeriodReadingPanel";
 import { AnalysisPerformance } from "./AnalysisPerformance";
 import { AnalysisBodyLife } from "./AnalysisBodyLife";
 
@@ -61,6 +62,7 @@ export function AnalysisContent() {
     <div key={tab} className="view-swap">
       {tab === "load" ? <AnalysisLoadRecovery from={activeRange.from} to={activeRange.to} /> : tab === "performance" ? <AnalysisPerformance from={activeRange.from} to={activeRange.to} /> : <AnalysisBodyLife from={activeRange.from} to={activeRange.to} />}
     </div>
+    <PeriodReadingPanel tab={tab} from={activeRange.from} to={activeRange.to} />
     <BrowseAllLink />
   </>;
 }
