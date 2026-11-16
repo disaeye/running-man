@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Trash2, X } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
@@ -96,16 +96,8 @@ export function WorkoutBuilderV2({
     }
   }, [selectedDate, timezone, event, goal, name, segs, sportType, onSave, toast]);
 
-  // 延迟删除：与 goals 页同模式，5 秒内可撤销。删除本身在 setTimeout 里执行，
-  // 撤销即 clearTimeout。组件卸载时定时器一并满理，导航离开会取消删除。
-  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
-    },
-    [],
-  );
-
+  // 删除立即执行，toast 如实说「已删除」；撤销按钮在 5 秒内按快照重建事件。
+  // 快照重建走重建接口，所以这个动作叫「重录恢复」而不是「撤销」。
   const handleDelete = useCallback(async () => {
     if (!event) return;
     setSaving(true);
@@ -119,10 +111,6 @@ export function WorkoutBuilderV2({
         {
           label: "重录恢复",
           onClick: async () => {
-            if (deleteTimerRef.current) {
-              clearTimeout(deleteTimerRef.current);
-              deleteTimerRef.current = null;
-            }
             try {
               await callOrvalValidated(
                 (f) => createEventApiV1CalendarPost(
@@ -152,10 +140,6 @@ export function WorkoutBuilderV2({
         },
         5000,
       );
-      deleteTimerRef.current = setTimeout(() => {
-        toast(`训练计划「${event.name}」已删除`, "info");
-        deleteTimerRef.current = null;
-      }, 5000);
     } catch {
       setSaveError("删除失败，请重试");
     } finally {
