@@ -41,7 +41,7 @@ let tplNextId = 0;
 export function WorkoutBuilderV2({
   date, allowDateEdit = false, defaultSport = "Run", event, onSave, onClose,
 }: Props) {
-  const { toast } = useToast();
+  const { toast, toastWithAction } = useToast();
   const timezone = useAthleteTimezone();
   const [selectedDate, setSelectedDate] = useState(date);
   const [sportType, setSportType] = useState(event?.sport_type ?? defaultSport);
@@ -101,15 +101,47 @@ export function WorkoutBuilderV2({
     setSaving(true);
     setSaveError(null);
     try {
+      const snapshot = {
+        payload: {
+          start_time: event.start_time,
+          category: event.category,
+          name: event.name,
+          sport_type: event.sport_type,
+          training_type: event.training_type,
+          predicted_tss: event.predicted_tss ?? null,
+          predicted_distance_m: event.predicted_distance_m ?? null,
+          workout_prescription: event.workout_prescription ?? null,
+          workout_xml: event.workout_xml ?? null,
+        },
+      };
       await callOrval((f) => deleteEventApiV1CalendarEventIdDelete(event.event_id, {}, f));
-      toast("训练计划已删除", "success");
       onSave?.();
+      toastWithAction(
+        `训练计划「${event.name}」将在 5 秒后删除。`,
+        "warning",
+        {
+          label: "撤销",
+          onClick: async () => {
+            try {
+              await callOrvalValidated(
+                (f) => createEventApiV1CalendarPost({ event_id: event.event_id, ...snapshot.payload }, {}, f),
+                Generated.CalendarEventOutput,
+              );
+              onSave?.();
+              toast("已撤销，训练计划已恢复", "success");
+            } catch {
+              toast(`训练计划「${event.name}」恢复失败，请重录`, "error");
+            }
+          },
+        },
+        5000,
+      );
     } catch {
       setSaveError("删除失败，请重试");
     } finally {
       setSaving(false);
     }
-  }, [event, onSave, toast]);
+  }, [event, onSave, toast, toastWithAction]);
 
   return (
     <div className="flex flex-col gap-4">

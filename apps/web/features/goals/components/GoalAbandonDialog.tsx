@@ -18,8 +18,8 @@ interface GoalAbandonDialogProps {
 }
 
 /**
- * 放弃目标的二次确认。删除连同历史进度与里程碑一起生效，不可撤销，
- * 所以确认前必须过这一层。
+ * 放弃目标的二次确认。删除连同历史进度与里程碑一起生效，
+ * 确认后有 5 秒撤销窗口（goals 页的 toast 通道），所以确认前必须过这一层。
  *
  * 请求在途时弹层不关闭：此时结果还没回来，关掉会让界面看起来像没发生。
  */
@@ -44,7 +44,7 @@ export function GoalAbandonDialog({
           <DialogTitle>放弃这个目标？</DialogTitle>
         </DialogHeader>
         <p className="text-subheadline text-text-secondary">
-          目标“{goalTitle}”及其历史进度和里程碑将被删除。此操作不可撤销。
+          目标“{goalTitle}”及其历史进度和里程碑将被删除。确认后 5 秒内可撤销。
         </p>
         {error ? <p role="alert" className="text-caption1 text-error">{error}</p> : null}
         <div className="flex justify-end gap-3">
