@@ -19,7 +19,7 @@ export function LovableRecovery({ readiness, soreness, score, today, conclusionT
         <div className="relative grid h-20 w-20 place-items-center rounded-full" style={{ background: `conic-gradient(var(--color-warn) ${(score ?? 0) * 3.6}deg, var(--color-secondary) 0)` }}><div className="grid h-16 w-16 place-items-center rounded-full bg-card"><span data-testid={conclusionTestId} className="num text-3xl font-bold">{score ?? NO_VALUE}</span></div></div>
         <Tag tone="outline">来源 本地测算</Tag>
       </div>
-      <div className="grid flex-1 grid-cols-2 gap-3"><Stat label="Readiness" value={score ?? "未记录"} /><Stat label="睡眠" value={sleep ? (sleep.value / 3600).toFixed(1) : "未记录"} unit={sleep ? "h" : undefined} sub={sleep?.baseline != null ? `7日均值 ${(sleep.baseline / 3600).toFixed(1)}h` : undefined} /></div>
+      <div className="grid flex-1 grid-cols-2 gap-3"><Stat label="就绪分数" value={score ?? "未记录"} /><Stat label="睡眠" value={sleep ? (sleep.value / 3600).toFixed(1) : "未记录"} unit={sleep ? "h" : undefined} sub={sleep?.baseline != null ? `7日均值 ${(sleep.baseline / 3600).toFixed(1)}h` : undefined} /></div>
     </div>
     <div data-testid={readingsTestId} className="mt-4 grid grid-cols-3 gap-2"><Chip label="HRV" reading={readings?.hrv} unit="ms" lowerIsBetter={false} source="Intervals.icu" today={today} /><Chip label="静息心率" reading={readings?.resting_hr} unit="bpm" source="Intervals.icu" today={today} /><Chip label="酸痛度（自评）" value={soreness != null ? `${Math.round(soreness)}/4` : "未记录"} source="训练页记录" /></div>
     <p className="mt-3 text-caption1 text-muted-foreground">心率类指标来自 Intervals.icu 的健康数据同步；酸痛度在训练页手动记录；就绪分数由这些输入本地计算。</p>

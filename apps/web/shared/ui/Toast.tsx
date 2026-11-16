@@ -57,7 +57,7 @@ function ToastItemComp({
         <button
           onClick={() => onRemove(item.id)}
           className="focus-ring -me-2 flex size-[44px] shrink-0 items-center justify-center text-current/60 hover:text-current"
-          aria-label="Dismiss"
+          aria-label="关闭提示"
         >
           <X className="size-4" aria-hidden />
         </button>

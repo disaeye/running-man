@@ -4,7 +4,7 @@ import { SlidingIndicator } from "@shared/ui/SlidingIndicator";
 import { CALENDAR_VIEWS, type CalendarView } from "@features/calendar/lib/calendar-view";
 import type { SportFamily } from "@shared/config/sport-config";
 
-const VIEW_LABELS = { week: "本周", month: "负荷", list: "流水" } as const;
+const VIEW_LABELS = { week: "本周", month: "负荷", list: "记录" } as const;
 const SPORT_FILTERS: readonly { key: SportFamily | "all"; label: string }[] = [
   { key: "all", label: "全部" },
   { key: "running", label: "跑步" },
