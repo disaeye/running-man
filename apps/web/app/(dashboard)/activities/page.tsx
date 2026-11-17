@@ -16,6 +16,7 @@ import { ActivitiesContent } from "@features/activity/components/ActivitiesConte
 import { filterActivities } from "@features/activity/lib/filter-activities";
 import { buildActivityTotals } from "@features/activity/lib/activity-totals";
 import { ManualActivityForm } from "@features/activity/components/ManualActivityForm";
+import { getSportConfig } from "@shared/config/sport-config";
 import { RecomputeStatusCard } from "@features/data/components/RecomputeStatusCard";
 
 const DEFAULT_RANGE_DAYS = 90;
@@ -132,7 +133,7 @@ export default function ActivitiesPage() {
           <h2 className="text-title2 font-semibold text-text-primary">这个筛选下没有训练</h2>
           <p className="mt-2 max-w-xl text-subheadline leading-relaxed text-text-secondary">
             当前条件是 {activeFilters.from} 至 {activeFilters.to}，
-            {activeFilters.sport === "all" ? "全部项目" : activeFilters.sport}，
+            {activeFilters.sport === "all" ? "全部项目" : getSportConfig(activeFilters.sport).label}，
             {activeFilters.intensity === "all" ? "全部强度" : activeFilters.intensity}。
             放宽到最近 90 天通常就能看到记录。
           </p>
