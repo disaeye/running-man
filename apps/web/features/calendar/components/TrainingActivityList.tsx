@@ -16,7 +16,6 @@ const WINDOW_DAYS = LIST_WINDOW_DAYS;
 const FAMILY_FILTERS: readonly { key: SportFamily | "all"; label: string }[] = [
   { key: "all", label: "全部" },
   { key: "running", label: "跑步" },
-  { key: "cycling", label: "骑行" },
   { key: "strength", label: "力量" },
 ];
 
