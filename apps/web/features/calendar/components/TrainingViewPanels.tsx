@@ -127,7 +127,7 @@ export function TrainingViewPanels(props: ViewPanelsProps) {
         <div key="list" className="view-swap flex flex-col gap-4">
           <BrowseAllLink />
           <TrainingActivityList
-            activities={props.activities}
+            activities={props.scopedActivities}
             timezone={props.timezone}
             days={props.listDays}
             onLoadEarlier={props.onLoadEarlier}
