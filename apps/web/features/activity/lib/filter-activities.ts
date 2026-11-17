@@ -1,6 +1,7 @@
 import type { ActivitySummary } from "@shared/types/activity";
 import {
   getSportConfig,
+  isProductSport,
   sportFamilyLabel,
   type SportFamily,
 } from "@shared/config/sport-config";
@@ -23,18 +24,17 @@ export const PROJECT_FILTERS: readonly { value: ProjectFilter; label: string }[]
   { value: "strength", label: getSportConfig("WeightTraining").label },
 ];
 
-/** Sport → project bucket. `all` matches everything; unknown sports match nothing. */
+/** Sport → project bucket. `all` matches the whole product scope (running + strength). */
 export function matchesProject(sport: string, project: ProjectFilter): boolean {
-  if (project === "all") return !["Ride", "VirtualRide", "Bike"].includes(sport);
+  if (project === "all") return isProductSport(sport);
   const cfg = getSportConfig(sport);
   if (project === "strength") return cfg.isStrength;
   return cfg.family === PROJECT_FAMILY[project];
 }
 
 /**
- * Pure filter pipeline for activities. Mirrors the conditions the ActivitiesPage
- * and CalendarListView apply to their `useActivities` data: project, sport,
- * intensity, gpsOnly, and source. Returns a new array; does not mutate input.
+ * Pure filter pipeline for activities: project scope, sport, race, intensity,
+ * gpsOnly, source and the name keyword. Returns a new array; does not mutate input.
  */
 export function filterActivities(
   data: ActivitySummary[],
@@ -57,12 +57,6 @@ export function filterActivities(
   }
   if (filters.gpsOnly) {
     // Filter on whether the activity actually has GPS.
-    //
-    // This previously tested ``source === "garmin"``, a source value that never
-    // occurs — this deployment syncs from Intervals.icu, and the registry lists
-    // fit / gpx / tcx / manual / intervals_icu. The filter therefore
-    // always returned an empty list and the UI reported "no matching
-    // activities" for a query that could never match anything.
     result = result.filter((a) => a.has_gps === true);
   }
   if (filters.source !== "all") {

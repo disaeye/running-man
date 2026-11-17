@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { DateRangePicker } from "@shared/ui/DateRangePicker";
-import { getSportConfig, SPORT_CONFIG } from "@shared/config/sport-config";
+import { getSportConfig, isProductSport } from "@shared/config/sport-config";
 import type { ActivitySummary } from "@shared/types/activity";
 
 type Intensity = "all" | "easy" | "moderate" | "hard" | "unknown";
@@ -34,8 +34,10 @@ const INTENSITY_OPTIONS: { value: Intensity; label: string }[] = [
 ];
 
 export function ActivityFilters({ filters, onChange, activities }: ActivityFiltersProps) {
+  // 类型下拉只列产品范围内的运动（跑步家族 + 力量家族）；标签走注册表，
+  // 未知类型兑底为「其他运动」。
   const availableActivities = useMemo(
-    () => activities.filter((activity) => !["Ride", "VirtualRide", "Bike"].includes(activity.sport)),
+    () => activities.filter((activity) => isProductSport(activity.sport)),
     [activities],
   );
 
@@ -79,7 +81,7 @@ export function ActivityFilters({ filters, onChange, activities }: ActivityFilte
         <option value="all">全部类型</option>
         {sportOptions.map((s) => (
           <option key={s.value} value={s.value}>
-            {Object.prototype.hasOwnProperty.call(SPORT_CONFIG, s.value) ? s.label : s.value}
+            {s.label}
           </option>
         ))}
       </select>

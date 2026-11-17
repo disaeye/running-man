@@ -18,7 +18,7 @@ import { resolveCalendarView, type CalendarView } from "@features/calendar/lib/c
 import { monthScaleRangeOf, shiftMonth, viewRange, weekRangeOf } from "@features/calendar/lib/view-range";
 import { buildWeekModel, eventFamily, listLabel, monthLabel, periodLabel, type WeekModel } from "@features/calendar/lib/training-week";
 import { defaultSportForFamily } from "@features/calendar/lib/workout-prescription";
-import { getSportConfig, type SportFamily } from "@shared/config/sport-config";
+import { getSportConfig, isProductSport, type SportFamily } from "@shared/config/sport-config";
 
 /** `?view=` 是视图的唯一来源：链接可分享，浏览器后退可用。 */
 export default function CalendarPage() {
@@ -65,8 +65,13 @@ function TrainingPageContent() {
   );
   const scaleDays = useMemo(() => dailyTss(scaleActivities.data, timezone), [scaleActivities.data, timezone]);
 
+  // 家族「全部」= 产品范围（跑步 + 力量），范围外运动（步行、骑行、游泳、
+  // 徒步）不进训练视图；同步仍全量拉取。
   const scopedActivities = useMemo(
-    () => activities.data.filter((a) => family === "all" || getSportConfig(a.sport).family === family),
+    () => activities.data.filter((a) => {
+      if (family !== "all") return getSportConfig(a.sport).family === family;
+      return isProductSport(a.sport);
+    }),
     [activities.data, family],
   );
   const scopedEvents = useMemo(

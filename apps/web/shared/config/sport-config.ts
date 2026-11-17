@@ -257,6 +257,16 @@ export function getSportConfig(sport: string): SportConfig {
 }
 
 /**
+ * 产品范围的单一真源：这个产品是跑步训练平台，训练视图只呈现
+ * 跑步家族与力量家族。同步仍然全量拉取（负荷计算与健康度核对需要
+ * 完整数据），范围限定只发生在呈现层。
+ */
+export function isProductSport(sport: string): boolean {
+  const { family } = getSportConfig(sport);
+  return family === "running" || family === "strength";
+}
+
+/**
  * A label for a sport family, taken from the first sport in that family.
  *
  * Used by filters that group several sports (跑步 covers Run / VirtualRun /
