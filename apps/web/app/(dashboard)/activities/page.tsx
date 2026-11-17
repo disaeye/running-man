@@ -16,6 +16,7 @@ import { ActivitiesContent } from "@features/activity/components/ActivitiesConte
 import { filterActivities } from "@features/activity/lib/filter-activities";
 import { buildActivityTotals } from "@features/activity/lib/activity-totals";
 import { ManualActivityForm } from "@features/activity/components/ManualActivityForm";
+import { useActivitySports } from "@features/activity/hooks/useActivitySports";
 import { getSportConfig } from "@shared/config/sport-config";
 import { RecomputeStatusCard } from "@features/data/components/RecomputeStatusCard";
 
@@ -55,6 +56,7 @@ export default function ActivitiesPage() {
   // which runs during static pre-render and wrote the build machine's dates into
   // the HTML.
   const defaultRange = useClientDayRange(DEFAULT_RANGE_DAYS);
+  const dataSports = useActivitySports();
   const searchParams = useSearchParams();
   const router = useRouter();
   const filters = useMemo(
@@ -121,7 +123,7 @@ export default function ActivitiesPage() {
       </div>
 
       <div id="activity-filters" className={mobileFiltersOpen ? "" : "hidden sm:block"}>
-        <ActivityFilters filters={activeFilters} onChange={setFilters} activities={data} />
+        <ActivityFilters filters={activeFilters} onChange={setFilters} activities={data} sports={dataSports} />
       </div>
 
       <ReadingStrip items={totals} />

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { DateRangePicker } from "@shared/ui/DateRangePicker";
-import { isProductSport, PRODUCT_SPORTS } from "@shared/config/sport-config";
+import { getSportConfig, isProductSport } from "@shared/config/sport-config";
 import type { ActivitySummary } from "@shared/types/activity";
 
 type Intensity = "all" | "easy" | "moderate" | "hard" | "unknown";
@@ -23,6 +23,8 @@ interface ActivityFiltersProps {
   filters: ActivityFilterState;
   onChange: (filters: ActivityFilterState) => void;
   activities: ActivitySummary[];
+  /** 下拉列出的类型：账户数据里实际存在的产品范围类型，注册表顺序。 */
+  readonly sports: readonly string[];
 }
 
 const INTENSITY_OPTIONS: { value: Intensity; label: string }[] = [
@@ -33,7 +35,7 @@ const INTENSITY_OPTIONS: { value: Intensity; label: string }[] = [
   { value: "unknown", label: "强度未知" },
 ];
 
-export function ActivityFilters({ filters, onChange, activities }: ActivityFiltersProps) {
+export function ActivityFilters({ filters, onChange, activities, sports }: ActivityFiltersProps) {
   // 数据源下拉只列实际提供过数据的来源；类型下拉用 PRODUCT_SPORTS 的
   // 完整分类列表，与当前窗口有无该类记录无关。
   const availableActivities = useMemo(
@@ -71,9 +73,9 @@ export function ActivityFilters({ filters, onChange, activities }: ActivityFilte
         className="focus-ring min-h-[44px] rounded-lg border border-border-default bg-surface-card px-3 py-2 text-subheadline text-text-primary transition-colors hover:bg-surface-overlay"
       >
         <option value="all">全部类型</option>
-        {PRODUCT_SPORTS.map((s) => (
-          <option key={s.key} value={s.key}>
-            {s.label}
+        {sports.map((key) => (
+          <option key={key} value={key}>
+            {getSportConfig(key).label}
           </option>
         ))}
       </select>
