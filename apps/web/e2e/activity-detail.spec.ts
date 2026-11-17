@@ -150,6 +150,17 @@ test.describe("activity workflow", () => {
     await expect(page.getByRole("button", { name: "GPS", exact: true })).toBeVisible();
     await expect(page.getByLabel("活动类型")).toBeVisible();
     await expect(page.getByLabel("训练强度")).toBeVisible();
+
+    // 类型下拉列出产品注册表的全部分类，与当前窗口有无记录无关。
+    const options = await page.getByLabel("活动类型").locator("option").allInnerTexts();
+    expect(options).toEqual([
+      "全部类型",
+      "跑步",
+      "越野跑",
+      "室内跑步",
+      "力量训练",
+      "健身",
+    ]);
   });
 
   test("filters live in the URL so a filtered view can be shared", async ({ page }) => {

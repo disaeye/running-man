@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { DateRangePicker } from "@shared/ui/DateRangePicker";
-import { getSportConfig, isProductSport } from "@shared/config/sport-config";
+import { isProductSport, PRODUCT_SPORTS } from "@shared/config/sport-config";
 import type { ActivitySummary } from "@shared/types/activity";
 
 type Intensity = "all" | "easy" | "moderate" | "hard" | "unknown";
@@ -34,20 +34,12 @@ const INTENSITY_OPTIONS: { value: Intensity; label: string }[] = [
 ];
 
 export function ActivityFilters({ filters, onChange, activities }: ActivityFiltersProps) {
-  // 类型下拉只列产品范围内的运动（跑步家族 + 力量家族）；标签走注册表，
-  // 未知类型兑底为「其他运动」。
+  // 数据源下拉只列实际提供过数据的来源；类型下拉用 PRODUCT_SPORTS 的
+  // 完整分类列表，与当前窗口有无该类记录无关。
   const availableActivities = useMemo(
     () => activities.filter((activity) => isProductSport(activity.sport)),
     [activities],
   );
-
-  const sportOptions = useMemo(() => {
-    const sports = new Set(availableActivities.map((a) => a.sport));
-    return Array.from(sports).sort().map((s) => ({
-      value: s,
-      label: getSportConfig(s).label,
-    }));
-  }, [availableActivities]);
 
   const sourceOptions = useMemo(() => {
     const sources = new Set(
@@ -79,8 +71,8 @@ export function ActivityFilters({ filters, onChange, activities }: ActivityFilte
         className="focus-ring min-h-[44px] rounded-lg border border-border-default bg-surface-card px-3 py-2 text-subheadline text-text-primary transition-colors hover:bg-surface-overlay"
       >
         <option value="all">全部类型</option>
-        {sportOptions.map((s) => (
-          <option key={s.value} value={s.value}>
+        {PRODUCT_SPORTS.map((s) => (
+          <option key={s.key} value={s.key}>
             {s.label}
           </option>
         ))}

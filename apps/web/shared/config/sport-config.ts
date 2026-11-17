@@ -257,14 +257,21 @@ export function getSportConfig(sport: string): SportConfig {
 }
 
 /**
- * 产品范围的单一真源：这个产品是跑步训练平台，训练视图只呈现
- * 跑步家族与力量家族。同步仍然全量拉取（负荷计算与健康度核对需要
- * 完整数据），范围限定只发生在呈现层。
+ * 产品范围单一真源：跑步训练平台只呈现跑步与力量家族；同步仍全量拉取
+ * （负荷计算与健康度核对需要完整数据），范围限定只发生在呈现层。
  */
 export function isProductSport(sport: string): boolean {
   const { family } = getSportConfig(sport);
   return family === "running" || family === "strength";
 }
+
+/**
+ * 产品范围完整分类列表，注册表顺序。类型筛选列出全部分类，
+ * 与当前查询窗口有无该类记录无关——选到无记录的类型时由空态如实说明。
+ */
+export const PRODUCT_SPORTS: readonly { key: string; label: string }[] = Object.keys(SPORT_REGISTRY)
+  .filter(isProductSport)
+  .map((key) => ({ key, label: getSportConfig(key).label }));
 
 /**
  * A label for a sport family, taken from the first sport in that family.
