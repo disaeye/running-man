@@ -73,14 +73,10 @@ function currentWeekRange(): { from: string; to: string } {
 
 test.describe("activity range guard", () => {
   /**
-   * `/activities` redirects to `/calendar?view=list`, where `qualityRange`
-   * returns undefined and the page passed `?? ""` into the activities hook. That
-   * issued `GET /api/v1/activities?from=&to=`, which the API answers with 422.
-   *
-   * The list rendered from a different data path, so nothing looked broken —
-   * the only trace was the failed request.
+   * 时区尚未解析时，页面会先用空字符串构造区间；若直接请求，API 会回 422。
+   * hook 把不完整的区间视为「暂不请求」，这里监听整个加载过程确认没有空区间请求。
    */
-  test("list view issues no empty-range request", async ({ page }) => {
+  test("the archive issues no empty-range request", async ({ page }) => {
     const emptyRange: string[] = [];
     page.on("request", (request) => {
       const url = request.url();
@@ -91,7 +87,7 @@ test.describe("activity range guard", () => {
       }
     });
 
-    await page.goto("/calendar?view=list", { waitUntil: "networkidle" });
+    await page.goto("/activities", { waitUntil: "networkidle" });
     await page.waitForTimeout(3500);
 
     expect(emptyRange, "requests sent with an empty from/to").toEqual([]);
@@ -118,7 +114,7 @@ test.describe("activity range guard", () => {
     expect(Math.abs((activities?.at ?? 0) - (profile?.at ?? 0))).toBeLessThan(300);
   });
 
-  test("no request is answered with 422 while browsing the log", async ({ page }) => {
+  test("no request is answered with 422 while browsing the archive", async ({ page }) => {
     const rejected: string[] = [];
     page.on("response", (response) => {
       if (response.status() === 422) {
@@ -126,7 +122,7 @@ test.describe("activity range guard", () => {
       }
     });
 
-    await page.goto("/calendar?view=list", { waitUntil: "networkidle" });
+    await page.goto("/activities", { waitUntil: "networkidle" });
     await page.waitForTimeout(3500);
 
     // 422 means the client sent a request it should never have constructed.

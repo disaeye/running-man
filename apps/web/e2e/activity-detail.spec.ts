@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import type { ActivityDetail, StreamPoint } from "../shared/types/activity";
+import { findRunWithPace } from "./activity-data";
 
 const activityBase: Omit<ActivityDetail, "has_gps"> = {
   activity_id: "activity-gps",
@@ -79,7 +80,8 @@ test.describe("activity workflow", () => {
     // /activities 是训练记录真实页：时间范围 + 名称搜索 + 来源/强度筛选。
     await page.goto("/activities");
     await expect(page).toHaveURL(/\/activities/);
-    await expect(page.getByRole("heading", { name: "训练记录" })).toBeVisible();
+    await expect(page.locator('[data-shell-region="main"] h1')).toHaveText("训练");
+    await expect(page.getByTestId("training-tab-activities")).toHaveAttribute("aria-current", "page");
     await expect(page.getByLabel("搜索训练名称")).toBeVisible();
 
     // Wait for the activity list to leave its loading state.
@@ -93,10 +95,9 @@ test.describe("activity workflow", () => {
     await page.waitForURL(/\/activities/);
 
     // 取列表里第一条活动：数据来自真实库，活动名称不是固定的。
-    // 表格视图行是 role=link 的 tr（键盘可达），点击后路由进详情。
-    const activityRow = page.locator('tbody tr[role="link"]').first();
-    await expect(activityRow).toBeVisible({ timeout: 15000 });
-    await activityRow.click();
+    const activityLink = page.locator('[data-testid="activity-table"] tbody a').first();
+    await expect(activityLink).toBeVisible({ timeout: 15000 });
+    await activityLink.click();
     await page.waitForURL(/\/activities\//);
 
     await expect(page.getByTestId("activity-detail-page")).toBeVisible({ timeout: 10000 });
@@ -125,17 +126,17 @@ test.describe("activity workflow", () => {
     await expect(page.getByTestId("session-quality-metrics")).toContainText("工作配速波动");
   });
 
-  test("shows stored classification in the activity log", async ({ page }) => {
+  test("shows stored classification in the training archive", async ({ page }) => {
     const response = await page.request.get("/api/v1/activities/classifications");
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.activity_count).toBeGreaterThan(0);
 
-    await page.goto("/calendar?view=list");
-    await expect(page.getByTestId("activity-list")).toBeVisible({ timeout: 15000 });
-    const course = page.getByTestId("activity-list-course").first();
-    await expect(course).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId("activity-list-quality")).toHaveCount(0);
+    await page.goto("/activities");
+    const table = page.getByTestId("activity-table");
+    await expect(table).toBeVisible({ timeout: 15000 });
+    await expect(table.getByTestId("activity-table-classification").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("session-quality-metrics")).toHaveCount(0);
   });
 
   test("shows filter controls on activities page", async ({ page }) => {
@@ -153,9 +154,11 @@ test.describe("activity workflow", () => {
 
     // 类型下拉列出的分类 = 账户数据里实际存在的产品范围类型（真实库：
     // run / virtual_run / weight_training / workout），注册表顺序。
-    // 数据里从没出现过的类型（越野跑）不列。
-    const options = await page.getByLabel("活动类型").locator("option").allInnerTexts();
-    expect(options).toEqual([
+    // 数据里从没出现过的类型（越野跑）不列。分类列表随统计请求到达，等到齐全再比。
+    const typeSelect = page.getByLabel("活动类型");
+    await expect
+      .poll(async () => typeSelect.locator("option").allInnerTexts(), { timeout: 15000 })
+      .toEqual([
       "全部类型",
       "跑步",
       "室内跑步",
@@ -202,6 +205,52 @@ test.describe("activity workflow", () => {
       expect(at, `${suffix} request missing`).toBeDefined();
       expect(Math.abs((at ?? 0) - (detail ?? 0)), `${suffix} started a wave late`).toBeLessThan(300);
     }
+  });
+
+  test("运动流横轴使用活动有效训练时长", async ({ page }) => {
+    await mockActivityDetail(page, false, [
+      { ...metadataRow(0, null, null), metric_type: "speed", value: 3 },
+      { ...metadataRow(60, null, null), metric_type: "speed", value: 3 },
+      { ...metadataRow(3600, null, null), metric_type: "speed", value: 3 },
+    ]);
+
+    await page.goto("/activities/activity-gps");
+
+    await expect(page.getByText("45:00", { exact: true })).toBeVisible();
+    await expect(page.getByText("1:00:00", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("按活动记录的有效训练时长展示")).toBeVisible();
+  });
+
+  test("鼠标和触摸都能读取运动流对应时刻", async ({ page }) => {
+    await page.goto(`/activities/${await findRunWithPace(page.request)}`);
+    const chart = page.getByTestId("stream-chart-pace").locator("div.touch-pan-y");
+    await chart.scrollIntoViewIfNeeded();
+    const box = await chart.boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) return;
+    await expect(chart.locator("path").nth(1)).toHaveCSS("stroke", /oklch|lab/);
+    const before = await page.getByTestId("stream-chart-pace").innerText();
+    await chart.dispatchEvent("pointermove", { pointerType: "mouse", bubbles: true, clientX: box.x + box.width * 0.4, clientY: box.y + 20 });
+    await expect.poll(() => page.getByTestId("stream-chart-pace").innerText()).not.toBe(before);
+    await expect(chart.locator("circle")).toHaveAttribute("fill", "var(--color-accent)");
+    const mouseText = await page.getByTestId("stream-chart-pace").innerText();
+    await chart.dispatchEvent("pointerdown", { pointerType: "touch", pointerId: 1, bubbles: true, clientX: box.x + box.width * 0.6, clientY: box.y + 20 });
+    await chart.dispatchEvent("pointermove", { pointerType: "touch", pointerId: 1, bubbles: true, clientX: box.x + box.width * 0.7, clientY: box.y + 20 });
+    await expect.poll(() => page.getByTestId("stream-chart-pace").innerText()).not.toBe(mouseText);
+    await chart.dispatchEvent("pointerup", { pointerType: "touch", pointerId: 1, bubbles: true, clientX: box.x + box.width * 0.7, clientY: box.y + 20 });
+    await expect(page.getByRole("button", { name: "关闭配速选定读数" })).toBeVisible();
+    await page.getByRole("button", { name: "关闭配速选定读数" }).click();
+    await expect(page.getByTestId("stream-chart-pace")).toContainText("均 ");
+  });
+
+  test("点击分段定位共享运动流读数", async ({ page }) => {
+    await page.goto(`/activities/${await findRunWithPace(page.request)}`);
+    const perKilometer = page.getByRole("tab", { name: "每公里" });
+    await expect(page.getByTestId("activity-splits")).toBeVisible();
+    if (await perKilometer.isVisible()) await perKilometer.click();
+    await page.getByRole("button", { name: "查看第 1 段运动流" }).click();
+    await expect(page.getByTestId("stream-chart-pace").locator("circle")).toBeVisible();
+    await expect(page.getByRole("button", { name: "关闭配速选定读数" })).toBeVisible();
   });
 
   test("renders GPS map when valid metadata lat/lon rows exist", async ({ page }) => {

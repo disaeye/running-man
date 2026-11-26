@@ -18,7 +18,7 @@
  *
  * `@tag: canonical-routes`
  */
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIResponse } from "@playwright/test";
 import {
   canonicalAnalysisSearch,
   canonicalCalendarSearch,
@@ -65,8 +65,7 @@ const ANALYSIS_INPAGE_ALIASES: readonly InPageAlias[] = [
 const CALENDAR_INPAGE_ALIASES: readonly InPageAlias[] = [
   { search: "?view=week", settled: "/calendar" },
   { search: "?view=month", settled: "/calendar?view=month" },
-  { search: "?view=list", settled: "/calendar?view=list" },
-  { search: "?view=strength", settled: "/calendar?view=list" },
+  // 流水视图与力量视图已是独立路由，由 middleware 在到达页面前改写
   { search: "?view=bad", settled: "/calendar" },
   { search: "?view=MONTH", settled: "/calendar" },
 ];
@@ -102,6 +101,42 @@ test.describe("canonical routes", () => {
         expect(location).toBe(aliasCase.canonical);
       });
     }
+  });
+
+  test.describe("redirect aliases (middleware)", () => {
+    // 每个用例写死请求路径：只访问本站路由，Location 可能是绝对地址，只比较路径与查询串。
+    const locationPath = (response: APIResponse) => {
+      const location = response.headers()["location"] ?? "";
+      const originEnd = location.startsWith("http") ? location.indexOf("/", location.indexOf("//") + 2) : 0;
+      return location.slice(originEnd);
+    };
+
+    test("/calendar?view=list settles on /activities", async ({ request }) => {
+      const response = await request.get("/calendar?view=list", {
+        maxRedirects: 0,
+        failOnStatusCode: false,
+      });
+      expect(response.status()).toBe(308);
+      expect(locationPath(response)).toBe("/activities");
+    });
+
+    test("/calendar?view=strength settles on /strength", async ({ request }) => {
+      const response = await request.get("/calendar?view=strength", {
+        maxRedirects: 0,
+        failOnStatusCode: false,
+      });
+      expect(response.status()).toBe(308);
+      expect(locationPath(response)).toBe("/strength");
+    });
+
+    test("/settings?section=strength settles on /strength", async ({ request }) => {
+      const response = await request.get("/settings?section=strength", {
+        maxRedirects: 0,
+        failOnStatusCode: false,
+      });
+      expect(response.status()).toBe(308);
+      expect(locationPath(response)).toBe("/strength");
+    });
   });
 
   test.describe("in-page analysis alias settling", () => {

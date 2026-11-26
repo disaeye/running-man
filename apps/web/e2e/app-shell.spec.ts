@@ -191,12 +191,13 @@ test.describe("app shell", () => {
       await expect(page.getByTestId("sidebar")).toHaveCount(0);
     });
 
-    test("desktop content uses the narrow reference layout", async ({ page }) => {
+    test("desktop content column stays within 64rem", async ({ page }) => {
       await page.goto("/");
-      const nav = page.locator('[data-layout-token="mobile-nav"] > div');
-      const box = await nav.boundingBox();
-      expect(box).not.toBeNull();
-      expect(box!.width).toBeLessThanOrEqual(672);
+      const content = page.locator(".shell-main-inner");
+      await expect(content).toBeVisible();
+      const width = await content.evaluate((element) => element.getBoundingClientRect().width);
+      expect(width).toBeGreaterThan(672);
+      expect(width).toBeLessThanOrEqual(1024);
     });
 
     test("desktop navigation links preserve their routes", async ({ page }) => {

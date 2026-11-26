@@ -54,9 +54,8 @@ test.describe("training interactions", () => {
     await expect(page.getByTestId("training-period-summary")).toBeVisible({ timeout: 15000 });
     await page.getByRole("button", { name: "上一周" }).click();
     await expect(page.getByTestId("training-period-summary")).toContainText("该周训练汇总");
-    await page.getByLabel("展开训练操作").click();
-    await page.getByRole("menuitem", { name: /记录训练/ }).click();
-    await page.getByRole("button", { name: /编排训练计划/ }).click();
+    await page.getByTestId("training-add-button").click();
+    await page.getByRole("button", { name: /编排单日课表/ }).click();
     await expect(page.locator("#wb-date")).toHaveValue("2026-10-26");
   });
 
@@ -94,6 +93,8 @@ test.describe("training interactions", () => {
     });
 
     await page.goto("/calendar");
+    await page.getByLabel("编辑 2026-11-04 训练").click();
+    await page.getByRole("button", { name: /今日体感/ }).click();
     const controls = page.getByTestId("training-subjective-controls");
     await expect(controls).toBeVisible({ timeout: 15000 });
     await controls.getByRole("button", { name: "酸痛度 3 偏重" }).click();
@@ -169,10 +170,10 @@ test.describe("training interactions", () => {
   });
 
   for (const vp of [{ width: 375, height: 812 }, { width: 1440, height: 900 }]) {
-    test(`视口 ${vp.width}x${vp.height} 下周/月/流水视图无横向溢出`, async ({ page }) => {
+    test(`视口 ${vp.width}x${vp.height} 下周/月历与记录、力量页无横向溢出`, async ({ page }) => {
       await page.setViewportSize(vp);
       await setupCalendarMocks(page);
-      for (const path of ["/calendar", "/calendar?view=month", "/calendar?view=list"]) {
+      for (const path of ["/calendar", "/calendar?view=month", "/activities", "/strength"]) {
         await page.goto(path);
         await page.waitForTimeout(500);
         const overflow = await page.evaluate(() =>

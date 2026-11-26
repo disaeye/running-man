@@ -192,7 +192,7 @@ function parseColor(color: string): [number, number, number] {
 }
 
 async function latestActivityRoute(page: Page): Promise<VisualRoute | null> {
-  await page.goto("/calendar?view=list", { waitUntil: "networkidle" });
+  await page.goto("/activities", { waitUntil: "networkidle" });
   const activityLink = page.locator('a[href*="/activities/"]').first();
   if ((await activityLink.count()) === 0) return null;
   const href = await activityLink.getAttribute("href");

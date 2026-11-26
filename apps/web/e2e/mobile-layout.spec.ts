@@ -186,17 +186,17 @@ test.describe("landscape phone (844x390)", () => {
 });
 
 test.describe("new affordances", () => {
-  test("calendar week view has jump-to-date", async ({ page }) => {
-    await page.goto("/calendar?view=week", { waitUntil: "load" });
+  test("calendar month view has jump-to-date", async ({ page }) => {
+    await page.goto("/calendar?view=month", { waitUntil: "load" });
     const jump = page.getByTestId("jump-to-date");
     await expect(jump).toBeVisible({ timeout: 10000 });
   });
 
-  test("calendar list view links to /activities", async ({ page }) => {
-    await page.goto("/calendar?view=list", { waitUntil: "load" });
-    const entry = page.getByTestId("browse-all-activities");
-    await expect(entry).toBeVisible({ timeout: 10000 });
-    await entry.click();
+  test("training tabs link the calendar to the archive", async ({ page }) => {
+    await page.goto("/calendar", { waitUntil: "load" });
+    const tab = page.getByTestId("training-tab-activities");
+    await expect(tab).toBeVisible({ timeout: 10000 });
+    await tab.click();
     await page.waitForURL(/\/activities$/);
   });
 });

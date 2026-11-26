@@ -9,7 +9,8 @@ export const REQUIRED_PUBLIC_IDENTITIES = ["public-login", "public-register", "p
 export const REQUIRED_SHARE_IDENTITIES = ["share-ready", "share-expired", "share-not-found", "share-network-error"] as const;
 export const REQUIRED_ACTIVITY_IDENTITIES = ["activity-valid", "activity-not-found", "activity-partial-streams"] as const;
 export const REQUIRED_STRENGTH_ACTIVITY_IDENTITIES = ["activity-strength-valid", "activity-strength-empty"] as const;
-export const REQUIRED_CALENDAR_IDENTITIES = ["calendar-week", "calendar-month", "calendar-list"] as const;
+export const REQUIRED_CALENDAR_IDENTITIES = ["calendar-week", "calendar-month"] as const;
+export const REQUIRED_TRAINING_IDENTITIES = ["training-activities", "training-strength"] as const;
 export const REQUIRED_ANALYSIS_IDENTITIES = [
   "analysis-load",
   "analysis-performance",
@@ -28,6 +29,7 @@ export type RequiredIdentity =
   | (typeof REQUIRED_ACTIVITY_IDENTITIES)[number]
   | (typeof REQUIRED_STRENGTH_ACTIVITY_IDENTITIES)[number]
   | (typeof REQUIRED_CALENDAR_IDENTITIES)[number]
+  | (typeof REQUIRED_TRAINING_IDENTITIES)[number]
   | (typeof REQUIRED_ANALYSIS_IDENTITIES)[number]
   | (typeof REQUIRED_SETTINGS_IDENTITIES)[number]
   | (typeof REQUIRED_PROFILE_IDENTITIES)[number]
@@ -61,6 +63,7 @@ const REQUIRED_IDENTITIES = [
   ...REQUIRED_ACTIVITY_IDENTITIES,
   ...REQUIRED_STRENGTH_ACTIVITY_IDENTITIES,
   ...REQUIRED_CALENDAR_IDENTITIES,
+  ...REQUIRED_TRAINING_IDENTITIES,
   ...REQUIRED_ANALYSIS_IDENTITIES,
   ...REQUIRED_SETTINGS_IDENTITIES,
   ...REQUIRED_PROFILE_IDENTITIES,
@@ -85,7 +88,8 @@ const DASHBOARD_ROUTES = [
   route("dashboard-today", "dashboard", "today-home", "/", ["ready", "empty", "error"]),
   route("calendar-week", "dashboard", "calendar-week", "/calendar?view=week", ["week", "empty", "error"]),
   route("calendar-month", "dashboard", "calendar-month", "/calendar?view=month", ["month", "empty", "error"]),
-  route("calendar-list", "dashboard", "calendar-list", "/calendar?view=list", ["list", "empty", "error"]),
+  route("training-activities", "dashboard", "training-activities", "/activities", ["ready", "empty", "error"]),
+  route("training-strength", "dashboard", "training-strength", "/strength", ["ready", "empty", "error"]),
   route("analysis-load", "dashboard", "analysis-load", "/analysis?tab=load", ["load", "sparse", "error"]),
   route("analysis-performance", "dashboard", "analysis-performance", "/analysis?tab=performance", ["performance", "sparse", "error"]),
   route("analysis-body", "dashboard", "analysis-body", "/analysis?tab=body", ["body", "sparse", "error"]),
@@ -108,14 +112,15 @@ const SETTINGS_ROUTES = [
 ] as const;
 
 const REDIRECT_ALIASES = [
-  alias("alias-activities", "/activities", "calendar-list", "/calendar?view=list"),
+  alias("alias-calendar-list", "/calendar?view=list", "training-activities", "/activities"),
+  alias("alias-strength-view", "/calendar?view=strength", "training-strength", "/strength"),
+  alias("alias-settings-strength", "/settings?section=strength", "training-strength", "/strength"),
   alias("alias-plan", "/plan", "calendar-week", "/calendar"),
   alias("alias-calendar-full", "/calendar/full", "calendar-week", "/calendar"),
   alias("alias-health", "/health", "analysis-load", "/analysis?tab=load"),
   alias("alias-trends", "/trends", "analysis-load", "/analysis?tab=load"),
   alias("alias-data", "/data", "settings-data", "/settings?section=data"),
   alias("alias-export", "/export", "settings-data", "/settings?section=data"),
-  alias("alias-strength-view", "/calendar?view=strength", "calendar-list", "/calendar?view=list"),
   alias("alias-performance", "/performance", "analysis-performance", "/analysis?tab=performance"),
   alias("alias-gear", "/gear", "settings-account", "/settings?section=account"),
   alias("alias-library", "/library", "settings-account", "/settings?section=account"),

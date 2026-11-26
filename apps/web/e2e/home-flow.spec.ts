@@ -9,7 +9,7 @@ import { test, expect, type Page } from "@playwright/test";
  * 主要内容按 testid 定位，布局调整后仍检查训练与恢复的阅读顺序。
  */
 
-const BLOCKS = ["home-workout", "home-recovery"] as const;
+const BLOCKS = ["home-workout", "home-recovery", "home-load", "home-week-progress"] as const;
 
 async function blockTops(page: Page) {
   return page.evaluate((ids) => {
@@ -50,15 +50,32 @@ test.describe("home page information flow", () => {
       return;
     }
 
-    const tops = await blockTops(page);
-    const workoutBottom = await page.evaluate(
-      () => Math.round(document.querySelector('[data-testid="home-workout"]')!.getBoundingClientRect().bottom),
-    );
+    const layout = await page.evaluate(() => {
+      const box = (id: string) => {
+        const el = document.querySelector(`[data-testid="${id}"]`);
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { top: Math.round(r.top), left: Math.round(r.left), bottom: Math.round(r.bottom) };
+      };
+      return { workout: box("home-workout"), recovery: box("home-recovery") };
+    });
 
-    expect(tops["home-workout"], "today's workout must be the first content block").toBeLessThan(
-      tops["home-recovery"] ?? shellHeight,
+    expect(layout.workout, "today's workout card must render").not.toBeNull();
+    const workoutBox = layout.workout!;
+    if (layout.recovery) {
+      expect(workoutBox.top, "today's workout must start at or above recovery").toBeLessThanOrEqual(
+        layout.recovery.top,
+      );
+      if (workoutBox.top === layout.recovery.top) {
+        expect(
+          workoutBox.left,
+          "today's workout must lead in the left primary column",
+        ).toBeLessThan(layout.recovery.left);
+      }
+    }
+    expect(workoutBox.bottom, "the workout hero must fit on the first screen").toBeLessThan(
+      shellHeight,
     );
-    expect(workoutBottom, "the workout hero must fit on the first screen").toBeLessThan(shellHeight);
   });
 
   test("narrow screens show the workout before recovery", async ({ page }) => {
@@ -74,6 +91,7 @@ test.describe("home page information flow", () => {
       await expect(page.getByTestId("home-starting-point")).toBeVisible();
       return;
     }
+    expect(present).toEqual([...BLOCKS]);
     for (let index = 1; index < present.length; index += 1) {
       const previous = present[index - 1]!;
       const current = present[index]!;
@@ -85,33 +103,47 @@ test.describe("home page information flow", () => {
   });
 });
 
-test.describe("home notices", () => {
-  // 通知区呈现：未读通知从 notifications API 进首页，一条一行，看了即消。
-  // 走真实 API（本套件全部真库运行），先读接口拿当前未读数再断言页面行为。
+test.describe("profile notices", () => {
+  // 通知区呈现：未读通知从 notifications API 进「我的」页，一条一行，看了即消。
+  // 页面只展示当天生成或需要处理（warning / error）的提醒，往日的信息类提醒不再出现。
+  // 走真实 API（本套件全部真库运行），先读接口按同一规则算出应出现的条数再断言页面行为。
   test("unread notices render in the strip and dismiss on read", async ({ page }) => {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/profile", { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(4000);
 
-    const strip = page.getByTestId("home-notices");
+    const strip = page.getByTestId("profile-notices");
     const response = await page.request.get("/api/v1/notifications?unread_only=true");
     expect(response.status()).toBe(200);
-    const unread = (await response.json()) as unknown[];
+    const unread = (await response.json()) as { body: string | null; created_at: string; severity: string; title: string }[];
+    const athlete = await (await page.request.get("/api/v1/athletes/me")).json();
+    const dayKey = (instant: string) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: athlete.timezone as string, year: "numeric", month: "2-digit", day: "2-digit" })
+        .format(new Date(instant));
+    const relevant = unread
+      .filter(
+        (notice) => notice.severity !== "info" || dayKey(notice.created_at) === dayKey(new Date().toISOString()),
+      )
+      // 同一天内重复生成的同文提醒在页面上合并成一条。
+      .filter((notice, index, all) => all.findIndex((other) => other.title === notice.title && other.body === notice.body) === index);
 
-    if (unread.length === 0) {
-      // 没有未读时通知区不渲染——空态诚实。
+    if (relevant.length === 0) {
+      // 没有需要展示的提醒时通知区不渲染——空态诚实。
       await expect(strip).toHaveCount(0);
       return;
     }
 
-    // 有未读时逐条呈现，最多三条；「知道了」标记已读后该条消失。
+    // 渐进式披露：默认仅展示最高优先级 1 条；「知道了」标记已读后该条消失（后面有则补位）。
     await expect(strip).toBeVisible();
     const items = strip.getByRole("listitem");
-    expect(await items.count()).toBe(Math.min(unread.length, 3));
+    expect(await items.count()).toBe(1);
 
-    const first = items.first();
-    await first.getByRole("button", { name: "知道了" }).click();
-    await expect(strip.getByRole("listitem")).toHaveCount(
-      Math.min(unread.length, 3) - 1,
-    );
+    if (relevant.length > 1) {
+      await strip.getByRole("button", { name: /展开其余/ }).click();
+      expect(await items.count()).toBe(Math.min(relevant.length, 5));
+    }
+
+    const dismissedText = (await items.first().innerText()).replaceAll("\n", "").trim();
+    await items.first().getByRole("button", { name: "知道了" }).click();
+    await expect(strip.locator("li", { hasText: dismissedText.slice(0, 24) })).toHaveCount(0);
   });
 });

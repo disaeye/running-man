@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { mockDashboard } from "./ux-dashboard-mocks";
 
 /**
- * 训练页的认知模型：今天该做什么、这周完成度、空状态分三级、历史周不谈今天。
+ * 训练页的认知模型：今天该做什么、这周完成度、空状态只提示一次、历史周不谈今天。
  * 数据通过 route 精确控制，避免依赖生产账户的活动时间。
  */
 const FIXED_NOW = "2026-11-04T04:00:00Z";
@@ -78,62 +78,65 @@ async function mockTraining(
   }));
 }
 
+async function openToday(page: Page) {
+  await page.getByLabel("编辑 2026-11-04 训练").click();
+}
+
 test.describe("training cognition", () => {
   test.beforeEach(async ({ page }) => {
     await page.clock.setFixedTime(new Date(FIXED_NOW));
   });
 
-  test("今天已完成时列出活动与 TSS", async ({ page }) => {
+  test("今天已完成时周列表直接列出活动与 TSS", async ({ page }) => {
     await mockTraining(page, { activities: [activity("a1")] });
     await page.goto("/calendar");
-    const focus = page.getByTestId("training-focus");
-    await expect(focus).toBeVisible({ timeout: 15000 });
-    await expect(focus).toContainText("今天已经练过");
-    await expect(focus).toContainText("晨跑");
-    await expect(focus).toContainText("TSS 80");
+    const day = page.getByTestId("plan-week-day-2026-11-04");
+    await expect(day).toBeVisible({ timeout: 15000 });
+    await expect(day).toContainText("晨跑");
+    await expect(day).toContainText("TSS 80");
+    await expect(day).toContainText("已完成");
   });
 
-  test("今天待完成时给出课名、时长与预计 TSS", async ({ page }) => {
+  test("今天待完成时周列表给出课名与时长", async ({ page }) => {
     await mockTraining(page, { events: [event("e1")] });
     await page.goto("/calendar");
-    const focus = page.getByTestId("training-focus");
-    await expect(focus).toBeVisible({ timeout: 15000 });
-    await expect(focus).toContainText("今天要练");
-    await expect(focus).toContainText("阈值跑");
-    await expect(focus).toContainText("50 min");
-    await expect(focus).toContainText("预计 TSS 70");
+    const day = page.getByTestId("plan-week-day-2026-11-04");
+    await expect(day).toBeVisible({ timeout: 15000 });
+    await expect(day).toContainText("阈值跑");
+    await expect(day).toContainText("50 min");
+    await expect(day).toContainText("待完成");
   });
 
   test("今天无安排时不假装有休息日", async ({ page }) => {
     await mockTraining(page, {});
     await page.goto("/calendar");
-    const focus = page.getByTestId("training-focus");
-    await expect(focus).toBeVisible({ timeout: 15000 });
-    await expect(focus).toContainText("今天没有安排");
-    await expect(focus).not.toContainText("休息日");
+    const day = page.getByTestId("plan-week-day-2026-11-04");
+    await expect(day).toBeVisible({ timeout: 15000 });
+    await expect(day).toContainText("没有安排");
+    await expect(day).not.toContainText("休息日");
   });
 
   test("未连接数据源时给连接引导", async ({ page }) => {
     await mockTraining(page, { connected: false });
     await page.goto("/calendar");
-    const empty = page.getByTestId("training-empty-state");
-    await expect(empty).toBeVisible({ timeout: 15000 });
-    await expect(empty).toContainText("还没有连接数据源");
-    await expect(empty.getByRole("link", { name: "去连接" })).toBeVisible();
+    const notice = page.getByTestId("training-connection-notice");
+    await expect(notice).toBeVisible({ timeout: 15000 });
+    await expect(notice).toContainText("还没有连接数据源");
+    await expect(notice.getByRole("link", { name: "去连接" })).toBeVisible();
   });
 
-  test("已连接但整周空白时折叠计划对比列并给编排入口", async ({ page }) => {
+  test("已连接但整周空白时只在一处提示未编排", async ({ page }) => {
     await mockTraining(page, {});
     await page.goto("/calendar");
-    const empty = page.getByTestId("training-empty-state");
     const summary = page.getByTestId("training-period-summary");
-    await expect(empty).toBeVisible({ timeout: 15000 });
-    await expect(empty).toContainText("这周还没有安排");
+    await expect(summary).toBeVisible({ timeout: 15000 });
     await expect(summary).toContainText("该周尚未编排计划");
+    await expect(summary).toContainText("编排本周");
     await expect(summary).not.toContainText("差值");
+    await expect(page.getByTestId("training-connection-notice")).toHaveCount(0);
   });
 
-  test("同一天有晨跑但晚上有未完成阈值课时，今天卡优先提示待完成计划", async ({ page }) => {
+  test("同一天有晨跑但晚上有未完成阈值课时，今日行标为部分完成", async ({ page }) => {
     await mockTraining(page, {
       activities: [activity("a1", { name: "晨间轻松跑", duration_s: 1800 })],
       events: [
@@ -146,11 +149,10 @@ test.describe("training cognition", () => {
       ],
     });
     await page.goto("/calendar");
-    const focus = page.getByTestId("training-focus");
-    await expect(focus).toBeVisible({ timeout: 15000 });
-    await expect(focus).toContainText("今天还要练");
-    await expect(focus).toContainText("晚间阈值跑");
-    await expect(page.getByTestId("plan-week-day-2026-11-04")).toContainText("部分完成");
+    const day = page.getByTestId("plan-week-day-2026-11-04");
+    await expect(day).toBeVisible({ timeout: 15000 });
+    await expect(day).toContainText("晚间阈值跑");
+    await expect(day).toContainText("部分完成");
   });
 
   test("课表接口 500 失败时显示错误和重试，不显示这周还没有安排", async ({ page }) => {
@@ -164,45 +166,42 @@ test.describe("training cognition", () => {
     await page.goto("/calendar");
     await expect(page.getByTestId("training-error-state")).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("button", { name: "重新尝试" })).toBeVisible();
-    await expect(page.getByTestId("training-empty-state")).toHaveCount(0);
+    await expect(page.getByTestId("training-period-summary")).toHaveCount(0);
   });
 
-  test("有计划未完成时列出差哪几课", async ({ page }) => {
-    await mockTraining(page, { events: [event("e1", { start_time: "2026-11-03T04:00:00Z" })] });
+  test("当日详情里的今日体感默认收起，点开录入", async ({ page }) => {
+    await mockTraining(page, { activities: [activity("a1")] });
     await page.goto("/calendar");
-    const empty = page.getByTestId("training-empty-state");
-    await expect(empty).toBeVisible({ timeout: 15000 });
-    await expect(empty).toContainText("阈值跑");
+    await openToday(page);
+    const toggle = page.getByRole("button", { name: /今日体感/ });
+    await expect(toggle).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("training-subjective-controls")).toHaveCount(0);
+    await toggle.click();
+    await expect(page.getByTestId("training-subjective-controls")).toBeVisible();
   });
 
-  test("375px 首屏先给今天与周对照，不铺七张空卡", async ({ page }) => {
+  test("375px 首屏先给周摘要与周日程", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await mockTraining(page, {});
     await page.goto("/calendar");
-    const focus = page.getByTestId("training-focus");
     const summary = page.getByTestId("training-period-summary");
-    await expect(focus).toBeVisible({ timeout: 15000 });
-    await expect(summary).toBeVisible();
-    const tops = await page.evaluate(() => ({
-      focus: document.querySelector('[data-testid="training-focus"]')?.getBoundingClientRect().top ?? Infinity,
-      summary: document.querySelector('[data-testid="training-period-summary"]')?.getBoundingClientRect().top ?? Infinity,
-      viewport: window.innerHeight,
-    }));
-    expect(tops.focus).toBeLessThan(tops.summary);
-    expect(tops.summary).toBeLessThan(tops.viewport);
-    expect(await page.locator('[data-testid^="plan-week-day-"]').count()).toBeLessThan(7);
+    await expect(summary).toBeVisible({ timeout: 15000 });
+    const weekTop = await page.getByTestId("plan-week-grid").evaluate((element) => element.getBoundingClientRect().top);
+    const summaryTop = await summary.evaluate((element) => element.getBoundingClientRect().top);
+    expect(summaryTop).toBeLessThan(weekTop);
+    expect(weekTop).toBeLessThan(812);
+    await expect(page.locator('[data-testid^="plan-week-day-"]')).toHaveCount(7);
     const overflow = await page.evaluate(() =>
       document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
   });
 
-  test("回看历史周时不出现今天的记录块", async ({ page }) => {
+  test("回看历史周时不出现今天标记", async ({ page }) => {
     await mockTraining(page, { activities: [activity("a1")], events: [event("e1")] });
     await page.goto("/calendar");
-    await expect(page.getByTestId("training-focus")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("plan-week-day-2026-11-04")).toBeVisible({ timeout: 15000 });
     await page.getByRole("button", { name: "上一周" }).click();
-    await expect(page.getByTestId("training-focus")).toHaveCount(0);
-    await expect(page.getByTestId("training-subjective")).toHaveCount(0);
+    await expect(page.getByTestId("plan-week-day-2026-11-04")).toHaveCount(0);
   });
 });

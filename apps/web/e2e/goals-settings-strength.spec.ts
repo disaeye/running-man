@@ -48,22 +48,23 @@ test.describe("goals settings strength", () => {
     });
   });
 
-  test.describe("strength workflow (own route, linked from the calendar)", () => {
-    test("calendar links to the strength route", async ({ page }) => {
-      await page.goto("/calendar?view=list");
-      // 入口已收进 FAB 菜单：展开后按 href 定位，不受同名活动干扰。
-      await page.getByRole("button", { name: "展开训练操作" }).click();
-      const entry = page.locator('a[href="/strength"]');
-      await expect(entry).toBeVisible({ timeout: 10000 });
-      await entry.click();
+  test.describe("strength workflow (training tab of its own)", () => {
+    test("the shared header links the calendar to the strength workbench", async ({ page }) => {
+      await page.goto("/calendar");
+      const tab = page.getByTestId("training-tab-strength");
+      await expect(tab).toHaveAttribute("href", "/strength");
+      await tab.click();
       await page.waitForURL(/\/strength$/);
-      await expect(page.getByRole("heading", { name: "力量训练" }).first()).toBeVisible({ timeout: 10000 });
+      await expect(tab).toHaveAttribute("aria-current", "page");
+      await expect(page.locator('[data-shell-region="main"] h1')).toHaveText("训练");
+      await expect(page.getByRole("heading", { name: "动作库" }).first()).toBeVisible({ timeout: 10000 });
     });
 
     test("strength route shows muscle load analytics", async ({ page }) => {
       await page.goto("/strength");
-      await expect(page.getByText("近 4 周肌群训练量")).toBeVisible({ timeout: 10000 });
       await expect(page.getByRole("heading", { name: "动作库" })).toBeVisible({ timeout: 10000 });
+      await page.getByRole("button", { name: "历史与分析" }).click();
+      await expect(page.getByText("近 4 周肌群训练量")).toBeVisible({ timeout: 10000 });
     });
 
     test("strength route renders the strength training session page", async ({ page }) => {

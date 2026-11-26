@@ -26,15 +26,12 @@ test.describe("Profile and settings flow", () => {
 
     await expect(page.getByRole("heading", { name: "我的", exact: true })).toBeVisible();
     await expect(page.getByTestId("settings-section-data")).toHaveCount(0);
-    await expect(page.locator("h2").first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "跑鞋与装备", exact: true })).toBeVisible();
-    // 新增跑鞋改为弹窗表单：未打开前页面上没有输入项。
-    await expect(page.getByLabel("名称")).toHaveCount(0);
-    await page.getByRole("button", { name: "新增跑鞋" }).click();
-    await expect(page.getByRole("dialog").getByLabel("名称")).toBeVisible();
-    await expect(page.getByRole("button", { name: "添加跑鞋" })).toBeDisabled();
-    await page.getByRole("button", { name: "取消" }).click();
-    await expect(page.getByLabel("名称")).toHaveCount(0);
+    await expect(page.getByTestId("profile-pb-grid")).toBeVisible();
+    // 没有登记跑鞋时，跑鞋卡换成一行待登记入口；设置入口在两种状态下都存在。
+    await expect(page.getByRole("heading", { name: "跑鞋与装备", exact: true }).or(page.getByTestId("profile-pending-setup"))).toBeVisible();
+    // 个人画像页保持只读：不在此页暴露跑鞋编辑弹窗或生理重算按钮
+    await expect(page.getByRole("button", { name: "新增跑鞋" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "自动测算" })).toHaveCount(0);
 
     const zonesLink = page.getByRole("link", { name: "调整训练区间" });
     await expect(zonesLink).toHaveAttribute("href", "/settings?section=training");
@@ -43,7 +40,21 @@ test.describe("Profile and settings flow", () => {
     await expect(page.getByRole("heading", { name: "设置", exact: true })).toBeVisible();
     await page.getByTestId("settings-page").getByRole("link", { name: "我的" }).click();
     await expect(page).toHaveURL(/\/profile$/);
-    await expect(page.getByRole("heading", { name: "我的", exact: true })).toBeVisible();
+
+    // 跑鞋管理入口跳转到「设置 → 账户与偏好」后再执行新增跑鞋弹窗交互
+    const manageGearLink = page.getByRole("link", { name: /管理装备|去登记/ }).first();
+    await expect(manageGearLink).toHaveAttribute("href", "/settings?section=account");
+    await manageGearLink.click();
+    await expect(page).toHaveURL(/\/settings\?section=account/);
+    await expect(page.getByRole("heading", { name: "跑鞋与装备", exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByLabel("名称", { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "新增跑鞋" }).click();
+    await expect(page.getByRole("dialog").getByLabel("名称", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "添加跑鞋" })).toBeDisabled();
+    await page.getByRole("button", { name: "取消" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByLabel("名称", { exact: true })).toHaveCount(0);
   });
 
   test("navigates between setting sections via deep links", async ({ page }) => {
@@ -58,10 +69,10 @@ test.describe("Profile and settings flow", () => {
     }
   });
 
-  test("legacy strength section deep link redirects to the calendar log view", async ({ page }) => {
-    // Middleware drops the settings query and lands on the log view directly.
+  test("legacy strength section deep link redirects to the strength workbench", async ({ page }) => {
+    // Middleware drops the settings query and lands on the strength workbench.
     await page.goto("/settings?section=strength");
-    await expect(page).toHaveURL(/\/calendar\?view=list/);
+    await expect(page).toHaveURL(/\/strength$/);
   });
 
   test("legacy profile section deep link lands on account", async ({ page }) => {
