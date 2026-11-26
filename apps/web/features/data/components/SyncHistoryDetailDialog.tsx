@@ -88,7 +88,7 @@ export function SyncHistoryDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl" mobileSheet>
         <DialogHeader>
           <div className="flex items-center justify-between gap-4 pr-6">
             <div className="flex items-center gap-2.5">
@@ -222,16 +222,16 @@ export function SyncHistoryDetailDialog({
 
           {/* Detailed JSON Payload if available */}
           {detailObj && Object.keys(detailObj).length > 0 && (
-            <div>
-              <h4 className="text-subheadline font-semibold text-text-primary mb-2">
-                深度元数据与诊断信息 (Detail)
-              </h4>
-              <div className="p-3 rounded-xl bg-surface-sunken border border-border-default max-h-60 overflow-y-auto">
+            <details className="rounded-xl border border-border-default bg-surface-sunken/40 p-3">
+              <summary className="cursor-pointer select-none text-subheadline font-semibold text-text-primary">
+                查看原始诊断数据 (JSON)
+              </summary>
+              <div className="mt-2 p-3 rounded-lg bg-surface-sunken border border-border-default max-h-60 overflow-y-auto">
                 <pre className="text-caption2 font-mono text-text-secondary whitespace-pre-wrap break-all">
                   {JSON.stringify(detailObj, null, 2)}
                 </pre>
               </div>
-            </div>
+            </details>
           )}
 
           <div className="flex justify-end pt-2">

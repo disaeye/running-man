@@ -7,7 +7,6 @@ import {
   loadScale,
   periodLabel,
   monthLabel,
-  listLabel,
 } from "./training-week";
 
 const FROM = "2026-11-02";
@@ -97,7 +96,7 @@ describe("buildWeekModel", () => {
     expect(model.comparison.metrics.sessions).toEqual({ planned: 0, actual: 0, delta: 0 });
   });
 
-  it("只渲染有内容或今天的日子，其余折叠成计数", () => {
+  it("只渲染有内容或今天的日子", () => {
     const model = buildWeekModel({
       activities: [activity("a1", "2026-11-03")],
       events: [event("e1", "2026-11-06")],
@@ -106,7 +105,18 @@ describe("buildWeekModel", () => {
     expect(model.days.map((day) => day.day)).toEqual([
       "2026-11-03", "2026-11-04", "2026-11-06",
     ]);
-    expect(model.hiddenCount).toBe(4);
+  });
+
+  it("周历可以显示整周，周期汇总只计算范围内的记录和计划", () => {
+    const model = buildWeekModel({
+      activities: [activity("before", "2026-11-01", { tss: 90 }), activity("inside", TODAY, { tss: 20 })],
+      events: [event("after", "2026-11-09", { predicted_tss: 50 })],
+      timezone: TZ, from: FROM, to: TO, today: TODAY, includeEmptyDays: true,
+    });
+    expect(model.days).toHaveLength(7);
+    expect(model.days[0]?.state).toBe("empty");
+    expect(model.comparison.metrics.tss.actual).toBe(20);
+    expect(model.comparison.hasPlan).toBe(false);
   });
 
   it("过去有计划无活动标未完成，未来不评价，无计划无记录写没有安排", () => {
@@ -217,9 +227,8 @@ describe("loadScale", () => {
 });
 
 describe("范围标签", () => {
-  it("周、月、流水各自给出可读范围", () => {
+  it("周与月各自给出可读范围", () => {
     expect(periodLabel(FROM, TO)).toBe("11-02 – 11-08");
     expect(monthLabel("2026-11")).toBe("2026 年 11 月");
-    expect(listLabel(90)).toBe("最近 90 天");
   });
 });

@@ -1,6 +1,8 @@
 "use client";
 
-import useSWR from "swr";
+import { useEffect, useRef } from "react";
+import useSWR, { useSWRConfig } from "swr";
+import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import {
   backfillIntegrationApiV1IntegrationsSourceBackfillPost,
@@ -126,6 +128,8 @@ export function sourceCoverageKey(source: IntegrationSource) {
  * is still visible when the athlete comes back.
  */
 export function useSyncJob(source: IntegrationSource) {
+  const { mutate: globalMutate } = useSWRConfig();
+  const seenActiveIdRef = useRef<string | null>(null);
   const { data, error, isLoading, mutate } = useSWR<SyncJob | null>(
     syncJobKey(source),
     {
@@ -138,6 +142,19 @@ export function useSyncJob(source: IntegrationSource) {
         ).then((raw) => (raw === null ? null : mapJob(raw))),
     },
   );
+
+  useEffect(() => {
+    if (!data) return;
+    if (isJobActive(data)) {
+      seenActiveIdRef.current = data.id;
+      return;
+    }
+    if (seenActiveIdRef.current !== data.id) return;
+    seenActiveIdRef.current = null;
+    if (data.status === "success") {
+      void invalidateDataCards(globalMutate, source);
+    }
+  }, [data, globalMutate, source]);
 
   return {
     job: data ?? null,

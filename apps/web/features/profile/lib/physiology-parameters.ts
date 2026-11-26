@@ -109,29 +109,33 @@ export function buildPhysiologyParameters({
       key: "lthr",
       label: "乳酸阈心率 LTHR",
       value: lthrValue != null ? `${Math.round(lthrValue)} bpm` : null,
-      source: lthr?.source ?? (lthrValue != null ? "estimate" : null),
-      dateLabel: effectiveDate(lthr?.day),
+      source: lthr?.source ?? (lthrValue != null ? "manual" : null),
+      dateLabel: lthr ? effectiveDate(lthr.day) : lthrValue != null ? "来自当前配置" : null,
     },
     {
       key: "threshold_pace",
       label: "阈值配速",
       value: paceValue != null ? `${formatPaceFromSeconds(Math.round(paceValue))}/km` : null,
-      source: pace?.source ?? (paceValue != null ? "estimate" : null),
-      dateLabel: effectiveDate(pace?.day),
+      source: pace?.source ?? (paceValue != null ? "manual" : null),
+      dateLabel: pace ? effectiveDate(pace.day) : paceValue != null ? "来自当前配置" : null,
     },
     {
       key: "hr_max",
       label: "最大心率 HRmax",
       value: hrMaxValue != null ? `${Math.round(hrMaxValue)} bpm` : null,
       source: hrMax?.source ?? (hrMaxValue != null ? "estimate" : null),
-      dateLabel: effectiveDate(hrMax?.day),
+      dateLabel: hrMax ? effectiveDate(hrMax.day) : hrMaxValue != null ? "来自当前配置或年龄估算" : null,
     },
     {
       key: "resting_hr",
       label: "静息心率",
       value: restingValue != null ? `${Math.round(restingValue)} bpm` : null,
-      source: restingThreshold?.source ?? (restingValue != null ? "estimate" : null),
-      dateLabel: effectiveDate(restingThreshold?.day),
+      source: restingThreshold?.source ?? (restingValue != null ? "manual" : null),
+      dateLabel: restingThreshold
+        ? effectiveDate(restingThreshold.day)
+        : restingValue != null
+          ? "来自当前配置"
+          : null,
     },
   ];
 }

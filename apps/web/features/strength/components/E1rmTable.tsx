@@ -48,11 +48,11 @@ export function E1rmTable({ data }: E1rmTableProps) {
                 </div>
               </td>
               <td className="py-2.5 pr-4 text-right">
-                <Badge variant="info">
+                <Badge variant="info" className="num tabular-nums">
                   {row.maxEst.toFixed(1)} kg
                 </Badge>
               </td>
-              <td className="py-2.5 text-text-secondary">{row.date}</td>
+              <td className="num py-2.5 text-text-secondary">{row.date}</td>
             </tr>
           ))}
         </tbody>

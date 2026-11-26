@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import useSWR from "swr";
 import { Section } from "@shared/ui/Section";
+import { DisclosureCard } from "@shared/ui/DisclosureCard";
+import { Badge } from "@shared/ui/Badge";
 import { Skeleton } from "@shared/ui/Skeleton";
 import { formatDate, formatDistance, formatDuration } from "@shared/lib/format";
 import { getSportConfig } from "@shared/config/sport-config";
@@ -55,27 +58,44 @@ export function FlaggedActivitiesSection() {
     void trashed.mutate();
   };
 
+  const ignoredCount = ignored.data?.length ?? 0;
+  const trashedCount = trashed.data?.length ?? 0;
+  const totalFlagged = ignoredCount + trashedCount;
+  const summaryText =
+    ignored.isLoading || trashed.isLoading
+      ? "正在读取记录状态…"
+      : totalFlagged === 0
+        ? "暂无已忽略或移入回收站的训练"
+        : `已忽略 ${ignoredCount} 条 · 回收站 ${trashedCount} 条`;
+
   return (
-    <div className="space-y-6" data-testid="flagged-activities">
-      <FlaggedList
-        title="已忽略的训练"
-        description="保留在活动记录中，但不计入跑步统计、个人最佳成绩与心率区间分析。"
-        rows={ignored.data}
-        loading={ignored.isLoading}
-        mode="ignored"
-        emptyLabel="没有被忽略的训练"
-        onChanged={reloadAll}
-      />
-      <FlaggedList
-        title="回收站"
-        description="已从列表隐藏，且再次同步时不会重新导入。可随时恢复。"
-        rows={trashed.data}
-        loading={trashed.isLoading}
-        mode="trash"
-        emptyLabel="回收站是空的"
-        onChanged={reloadAll}
-      />
-    </div>
+    <DisclosureCard
+      title="已忽略与回收站"
+      summary={summaryText}
+      badge={totalFlagged > 0 ? <Badge variant="neutral">{totalFlagged}</Badge> : undefined}
+      testId="flagged-activities"
+    >
+      <div className="space-y-6">
+        <FlaggedList
+          title="已忽略的训练"
+          description="保留在活动记录中，但不计入跑步统计、个人最佳成绩与心率区间分析。"
+          rows={ignored.data}
+          loading={ignored.isLoading}
+          mode="ignored"
+          emptyLabel="没有被忽略的训练"
+          onChanged={reloadAll}
+        />
+        <FlaggedList
+          title="回收站"
+          description="已从列表隐藏，且再次同步时不会重新导入。可随时恢复。"
+          rows={trashed.data}
+          loading={trashed.isLoading}
+          mode="trash"
+          emptyLabel="回收站是空的"
+          onChanged={reloadAll}
+        />
+      </div>
+    </DisclosureCard>
   );
 }
 
@@ -115,17 +135,27 @@ function FlaggedList({
             return (
               <li key={item.activityId} className="flex flex-wrap items-center gap-3 py-2.5">
                 <span
-                  className="rounded-full border border-border-subtle px-2 py-0.5 text-caption2 font-medium"
+                  className="rounded-full border border-border-subtle px-2 py-0.5 text-caption1 font-medium"
                   style={{ color: config.color }}
                 >
                   {config.label}
                 </span>
-                <span className="text-caption1 text-text-secondary">
-                  {formatDate(item.startTime)}
-                </span>
-                <span className="font-mono text-caption1 text-text-muted">
+                {mode === "ignored" ? (
+                  <Link
+                    href={`/activities/${item.activityId}`}
+                    className="text-caption1 font-medium text-text-secondary hover:text-accent-strong hover:underline"
+                  >
+                    {formatDate(item.startTime)} {item.startTime.slice(11, 16)}
+                  </Link>
+                ) : (
+                  <span className="text-caption1 text-text-secondary">
+                    {formatDate(item.startTime)} {item.startTime.slice(11, 16)}
+                  </span>
+                )}
+                <span className="font-mono text-caption1 tabular-nums text-text-muted">
                   {item.distanceM != null ? formatDistance(item.distanceM) : NO_VALUE}
                   {item.durationS != null && ` · ${formatDuration(item.durationS)}`}
+                  {item.flaggedAt ? ` · 操作于 ${formatDate(item.flaggedAt)}` : ""}
                 </span>
                 <span className="ml-auto">
                   <ActivityRestoreActions

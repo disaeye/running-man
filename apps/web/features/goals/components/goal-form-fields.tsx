@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Flag, Flame, Ruler, Scale, Timer, type LucideIcon } from "lucide-react";
 import { Input } from "@shared/ui/input";
 import { getSportConfig } from "@shared/config/sport-config";
@@ -77,19 +78,51 @@ export function EventFields({ form, update, errors, targetPace }: {
   errors: Record<string, string>;
   targetPace: number | null;
 }) {
-  const seconds = form.race_target_time_s ?? 0;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const setClock = (hours: number, minutes: number, secs: number) =>
-    update({ race_target_time_s: hours * 3600 + minutes * 60 + secs });
+  const [hoursStr, setHoursStr] = useState(() =>
+    form.race_target_time_s != null ? String(Math.floor(form.race_target_time_s / 3600)) : "",
+  );
+  const [minsStr, setMinsStr] = useState(() =>
+    form.race_target_time_s != null ? String(Math.floor((form.race_target_time_s % 3600) / 60)) : "",
+  );
+  const [secsStr, setSecsStr] = useState(() =>
+    form.race_target_time_s != null ? String(form.race_target_time_s % 60) : "",
+  );
+
+  const onClockChange = (part: "h" | "m" | "s", raw: string) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 2);
+    const max = part === "h" ? 47 : 59;
+    const clamped = digits === "" ? "" : String(Math.min(max, Number(digits)));
+    const nh = part === "h" ? clamped : hoursStr;
+    const nm = part === "m" ? clamped : minsStr;
+    const ns = part === "s" ? clamped : secsStr;
+    if (part === "h") setHoursStr(nh);
+    if (part === "m") setMinsStr(nm);
+    if (part === "s") setSecsStr(ns);
+    if (nh === "" && nm === "" && ns === "") {
+      update({ race_target_time_s: null });
+      return;
+    }
+    update({
+      race_target_time_s: (Number(nh) || 0) * 3600 + (Number(nm) || 0) * 60 + (Number(ns) || 0),
+    });
+  };
+
+  const selectPreset = (preset: { label: string; meters: number }) => {
+    const isDefaultOrEmpty =
+      !form.title.trim() || DISTANCE_PRESETS.some((item) => form.title.trim() === `${item.label}目标`);
+    update({
+      race_distance_m: preset.meters,
+      ...(isDefaultOrEmpty ? { title: `${preset.label}目标` } : {}),
+    });
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div>
         <span className="text-subheadline font-medium text-text-secondary">比赛距离</span>
         <div className="mt-2 flex flex-wrap gap-2">
           {DISTANCE_PRESETS.map((preset) => (
-            <button key={preset.label} type="button" onClick={() => update({ race_distance_m: preset.meters })}
+            <button key={preset.label} type="button" onClick={() => selectPreset(preset)}
               aria-pressed={form.race_distance_m === preset.meters}
               className={`tactile min-h-11 rounded-full border px-3.5 text-caption1 ${
                 form.race_distance_m === preset.meters ? "border-accent bg-accent/15 text-accent-strong" : "border-border-default text-text-secondary"}`}>
@@ -105,42 +138,50 @@ export function EventFields({ form, update, errors, targetPace }: {
       <div>
         <span className="text-subheadline font-medium text-text-secondary">目标完赛用时</span>
         <div className="mt-2 grid grid-cols-3 gap-2">
-          {([["小时", 3600, h], ["分", 60, m], ["秒", 1, s]] as const).map(([label, factor, value]) => (
+          {([["小时", "h", hoursStr, 47], ["分", "m", minsStr, 59], ["秒", "s", secsStr, 59]] as const).map(([label, part, val, max]) => (
             <label key={label} className="flex flex-col gap-1">
               <span className="text-caption1 text-text-muted">{label}</span>
-              <Input type="number" min={0} max={factor === 3600 ? 47 : 59} step={1} value={value || ""}
-                onChange={(e) => {
-                  const v = Number(e.target.value) || 0;
-                  setClock(factor === 3600 ? v : h, factor === 60 ? v : m, factor === 1 ? v : s);
-                }} />
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={max}
+                step={1}
+                placeholder="0"
+                value={val}
+                onChange={(e) => onClockChange(part, e.target.value)}
+              />
             </label>
           ))}
         </div>
         {targetPace ? <p className="mt-2 text-caption1 text-text-secondary">目标平均配速 {formatPaceFromSeconds(Math.round(targetPace))} /公里</p> : null}
         {errors.race && <p role="alert" className="mt-1 text-caption1 text-error">{errors.race}</p>}
       </div>
-      <label className="flex items-center gap-3 rounded-xl border border-border-default p-3">
-        <input type="checkbox" checked={form.is_primary} onChange={(e) => update({ is_primary: e.target.checked })} className="size-4" />
-        <span className="text-caption1 text-text-secondary">设为主目标（计划与首页按它编排；同时最多一个）</span>
-      </label>
     </div>
   );
 }
 
-export function WeightFields({ form, update, errors, latestWeight }: {
+export function WeightFields({ form, update, errors, latestWeight, isEdit = false }: {
   form: GoalFormData;
   update: (patch: FormPatch) => void;
   errors: Record<string, string>;
   latestWeight: number | null;
+  isEdit?: boolean;
 }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <label className="flex flex-col gap-1">
-        <span className="text-subheadline font-medium text-text-secondary">当前体重（公斤）</span>
+        <span className="text-subheadline font-medium text-text-secondary">{isEdit ? "起始体重（公斤）" : "当前体重（公斤）"}</span>
         <Input type="number" step={0.1} min={20} max={300}
           placeholder={latestWeight != null ? String(latestWeight) : "例如 75"}
           value={form.baseline_value ?? ""}
-          onChange={(e) => update({ baseline_value: e.target.value ? Number(e.target.value) : null, current_value: e.target.value ? Number(e.target.value) : 0 })} />
+          onChange={(e) => {
+            const nextVal = e.target.value ? Number(e.target.value) : null;
+            update({
+              baseline_value: nextVal,
+              ...(isEdit ? {} : { current_value: nextVal ?? 0 }),
+            });
+          }} />
         {errors.baseline && <span className="text-caption1 text-error">{errors.baseline}</span>}
       </label>
       <label className="flex flex-col gap-1">

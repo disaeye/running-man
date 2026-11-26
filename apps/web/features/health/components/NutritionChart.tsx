@@ -3,7 +3,7 @@
 import { useRef, useMemo } from "react";
 import * as echarts from "echarts/core";
 import { LineChart } from "echarts/charts";
-import { GridComponent, TooltipComponent } from "echarts/components";
+import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { useChartConfig, type ChartConfig } from "@shared/hooks/useChartConfig";
 import { useECharts } from "@shared/hooks/useECharts";
@@ -11,7 +11,7 @@ import { EmptyState } from "@shared/ui/EmptyState";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 
-echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
 interface NutritionChartProps {
   data: WellnessPoint[];
@@ -77,7 +77,8 @@ function buildOption(
   const c = chartConfig.colors;
   const days = points.map((p) => p.day.slice(5));
   return {
-    grid: { left: 56, right: 40, top: 16, bottom: 16 },
+    legend: { type: "scroll", top: 0, textStyle: { color: c.textSecondary, fontSize: 11 } },
+    grid: { left: 56, right: 44, top: 44, bottom: 24 },
     xAxis: { data: days },
     yAxis: [
       {

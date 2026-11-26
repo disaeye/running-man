@@ -149,9 +149,10 @@ function buildKmMarks(samples: readonly TrackSample[], px: readonly { x: number;
   if (samples.length < 2) return [];
   const cumKm = cumulativeDistancesKm(samples.map((s) => s.point));
   const totalKm = cumKm[cumKm.length - 1] ?? 0;
+  const step = totalKm > 30 ? 5 : totalKm > 15 ? 2 : 1;
   const marks: { km: number; x: number; y: number }[] = [];
   let idx = 1;
-  for (let km = 1; km < Math.floor(totalKm); km += 1) {
+  for (let km = step; km < Math.floor(totalKm); km += step) {
     while (idx < cumKm.length && (cumKm[idx] ?? 0) < km) idx += 1;
     const p = px[idx];
     if (p) marks.push({ km, x: p.x, y: p.y });

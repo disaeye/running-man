@@ -61,14 +61,27 @@ export function middleware(request: NextRequest) {
     return redirectToLogin(request);
   }
 
-  // Backward-compat: /settings?section=strength was re-homed to the calendar.
-  // Handle in middleware (not next.config.js) so the source query is dropped
-  // cleanly instead of being appended to the destination. It points straight at
-  // the log view: `?view=strength` is itself a 308 to `?view=list`, and a
-  // redirect to a redirect costs the browser a second round trip.
+  // The calendar's former log and strength views now live at /activities and
+  // /strength. Handle both here rather than in next.config.js so legacy query
+  // params are dropped cleanly in one hop instead of being appended to the
+  // destination.
+  if (pathname === "/calendar") {
+    const viewParam = request.nextUrl.searchParams.get("view");
+    if (viewParam === "list") {
+      return NextResponse.redirect(new URL("/activities", request.url), 308);
+    }
+    if (viewParam === "strength") {
+      return NextResponse.redirect(new URL("/strength", request.url), 308);
+    }
+  }
+
+  // Backward-compat: /settings?section=strength was re-homed to the strength
+  // workbench, a training tab of its own. Handle in middleware (not
+  // next.config.js) so the source query is dropped cleanly instead of being
+  // appended to the destination.
   if (pathname === "/settings" && request.nextUrl.searchParams.get("section") === "strength") {
     if (!accessToken) return redirectToLogin(request);
-    return NextResponse.redirect(new URL("/calendar?view=list", request.url), 308);
+    return NextResponse.redirect(new URL("/strength", request.url), 308);
   }
 
   // Signing in twice is a dead end: an athlete who already has a session and

@@ -12,6 +12,10 @@ export function weekRangeOf(anchor: string): ViewRange {
   return { from: monday, to: dayKeyOffset(monday, 6) };
 }
 
+export function monthRangeOf(monthKey: string): ViewRange {
+  return { from: `${monthKey}-01`, to: dayKeyOffset(`${shiftMonth(monthKey, 1)}-01`, -1) };
+}
+
 /** 月历网格覆盖的 42 天，含前后月份的补白日期。 */
 export function monthGridRangeOf(monthKey: string): ViewRange {
   const firstOfMonth = `${monthKey}-01`;
@@ -19,11 +23,7 @@ export function monthGridRangeOf(monthKey: string): ViewRange {
   return { from, to: dayKeyOffset(from, 41) };
 }
 
-export function yearRangeOf(year: number): ViewRange {
-  return { from: `${year}-01-01`, to: `${year}-12-31` };
-}
-
-/** 流水视图的时间窗口，结束于今天。 */
+/** 结束于 `today` 的最近 `days` 天窗口。 */
 export function trailingRangeOf(today: string, days: number): ViewRange {
   return { from: dayKeyOffset(today, -(days - 1)), to: today };
 }
@@ -39,24 +39,25 @@ export function shiftMonth(monthKey: string, delta: number): string {
   return shifted.toISOString().slice(0, 7);
 }
 
-export function currentWeekAnchor(today: string, offset: number): string {
-  return dayKeyOffset(today, offset * 7);
+/** 锚点日在相邻几周的同一天；负数向前翻。 */
+export function shiftAnchorWeek(anchor: string, deltaWeeks: number): string {
+  return dayKeyOffset(anchor, deltaWeeks * 7);
+}
+
+/** 锚点日在相邻月份的同一天；目标月份没有这一天（如 31 日）时取该月月末。 */
+export function shiftAnchorMonth(anchor: string, deltaMonths: number): string {
+  const [year, month, day] = anchor.split("-").map(Number) as [number, number, number];
+  const lastDay = new Date(Date.UTC(year, month + deltaMonths, 0)).getUTCDate();
+  const clamped = Math.min(day, lastDay);
+  return `${shiftMonth(anchor.slice(0, 7), deltaMonths)}-${String(clamped).padStart(2, "0")}`;
 }
 
 /**
- * 每个视图只请求自己需要的区间：周视图一周、月视图一个月历网格、流水最近 N 天。
- * 切换月份或翻周时区间随之变化，SWR 按区间缓存。
+ * 每个视图只请求自己需要的区间：周视图包含锚点的一周，月视图锚点所在的月历网格。
+ * 翻周或翻月时锚点随之变化，SWR 按区间缓存。
  */
-export function viewRange(
-  view: CalendarView,
-  today: string,
-  weekOffset: number,
-  monthKey: string,
-  listDays: number,
-): ViewRange {
-  if (view === "week") return weekRangeOf(currentWeekAnchor(today, weekOffset));
-  if (view === "month") return monthGridRangeOf(monthKey);
-  return trailingRangeOf(today, listDays);
+export function viewRange(view: CalendarView, anchor: string): ViewRange {
+  return view === "week" ? weekRangeOf(anchor) : monthGridRangeOf(anchor.slice(0, 7));
 }
 
 /** 按运动员时区把 YYYY-MM-DD 转为当天 06:00 的 UTC ISO 时间戳。 */

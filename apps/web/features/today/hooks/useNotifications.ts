@@ -30,10 +30,23 @@ export function useNotifications() {
     },
   );
 
-  const markRead = (id: string) =>
-    callOrval((fetcher) =>
-      markNotificationReadApiV1NotificationsNotificationIdReadPost(id, {}, fetcher),
-    ).then(() => globalMutate(NOTIFICATIONS_KEY));
+  const markRead = async (id: string) => {
+    const previous = data ?? [];
+    await globalMutate(
+      NOTIFICATIONS_KEY,
+      previous.filter((item) => item.id !== id),
+      { revalidate: false },
+    );
+    try {
+      await callOrval((fetcher) =>
+        markNotificationReadApiV1NotificationsNotificationIdReadPost(id, {}, fetcher),
+      );
+      await globalMutate(NOTIFICATIONS_KEY);
+    } catch (cause) {
+      await globalMutate(NOTIFICATIONS_KEY, previous, { revalidate: false });
+      throw cause;
+    }
+  };
 
   return {
     notices: data ?? [],

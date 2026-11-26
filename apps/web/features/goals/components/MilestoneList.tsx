@@ -158,15 +158,23 @@ function MilestoneRow({
           <Circle aria-hidden="true" className="size-5 text-text-muted" />
         )}
       </button>
-      <span className="min-w-0 flex-1 text-subheadline text-text-primary">{milestone.title}</span>
-      {milestone.target_value != null ? (
-        <span className="num text-caption1 text-text-secondary">
-          {milestone.target_value}{displayUnit ? ` ${displayUnit}` : ""}
-        </span>
-      ) : null}
-      {milestone.target_date ? (
-        <span className="text-caption1 text-text-muted">{formatDate(milestone.target_date)}</span>
-      ) : null}
+      <div className="min-w-0 flex-1">
+        <span className="block truncate text-subheadline text-text-primary">{milestone.title}</span>
+        {milestone.result_text || milestone.achieved_at ? (
+          <span className="block truncate text-caption1 text-text-muted">
+            {[
+              milestone.result_text,
+              milestone.achieved_at ? `达成于 ${formatDate(milestone.achieved_at)}` : null,
+            ].filter(Boolean).join(" · ")}
+          </span>
+        ) : null}
+      </div>
+      <span className="w-16 shrink-0 text-right font-mono text-caption1 tabular-nums text-text-secondary">
+        {milestone.target_value != null ? `${milestone.target_value}${displayUnit ? ` ${displayUnit}` : ""}` : ""}
+      </span>
+      <span className="w-20 shrink-0 text-right font-mono text-caption1 tabular-nums text-text-muted">
+        {milestone.target_date ? formatDate(milestone.target_date) : ""}
+      </span>
       <Button variant="ghost" size="icon" aria-label={`编辑${milestone.title}`} onClick={onEdit}>
         <Pencil aria-hidden="true" className="size-4" />
       </Button>

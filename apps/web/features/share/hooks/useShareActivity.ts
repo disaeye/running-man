@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { publicApiFetch } from "@shared/lib/api";
 
@@ -17,17 +17,34 @@ export interface PublicActivity {
 export interface UseShareActivityResult {
   readonly activity: PublicActivity | null;
   readonly error: unknown;
+  readonly reload: () => void;
 }
 
 export function useShareActivity(token: string): UseShareActivityResult {
   const [activity, setActivity] = useState<PublicActivity | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  const reload = useCallback(() => {
+    setError(null);
+    setAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
+    let active = true;
     publicApiFetch<PublicActivity>(`/share/${encodeURIComponent(token)}`)
-      .then((data) => setActivity(data))
-      .catch(setError);
-  }, [token]);
+      .then((data) => {
+        if (!active) return;
+        setError(null);
+        setActivity(data);
+      })
+      .catch((cause) => {
+        if (active) setError(cause);
+      });
+    return () => {
+      active = false;
+    };
+  }, [token, attempt]);
 
-  return { activity, error };
+  return { activity, error, reload };
 }

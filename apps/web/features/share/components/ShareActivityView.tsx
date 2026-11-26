@@ -1,9 +1,9 @@
 import { getSportConfig } from "@shared/config/sport-config";
 import { HEART_RATE_UNIT } from "@shared/config/terms";
+import { formatPaceFromSeconds } from "@shared/lib/format";
 import { Badge } from "@shared/ui/Badge";
 import { Card } from "@shared/ui/Card";
 import { ReadingStrip, type Reading } from "@shared/ui/ReadingStrip";
-import { NO_VALUE } from "@shared/lib/use-data-state";
 
 import type { PublicActivity } from "../hooks/useShareActivity";
 import { sportIconFor } from "../lib/sport-icon";
@@ -15,12 +15,6 @@ function pacePerKm(activity: PublicActivity): number | null {
   return activity.duration_s / (activity.distance_m / 1000);
 }
 
-function formatPace(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const rest = Math.round(seconds % 60);
-  return `${minutes}'${String(rest).padStart(2, "0")}"`;
-}
-
 /**
  * The public face of one activity.
  *
@@ -29,28 +23,48 @@ function formatPace(seconds: number): string {
  */
 export function ShareActivityView({ activity }: { readonly activity: PublicActivity }) {
   const config = getSportConfig(activity.sport);
-  const pace = pacePerKm(activity);
+  const pace = config.isStrength ? null : pacePerKm(activity);
 
-  const readings: Reading[] = [
-    {
-      label: "距离",
-      value:
-        activity.distance_m != null ? `${(activity.distance_m / 1000).toFixed(1)} km` : NO_VALUE,
-    },
-    {
-      label: "时长",
-      value: activity.duration_s != null ? `${Math.round(activity.duration_s / 60)} 分钟` : NO_VALUE,
-    },
-    {
-      label: "平均配速",
-      value: pace != null ? `${formatPace(pace)} /km` : NO_VALUE,
-      note: pace == null ? "没有速度数据" : undefined,
-    },
-    {
-      label: "平均心率",
-      value: activity.avg_hr != null ? `${Math.round(activity.avg_hr)} ${HEART_RATE_UNIT}` : "未记录",
-    },
-  ];
+  const readings: Reading[] = config.isStrength
+    ? [
+        {
+          label: "时长",
+          value: activity.duration_s != null ? String(Math.round(activity.duration_s / 60)) : null,
+          unit: activity.duration_s != null ? "分钟" : null,
+        },
+        {
+          label: "平均心率",
+          value: activity.avg_hr != null ? String(Math.round(activity.avg_hr)) : null,
+          unit: activity.avg_hr != null ? HEART_RATE_UNIT : null,
+        },
+      ]
+    : [
+        {
+          label: "距离",
+          value: activity.distance_m != null ? (activity.distance_m / 1000).toFixed(1) : null,
+          unit: activity.distance_m != null ? "km" : null,
+        },
+        {
+          label: "时长",
+          value: activity.duration_s != null ? String(Math.round(activity.duration_s / 60)) : null,
+          unit: activity.duration_s != null ? "分钟" : null,
+        },
+        {
+          label: "平均配速",
+          value: pace != null ? formatPaceFromSeconds(pace) : null,
+          unit: pace != null ? "/km" : null,
+          note: pace == null ? "没有速度数据" : undefined,
+        },
+        ...(activity.avg_hr != null
+          ? [
+              {
+                label: "平均心率",
+                value: String(Math.round(activity.avg_hr)),
+                unit: HEART_RATE_UNIT,
+              },
+            ]
+          : []),
+      ];
 
   return (
     <ShareShell>
@@ -58,7 +72,7 @@ export function ShareActivityView({ activity }: { readonly activity: PublicActiv
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Badge
             variant="neutral"
-            className="flex items-center gap-1.5 rounded-md"
+            className="flex items-center gap-1.5"
             data-testid="share-sport-badge"
           >
             {sportIconFor(activity.sport)}

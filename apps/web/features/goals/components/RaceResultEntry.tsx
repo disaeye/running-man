@@ -71,7 +71,12 @@ function RaceResultDialog({ goal, onClose, onRecorded }: {
   const record = async () => {
     setSaving(true);
     setError(null);
-    const finishTime = manualTime ? clockToSeconds(manualTime) : null;
+    const finishTime = manualTime.trim() ? clockToSeconds(manualTime.trim()) : null;
+    if (manualTime.trim() && finishTime == null) {
+      setError("完赛用时格式应为 HH:MM:SS 或 MM:SS（例如 1:45:30 或 45:20）。");
+      setSaving(false);
+      return;
+    }
     if (!selectedId && finishTime == null) {
       setError("请选择比赛活动或填写完赛用时。");
       setSaving(false);
@@ -117,7 +122,11 @@ function RaceResultDialog({ goal, onClose, onRecorded }: {
                 <li key={candidate.activity_id}>
                   <button
                     type="button"
-                    onClick={() => setSelectedId(candidate.activity_id)}
+                    onClick={() =>
+                      setSelectedId((prev) =>
+                        prev === candidate.activity_id ? null : candidate.activity_id,
+                      )
+                    }
                     aria-pressed={selectedId === candidate.activity_id}
                     className={`tactile flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left ${
                       selectedId === candidate.activity_id
@@ -168,10 +177,20 @@ function RaceResultDialog({ goal, onClose, onRecorded }: {
 }
 
 function clockToSeconds(text: string): number | null {
-  const parts = text.split(":").map((part) => Number(part));
-  if (parts.some((part) => !Number.isFinite(part))) return null;
-  const [hours = 0, minutes = 0, seconds = 0] = parts;
-  if (parts.length === 3) return hours * 3600 + minutes * 60 + seconds;
-  if (parts.length === 2) return hours * 60 + minutes;
-  return parts.length === 1 ? hours : null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const parts = trimmed.split(":");
+  if (parts.length !== 2 && parts.length !== 3) return null;
+  const nums = parts.map((part) => (/^\d+$/.test(part.trim()) ? Number(part.trim()) : NaN));
+  if (nums.some((part) => !Number.isInteger(part) || part < 0)) return null;
+  if (parts.length === 3) {
+    const [hours = 0, minutes = 0, seconds = 0] = nums;
+    if (minutes >= 60 || seconds >= 60) return null;
+    const total = hours * 3600 + minutes * 60 + seconds;
+    return total > 0 ? total : null;
+  }
+  const [minutes = 0, seconds = 0] = nums;
+  if (seconds >= 60) return null;
+  const total = minutes * 60 + seconds;
+  return total > 0 ? total : null;
 }

@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useSWRConfig } from "swr";
+import { useToast } from "@shared/ui/Toast";
+import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import type { ActivitySummary } from "@shared/types/activity";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
@@ -45,6 +48,8 @@ export function TrainingSubjective({
   readonly onSaved: () => void;
   readonly compact?: boolean;
 }) {
+  const { mutate } = useSWRConfig();
+  const { toast } = useToast();
   const [pendingSoreness, setPendingSoreness] = useState<number | null | undefined>(undefined);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [pendingRpe, setPendingRpe] = useState<number | null | undefined>(undefined);
@@ -73,6 +78,8 @@ export function TrainingSubjective({
         method: "PUT",
         body: JSON.stringify({ day, soreness: next }),
       });
+      void invalidateDataCards(mutate);
+      toast(next == null ? "已清除今日酸痛度" : "酸痛度已保存", "success");
       onSaved();
       setPendingSoreness(undefined);
     } catch (caught) {
@@ -105,6 +112,8 @@ export function TrainingSubjective({
           Generated.CalendarEventOutput,
         );
       }
+      void invalidateDataCards(mutate);
+      toast(next == null ? "已清除 RPE" : "RPE 已保存", "success");
       onSaved();
       setPendingRpe(undefined);
     } catch (caught) {
@@ -147,7 +156,7 @@ export function TrainingSubjective({
               aria-label={`酸痛度 ${item.score} ${item.label}`}
               aria-pressed={sorenessValue === item.score}
               onClick={() => void saveSoreness(item.score)}
-              className={`num tactile min-h-11 rounded-lg px-2 text-caption1 ${
+              className={`num tactile min-h-11 whitespace-nowrap rounded-lg px-1 text-caption1 ${
                 sorenessValue === item.score
                   ? "bg-primary font-semibold text-primary-foreground"
                   : "bg-secondary text-text-muted hover:text-text-primary"

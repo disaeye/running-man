@@ -7,11 +7,11 @@ import type { Zone } from "@features/settings/hooks/useZoneOverrides";
  * 前端按区间序号映射；配色沿用设计系统的五个区间色。
  */
 export const HEART_RATE_ZONE_DETAILS = [
-  { name: "Z1 恢复", color: "bg-zone-1" },
-  { name: "Z2 有氧", color: "bg-zone-2" },
-  { name: "Z3 节奏", color: "bg-zone-3" },
-  { name: "Z4 阈值", color: "bg-zone-4" },
-  { name: "Z5 极限", color: "bg-zone-5" },
+  { name: "Z1 恢复区", color: "bg-zone-1" },
+  { name: "Z2 有氧区", color: "bg-zone-2" },
+  { name: "Z3 节奏区", color: "bg-zone-3" },
+  { name: "Z4 阈值区", color: "bg-zone-4" },
+  { name: "Z5 极限区", color: "bg-zone-5" },
 ] as const;
 
 export interface HeartRateZoneRow {

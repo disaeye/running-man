@@ -3,7 +3,7 @@
 import { useRef, useMemo } from "react";
 import * as echarts from "echarts/core";
 import { LineChart } from "echarts/charts";
-import { GridComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
+import { GridComponent, LegendComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { useChartConfig, type ChartConfig } from "@shared/hooks/useChartConfig";
 import { useECharts } from "@shared/hooks/useECharts";
@@ -15,7 +15,7 @@ import { formatDuration } from "@shared/lib/format";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 import { SLEEP_TARGET_SECS, cumulativeSleepDebt, avg } from "./recovery";
 
-echarts.use([LineChart, GridComponent, TooltipComponent, MarkLineComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, MarkLineComponent, CanvasRenderer]);
 
 interface SleepAnalysisProps {
   /** Wellness points for at least the last 7 days (older points used for the trend). */
@@ -29,7 +29,8 @@ function buildOption(data: WellnessPoint[], chartConfig: ChartConfig): echarts.E
   const hours = data.map((p) => (p.sleep_secs ? +(p.sleep_secs / 3600).toFixed(1) : null));
   const scores = data.map((p) => (p.sleep_score != null ? Math.round(p.sleep_score) : null));
   return {
-    grid: { left: 40, right: 40, top: 16, bottom: 16 },
+    legend: { data: ["睡眠时长", "睡眠评分"], top: 0, textStyle: { color: c.textSecondary, fontSize: 11 } },
+    grid: { left: 40, right: 44, top: 44, bottom: 24 },
     xAxis: {
       data: days,
     },
@@ -66,7 +67,7 @@ function buildOption(data: WellnessPoint[], chartConfig: ChartConfig): echarts.E
           data: [
             {
               yAxis: +(SLEEP_TARGET_SECS / 3600).toFixed(1),
-              label: { formatter: "目标 7h", color: c.textMuted, fontSize: 10 },
+              label: { formatter: "目标 7h", color: c.textMuted, fontSize: 10, position: "insideEndTop" },
             },
           ],
         },
@@ -92,26 +93,34 @@ function buildOption(data: WellnessPoint[], chartConfig: ChartConfig): echarts.E
 export function SleepAnalysis({ data }: SleepAnalysisProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartConfig = useChartConfig();
-  useECharts(containerRef, () => buildOption(data, chartConfig), [data, chartConfig], {
+  const sortedData = useMemo(() => [...data].sort((a, b) => a.day.localeCompare(b.day)), [data]);
+  useECharts(containerRef, () => buildOption(sortedData, chartConfig), [sortedData, chartConfig], {
     chartConfig,
   });
 
   const stats = useMemo(() => {
-    const sorted = [...data].sort((a, b) => a.day.localeCompare(b.day));
-    const last = [...sorted].reverse().find((p) => p.sleep_secs != null);
-    const lastScore = [...sorted].reverse().find((p) => p.sleep_score != null);
-    const recent = sorted.slice(-7);
-    const avgSecs = avg(recent.map((p) => p.sleep_secs));
+    const validSleep = sortedData.filter((p) => p.sleep_secs != null && p.sleep_secs > 0);
+    const last = validSleep.at(-1);
+    const lastScore = [...sortedData].reverse().find((p) => p.sleep_score != null);
+    const anchorDay = sortedData.at(-1)?.day ?? null;
+    const cutoffDay = anchorDay
+      ? new Date(Date.parse(`${anchorDay}T00:00:00Z`) - 6 * 86400000).toISOString().slice(0, 10)
+      : null;
+    const recent = cutoffDay
+      ? sortedData.filter((p) => p.day >= cutoffDay && p.day <= anchorDay!)
+      : sortedData.slice(-7);
+    const sleepValues = recent.map((p) => (p.sleep_secs != null && p.sleep_secs > 0 ? p.sleep_secs : null));
+    const avgSecs = avg(sleepValues);
     const avgScore = avg(recent.map((p) => p.sleep_score));
-    const debt = cumulativeSleepDebt(recent.map((p) => p.sleep_secs));
-    const debtNights = recent.filter((p) => p.sleep_secs != null).length;
+    const debt = cumulativeSleepDebt(sleepValues);
+    const debtNights = sleepValues.filter((v) => v != null).length;
     return { last, lastScore, avgSecs, avgScore, debt, debtNights };
-  }, [data]);
+  }, [sortedData]);
 
   const debtHours = stats.debt / 3600;
   const debtPerNight = stats.debtNights > 0 ? debtHours / stats.debtNights : 0;
   const debtVariant = debtVariantFromHours(debtHours);
-  const hasData = data.some((p) => p.sleep_secs != null || p.sleep_score != null);
+  const hasData = data.some((p) => (p.sleep_secs != null && p.sleep_secs > 0) || p.sleep_score != null);
 
   return (
     <Card padding="md">
@@ -141,15 +150,17 @@ export function SleepAnalysis({ data }: SleepAnalysisProps) {
         <div className="flex flex-col gap-1">
           <span className="text-caption1 text-text-secondary">7日睡眠负债</span>
           <div className="flex items-baseline gap-2">
-            <span className="font-mono text-title1 font-bold text-text-primary">
-              {debtHours.toFixed(1)}
+            <span className="font-mono text-title1 font-bold tabular-nums text-text-primary">
+              {stats.debtNights > 0 ? debtHours.toFixed(1) : "--"}
             </span>
-            <span className="text-caption1 text-text-muted">h</span>
-            <Badge variant={debtVariant} className="ml-auto">
-              {debtHours >= 4 ? "高" : debtHours >= 2 ? "中" : "低"}
+            {stats.debtNights > 0 ? <span className="text-caption1 text-text-muted">h</span> : null}
+            <Badge variant={stats.debtNights > 0 ? debtVariant : "neutral"} className="ml-auto">
+              {stats.debtNights > 0 ? (debtHours >= 4 ? "高" : debtHours >= 2 ? "中" : "低") : "暂无"}
             </Badge>
           </div>
-          <span className="text-caption1 text-text-muted">平均 {debtPerNight.toFixed(1)}h / 夜</span>
+          <span className="text-caption1 text-text-muted">
+            {stats.debtNights > 0 ? `平均 ${debtPerNight.toFixed(1)}h / 夜` : "暂无有效睡眠"}
+          </span>
         </div>
       </div>
 
@@ -172,8 +183,8 @@ function SleepStat({ label, value, hint }: { label: string; value: string; hint:
   return (
     <div className="flex flex-col gap-1">
       <span className="text-caption1 text-text-secondary">{label}</span>
-      <span className="font-mono text-title1 font-bold text-text-primary">{value}</span>
-      <span className="text-caption2 text-text-muted">{hint}</span>
+      <span className="font-mono text-title1 font-bold tabular-nums text-text-primary">{value}</span>
+      <span className="text-caption1 text-text-muted">{hint}</span>
     </div>
   );
 }

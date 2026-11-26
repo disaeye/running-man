@@ -1,11 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import useSWR, { useSWRConfig } from "swr";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
-import { PageCard, Bar } from "@shared/ui/Lovable";
+import { Bar } from "@shared/ui/MetricBar";
+import { DisclosureCard } from "@shared/ui/DisclosureCard";
+import { Badge } from "@shared/ui/Badge";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
+import { useToast } from "@shared/ui/Toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shared/ui/dialog";
+import { ConfirmDialog } from "@shared/ui/ConfirmDialog";
+import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
 
 interface Shoe {
   id: string;
@@ -50,75 +56,93 @@ function shoePayload(draft: ShoeDraft) {
 }
 
 export function ShoeManager() {
-  const [shoes, setShoes] = useState<Shoe[]>([]);
+  const { mutate: globalMutate } = useSWRConfig();
+  const { toast } = useToast();
+  const { data: shoes = [], isLoading: loading, error: swrError, mutate } = useSWR<Shoe[]>(
+    ["/gear/shoes"],
+    () => apiFetch<Shoe[]>("/gear/shoes"),
+  );
   const [draft, setDraft] = useState<ShoeDraft>(EMPTY_DRAFT);
-  const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const [retiringId, setRetiringId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [confirmRetire, setConfirmRetire] = useState<Shoe | null>(null);
+  const loadError = swrError ? apiErrorMessage(swrError, "无法读取跑鞋") : null;
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setError(null);
-      try {
-        const result = await apiFetch<Shoe[]>("/gear/shoes");
-        if (!cancelled) setShoes(result);
-      } catch (err: unknown) {
-        if (!cancelled) setError(apiErrorMessage(err, "无法读取跑鞋"));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    void load();
-    return () => { cancelled = true; };
-  }, [refreshKey]);
-
-  const reload = useCallback(() => {
-    setLoading(true);
-    setRefreshKey((key) => key + 1);
-  }, []);
+  const reload = () => {
+    void mutate();
+  };
 
   const createShoe = async () => {
     if (!draft.name.trim()) return;
     setSaving(true);
-    setError(null);
+    setSubmitError(null);
     try {
       await apiFetch<Shoe>("/gear/shoes", { method: "POST", body: JSON.stringify(shoePayload(draft)) });
       setDraft(EMPTY_DRAFT);
       setDialogOpen(false);
-      reload();
+      toast("已添加跑鞋", "success");
+      await invalidateDataCards(globalMutate);
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, "保存跑鞋失败"));
+      setSubmitError(apiErrorMessage(err, "保存跑鞋失败"));
     } finally {
       setSaving(false);
     }
   };
 
   const retireShoe = async (shoe: Shoe) => {
-    setError(null);
+    setActionError(null);
     setRetiringId(shoe.id);
     try {
       await apiFetch<void>(`/gear/shoes/${shoe.id}`, { method: "DELETE" });
-      reload();
+      setConfirmRetire(null);
+      toast(`「${shoe.name}」已标记退役`, "info");
+      await invalidateDataCards(globalMutate);
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, "退役跑鞋失败"));
+      setActionError(apiErrorMessage(err, "退役跑鞋失败"));
     } finally {
       setRetiringId(null);
     }
   };
 
+  const activeShoes = shoes.filter((s) => !s.retired_at);
+  const topShoe = [...activeShoes].sort((a, b) => b.mileage_m - a.mileage_m)[0] ?? null;
+  const alertCount = activeShoes.filter((s) => s.retirement_alert).length;
+  const summaryText = loading
+    ? "正在读取跑鞋…"
+    : loadError
+      ? "读取失败，展开重试"
+      : shoes.length === 0
+        ? "尚未记录跑鞋 · 跑量按已关联跑步计算"
+        : `${activeShoes.length} 双在役${topShoe ? ` · 主用 ${topShoe.name} (${(topShoe.mileage_m / 1000).toFixed(0)} km)` : ""}${alertCount > 0 ? ` · ${alertCount} 双建议更换` : ""}`;
+
   return (
-    <PageCard className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
+    <>
+      <DisclosureCard
+        title="跑鞋与装备"
+      summary={summaryText}
+      badge={alertCount > 0 ? <Badge variant="warning">建议更换</Badge> : undefined}
+      action={
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => {
+            setSubmitError(null);
+            setDialogOpen(true);
+          }}
+          disabled={retiringId !== null}
+        >
+          新增跑鞋
+        </Button>
+      }
+    >
+      <div className="space-y-4">
         <p className="text-caption1 text-text-muted">记录鞋款与累计跑量；跑量按已关联的跑步活动计算。</p>
-        <Button type="button" onClick={() => setDialogOpen(true)} disabled={retiringId !== null}>新增跑鞋</Button>
-      </div>
-      {loading ? <p className="text-caption1 text-text-muted">正在读取跑鞋…</p> : error ? (
+      {loading ? <p className="text-caption1 text-text-muted">正在读取跑鞋…</p> : loadError ? (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-error/30 bg-error/5 p-3 text-error">
-          <p className="text-caption1">{error}</p>
+          <p className="text-caption1">{loadError}</p>
           <Button type="button" variant="outline" onClick={reload}>重新读取</Button>
         </div>
       ) : shoes.length === 0 ? (
@@ -127,17 +151,27 @@ export function ShoeManager() {
         <ul className="space-y-3">
           {shoes.map((shoe) => (
             <li key={shoe.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
-              <div>
-                <p className="font-medium text-text-primary">{shoe.name}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium text-text-primary">{shoe.name}</p>
+                  {shoe.retirement_alert && !shoe.retired_at ? <Badge variant="warning">建议更换</Badge> : null}
+                  {shoe.retired_at ? <Badge variant="neutral">已退役</Badge> : null}
+                </div>
                 <p className="text-caption1 text-text-muted">{[shoe.brand, shoe.model].filter(Boolean).join(" · ") || "未填写品牌与型号"}</p>
-                <p className="font-mono text-caption1 text-text-secondary">{(shoe.mileage_m / 1000).toFixed(1)} / {RETIREMENT_KM} km{shoe.retired_at ? " · 已退役" : ""}</p>
-                <p className="text-caption1 text-text-muted">{shoe.total_activities} 次 · 最近 {lastUsedLabel(shoe.last_used_at)}</p>
+                <p className="font-mono tabular-nums text-caption1 text-text-secondary">
+                  {(shoe.mileage_m / 1000).toFixed(1)} / {RETIREMENT_KM} km · {shoe.total_activities} 次 · 最近 {lastUsedLabel(shoe.last_used_at)}
+                </p>
+                {shoe.purchase_date || shoe.notes ? (
+                  <p className="text-caption1 text-text-muted">
+                    {[shoe.purchase_date ? `购于 ${shoe.purchase_date}` : null, shoe.notes].filter(Boolean).join(" · ")}
+                  </p>
+                ) : null}
                 <Bar value={shoe.mileage_m / 1000} max={RETIREMENT_KM} tone={shoe.retirement_alert ? "bg-warn" : "bg-primary"} className="mt-2" />
               </div>
               {!shoe.retired_at && (
                 <Button
                   variant="outline"
-                  onClick={() => void retireShoe(shoe)}
+                  onClick={() => setConfirmRetire(shoe)}
                   disabled={retiringId !== null}
                 >
                   {retiringId === shoe.id ? "处理中…" : "标记退役"}
@@ -147,9 +181,18 @@ export function ShoeManager() {
           ))}
         </ul>
       )}
-      {error && !loading ? <p role="alert" className="text-caption1 text-error">{error}</p> : null}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+      {actionError ? <p role="alert" className="text-caption1 text-error">{actionError}</p> : null}
+      </div>
+    </DisclosureCard>
+    <Dialog
+      open={dialogOpen}
+        onOpenChange={(next) => {
+          if (saving) return;
+          setDialogOpen(next);
+          if (!next) setSubmitError(null);
+        }}
+      >
+        <DialogContent mobileSheet>
           <DialogHeader><DialogTitle>新增跑鞋</DialogTitle></DialogHeader>
           <form
             className="grid gap-3 sm:grid-cols-2"
@@ -175,6 +218,9 @@ export function ShoeManager() {
               <span className="block">备注</span>
               <Input id="shoe-notes" value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} maxLength={500} />
             </label>
+            {submitError ? (
+              <p role="alert" className="text-caption1 text-error sm:col-span-2">{submitError}</p>
+            ) : null}
             <div className="flex justify-end gap-2 sm:col-span-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>取消</Button>
               <Button type="submit" disabled={saving || !draft.name.trim()}>
@@ -184,6 +230,16 @@ export function ShoeManager() {
           </form>
         </DialogContent>
       </Dialog>
-    </PageCard>
+      <ConfirmDialog
+        open={confirmRetire !== null}
+        onOpenChange={(next) => { if (!next && retiringId === null) setConfirmRetire(null); }}
+        title="确认退役这双跑鞋？"
+        description={confirmRetire ? `「${confirmRetire.name}」标记退役后将保留历史里程，但不再参与后续活动关联。` : ""}
+        confirmLabel="确认退役"
+        confirmVariant="destructive"
+        loading={retiringId !== null}
+        onConfirm={() => { if (confirmRetire) void retireShoe(confirmRetire); }}
+      />
+    </>
   );
 }

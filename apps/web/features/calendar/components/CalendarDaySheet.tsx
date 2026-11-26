@@ -1,34 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@shared/ui/sheet";
+import Link from "next/link";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@shared/ui/sheet";
+import { DayReviewSection } from "./DayReviewSection";
 import { WorkoutBuilderV2 } from "@features/calendar/components/WorkoutBuilderV2";
-import { DayActivitySummary } from "@features/calendar/components/DayActivitySummary";
-import { PlanPacePrescription } from "@features/calendar/components/PlanPacePrescription";
-import { DayPlanActual } from "@features/calendar/components/DayPlanActual";
-import { EventLinkSection } from "@features/calendar/components/EventLinkSection";
 import { ManualActivityForm } from "@features/activity/components/ManualActivityForm";
 import { SlidingIndicator } from "@shared/ui/SlidingIndicator";
+import { strengthLogUrl } from "@shared/config/training-nav";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 import type { ActivitySummary } from "@shared/types/activity";
+import type { WellnessPoint } from "@features/health/hooks/useWellness";
+
+export type DaySheetMode = "review" | "log" | "plan";
 
 interface CalendarDaySheetProps {
   selectedDate: string | null;
+  today: string;
+  returnTo: string;
   activities: readonly ActivitySummary[];
   editingEvent: CalendarEventDTO | undefined;
+  events?: readonly CalendarEventDTO[];
+  initialMode?: DaySheetMode;
   defaultSport?: string;
+  wellness: WellnessPoint | null;
+  wellnessLoading: boolean;
+  wellnessError: string | null;
+  onRetryWellness: () => void;
   onSave: () => void;
   onClose: () => void;
   onActivitySaved: () => void;
 }
-
-/** 抽屉顶部的三个模式：回顾看结果，补录写今天，编排改课表。 */
-type DaySheetMode = "review" | "log" | "plan";
 
 const MODES: readonly { key: DaySheetMode; label: string }[] = [
   { key: "review", label: "回顾" },
@@ -36,47 +38,52 @@ const MODES: readonly { key: DaySheetMode; label: string }[] = [
   { key: "plan", label: "编排" },
 ];
 
-/**
- * 单日详情抽屉：顶部三分段（回顾 / 补录 / 编排），每段只装自己那个问题的
- * 内容——跑完步的状态是单手、想快点记完，补录默认落点因此按「当天没有
- * 记录」决定，而不是永远从回顾滚到底。
- */
 export function CalendarDaySheet({
   selectedDate,
+  today,
+  returnTo,
   activities,
   editingEvent,
+  events,
+  initialMode,
   defaultSport = "Run",
+  wellness,
+  wellnessLoading,
+  wellnessError,
+  onRetryWellness,
   onSave,
   onClose,
   onActivitySaved,
 }: CalendarDaySheetProps) {
+  const dayEvents = events?.length ? events : editingEvent ? [editingEvent] : [];
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const creatingPlan = selectedEventId === "__new__";
+  const activeEvent = creatingPlan
+    ? undefined
+    : (dayEvents.find((item) => item.event_id === selectedEventId) ?? dayEvents[0]);
   const hasActivities = activities.length > 0;
-  const title = !selectedDate
-    ? ""
-    : hasActivities
-      ? `${selectedDate} 训练详情`
-      : editingEvent
-        ? `编辑计划 · ${selectedDate}`
-        : `新建训练 · ${selectedDate}`;
-  // 当天没记录时补录就是来意：默认落「补录」；有记录时先回顾结果。
-  const defaultMode: DaySheetMode = hasActivities ? "review" : "log";
-  // 模式与上一次的日期都存在 state 里：渲染期对比当前 selectedDate 与上一次的值，
-  // 不一致就重置模式。抽屉关过再开同一日期（null → 日期）也是一次新会话，
-  // 回到默认模式；这是 React 文档的「渲染期调整状态」模式，无 effect 同步。
+
+  const title = !selectedDate ? "" : hasActivities ? `${selectedDate} 训练详情` : activeEvent ? `编辑计划 · ${selectedDate}` : `新建训练 · ${selectedDate}`;
+
+  // 空白日打开「编排」；已有课表或活动的日期打开「回顾」。
+  const defaultMode: DaySheetMode = initialMode ?? (hasActivities || dayEvents.length > 0 ? "review" : "plan");
   const [modeByDate, setMode] = useState<{ date: string; mode: DaySheetMode }>(
     selectedDate ? { date: selectedDate, mode: defaultMode } : { date: "", mode: "review" },
   );
-  const [prevDate, setPrevDate] = useState<string | null>(selectedDate);
-  let mode: DaySheetMode = selectedDate != null && modeByDate.date === selectedDate
-    ? modeByDate.mode
-    : defaultMode;
-  if (selectedDate !== prevDate) {
-    setPrevDate(selectedDate);
+  const [prevSession, setPrevSession] = useState<string>("");
+  const sessionKey = `${selectedDate ?? ""}:${initialMode ?? ""}`;
+  let mode: DaySheetMode = selectedDate != null && modeByDate.date === selectedDate ? modeByDate.mode : defaultMode;
+  if (sessionKey !== prevSession) {
+    setPrevSession(sessionKey);
     if (selectedDate != null) {
       setMode({ date: selectedDate, mode: defaultMode });
+      setSelectedEventId(null);
     }
     mode = selectedDate != null ? defaultMode : mode;
   }
+
+  const switchMode = (nextMode: DaySheetMode) =>
+    setMode(selectedDate != null ? { date: selectedDate, mode: nextMode } : { date: modeByDate.date, mode: nextMode });
 
   return (
     <Sheet
@@ -85,11 +92,11 @@ export function CalendarDaySheet({
     >
       <SheetContent
         side="bottom"
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-t-[22px] sm:max-w-lg sm:mx-auto"
+        className="rounded-t-3xl sm:inset-x-auto sm:left-1/2 sm:w-[calc(100vw-2rem)] sm:max-w-2xl sm:-translate-x-1/2"
       >
         {selectedDate ? (
           <>
-            <SheetHeader>
+            <SheetHeader className="sticky top-0 z-10 border-b border-border-subtle bg-surface-card">
               <SheetTitle className="text-body font-semibold">{title}</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-5 px-4 pb-6">
@@ -105,7 +112,7 @@ export function CalendarDaySheet({
                     role="tab"
                     aria-selected={mode === entry.key}
                     data-indicator-key={entry.key}
-                    onClick={() => setMode(selectedDate != null ? { date: selectedDate, mode: entry.key } : { date: modeByDate.date, mode: entry.key })}
+                    onClick={() => switchMode(entry.key)}
                     className={`tactile relative z-10 flex min-h-11 flex-1 items-center justify-center rounded-full px-3 text-subheadline font-medium ${mode === entry.key ? "text-text-primary" : "text-text-muted"}`}
                   >
                     {entry.label}
@@ -113,11 +120,52 @@ export function CalendarDaySheet({
                 ))}
               </div>
 
+              {(dayEvents.length > 1 || (dayEvents.length > 0 && mode === "plan")) && mode !== "log" ? (
+                <div className="flex flex-wrap items-center gap-1.5" aria-label="切换当日课表">
+                  {dayEvents.map((ev, index) => (
+                    <button
+                      key={ev.event_id}
+                      type="button"
+                      onClick={() => setSelectedEventId(ev.event_id)}
+                      aria-pressed={!creatingPlan && activeEvent?.event_id === ev.event_id}
+                      className={`tactile min-h-11 rounded-full border px-3 text-caption1 ${
+                        !creatingPlan && activeEvent?.event_id === ev.event_id
+                          ? "border-accent bg-accent/15 text-accent-strong"
+                          : "border-border-default text-text-muted"
+                      }`}
+                    >
+                      {ev.name || `课表 ${index + 1}`}
+                    </button>
+                  ))}
+                  {mode === "plan" ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEventId("__new__")}
+                      aria-pressed={creatingPlan}
+                      className={`tactile min-h-11 rounded-full border px-3 text-caption1 ${
+                        creatingPlan ? "border-accent bg-accent/15 text-accent-strong" : "border-border-default text-text-muted"
+                      }`}
+                    >
+                      + 新增课表
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
               {mode === "review" ? (
-                <ReviewSection
+                <DayReviewSection
                   activities={activities}
-                  editingEvent={editingEvent}
+                  editingEvent={activeEvent}
+                  day={selectedDate}
+                  today={today}
+                  returnTo={returnTo}
+                  events={dayEvents}
+                  wellness={wellness}
+                  wellnessLoading={wellnessLoading}
+                  wellnessError={wellnessError}
+                  onRetryWellness={onRetryWellness}
                   onSave={onSave}
+                  onSwitchMode={switchMode}
                 />
               ) : null}
 
@@ -130,15 +178,25 @@ export function CalendarDaySheet({
                     key={selectedDate}
                     initialDate={selectedDate}
                     eventId={
-                      editingEvent?.status === "planned" && !editingEvent.done
-                        ? editingEvent.event_id
+                      activeEvent?.status === "planned" && !activeEvent.done
+                        ? activeEvent.event_id
                         : undefined
                     }
                     onSaved={() => {
                       onActivitySaved();
                       onClose();
                     }}
+                    onStrengthNavigate={onClose}
                   />
+                  <Link
+                    href={strengthLogUrl(selectedDate)}
+                    onClick={onClose}
+                    data-testid="day-log-strength"
+                    className="tactile flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border-subtle px-3 py-2.5 text-caption1 text-text-secondary hover:bg-surface-overlay"
+                  >
+                    <span>记录当日力量训练（动作与组数）</span>
+                    <span className="shrink-0 font-medium text-accent-strong">前往力量工作台 →</span>
+                  </Link>
                 </section>
               ) : null}
 
@@ -148,14 +206,12 @@ export function CalendarDaySheet({
                     <h3 className="text-caption1 font-semibold text-text-muted">计划</h3>
                   ) : null}
                   <WorkoutBuilderV2
-                    key={`${selectedDate}:${editingEvent?.event_id ?? "new"}`}
+                    key={`${selectedDate}:${activeEvent?.event_id ?? "new"}`}
                     date={selectedDate}
+                    allowDateEdit
                     defaultSport={defaultSport}
-                    event={editingEvent}
-                    onSave={() => {
-                      onSave();
-                      onClose();
-                    }}
+                    event={activeEvent}
+                    onSave={() => { onSave(); onClose(); }}
                     onClose={onClose}
                   />
                 </section>
@@ -165,46 +221,5 @@ export function CalendarDaySheet({
         ) : null}
       </SheetContent>
     </Sheet>
-  );
-}
-
-/** 回顾段：实际结果、比赛横幅、处方、计划实际对照与课表关联。 */
-function ReviewSection({
-  activities,
-  editingEvent,
-  onSave,
-}: {
-  activities: readonly ActivitySummary[];
-  editingEvent: CalendarEventDTO | undefined;
-  onSave: () => void;
-}) {
-  const hasActivities = activities.length > 0;
-  return (
-    <>
-      {hasActivities ? (
-        <section className="flex flex-col gap-3" aria-label="实际训练">
-          <h3 className="text-caption1 font-semibold text-text-muted">实际</h3>
-          {activities.map((activity) => (
-            <DayActivitySummary key={activity.activity_id} activity={activity} />
-          ))}
-        </section>
-      ) : null}
-
-      {editingEvent?.training_type === "race" ? (
-        <section className="rounded-lg border border-accent/30 bg-accent/5 p-3" aria-label="比赛日">
-          <h3 className="text-subheadline font-semibold text-accent-strong">比赛日</h3>
-          <p className="mt-1 text-caption1 text-text-secondary">
-            {editingEvent.name ?? "目标比赛"} · 记录比赛实绩时可关联此日期。
-          </p>
-        </section>
-      ) : null}
-      {editingEvent ? <PlanPacePrescription event={editingEvent} /> : null}
-
-      <DayPlanActual event={editingEvent} activities={activities} />
-
-      {editingEvent && editingEvent.status !== "deleted" ? (
-        <EventLinkSection event={editingEvent} activities={activities} onSaved={onSave} />
-      ) : null}
-    </>
   );
 }

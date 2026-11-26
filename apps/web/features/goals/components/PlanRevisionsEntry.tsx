@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { History } from "lucide-react";
+import { Button } from "@shared/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shared/ui/dialog";
-import { Tag } from "@shared/ui/Lovable";
+import { Tag } from "@shared/ui/Badge";
 import { Skeleton } from "@shared/ui/Skeleton";
 import { usePlanRevisions, fetchPlanRevision } from "@features/goals/hooks/usePlanRevisions";
 import { phaseLabel } from "@features/goals/lib/phase-labels";
@@ -38,7 +39,7 @@ function PlanRevisionsDialog({ goalId, onClose }: { goalId: string; onClose: () 
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="sm:max-w-lg" mobileSheet>
+      <DialogContent className="sm:max-w-xl" mobileSheet>
         <DialogHeader>
           <DialogTitle>{detailId ? "版本快照" : "计划版本"}</DialogTitle>
         </DialogHeader>
@@ -54,7 +55,7 @@ function PlanRevisionsDialog({ goalId, onClose }: { goalId: string; onClose: () 
         ) : revisions.length === 0 ? (
           <p className="text-caption1 text-muted-foreground">还没有生成过计划。</p>
         ) : (
-          <ul className="max-h-80 space-y-2 overflow-y-auto">
+          <ul className="space-y-2 md:max-h-[52dvh] md:overflow-y-auto md:pr-1">
             {revisions.map((revision) => (
               <li key={revision.revision_id}>
                 <button
@@ -77,6 +78,11 @@ function PlanRevisionsDialog({ goalId, onClose }: { goalId: string; onClose: () 
             ))}
           </ul>
         )}
+        <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex justify-end border-t border-border-subtle bg-surface-card px-6 py-4">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            关闭
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -100,7 +106,7 @@ function RevisionDetail({ revisionId, onBack }: { revisionId: string; onBack: ()
     return (
       <div>
         <p role="alert" className="text-caption1 text-error">{error}</p>
-        <button type="button" onClick={onBack} className="mt-2 text-caption1 text-accent-strong">返回列表</button>
+        <button type="button" onClick={onBack} className="mt-2 inline-flex min-h-11 items-center text-caption1 text-accent-strong">返回列表</button>
       </div>
     );
   }
@@ -108,7 +114,7 @@ function RevisionDetail({ revisionId, onBack }: { revisionId: string; onBack: ()
 
   return (
     <div className="flex flex-col gap-3">
-      <button type="button" onClick={onBack} className="self-start text-caption1 text-accent-strong hover:underline">
+      <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center self-start text-caption1 text-accent-strong hover:underline">
         返回版本列表
       </button>
       <div className="flex flex-wrap gap-2">
@@ -118,22 +124,44 @@ function RevisionDetail({ revisionId, onBack }: { revisionId: string; onBack: ()
           </Tag>
         ))}
       </div>
-      <ol className="max-h-72 space-y-1.5 overflow-y-auto">
-        {(detail.events ?? []).map((event, index) => (
-          <li key={`${event.event_id}-${index}`} className="rounded-lg bg-surface-overlay/50 p-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-caption1 font-medium text-text-primary">{event.date} · {event.name}</span>
+      <div className="space-y-3 md:max-h-[52dvh] md:overflow-y-auto md:pr-1">
+        {groupEventsByPhase(detail.events ?? []).map(([phase, events]) => (
+          <div key={phase} className="space-y-1.5">
+            <div className="text-caption1 font-medium text-text-secondary">
+              {phaseLabel(phase)} · {events.length} 课
             </div>
-            <p className="num mt-0.5 text-caption1 text-text-muted">
-              {event.duration_min} 分钟 · {phaseLabel(event.phase)}
-              {event.predicted_tss != null ? ` · TSS ${Math.round(event.predicted_tss)}` : ""}
-              {event.pace_min_s_km != null && event.pace_max_s_km != null
-                ? ` · ${formatPaceFromSeconds(event.pace_min_s_km)}–${formatPaceFromSeconds(event.pace_max_s_km)} /公里`
-                : ""}
-            </p>
-          </li>
+            <ol className="space-y-1.5">
+              {events.map((event, index) => (
+                <li key={`${event.event_id}-${index}`} className="rounded-lg bg-surface-overlay/50 p-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-caption1 font-medium text-text-primary">{event.date} · {event.name}</span>
+                  </div>
+                  <p className="num mt-0.5 text-caption1 text-text-muted">
+                    {event.duration_min} 分钟
+                    {event.predicted_tss != null ? ` · TSS ${Math.round(event.predicted_tss)}` : ""}
+                    {event.pace_min_s_km != null && event.pace_max_s_km != null
+                      ? ` · ${formatPaceFromSeconds(event.pace_min_s_km)}–${formatPaceFromSeconds(event.pace_max_s_km)} /公里`
+                      : ""}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
         ))}
-      </ol>
+      </div>
     </div>
   );
+}
+
+function groupEventsByPhase(
+  events: readonly NonNullable<Generated.PlanRevisionDetailOutput["events"]>[number][],
+) {
+  const map = new Map<string, NonNullable<Generated.PlanRevisionDetailOutput["events"]>[number][]>();
+  for (const event of events) {
+    const key = event.phase || "base";
+    const list = map.get(key);
+    if (list) list.push(event);
+    else map.set(key, [event]);
+  }
+  return Array.from(map.entries());
 }

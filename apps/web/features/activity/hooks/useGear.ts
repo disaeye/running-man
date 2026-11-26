@@ -1,6 +1,7 @@
 "use client";
 
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
+import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import type { Shoe, ShoeAssignment, ShoeWithStats } from "@shared/types/gear";
 
@@ -102,6 +103,7 @@ export function useShoe(shoeId: string | null): UseShoeResult {
 }
 
 export function useShoeMutations(): UseShoeMutations {
+  const { mutate } = useSWRConfig();
   return {
     async create(payload) {
       try {
@@ -109,6 +111,7 @@ export function useShoeMutations(): UseShoeMutations {
           method: "POST",
           body: JSON.stringify(payload),
         });
+        await invalidateDataCards(mutate);
         return mapShoe(row);
       } catch {
         return null;
@@ -120,6 +123,7 @@ export function useShoeMutations(): UseShoeMutations {
           method: "PUT",
           body: JSON.stringify(payload),
         });
+        await invalidateDataCards(mutate);
         return mapShoe(row);
       } catch {
         return null;
@@ -128,6 +132,7 @@ export function useShoeMutations(): UseShoeMutations {
     async retire(shoeId) {
       try {
         await apiFetch(`/gear/shoes/${shoeId}`, { method: "DELETE" });
+        await invalidateDataCards(mutate);
         return true;
       } catch {
         return false;
@@ -142,6 +147,7 @@ export function useShoeMutations(): UseShoeMutations {
             body: JSON.stringify({ activity_id: activityId }),
           },
         );
+        await invalidateDataCards(mutate);
         return {
           assignment_id: String(row.id ?? ""),
           activity_id: String(row.activity_id ?? activityId),
@@ -158,6 +164,7 @@ export function useShoeMutations(): UseShoeMutations {
         await apiFetch(`/gear/shoes/${shoeId}/assign/${activityId}`, {
           method: "DELETE",
         });
+        await invalidateDataCards(mutate);
         return true;
       } catch {
         return false;

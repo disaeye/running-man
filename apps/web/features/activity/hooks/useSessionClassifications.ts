@@ -18,10 +18,11 @@ export interface UseSessionClassificationsResult {
 export function useSessionClassifications(
   from?: string,
   to?: string,
+  enabled = true,
 ): UseSessionClassificationsResult {
   const params = { from, to };
   const { data, error, isLoading, mutate } = useSWR(
-    ["/activities/classifications", from ?? "", to ?? ""],
+    enabled ? ["/activities/classifications", from ?? "", to ?? ""] : null,
     {
       fetcher: () =>
         callOrvalValidated(

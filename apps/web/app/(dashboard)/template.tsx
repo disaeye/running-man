@@ -1,11 +1,10 @@
 import { Suspense } from "react";
 import { RouteCrossfade } from "@shared/layout/RouteCrossfade";
+import { RouteArrival } from "@shared/layout/RouteArrival";
 
 /**
  * 路由入场只作用于内容列。导航外壳由 DashboardShell 持有，不随 template 重挂载。
- *
- * 浏览器接管 View Transition 时，全局 data-route-vt 会关闭这个入场，避免
- * 两段动画叠在一起。Suspense 只包住依赖 useSearchParams 的协调器。
+ * Suspense 只包住依赖 useSearchParams 的协调器。
  */
 export default function DashboardTemplate({
   children,
@@ -15,7 +14,7 @@ export default function DashboardTemplate({
       <Suspense fallback={null}>
         <RouteCrossfade />
       </Suspense>
-      <div className="page-arrival">{children}</div>
+      <RouteArrival>{children}</RouteArrival>
     </>
   );
 }

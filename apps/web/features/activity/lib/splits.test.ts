@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTimeline, splitByDistance } from "@features/activity/lib/splits";
+import { buildTimeline, splitByDistance, splitTimeSec, validSplitSampleTime } from "@features/activity/lib/splits";
 import type { StreamMap } from "@shared/types/activity";
 
 /** 匀速 3 m/s，每秒一个样本 */
@@ -15,6 +15,20 @@ function constantSpeedStream(seconds: number): StreamMap {
   }));
   return { speed: points };
 }
+
+describe("splitTimeSec", () => {
+  it("将分段时间线换算到活动开始时刻的 Unix 秒", () => {
+    const first = Date.parse("2026-11-02T10:00:05Z") / 1000;
+    expect(splitTimeSec(first + 10, first + 30, first, "2026-11-02T10:00:00Z")).toBe(Date.parse("2026-11-02T10:00:20Z") / 1000);
+  });
+
+  it("选择分段内可显示的速度样本", () => {
+    const streams = constantSpeedStream(60);
+    const start = Date.parse("2026-11-02T10:00:00Z") / 1000;
+    expect(validSplitSampleTime(streams, start + 10, start + 30)).toBe(start + 10);
+    expect(validSplitSampleTime(streams, start + 100, start + 120)).toBeNull();
+  });
+});
 
 describe("splitByDistance", () => {
   it("整公里行正好是 1000 米，尾段是剩余距离", () => {

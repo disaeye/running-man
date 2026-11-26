@@ -2,17 +2,8 @@ import { describe, expect, it } from "vitest";
 import { hasUsableRange } from "./useActivities";
 
 /**
- * Regression test for a 422 that fired on every visit to /activities.
- *
- * `/activities` redirects to `/calendar?view=list` (see next.config.js), and in
- * list view `qualityRange` returns `undefined`. The page then called
- * `usePlanMatch(planRange?.from ?? "", planRange?.to ?? "", events)`, so the
- * hook issued `GET /api/v1/activities?from=&to=` — which the API rejects with
- * 422. The failure was invisible in normal use because the list view has its
- * own data path; only a listener on the network log saw it.
- *
- * The hook now treats an incomplete range as "do not fetch yet" rather than
- * "fetch everything", so the guard is what this asserts.
+ * 回归测试：活动区间尚未解析完成时，调用方会先用空字符串构造区间，
+ * 直接请求会得到 422。hook 把不完整的区间视为「暂不请求」，这里断言的就是这条守卫。
  */
 describe("hasUsableRange", () => {
   it("rejects the empty range a not-yet-resolved caller builds", () => {

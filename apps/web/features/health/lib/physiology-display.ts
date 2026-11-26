@@ -59,15 +59,24 @@ export function deriveCurrentReadings(points: readonly WellnessPoint[]): Current
 function useWellnessHistoryState(): {
   readonly data: readonly WellnessPoint[];
   readonly loading: boolean;
+  readonly refreshing: boolean;
+  readonly error: string | null;
+  readonly reload: () => Promise<unknown>;
 } {
   const { timezone, resolved } = useAthleteTimezoneState();
   const today = resolved ? athleteToday(timezone) : "";
-  const { data, loading } = useWellness(
+  const { data, loading, refreshing, error, reload } = useWellness(
     resolved ? "1970-01-01" : "",
     today,
     CURRENT_READING_METRICS,
   );
-  return { data, loading: loading || !resolved };
+  return {
+    data,
+    loading: loading || !resolved,
+    refreshing,
+    error,
+    reload: async () => reload(),
+  };
 }
 
 /** 全历史健康序列，按运动员时区确定上界。趋势图用它画实际记录点。 */
@@ -77,13 +86,19 @@ export function useWellnessHistory(): readonly WellnessPoint[] {
 
 export interface CurrentReadingsState extends CurrentReadings {
   readonly loading: boolean;
+  readonly refreshing: boolean;
+  readonly error: string | null;
+  readonly reload: () => Promise<unknown>;
 }
 
 /** 所有「当前读数」消费方的唯一入口。 */
 export function useCurrentReadings(): CurrentReadingsState {
-  const { data, loading } = useWellnessHistoryState();
+  const { data, loading, refreshing, error, reload } = useWellnessHistoryState();
   const readings = useMemo(() => deriveCurrentReadings(data), [data]);
-  return useMemo(() => ({ ...readings, loading }), [readings, loading]);
+  return useMemo(
+    () => ({ ...readings, loading, refreshing, error, reload }),
+    [readings, loading, refreshing, error, reload],
+  );
 }
 
 /** 记录日距今的天数，用于提示数据陈旧程度。 */

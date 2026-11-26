@@ -1,6 +1,6 @@
 "use client";
 
-import { Tag } from "@shared/ui/Lovable";
+import { Tag } from "@shared/ui/Badge";
 import type { Goal } from "@shared/types/goals";
 
 /** 目标切换条：换行铺开，按传入顺序（页面已排序：主目标优先）。 */

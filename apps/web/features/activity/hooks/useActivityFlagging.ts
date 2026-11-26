@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useSWRConfig } from "swr";
+import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
 import { callOrval } from "@shared/api/orval-adapter";
 import { apiErrorMessage } from "@shared/lib/api";
 import {
@@ -18,16 +19,6 @@ import {
  * 忽略会保留活动记录，删除会将活动移入回收站，之后都可以恢复。
  * 每次操作都会清理相关缓存，让页面读取最新统计。
  */
-
-/** 活动标记更新后需要重新读取的数据。 */
-const AFFECTED_KEYS = [
-  "/activities",
-  "/insights/zones",
-  "/data/health",
-  "/data/quality",
-  "/insights/intensity-distribution",
-  "/insights/personal-records",
-];
 
 export interface UseActivityFlaggingResult {
   pending: boolean;
@@ -46,19 +37,7 @@ export function useActivityFlagging(): UseActivityFlaggingResult {
   const [error, setError] = useState<string | null>(null);
 
   const invalidate = useCallback(async () => {
-    // 清理与路径前缀匹配的缓存，包括带有日期参数的活动列表。
-    await Promise.all(
-      AFFECTED_KEYS.map((key) =>
-        mutate(
-          (cacheKey) =>
-            typeof cacheKey === "string"
-              ? cacheKey.startsWith(key)
-              : Array.isArray(cacheKey) &&
-                typeof cacheKey[0] === "string" &&
-                cacheKey[0].startsWith(key),
-        ),
-      ),
-    );
+    await invalidateDataCards(mutate);
   }, [mutate]);
 
   const run = useCallback(

@@ -92,7 +92,7 @@ export function useWellness(
   const params = { metrics: metrics.join(","), grain: "daily", from, to };
   // 空范围代表「日期还没定」，不是请求全部：后端对缺参回答 422。
   const hasRange = Boolean(from && to);
-  const { data, error, isLoading, mutate } = useSWR<WellnessPoint[]>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<WellnessPoint[]>(
     hasRange ? ["/metrics/series/batch", params] : null,
     {
       fetcher: async () => {
@@ -107,7 +107,7 @@ export function useWellness(
           throw new Error(`健康数据加载失败 (${res.status})`);
         }
         const batch: BatchResponse = await res.json();
-        return pivotToWellnessPoints(batch.series);
+        return pivotToWellnessPoints(Array.isArray(batch?.series) ? batch.series : []);
       },
     },
   );
@@ -115,8 +115,9 @@ export function useWellness(
   return {
     data: data ?? EMPTY_WELLNESS_POINTS,
     loading: hasRange && isLoading,
+    refreshing: hasRange && isValidating,
     error: error?.message ?? null,
-    reload: () => void mutate(),
+    reload: () => mutate(),
   };
 }
 

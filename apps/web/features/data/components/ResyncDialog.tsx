@@ -11,20 +11,20 @@ import {
 interface ResyncDialogProps {
   open: boolean;
   onClose(): void;
-  onConfirm(): Promise<void>;
+  onConfirm(): Promise<boolean | void>;
   isBusy?: boolean;
 }
 
 /** 全量重拉会清空本地已导入的活动与健康数据，必须经运动员确认后执行。 */
 export function ResyncDialog({ open, onClose, onConfirm, isBusy = false }: ResyncDialogProps) {
   const handleConfirm = async () => {
-    await onConfirm();
-    onClose();
+    const ok = await onConfirm();
+    if (ok !== false) onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next && !isBusy) onClose(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" mobileSheet>
         <DialogHeader>
           <DialogTitle>重新同步全部历史？</DialogTitle>
         </DialogHeader>
@@ -36,7 +36,7 @@ export function ResyncDialog({ open, onClose, onConfirm, isBusy = false }: Resyn
             <Button variant="secondary" onClick={onClose} disabled={isBusy}>
               取消
             </Button>
-            <Button onClick={() => void handleConfirm()} disabled={isBusy} data-testid="resync-confirm">
+            <Button variant="destructive" onClick={() => void handleConfirm()} disabled={isBusy} data-testid="resync-confirm">
               {isBusy ? "排队中…" : "清空并重新同步"}
             </Button>
           </div>

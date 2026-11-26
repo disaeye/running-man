@@ -1,8 +1,13 @@
 "use client";
 
-import { Sparkles, Pencil, Archive } from "lucide-react";
-import { Trophy } from "lucide-react";
-import { PageCard, Tag } from "@shared/ui/Lovable";
+import { useState } from "react";
+import { useSWRConfig } from "swr";
+import { Sparkles } from "lucide-react";
+import { invalidateGoalDependents } from "@features/data/lib/invalidate-after-sync";
+import { PageCard } from "@shared/ui/Card";
+import { Segmented } from "@shared/ui/SegmentedControl";
+import { Tag } from "@shared/ui/Badge";
+import { DisclosureCard } from "@shared/ui/DisclosureCard";
 import { RaceResultEntry } from "@features/goals/components/RaceResultEntry";
 import { GoalHeroSummary } from "@features/goals/components/GoalHeroSummary";
 import { GoalPhases } from "@features/goals/components/GoalPhases";
@@ -11,7 +16,6 @@ import { RaceReadinessCard } from "@features/goals/components/RaceReadinessCard"
 import { TrainingPaceCard } from "@features/goals/components/TrainingPaceCard";
 import { GoalsPageSkeleton } from "@features/goals/components/GoalsPageSkeleton";
 import { MilestoneList } from "@features/goals/components/MilestoneList";
-import { PersonalRecordsHall } from "@features/goals/components/PersonalRecordsHall";
 import { GoalLoadForecast } from "@features/goals/components/GoalLoadForecast";
 import { GoalAdjustments } from "@features/goals/components/GoalAdjustments";
 import { useGoal, createMilestone, toggleMilestone, updateMilestone } from "@features/goals/hooks/useGoals";
@@ -20,17 +24,18 @@ import { usePlanAdjustments } from "@features/goals/hooks/usePlanAdjustments";
 import { useAthleteTimezone, athleteToday } from "@shared/lib/training-day";
 import { GOAL_TYPES, type Goal } from "@shared/types/goals";
 
-/** 目标详情区：按类型分叉渲染。比赛走阶段与配速，其他类型走进度环。 */
-export function GoalDetailArea({ goalId, onEdit, onAbandon, onGenerate }: {
+/** 目标详情区：按类型分叉渲染。比赛走阶段与配速，其他类型走进度环；编辑与删除在「管理全部」抽屉里。 */
+export function GoalDetailArea({ goalId, onGenerate }: {
   goalId: string;
-  onEdit: () => void;
-  onAbandon: () => void;
   onGenerate: () => void;
 }) {
+  const { mutate } = useSWRConfig();
   const { goal, milestones, refresh, loading } = useGoal(goalId);
   const timezone = useAthleteTimezone();
   const adjustments = usePlanAdjustments();
   const { refreshGoal, loading: refreshLoading, error: refreshError } = useGoalRefresh();
+  const [detailTab, setDetailTab] = useState<"plan" | "forecast">("plan");
+  const pendingAdjustments = adjustments.data.filter((item) => item.status === "pending").length;
   const today = athleteToday(timezone);
   const days = goal?.target_date
     ? Math.max(0, Math.ceil((new Date(goal.target_date).getTime() - new Date(today).getTime()) / 86400000))
@@ -47,12 +52,14 @@ export function GoalDetailArea({ goalId, onEdit, onAbandon, onGenerate }: {
     <div className="content-swap space-y-4">
       {isEvent ? (
         <PageCard hero>
-          <GoalHeroSummary goal={goal} days={days} />
+          <GoalHeroSummary goal={goal} days={days} today={today} />
           <DetailActions
-            onEdit={onEdit}
-            onAbandon={onAbandon}
             onGenerate={canGenerate ? onGenerate : undefined}
-            onRecordResult={racePassed ? () => void refresh() : undefined}
+            onRecordResult={
+              racePassed
+                ? () => void Promise.all([refresh(), invalidateGoalDependents(mutate, goalId)])
+                : undefined
+            }
             goalForResult={racePassed ? goal : null}
           />
         </PageCard>
@@ -69,54 +76,94 @@ export function GoalDetailArea({ goalId, onEdit, onAbandon, onGenerate }: {
             </div>
             {goal.is_primary ? <Tag tone="primary">主目标</Tag> : null}
           </div>
-          <DetailActions onEdit={onEdit} onAbandon={onAbandon} />
         </PageCard>
       )}
 
       {isEvent ? (
         <>
-          {goal.target_date ? <GoalPhases goalId={goalId} today={today} /> : null}
-          <RaceReadinessCard goal={goal} />
-          <TrainingPaceCard goalId={goalId} />
+          {pendingAdjustments > 0 ? (
+            <GoalAdjustments adjustments={adjustments.data} onDecided={adjustments.reload} />
+          ) : null}
+          <RaceReadinessCard goal={goal} daysOverride={days} />
+          <Segmented
+            options={[
+              { value: "plan" as const, label: "备赛计划与配速" },
+              {
+                value: "forecast" as const,
+                label: pendingAdjustments > 0 ? `负荷推演与调整 (${pendingAdjustments})` : "负荷推演与调整",
+              },
+            ]}
+            value={detailTab}
+            onChange={setDetailTab}
+          />
+          {detailTab === "plan" ? (
+            <div className="view-swap space-y-4">
+              {goal.target_date ? <GoalPhases goalId={goalId} today={today} onGenerate={canGenerate ? onGenerate : undefined} /> : null}
+              <TrainingPaceCard goalId={goalId} />
+              <PageCard title="里程碑">
+                <MilestoneList
+                  milestones={milestones}
+                  goalId={goalId}
+                  goalUnit={goal.unit}
+                  onToggle={async (id) => {
+                    await toggleMilestone(goalId, id, !milestones.find((m) => m.milestone_id === id)?.achieved);
+                    await refresh();
+                  }}
+                  onSave={async (id, draft) => {
+                    if (id) await updateMilestone(goalId, id, draft);
+                    else await createMilestone(goalId, draft);
+                    await refresh();
+                  }}
+                />
+              </PageCard>
+            </div>
+          ) : (
+            <div className="view-swap space-y-4">
+              <GoalLoadForecast today={today} targetDate={goal.target_date} timezone={timezone} />
+            </div>
+          )}
         </>
       ) : (
-        <GoalProgress
-          goal={goal}
-          onRefresh={() => void refreshGoal(goalId).then(refresh)}
-          refreshLoading={refreshLoading}
-          refreshError={refreshError}
-        />
+        <>
+          <GoalProgress
+            goal={goal}
+            onRefresh={() =>
+              void refreshGoal(goalId)
+                .then(() => Promise.all([refresh(), invalidateGoalDependents(mutate, goalId)]))
+                .catch(() => undefined)
+            }
+            refreshLoading={refreshLoading}
+            refreshError={refreshError}
+          />
+          <PageCard title="里程碑">
+            <MilestoneList
+              milestones={milestones}
+              goalId={goalId}
+              goalUnit={goal.unit}
+              onToggle={async (id) => {
+                await toggleMilestone(goalId, id, !milestones.find((m) => m.milestone_id === id)?.achieved);
+                await refresh();
+              }}
+              onSave={async (id, draft) => {
+                if (id) await updateMilestone(goalId, id, draft);
+                else await createMilestone(goalId, draft);
+                await refresh();
+              }}
+            />
+          </PageCard>
+          <DisclosureCard
+            title="预计负荷走势"
+            summary="按当前训练状态与未来课表推演体能趋势"
+          >
+            <GoalLoadForecast today={today} targetDate={goal.target_date} timezone={timezone} />
+          </DisclosureCard>
+        </>
       )}
-
-      <PageCard title="里程碑">
-        <MilestoneList
-          milestones={milestones}
-          goalId={goalId}
-          goalUnit={goal.unit}
-          onToggle={async (id) => {
-            await toggleMilestone(goalId, id, !milestones.find((m) => m.milestone_id === id)?.achieved);
-            await refresh();
-          }}
-          onSave={async (id, draft) => {
-            if (id) await updateMilestone(goalId, id, draft);
-            else await createMilestone(goalId, draft);
-            await refresh();
-          }}
-        />
-      </PageCard>
-
-      <GoalLoadForecast today={today} targetDate={goal.target_date} timezone={timezone} />
-      <GoalAdjustments adjustments={adjustments.data} onDecided={adjustments.reload} />
-      <PageCard title="个人荣誉室" action={<Trophy className="h-4 w-4 text-warn" aria-hidden />}>
-        <PersonalRecordsHall />
-      </PageCard>
     </div>
   );
 }
 
-export function DetailActions({ onEdit, onAbandon, onGenerate, onRecordResult, goalForResult }: {
-  onEdit: () => void;
-  onAbandon: () => void;
+export function DetailActions({ onGenerate, onRecordResult, goalForResult }: {
   onGenerate?: () => void;
   onRecordResult?: () => void;
   goalForResult?: Goal | null;
@@ -132,14 +179,6 @@ export function DetailActions({ onEdit, onAbandon, onGenerate, onRecordResult, g
       {onRecordResult && goalForResult ? (
         <RaceResultEntry goal={goalForResult} onRecorded={onRecordResult} />
       ) : null}
-      <button type="button" onClick={onEdit} className="inline-flex min-h-11 items-center gap-1.5 text-caption1 text-accent-strong hover:underline">
-        <Pencil className="h-3.5 w-3.5" aria-hidden />
-        编辑目标
-      </button>
-      <button type="button" onClick={onAbandon} className="inline-flex min-h-11 items-center gap-1.5 text-caption1 text-text-muted hover:text-error">
-        <Archive className="h-3.5 w-3.5" aria-hidden />
-        放弃目标
-      </button>
     </div>
   );
 }

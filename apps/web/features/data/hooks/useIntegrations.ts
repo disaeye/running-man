@@ -60,13 +60,18 @@ function mapToStatus(
 ): IntegrationStatus {
   const settings = raw.settings ?? {};
   const detail = raw.last_sync_detail;
+  const detailObj =
+    detail !== null && detail !== undefined && typeof detail === "object"
+      ? (detail as Record<string, unknown>)
+      : null;
+  const detailErrors = Array.isArray(detailObj?.errors) ? detailObj.errors.length : 0;
   return {
     id: source,
     name: getSourceDefinition(source)?.display_name ?? source,
     status: raw.connected ? "connected" : "disconnected",
     last_sync: raw.last_sync_at ?? null,
     athlete_id: raw.data_as_of ?? undefined,
-    error_count: 0,
+    error_count: detailErrors,
     settings: {
       sync_frequency: narrowToLiteral(
         settings.sync_frequency,

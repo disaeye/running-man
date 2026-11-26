@@ -11,7 +11,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function RecomputeStatusCard() {
-  const { status, attempts, lastError, error, reload } = useRecomputeStatus();
+  const { status, finishedAt, lastError, error, reload } = useRecomputeStatus();
   if (!status) return null;
 
   return (
@@ -24,13 +24,14 @@ export function RecomputeStatusCard() {
         <Badge variant={status === "failed" ? "warning" : status === "succeeded" ? "success" : "info"}>
           {STATUS_LABELS[status] ?? status}
         </Badge>
-        {status === "failed" && attempts > 0 && (
-          <span className="text-caption1 text-text-muted">已尝试 {attempts} 次</span>
+        {status === "failed" && (
+          <span className="text-caption1 text-text-secondary">
+            部分训练指标尚未更新，当前仍展示已有记录。前往「我的 → 设置 → 数据源与同步」重新计算。
+            {finishedAt ? ` 上次检查：${new Date(finishedAt).toLocaleString("zh-CN")}` : ""}
+          </span>
         )}
-        {status === "failed" && lastError && (
-          <span className="text-caption1 text-error">{lastError}</span>
-        )}
-        {error && <span className="text-caption1 text-error">状态读取失败：{error}</span>}
+        {lastError ? <span className="sr-only">计算状态技术详情：{lastError}</span> : null}
+        {error && <span className="text-caption1 text-error">暂时无法读取指标计算状态，请稍后刷新。</span>}
       </div>
       {status === "failed" && (
         <button
@@ -38,7 +39,7 @@ export function RecomputeStatusCard() {
           onClick={reload}
           className="focus-ring min-h-11 rounded-md px-3 text-caption1 font-medium text-accent-strong hover:bg-surface-overlay"
         >
-          重新检查
+          刷新状态
         </button>
       )}
     </section>

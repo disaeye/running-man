@@ -94,10 +94,10 @@ function mapAnalysis(raw: Generated.ActivityAnalysisResponseOutput): ActivityAna
       pace_s_per_km:
         lap.pace_s_per_km ??
         (lap.distance_m > 0 && lap.duration_s != null && lap.duration_s > 0
-          ? lap.distance_m / lap.duration_s
+          ? (lap.duration_s * 1000) / lap.distance_m
           : null),
       avg_pace: lap.distance_m > 0 && lap.duration_s != null && lap.duration_s > 0
-        ? lap.distance_m / lap.duration_s
+        ? (lap.duration_s * 1000) / lap.distance_m
         : null,
       elevation_gain: null,
     })),

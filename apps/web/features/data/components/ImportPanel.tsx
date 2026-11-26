@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useSWRConfig } from "swr";
 import { Card } from "@shared/ui/Card";
 import { Badge } from "@shared/ui/Badge";
 import { API_ERROR_KINDS, ApiError, apiErrorMessage, apiFetch } from "@shared/lib/api";
+import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
 
 const ACCEPTED_EXTENSIONS = [".fit", ".tcx", ".gpx"];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
@@ -17,9 +19,17 @@ interface UploadRecord {
   error?: string;
 }
 
-export function ImportPanel() {
+export interface UploadBatchSummary {
+  total: number;
+  succeeded: number;
+  failed: number;
+}
+
+export function ImportPanel({ onUploaded }: { readonly onUploaded?: (summary: UploadBatchSummary) => void } = {}) {
+  const { mutate } = useSWRConfig();
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [history, setHistory] = useState<UploadRecord[]>(loadHistory());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -36,15 +46,15 @@ export function ImportPanel() {
     });
   }, []);
 
-  const uploadFile = useCallback(async (file: File) => {
+  const uploadFile = useCallback(async (file: File): Promise<boolean> => {
     const ext = "." + file.name.split(".").pop()?.toLowerCase();
     if (!ACCEPTED_EXTENSIONS.includes(ext)) {
       addHistory({ filename: file.name, status: "failed", error: "不支持的文件格式" });
-      return;
+      return false;
     }
     if (file.size > MAX_FILE_SIZE) {
       addHistory({ filename: file.name, status: "failed", error: "文件大小超过 50MB 限制" });
-      return;
+      return false;
     }
 
     setUploading(true);
@@ -57,6 +67,7 @@ export function ImportPanel() {
         body: formData,
       });
       addHistory({ filename: file.name, status: "success" });
+      return true;
     } catch (caught) {
       if (caught instanceof ApiError && caught.kind === API_ERROR_KINDS.conflict) {
         addHistory({ filename: file.name, status: "duplicate" });
@@ -67,6 +78,7 @@ export function ImportPanel() {
           error: apiErrorMessage(caught),
         });
       }
+      return false;
     } finally {
       setUploading(false);
     }
@@ -74,10 +86,21 @@ export function ImportPanel() {
 
   const handleFiles = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
-    for (const file of fileArray) {
-      await uploadFile(file);
+    let succeeded = 0;
+    let failed = 0;
+    for (let i = 0; i < fileArray.length; i += 1) {
+      const file = fileArray[i]!;
+      setUploadProgress(fileArray.length > 1 ? `上传中 (${i + 1}/${fileArray.length})…` : "上传中…");
+      const ok = await uploadFile(file);
+      if (ok) succeeded += 1;
+      else failed += 1;
     }
-  }, [uploadFile]);
+    setUploadProgress(null);
+    if (succeeded > 0) {
+      await invalidateDataCards(mutate);
+      onUploaded?.({ total: fileArray.length, succeeded, failed });
+    }
+  }, [uploadFile, mutate, onUploaded]);
 
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault();
@@ -126,7 +149,7 @@ export function ImportPanel() {
         >
           <UploadCloudIcon />
           <span className="text-subheadline font-medium text-text-primary">
-            {uploading ? "上传中…" : "拖拽文件到此处，或点击选择"}
+            {uploading ? (uploadProgress ?? "上传中…") : "拖拽文件到此处，或点击选择"}
           </span>
           <span className="text-caption1 text-text-muted">FIT / TCX / GPX</span>
           <input
@@ -134,6 +157,7 @@ export function ImportPanel() {
             type="file"
             accept=".fit,.tcx,.gpx"
             multiple
+            disabled={uploading}
             onChange={handleInputChange}
             className="hidden"
             aria-label="选择训练文件"

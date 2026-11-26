@@ -1,19 +1,32 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { login } from "@shared/lib/auth";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
-import { classifyAuthError, type AuthErrorState } from "@features/auth/lib/auth-error";
+import {
+  buildAuthSwitchHref,
+  classifyAuthError,
+  resolveSafeNextPath,
+  type AuthErrorState,
+} from "@features/auth/lib/auth-error";
+
+const subscribeLocation = () => () => {};
+const getLocationSearch = () => (typeof window === "undefined" ? "" : window.location.search);
+const getServerLocationSearch = () => "";
 
 export function LoginForm() {
-  const [email, setEmail] = useState("");
+  const search = useSyncExternalStore(subscribeLocation, getLocationSearch, getServerLocationSearch);
+  const prefillEmail = new URLSearchParams(search).get("email") ?? "";
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+  const email = emailDraft ?? prefillEmail;
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState<AuthErrorState | null>(null);
   const [loading, setLoading] = useState(false);
+  const registerHref = buildAuthSwitchHref("/register", search);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -24,9 +37,7 @@ export function LoginForm() {
     try {
       await login({ email, password });
       const nextTarget =
-        typeof window !== "undefined"
-          ? new URLSearchParams(window.location.search).get("next") || "/"
-          : "/";
+        typeof window !== "undefined" ? resolveSafeNextPath(window.location.search) : "/";
       window.location.assign(nextTarget);
     } catch (caught) {
       setAuthError(classifyAuthError(caught, "login"));
@@ -53,7 +64,7 @@ export function LoginForm() {
           type="email"
           placeholder="name@domain.com"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => setEmailDraft(event.target.value)}
           required
           autoComplete="email"
           aria-invalid={emailError != null}
@@ -128,7 +139,7 @@ export function LoginForm() {
 
       <p className="text-center text-caption1 text-text-muted">
         还没有账号？{" "}
-        <Link href="/register" className="text-accent-strong underline underline-offset-4">
+        <Link href={registerHref} className="text-accent-strong underline underline-offset-4">
           创建账号
         </Link>
       </p>

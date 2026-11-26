@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
-import { Card } from "@shared/ui/Card";
-import { CardHeader } from "@shared/ui/CardHeader";
+import { DisclosureCard } from "@shared/ui/DisclosureCard";
 import { Button } from "@shared/ui/button";
+import { Badge } from "@shared/ui/Badge";
+import { ConfirmDialog } from "@shared/ui/ConfirmDialog";
+import { useToast } from "@shared/ui/Toast";
 import { apiErrorMessage } from "@shared/lib/api";
 import { eventLabel } from "@features/today/lib/grade-label";
 import { useRaceResults } from "@features/settings/hooks/useRaceResults";
@@ -19,8 +21,10 @@ import { RaceResultForm } from "@features/settings/components/RaceResultForm";
  * 而是登记之后才会出现等级。
  */
 export function RaceResultsSection() {
+  const { toast } = useToast();
   const { data, loading, error, create, remove, reload } = useRaceResults();
   const [formOpen, setFormOpen] = useState(false);
+  const [confirmRow, setConfirmRow] = useState<{ id: string; name: string } | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -29,6 +33,8 @@ export function RaceResultsSection() {
     setDeleteError(null);
     try {
       await remove(id);
+      setConfirmRow(null);
+      toast("比赛成绩已删除", "info");
     } catch (caught) {
       setDeleteError(apiErrorMessage(caught, "删除比赛成绩失败，请稍后重试。"));
     } finally {
@@ -36,18 +42,38 @@ export function RaceResultsSection() {
     }
   };
 
+  const [open, setOpen] = useState(false);
+  const latest = data[0] ?? null;
+  const summaryText = loading
+    ? "正在读取比赛成绩…"
+    : error !== null
+      ? "读取失败，展开重试"
+      : data.length === 0
+        ? "还没有比赛成绩 · 登记后计算大众选手等级"
+        : `共 ${data.length} 条 · 最近 ${latest ? `${latest.event_name} ${formatRaceTime(latest.time_s)}` : ""}`;
+
   return (
-    <Card padding="md" data-testid="race-results-section">
-      <CardHeader
-        title="比赛成绩"
-        trailing={
-          formOpen ? undefined : (
-            <Button variant="secondary" size="sm" onClick={() => setFormOpen(true)}>
-              添加成绩
-            </Button>
-          )
-        }
-      />
+    <DisclosureCard
+      title="比赛成绩"
+      summary={summaryText}
+      open={open || formOpen}
+      onOpenChange={setOpen}
+      testId="race-results-section"
+      action={
+        formOpen ? undefined : (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setOpen(true);
+              setFormOpen(true);
+            }}
+          >
+            添加成绩
+          </Button>
+        )
+      }
+    >
 
       {loading && (
         <p className="flex items-center gap-2 text-caption1 text-text-muted">
@@ -88,10 +114,13 @@ export function RaceResultsSection() {
               className="flex min-h-14 items-center justify-between gap-3"
             >
               <div className="min-w-0">
-                <p className="truncate text-body text-text-primary">
-                  {row.event_name}
-                </p>
-                <p className="truncate text-caption1 text-text-muted">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-body text-text-primary">
+                    {row.event_name}
+                  </p>
+                  {row.a1_certified ? <Badge variant="info">A1 认证</Badge> : null}
+                </div>
+                <p className="truncate text-caption1 text-text-muted font-mono tabular-nums">
                   {eventLabel(row.distance_category)} · {row.race_date}
                 </p>
               </div>
@@ -101,8 +130,11 @@ export function RaceResultsSection() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => void deleteRow(row.id)}
-                  disabled={removingId === row.id}
+                  onClick={() => {
+                    setDeleteError(null);
+                    setConfirmRow({ id: row.id, name: row.event_name });
+                  }}
+                  disabled={removingId !== null}
                   aria-label={`删除 ${row.event_name}`}
                   className="focus-ring grid size-11 place-items-center rounded-full text-text-muted transition-colors hover:text-error disabled:opacity-50"
                 >
@@ -133,6 +165,16 @@ export function RaceResultsSection() {
           onCancel={() => setFormOpen(false)}
         />
       )}
-    </Card>
+      <ConfirmDialog
+        open={confirmRow !== null}
+        onOpenChange={(next) => { if (!next && removingId === null) setConfirmRow(null); }}
+        title="确认删除这条比赛成绩？"
+        description={confirmRow ? `删除「${confirmRow.name}」后将重新计算大众选手等级，且不可恢复。` : ""}
+        confirmLabel="确认删除"
+        confirmVariant="destructive"
+        loading={removingId !== null}
+        onConfirm={() => { if (confirmRow) void deleteRow(confirmRow.id); }}
+      />
+    </DisclosureCard>
   );
 }

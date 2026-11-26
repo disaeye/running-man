@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSWRConfig } from "swr";
 import { Card } from "@shared/ui/Card";
 import { Input } from "@shared/ui/input";
 import {
@@ -11,9 +12,11 @@ import {
   SelectValue,
 } from "@shared/ui/select";
 import { Button } from "@shared/ui/button";
+import { useToast } from "@shared/ui/Toast";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import { timezoneOptions } from "@shared/config/timezones";
 import type { UserProfile } from "@shared/lib/auth";
+import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
 
 interface Props {
   profile: UserProfile;
@@ -21,21 +24,27 @@ interface Props {
 }
 
 export function SettingsProfile({ profile, onSaved }: Props) {
+  const { mutate } = useSWRConfig();
+  const { toast } = useToast();
+  const baseTimezone = profile.timezone || "UTC";
+  const [source, setSource] = useState(profile);
   const [name, setName] = useState(profile.name || "");
-  const [timezone, setTimezone] = useState(profile.timezone || "Asia/Shanghai");
-  const [units, setUnits] = useState<"metric" | "imperial">(
-    () => (typeof window !== "undefined" && localStorage.getItem("settings_units") as "metric" | "imperial") || "metric",
-  );
+  const [timezone, setTimezone] = useState(baseTimezone);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hasChanges =
-    name !== (profile.name || "") ||
-    timezone !== (profile.timezone || "Asia/Shanghai") ||
-    (typeof window !== "undefined" && (localStorage.getItem("settings_units") || "metric") !== units);
+  if (source !== profile) {
+    setSource(profile);
+    setName(profile.name || "");
+    setTimezone(baseTimezone);
+    setError(null);
+  }
+
+  const hasChanges = name !== (profile.name || "") || timezone !== baseTimezone;
 
   const handleSave = async () => {
+    const timezoneChanged = timezone !== baseTimezone;
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -44,12 +53,12 @@ export function SettingsProfile({ profile, onSaved }: Props) {
         method: "PUT",
         body: JSON.stringify({ name: name.trim(), timezone }),
       });
-      if (typeof window !== "undefined") {
-        localStorage.setItem("settings_units", units);
-      }
       setSaved(true);
+      toast("个人信息已保存", "success");
       onSaved();
-      setTimeout(() => setSaved(false), 3000);
+      if (timezoneChanged) {
+        void invalidateDataCards(mutate);
+      }
     } catch (err: unknown) {
       setError(apiErrorMessage(err, "保存失败，请稍后重试"));
     } finally {
@@ -61,7 +70,7 @@ export function SettingsProfile({ profile, onSaved }: Props) {
     <Card padding="md" className="space-y-6">
       <div>
         <h2 className="text-caption1 font-semibold text-text-secondary">基本信息</h2>
-        <p className="mt-0.5 text-caption1 text-text-muted">管理您的运动员称呼、系统时区及度量单位偏好</p>
+        <p className="mt-0.5 text-caption1 text-text-muted">管理您的运动员称呼与系统时区</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -104,41 +113,6 @@ export function SettingsProfile({ profile, onSaved }: Props) {
           </Select>
           <span className="text-caption1 text-text-muted">用于按天划分训练日志与生理指标统计周期</span>
         </label>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="text-subheadline font-medium text-text-secondary">度量单位系统</span>
-          <div className="grid grid-cols-2 gap-2 h-[44px]">
-            <button
-              type="button"
-              onClick={() => {
-                setUnits("metric");
-                setSaved(false);
-              }}
-              className={`focus-ring flex items-center justify-center rounded-md px-3 py-2 text-subheadline transition-all ${
-                units === "metric"
-                  ? "bg-accent text-accent-foreground font-medium shadow-sm"
-                  : "bg-surface-overlay border border-border-default text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              公制 (km / kg)
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setUnits("imperial");
-                setSaved(false);
-              }}
-              className={`focus-ring flex items-center justify-center rounded-md px-3 py-2 text-subheadline transition-all ${
-                units === "imperial"
-                  ? "bg-accent text-accent-foreground font-medium shadow-sm"
-                  : "bg-surface-overlay border border-border-default text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              英制 (mi / lbs)
-            </button>
-          </div>
-          <span className="text-caption1 text-text-muted">配速展示与体力量度均会自动适配</span>
-        </div>
       </div>
 
       {error && (
@@ -149,10 +123,10 @@ export function SettingsProfile({ profile, onSaved }: Props) {
 
       <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
         <div className="text-caption1 text-text-muted">
-          {saved && <span className="text-success font-medium">✓ 个人信息已更新</span>}
-          {!saved && hasChanges && <span className="text-warning">● 有未保存的修改</span>}
+          {saved && !hasChanges && <span className="text-success font-medium">✓ 个人信息已更新</span>}
+          {hasChanges && !saving && <span className="text-warn font-medium">有未保存的改动，点击「保存修改」后生效</span>}
         </div>
-        <Button onClick={handleSave} disabled={saving || !hasChanges}>
+        <Button onClick={handleSave} disabled={saving || !hasChanges} className={hasChanges && !saving ? "ring-2 ring-accent/40" : undefined}>
           {saving ? "保存中…" : "保存修改"}
         </Button>
       </div>

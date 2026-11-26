@@ -14,7 +14,7 @@ import { useSourceCoverage } from "@features/data/hooks/useSyncJobs";
 interface BackfillDialogProps {
   open: boolean;
   onClose(): void;
-  onStartBackfill(fromDate: string): Promise<void>;
+  onStartBackfill(fromDate: string): Promise<boolean | void>;
   isBusy?: boolean;
 }
 
@@ -45,13 +45,13 @@ export function BackfillDialog({
 
   const handleSubmit = async () => {
     if (!fromDate) return;
-    await onStartBackfill(fromDate);
-    onClose();
+    const ok = await onStartBackfill(fromDate);
+    if (ok !== false) onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={(next) => { if (!next && !isBusy) onClose(); }}>
+      <DialogContent className="max-w-md" mobileSheet>
         <DialogHeader>
           <DialogTitle>导入更早历史数据</DialogTitle>
         </DialogHeader>

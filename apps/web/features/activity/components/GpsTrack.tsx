@@ -7,19 +7,20 @@ import type { StreamMap } from "@shared/types/activity";
 
 interface GpsTrackProps {
   streams: StreamMap;
+  hoverTimeSec?: number | null;
 }
 
 const SVG_W = 600;
 const SVG_H = 280;
 const PAD = 28;
 
-export function GpsTrack({ streams }: GpsTrackProps) {
+export function GpsTrack({ streams, hoverTimeSec = null }: GpsTrackProps) {
   const coords = useMemo(() => normalizeGpsTrack(streams).points, [streams]);
   const gridPatternId = useId();
 
-  const { pointsStr, start, finish } = useMemo(() => {
+  const { pointsStr, projectedPoints, start, finish } = useMemo(() => {
     if (coords.length < 2) {
-      return { pointsStr: "", start: null, finish: null };
+      return { pointsStr: "", projectedPoints: [], start: null, finish: null };
     }
     const projection = projectGpsTrack(coords, {
       width: SVG_W,
@@ -29,10 +30,34 @@ export function GpsTrack({ streams }: GpsTrackProps) {
     const pts = projection.points.map((p) => `${p.x},${p.y}`).join(" ");
     return {
       pointsStr: pts,
+      projectedPoints: projection.points,
       start: projection.start,
       finish: projection.finish,
     };
   }, [coords]);
+
+  const hoverPoint = useMemo(() => {
+    if (hoverTimeSec == null || coords.length < 2 || projectedPoints.length < 2) return null;
+    const t0 = Date.parse(coords[0]!.sample_time);
+    if (!Number.isFinite(t0)) return null;
+    const isEpochSec = hoverTimeSec >= 1e9;
+    let bestIdx = 0;
+    let bestDelta = Infinity;
+    let largestGap = 0;
+    let previousSec = 0;
+    for (let i = 0; i < coords.length; i += 1) {
+      const sampleMs = Date.parse(coords[i]!.sample_time);
+      const sec = isEpochSec ? sampleMs / 1000 : (sampleMs - t0) / 1000;
+      if (i > 0) largestGap = Math.max(largestGap, sec - previousSec);
+      previousSec = sec;
+      const delta = Math.abs(sec - hoverTimeSec);
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        bestIdx = i;
+      }
+    }
+    return bestDelta <= Math.max(20, largestGap) ? (projectedPoints[bestIdx] ?? null) : null;
+  }, [hoverTimeSec, coords, projectedPoints]);
 
   if (coords.length < 2 || !start || !finish) {
     return (
@@ -133,6 +158,18 @@ export function GpsTrack({ streams }: GpsTrackProps) {
           strokeWidth="1.5"
         />
 
+        {hoverPoint ? (
+          <circle
+            cx={hoverPoint.x}
+            cy={hoverPoint.y}
+            r="6"
+            fill="var(--color-primary)"
+            fillOpacity="0.35"
+            stroke="var(--color-primary)"
+            strokeWidth="2"
+          />
+        ) : null}
+
         {/* 指北针 */}
         <g transform={`translate(${SVG_W - 36}, 24)`} opacity="0.65">
           <circle r="12" fill="var(--color-background)" fillOpacity="0.6" stroke="var(--color-border)" strokeWidth="0.8" />
@@ -143,7 +180,7 @@ export function GpsTrack({ streams }: GpsTrackProps) {
       </svg>
 
       {/* 底部信息与图例 */}
-      <div className="absolute bottom-2.5 left-3 flex items-center gap-3 rounded-full bg-background/80 px-2.5 py-1 text-caption2 backdrop-blur-md">
+      <div className="absolute bottom-2.5 left-3 flex items-center gap-3 rounded-full border border-border-default bg-surface-card/95 px-2.5 py-1 text-caption1">
         <span className="flex items-center gap-1 text-muted-foreground">
           <span className="h-2 w-2 rounded-full bg-success" /> 起点
         </span>

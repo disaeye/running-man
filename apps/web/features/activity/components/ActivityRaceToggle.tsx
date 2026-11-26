@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@shared/ui/Toast";
 import { useActivityFlagging } from "@features/activity/hooks/useActivityFlagging";
 
 export function ActivityRaceToggle({
@@ -12,8 +13,10 @@ export function ActivityRaceToggle({
   isRace: boolean;
   onDone: () => void;
 }) {
+  const { toast } = useToast();
   const { setRace, pending, error } = useActivityFlagging();
-  const [value, setValue] = useState(isRace);
+  const [optimisticRace, setOptimisticRace] = useState<boolean | undefined>(undefined);
+  const shownRace = optimisticRace !== undefined ? optimisticRace : isRace;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -22,14 +25,17 @@ export function ActivityRaceToggle({
           aria-label="比赛活动"
           className="size-5 accent-accent"
           type="checkbox"
-          checked={value}
+          checked={shownRace}
           disabled={pending}
           onChange={(event) => {
             const next = event.target.checked;
-            setValue(next);
+            setOptimisticRace(next);
             void setRace(activityId, next).then((ok) => {
-              if (ok) onDone();
-              else setValue(!next);
+              setOptimisticRace(undefined);
+              if (ok) {
+                toast(next ? "已标记为比赛活动" : "已取消比赛标记", "success");
+                onDone();
+              }
             });
           }}
         />

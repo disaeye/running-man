@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { useAthleteTimezone } from "@shared/lib/training-day";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import { getSportConfig } from "@shared/config/sport-config";
+import { strengthLogUrl } from "@shared/config/training-nav";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { SPORT_ALIASES } from "@shared/config/generated/sport-registry";
 import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
@@ -17,6 +19,8 @@ type ManualActivityFormProps = {
   onSaved: (activity: ActivitySummary) => void;
   initialDate?: string;
   eventId?: string;
+  /** 选了健身却想要动作与组数时，表单顶部给出力量工作台入口；点击时先调用它再跳转。 */
+  onStrengthNavigate?: () => void;
 };
 
 type ManualActivityResponse = {
@@ -104,7 +108,7 @@ function localTimeToIso(value: string, timezone: string): string {
   return new Date(instant).toISOString();
 }
 
-export function ManualActivityForm({ onSaved, initialDate, eventId }: ManualActivityFormProps) {
+export function ManualActivityForm({ onSaved, initialDate, eventId, onStrengthNavigate }: ManualActivityFormProps) {
   const timezone = useAthleteTimezone();
   const { mutate } = useSWRConfig();
   const { profile } = useProfile();
@@ -145,7 +149,7 @@ export function ManualActivityForm({ onSaved, initialDate, eventId }: ManualActi
         body: JSON.stringify({
           start_time: localTimeToIso(startTime, timezone),
           sport: SPORT_ALIASES[sport],
-          distance_m: distanceKm ? Number(distanceKm) * 1000 : null,
+          distance_m: distanceKm && Number(distanceKm) > 0 ? Number(distanceKm) * 1000 : null,
           duration_s: durationS,
           avg_hr: avgHr ? Number(avgHr) : null,
           max_hr: maxHr ? Number(maxHr) : null,
@@ -198,6 +202,17 @@ export function ManualActivityForm({ onSaved, initialDate, eventId }: ManualActi
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" aria-label="手动记录训练">
+      {sport === "Workout" ? (
+        <Link
+          href={strengthLogUrl(/^\d{4}-\d{2}-\d{2}/.test(startTime) ? startTime.slice(0, 10) : null)}
+          onClick={onStrengthNavigate}
+          data-testid="manual-strength-hint"
+          className="tactile flex min-h-11 items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2.5 text-caption1 text-text-secondary hover:bg-accent/15"
+        >
+          <span>需要记录具体动作、重量与组数？</span>
+          <span className="shrink-0 font-medium text-accent-strong">前往力量工作台 →</span>
+        </Link>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-caption1 text-text-secondary">
           运动项目
@@ -216,14 +231,14 @@ export function ManualActivityForm({ onSaved, initialDate, eventId }: ManualActi
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-caption1 text-text-secondary">
-          距离（公里，可留空）
-          <Input type="number" min="0.001" max="1000" step="0.001" value={distanceKm} onChange={(event) => setDistanceKm(event.target.value)} />
+          {sport === "Workout" ? "距离（公里，力量/室内可留空）" : "距离（公里，可留空）"}
+          <Input type="number" min="0" max="1000" step="0.001" value={distanceKm} onChange={(event) => setDistanceKm(event.target.value)} />
         </label>
         <fieldset className="flex flex-col gap-1">
           <legend className="text-caption1 text-text-secondary">实际时长</legend>
           <div className="grid grid-cols-3 gap-2">
             <Input aria-label="小时" type="number" min="0" max="48" value={hours} onChange={(event) => setHours(event.target.value)} placeholder="时" />
-            <Input aria-label="分钟" type="number" min="0" max="59" value={minutes} onChange={(event) => setMinutes(event.target.value)} placeholder="分" />
+            <Input aria-label="分钟" type="number" min="0" max={hours ? "59" : "600"} value={minutes} onChange={(event) => setMinutes(event.target.value)} placeholder="分" />
             <Input aria-label="秒" type="number" min="0" max="59" value={seconds} onChange={(event) => setSeconds(event.target.value)} placeholder="秒" />
           </div>
         </fieldset>

@@ -16,6 +16,7 @@ import {
   type SegmentType,
 } from "@features/calendar/components/types";
 import {
+  formatPaceInput,
   parsePaceInput,
   type BuilderSegment,
 } from "@features/calendar/lib/workout-prescription";
@@ -24,18 +25,30 @@ let nextSegmentId = 0;
 
 interface Props {
   readonly isRun: boolean;
+  readonly editingSegment?: BuilderSegment | null;
+  readonly onCancelEdit?: () => void;
   readonly onAdd: (segment: BuilderSegment) => void;
 }
 
-export function WorkoutSegmentForm({ isRun, onAdd }: Props) {
-  const [segType, setSegType] = useState<SegmentType>(isRun ? "SteadyState" : "SteadyState");
-  const [durMin, setDurMin] = useState("");
-  const [durSec, setDurSec] = useState("");
-  const [reps, setReps] = useState("4");
-  const [recMin, setRecMin] = useState("1");
-  const [recSec, setRecSec] = useState("30");
-  const [paceMinText, setPaceMinText] = useState("");
-  const [paceMaxText, setPaceMaxText] = useState("");
+export function WorkoutSegmentForm({ isRun, editingSegment, onCancelEdit, onAdd }: Props) {
+  const [segType, setSegType] = useState<SegmentType>(editingSegment?.segment_type ?? "SteadyState");
+  const [durMin, setDurMin] = useState(() =>
+    editingSegment ? String(Math.floor(editingSegment.duration_s / 60)) : "",
+  );
+  const [durSec, setDurSec] = useState(() => {
+    if (!editingSegment) return "";
+    const remSec = editingSegment.duration_s % 60;
+    return remSec > 0 ? String(remSec) : "";
+  });
+  const [reps, setReps] = useState(() => String(editingSegment?.repetitions ?? 4));
+  const [recMin, setRecMin] = useState(() => String(Math.floor((editingSegment?.recovery_s ?? 90) / 60)));
+  const [recSec, setRecSec] = useState(() => String((editingSegment?.recovery_s ?? 90) % 60));
+  const [paceMinText, setPaceMinText] = useState(() =>
+    editingSegment?.pace_min_s_km != null ? formatPaceInput(editingSegment.pace_min_s_km) : "",
+  );
+  const [paceMaxText, setPaceMaxText] = useState(() =>
+    editingSegment?.pace_max_s_km != null ? formatPaceInput(editingSegment.pace_max_s_km) : "",
+  );
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = (e: FormEvent) => {
@@ -75,7 +88,7 @@ export function WorkoutSegmentForm({ isRun, onAdd }: Props) {
       : null;
 
     onAdd({
-      id: `seg-${Date.now()}-${nextSegmentId++}`,
+      id: editingSegment ? editingSegment.id : `seg-${Date.now()}-${nextSegmentId++}`,
       segment_type: segType,
       duration_s: totalSec,
       pace_min_s_km: paceMin,
@@ -92,7 +105,26 @@ export function WorkoutSegmentForm({ isRun, onAdd }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-xl bg-surface-overlay/50 p-3">
-      <p className="text-caption1 font-medium text-text-secondary">添加训练段落</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-caption1 font-medium text-text-secondary">
+          {editingSegment ? "编辑训练段落" : "添加训练段落"}
+        </p>
+        {editingSegment && onCancelEdit ? (
+          <button
+            type="button"
+            onClick={() => {
+              setDurMin("");
+              setDurSec("");
+              setPaceMinText("");
+              setPaceMaxText("");
+              onCancelEdit();
+            }}
+            className="text-caption1 text-text-muted hover:text-text-primary"
+          >
+            取消编辑
+          </button>
+        ) : null}
+      </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className="text-caption1 text-text-muted">段落类型</span>
@@ -202,7 +234,9 @@ export function WorkoutSegmentForm({ isRun, onAdd }: Props) {
       ) : null}
 
       {formError ? <p role="alert" className="text-caption1 text-error">{formError}</p> : null}
-      <Button type="submit" variant="secondary" className="min-h-11">添加段落</Button>
+      <Button type="submit" variant="secondary" className="min-h-11">
+        {editingSegment ? "更新段落" : "添加段落"}
+      </Button>
     </form>
   );
 }

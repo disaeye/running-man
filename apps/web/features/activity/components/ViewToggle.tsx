@@ -7,9 +7,10 @@ export interface ViewToggleProps {
 
 export function ViewToggle({ mode, onChange }: ViewToggleProps) {
   return (
-    <div className="flex min-h-[44px] overflow-hidden rounded-md border border-border-subtle">
+    <div role="group" aria-label="视图切换" className="flex min-h-[44px] overflow-hidden rounded-md border border-border-subtle">
       <button
         type="button"
+        aria-pressed={mode === "list"}
         onClick={() => onChange("list")}
         className={`flex min-h-[44px] items-center px-3 py-1.5 text-subheadline transition-colors focus-visible:bg-surface-active focus-visible:outline-none ${
           mode === "list"
@@ -21,6 +22,7 @@ export function ViewToggle({ mode, onChange }: ViewToggleProps) {
       </button>
       <button
         type="button"
+        aria-pressed={mode === "table"}
         onClick={() => onChange("table")}
         className={`flex min-h-[44px] items-center border-l border-border-subtle px-3 py-1.5 text-subheadline transition-colors focus-visible:bg-surface-active focus-visible:outline-none ${
           mode === "table"

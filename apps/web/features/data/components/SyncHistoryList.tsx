@@ -83,6 +83,7 @@ export function SyncHistoryList() {
             {[
               { id: "all", label: "全部" },
               { id: "intervals_icu", label: "Intervals" },
+              { id: "file_upload", label: "文件导入" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -104,6 +105,7 @@ export function SyncHistoryList() {
             {[
               { id: "all", label: "全部" },
               { id: "success", label: "成功" },
+              { id: "partial", label: "部分" },
               { id: "failed", label: "失败" },
             ].map((tab) => (
               <button
@@ -171,7 +173,7 @@ export function SyncHistoryList() {
                       <div className="font-medium text-text-primary">
                         {SOURCE_LABEL[row.source] ?? row.source}
                       </div>
-                      <div className="text-caption2 text-text-muted">
+                      <div className="text-caption1 text-text-muted">
                         {TRIGGER_LABEL[row.trigger] ?? row.trigger}
                       </div>
                     </td>
@@ -179,11 +181,11 @@ export function SyncHistoryList() {
                       <div className="text-text-primary font-medium">
                         {formatDate(row.started_at)}
                       </div>
-                      <div className="text-caption2 text-text-muted">
+                      <div className="text-caption1 text-text-muted">
                         {row.started_at ? formatRelativeTime(row.started_at) : ""}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-text-secondary font-mono text-caption2">
+                    <td className="px-4 py-3 text-text-secondary font-mono text-caption1">
                       {formatWindow(row.window_start, row.window_end)}
                     </td>
                     <td className="px-4 py-3">
@@ -192,7 +194,7 @@ export function SyncHistoryList() {
                           {STATUS_LABEL[row.status] ?? row.status}
                         </Badge>
                         {row.errors_count > 0 && (
-                          <span className="text-caption2 text-error font-medium">
+                          <span className="text-caption1 text-error font-medium">
                             ({row.errors_count} 错)
                           </span>
                         )}

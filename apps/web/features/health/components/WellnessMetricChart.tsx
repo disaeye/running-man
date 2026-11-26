@@ -108,7 +108,7 @@ function buildOption(
   const days = points.map((p) => p.day.slice(5));
   const values = points.map((p) => p[field]);
   return {
-    grid: { left: 48, right: 16, top: 16, bottom: 16 },
+    grid: { left: 48, right: 16, top: 32, bottom: 24 },
     xAxis: { data: days },
     yAxis: {
       name: unit,

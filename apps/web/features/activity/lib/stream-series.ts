@@ -56,8 +56,20 @@ export interface TimeDomain {
   end: number;
 }
 
-/** 三条流共用的时间跨度，纵轴各算各的 */
-export function sharedDomain(series: readonly (readonly TimePoint[])[]): TimeDomain | null {
+/** 三条流共用活动有效训练时间，纵轴各算各的。 */
+export function sharedDomain(
+  series: readonly (readonly TimePoint[])[],
+  activityStartTime?: string,
+  activityDurationS?: number | null,
+): TimeDomain | null {
+  const start = activityStartTime ? new Date(activityStartTime).getTime() / 1000 : NaN;
+  if (Number.isFinite(start) && activityDurationS != null && activityDurationS > 0) {
+    return { start, end: start + activityDurationS };
+  }
+  return streamDomain(series);
+}
+
+function streamDomain(series: readonly (readonly TimePoint[])[]): TimeDomain | null {
   let start = Infinity;
   let end = -Infinity;
   for (const points of series) {
@@ -70,9 +82,32 @@ export function sharedDomain(series: readonly (readonly TimePoint[])[]): TimeDom
   return { start, end };
 }
 
-/** 时间点上的值：取最近样本，超过容差视为没有数据 */
-export function valueAt(points: readonly TimePoint[], timeSec: number, toleranceSec = 20): number | null {
+export function clipToDomain(points: readonly TimePoint[], domain: TimeDomain): TimePoint[] {
+  return points.filter((point) => point.timeSec >= domain.start && point.timeSec <= domain.end);
+}
+
+/** 按样本到下一个样本的时间加权，采样间隔变化不会扭曲平均值。 */
+export function weightedAverage(points: readonly TimePoint[]): number | null {
   if (points.length === 0) return null;
+  if (points.length === 1) return points[0]!.value;
+  let weightedSum = 0;
+  let duration = 0;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const current = points[index]!;
+    const next = points[index + 1]!;
+    const seconds = Math.max(0, next.timeSec - current.timeSec);
+    weightedSum += current.value * seconds;
+    duration += seconds;
+  }
+  return duration > 0 ? weightedSum / duration : points.at(-1)!.value;
+}
+
+/** 时间点上的值：取最近样本，超过容差视为没有数据 */
+export function valueAt(points: readonly TimePoint[], timeSec: number, toleranceSec?: number): number | null {
+  if (points.length === 0) return null;
+  const intervals = points.slice(1).map((point, index) => point.timeSec - points[index]!.timeSec).filter((seconds) => seconds > 0);
+  const sampleInterval = intervals.length > 0 ? Math.max(...intervals) : 20;
+  const tolerance = toleranceSec ?? Math.max(20, sampleInterval);
   let best: TimePoint | null = null;
   let bestDelta = Infinity;
   for (const point of points) {
@@ -82,7 +117,7 @@ export function valueAt(points: readonly TimePoint[], timeSec: number, tolerance
       best = point;
     }
   }
-  return best && bestDelta <= toleranceSec ? best.value : null;
+  return best && bestDelta <= tolerance ? best.value : null;
 }
 
 /** 时间刻度标签：mm:ss */

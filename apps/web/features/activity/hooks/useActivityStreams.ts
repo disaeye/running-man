@@ -9,7 +9,7 @@ import { z } from "zod";
 import { nn } from "@shared/lib/dto-nullable";
 
 export function useActivityStreams(id: string | undefined) {
-  const { data, error, isLoading } = useSWR<StreamPoint[]>(
+  const { data, error, isLoading, mutate } = useSWR<StreamPoint[]>(
     id ? [`/activities/${id}/streams`, {}] : null,
     {
       fetcher: async () => {
@@ -26,6 +26,7 @@ export function useActivityStreams(id: string | undefined) {
     data: data ?? [],
     loading: isLoading,
     error: error?.message ?? null,
+    reload: () => void mutate(),
   };
 }
 

@@ -1,37 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { Card } from "@shared/ui/Card";
 import { Button } from "@shared/ui/button";
 import { apiDownloadUrl, apiErrorMessage, apiFetch } from "@shared/lib/api";
+import { athleteToday, useAthleteTimezone } from "@shared/lib/training-day";
 
 interface CalendarEvent {
   event_id: string;
   name: string | null;
+  status?: string | null;
+}
+
+function addDays(day: string, offset: number): string {
+  const dt = new Date(`${day}T00:00:00Z`);
+  dt.setUTCDate(dt.getUTCDate() + offset);
+  return dt.toISOString().slice(0, 10);
 }
 
 export function ExportSection() {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const timezone = useAthleteTimezone();
+  const today = athleteToday(timezone);
+  const yearStart = `${today.slice(0, 4)}-01-01`;
+  const [fromOverride, setFromOverride] = useState<string | null>(null);
+  const [toOverride, setToOverride] = useState<string | null>(null);
+  const from = fromOverride ?? yearStart;
+  const to = toOverride ?? today;
+  const futureEnd = addDays(today, 90);
   const [selectedEventId, setSelectedEventId] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const { data: rawEvents, error: eventsError } = useSWR<CalendarEvent[]>(
+    ["/calendar", { from: yearStart, to: futureEnd }],
+    () => apiFetch<CalendarEvent[]>("/calendar", { params: { from: yearStart, to: futureEnd } }),
+  );
+  const events = (rawEvents ?? []).filter((ev) => ev.status !== "deleted");
+  const error = eventsError ? apiErrorMessage(eventsError) : null;
 
-  useEffect(() => {
-    const today = new Date();
-    const start = new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10);
-    const end = today.toISOString().slice(0, 10);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFrom(start);
-    setTo(end);
-
-    apiFetch<CalendarEvent[]>("/calendar", { params: { from: start, to: end } })
-      .then(setEvents)
-      .catch((caught) => setError(apiErrorMessage(caught)));
-  }, []);
+  const invalidRange = Boolean(from && to && from > to);
 
   const handleCsvExport = () => {
-    if (!from || !to) return;
+    if (!from || !to || invalidRange) return;
     window.open(apiDownloadUrl("/export/activities.csv", { from, to }));
   };
 
@@ -51,12 +59,17 @@ export function ExportSection() {
         <div className="flex flex-col gap-3 rounded-md border border-border-subtle bg-surface-base p-4">
           <h3 className="text-subheadline font-medium text-text-primary">活动数据 (CSV)</h3>
           <div className="flex flex-wrap items-end gap-3">
-            <DateField label="开始" value={from} onChange={setFrom} />
-            <DateField label="结束" value={to} onChange={setTo} />
-            <Button onClick={handleCsvExport} disabled={!from || !to}>
+            <DateField label="开始" value={from} onChange={setFromOverride} />
+            <DateField label="结束" value={to} onChange={setToOverride} />
+            <Button onClick={handleCsvExport} disabled={!from || !to || invalidRange}>
               导出 CSV
             </Button>
           </div>
+          {invalidRange ? (
+            <p role="alert" className="text-caption1 text-error">
+              开始日期不能晚于结束日期
+            </p>
+          ) : null}
         </div>
 
         {/* ZWO Export */}

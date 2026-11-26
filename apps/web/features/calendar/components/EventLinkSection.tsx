@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useSWRConfig } from "swr";
 import { Link2, Unlink } from "lucide-react";
 import { Button } from "@shared/ui/button";
+import { apiErrorMessage } from "@shared/lib/api";
+import { invalidatePlanDependents } from "@features/data/lib/invalidate-after-sync";
 import { callOrval, callOrvalValidated } from "@shared/api/orval-adapter";
 import {
   linkEventApiV1CalendarEventIdLinkPost,
@@ -23,6 +26,7 @@ interface EventLinkSectionProps {
 
 /** 课表关联区块：把已同步的活动绑定到计划课，或解除绑定。 */
 export function EventLinkSection({ event, activities, onSaved }: EventLinkSectionProps) {
+  const { mutate } = useSWRConfig();
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,10 +36,11 @@ export function EventLinkSection({ event, activities, onSaved }: EventLinkSectio
     setError(null);
     try {
       await action();
+      await invalidatePlanDependents(mutate);
       toast(message, "success");
       onSaved();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "操作失败，请重试");
+      setError(apiErrorMessage(cause, "操作失败，请重试"));
     } finally {
       setBusy(false);
     }

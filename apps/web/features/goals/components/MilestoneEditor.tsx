@@ -35,7 +35,7 @@ export function MilestoneEditor({ goalId, initial, goalUnit, saving, onCancel, o
 
   // 与 GoalPhases 共享同一个 SWR key：详情页里两处读的是同一份缓存。
   const { data: phases } = useSWR<Generated.TrainingPhaseResponseOutput[]>(
-    initial == null ? ["/plan/periodization", goalId] : null,
+    ["/plan/periodization", goalId],
     {
       fetcher: () =>
         callOrvalValidated(

@@ -9,7 +9,6 @@ import { IntervalsSourceCard } from "./IntervalsSourceCard";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@shared/ui/tabs";
 import { SyncStatusOverview } from "./SyncStatusOverview";
 import { SyncHistoryList } from "./SyncHistoryList";
-import { DataHealthSummary } from "./DataHealthSummary";
 import { DataQuality } from "./DataQuality";
 import { ImportPanel } from "./ImportPanel";
 import { ExportSection } from "./ExportSection";
@@ -36,7 +35,7 @@ export function DataSources() {
     }
   };
 
-  if (loading && !integrations.intervals_icu) {
+  if (loading) {
     return (
       <div className="space-y-6">
         <Skeleton variant="rectangular" className="h-[120px] w-full rounded-2xl" />
@@ -46,7 +45,7 @@ export function DataSources() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="content-arrival space-y-6">
       <SyncStatusOverview
         integrations={{ intervals_icu: integrations.intervals_icu }}
         syncingSource={syncingSource}
@@ -54,37 +53,35 @@ export function DataSources() {
       />
 
       <Tabs defaultValue="sources" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-4 rounded-xl bg-surface-sunken p-1">
-          <TabsTrigger value="sources" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">数据源集成</TabsTrigger>
-          <TabsTrigger value="history" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">同步历史记录</TabsTrigger>
-          <TabsTrigger value="health" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">健康度与质量</TabsTrigger>
-          <TabsTrigger value="import_export" className="whitespace-normal px-1 text-caption1 font-medium leading-tight">文件导入与导出</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-surface-sunken p-1 sm:grid sm:w-full sm:grid-cols-4">
+          <TabsTrigger value="sources" className="min-h-10 whitespace-normal px-2 text-caption1 font-medium leading-tight">数据源集成</TabsTrigger>
+          <TabsTrigger value="history" className="min-h-10 whitespace-normal px-2 text-caption1 font-medium leading-tight">同步历史记录</TabsTrigger>
+          <TabsTrigger value="health" className="min-h-10 whitespace-normal px-2 text-caption1 font-medium leading-tight">健康度与质量</TabsTrigger>
+          <TabsTrigger value="import_export" className="min-h-10 whitespace-normal px-2 text-caption1 font-medium leading-tight">文件导入与导出</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Data Source Integrations */}
         <TabsContent value="sources" className="pt-4 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <IntervalsSourceCard
-              integration={integrations.intervals_icu}
-              onConnect={async (athleteId, apiKey) => {
-                await connectIntegration("intervals_icu", {
-                  athlete_id: athleteId,
-                  api_key: apiKey,
-                });
-              }}
-              onDisconnect={(clearData) => disconnectIntegration("intervals_icu", clearData)}
-              onSync={() => handleSyncSource("intervals_icu")}
-              onBackfill={async (fromDate) => {
-                await startBackfill("intervals_icu", fromDate);
-              }}
-              onSettingsChange={async (freq, autoSync) => {
-                await updateIntegrationSettings("intervals_icu", {
-                  sync_frequency: freq,
-                  auto_sync: autoSync,
-                });
-              }}
-            />
-          </div>
+          <IntervalsSourceCard
+            integration={integrations.intervals_icu}
+            onConnect={async (athleteId, apiKey) => {
+              await connectIntegration("intervals_icu", {
+                athlete_id: athleteId,
+                api_key: apiKey,
+              });
+            }}
+            onDisconnect={(clearData) => disconnectIntegration("intervals_icu", clearData)}
+            onSync={() => handleSyncSource("intervals_icu")}
+            onBackfill={async (fromDate) => {
+              await startBackfill("intervals_icu", fromDate);
+            }}
+            onSettingsChange={async (freq, autoSync) => {
+              await updateIntegrationSettings("intervals_icu", {
+                sync_frequency: freq,
+                auto_sync: autoSync,
+              });
+            }}
+          />
         </TabsContent>
 
         {/* Tab 2: Sync History & Audit Log */}
@@ -96,40 +93,25 @@ export function DataSources() {
 
         {/* Tab 3: Data Health & Quality Diagnostics */}
         <TabsContent value="health" className="pt-4 space-y-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card padding="md" className="space-y-4">
-              <div>
-                <h3 className="text-caption1 font-semibold text-text-secondary">
-                  数据连续性与健康度
-                </h3>
-                <p className="text-caption1 text-text-muted">
-                  评估训练数据的完整度与最近同步窗口健康状态。
-                </p>
-              </div>
-              <DataHealthSummary />
-              <RecomputeStatusCard />
-            </Card>
+          <Card padding="md" className="space-y-4">
+            <div>
+              <h3 className="text-caption1 font-semibold text-text-secondary">
+                重算与健康窗口状态
+              </h3>
+              <p className="text-caption1 text-text-muted">
+                查看指标重算队列与同步状态健康度。
+              </p>
+            </div>
+            <RecomputeStatusCard />
+          </Card>
 
-            <Card padding="md" className="space-y-4">
-              <div>
-                <h3 className="text-caption1 font-semibold text-text-secondary">
-                  数据质量与完整度检查
-                </h3>
-                <p className="text-caption1 text-text-muted">
-                  核对心率、配速、GPS、高度等关键数据的异常及覆盖率。
-                </p>
-              </div>
-              <DataQuality />
-            </Card>
-          </div>
+          <DataQuality hideSettingsLink />
         </TabsContent>
 
         {/* Tab 4: File Import & Export */}
         <TabsContent value="import_export" className="pt-4 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ImportPanel />
-            <ExportSection />
-          </div>
+          <ImportPanel />
+          <ExportSection />
         </TabsContent>
       </Tabs>
     </div>

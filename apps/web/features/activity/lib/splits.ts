@@ -5,6 +5,8 @@ import type { StreamMap } from "@shared/types/activity";
 export type SplitMode = "distance" | "time" | "custom";
 
 export interface SplitRow {
+  readonly startTime: number;
+  readonly endTime: number;
   /** Segment label, e.g. "km 1" or "min 5–10". */
   label: string;
   /** Distance in meters. */
@@ -97,6 +99,8 @@ function rowFromRange(
   const mean = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
 
   return {
+    startTime: first.t,
+    endTime: last.t,
     label,
     distanceM: Math.max(0, dM),
     durationS: Math.max(0, dur),
@@ -104,6 +108,24 @@ function rowFromRange(
     avgHr: hrs.length ? mean(hrs) : null,
     avgCadence: cds.length ? mean(cds) : null,
   };
+}
+
+/** 图表横轴使用活动开始时刻的 Unix 秒，分段时间线从首个流样本开始。 */
+export function splitTimeSec(startTime: number, endTime: number, firstSampleTime: number | undefined, activityStartTime?: string): number | null {
+  if (firstSampleTime == null) return null;
+  const activityStart = activityStartTime ? new Date(activityStartTime).getTime() / 1000 : firstSampleTime;
+  return (startTime + endTime) / 2 - firstSampleTime + activityStart;
+}
+
+export function validSplitSampleTime(streams: StreamMap, startTime: number, endTime: number): number | null {
+  const speed = streams["speed"] ?? [];
+  const sample = speed.find((point) => point.value > 0.5 && point.value < 12 && timeOfStream(point.sample_time) >= startTime && timeOfStream(point.sample_time) <= endTime);
+  if (!sample) return null;
+  return timeOfStream(sample.sample_time);
+}
+
+function timeOfStream(sampleTime: string): number {
+  return new Date(sampleTime).getTime() / 1000;
 }
 
 /** Split by distance: each row covers `strideM` meters (e.g. 1000 for km).
@@ -187,6 +209,8 @@ function rangeRow(
   const cads = points.map((p) => p.cadence).filter((v): v is number => v != null);
   const mean = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
   return {
+    startTime: fromTime,
+    endTime: toTime,
     label,
     distanceM,
     durationS,

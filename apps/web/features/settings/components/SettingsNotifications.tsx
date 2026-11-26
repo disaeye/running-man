@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Card } from "@shared/ui/Card";
+import { useState, useCallback } from "react";
+import { DisclosureCard } from "@shared/ui/DisclosureCard";
 import { Button } from "@shared/ui/button";
 import { Checkbox } from "@shared/ui/Checkbox";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
@@ -71,17 +71,19 @@ const TOGGLES: {
 ];
 
 export function SettingsNotifications({ profile, onSaved }: SettingsNotificationsProps) {
-  const [prefs, setPrefs] = useState<NotificationPrefs>(
-    () => profile.notification_prefs ?? DEFAULT_PREFS,
-  );
+  const baseline = profile.notification_prefs ?? DEFAULT_PREFS;
+  const [sourcePrefs, setSourcePrefs] = useState(profile.notification_prefs);
+  const [prefs, setPrefs] = useState<NotificationPrefs>(() => baseline);
+  if (sourcePrefs !== profile.notification_prefs) {
+    setSourcePrefs(profile.notification_prefs);
+    if (profile.notification_prefs) {
+      setPrefs(profile.notification_prefs);
+    }
+  }
+  const hasChanges = JSON.stringify(prefs) !== JSON.stringify(baseline);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (profile.notification_prefs) setPrefs(profile.notification_prefs);
-  }, [profile.notification_prefs]);
 
   const update = useCallback(<K extends keyof NotificationPrefs>(key: K, value: NotificationPrefs[K]) => {
     setPrefs((prev) => ({ ...prev, [key]: value }));
@@ -97,29 +99,29 @@ export function SettingsNotifications({ profile, onSaved }: SettingsNotification
       await apiFetch<unknown>("/athletes/me", {
         method: "PUT",
         body: JSON.stringify({
-          id: profile.id,
-          email: profile.email,
           notification_prefs: prefs,
         }),
       });
       setSaved(true);
       onSaved();
-      setTimeout(() => setSaved(false), 3000);
     } catch (err: unknown) {
       setError(apiErrorMessage(err, "保存通知配置失败"));
     } finally {
       setSaving(false);
     }
-  }, [prefs, profile.id, profile.email, onSaved]);
+  }, [prefs, onSaved]);
+
+  const enabledCount = TOGGLES.filter((t) => prefs[t.key]).length;
 
   return (
-    <Card padding="md" className="space-y-6">
-      <div>
-        <h2 className="text-caption1 font-semibold text-text-secondary">通知与预警偏好</h2>
-        <p className="mt-0.5 text-caption1 text-text-muted">
+    <DisclosureCard
+      title="通知与预警偏好"
+      summary={`已开启 ${enabledCount}/${TOGGLES.length} 项提醒 · 点击展开逐项调整`}
+    >
+      <div className="space-y-5">
+        <p className="text-caption1 text-text-muted">
           定制系统关键事件提醒，配置会实时同步并在所有终端生效
         </p>
-      </div>
 
       <div className="space-y-3">
         {TOGGLES.map((t) => (
@@ -141,12 +143,14 @@ export function SettingsNotifications({ profile, onSaved }: SettingsNotification
 
       <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
         <div className="text-caption1 text-text-muted">
-          {saved && <span className="text-success font-medium">✓ 通知设置已更新</span>}
+          {saved && !hasChanges && <span className="text-success font-medium">✓ 通知设置已更新</span>}
+          {hasChanges && !saving && <span className="text-warn font-medium">有未保存的改动，点击「保存通知偏好」后生效</span>}
         </div>
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving || !hasChanges} className={hasChanges && !saving ? "ring-2 ring-accent/40" : undefined}>
           {saving ? "保存中…" : "保存通知偏好"}
         </Button>
       </div>
-    </Card>
+      </div>
+    </DisclosureCard>
   );
 }

@@ -136,7 +136,9 @@ export function matchDayEvents(
 ): ReadonlyMap<string, DayEventMatch> {
   const result = new Map<string, DayEventMatch>();
   const usedActivityIds = new Set<string>();
-  const activeEvents = events.filter((e) => e.status !== "deleted");
+  const activeEvents = events.filter(
+    (e) => e.status !== "deleted" && e.training_type !== "race",
+  );
 
   // 第一轮：先匹配明确绑定了 linked_activity_id 的课表，避免被未绑定课表抢占。
   for (const event of activeEvents) {

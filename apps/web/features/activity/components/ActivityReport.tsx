@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { groupStreams, type ActivityDetail } from "@shared/types/activity";
-import { PageCard, Stat, Tag } from "@shared/ui/Lovable";
+import { PageCard } from "@shared/ui/Card";
+import { Segmented } from "@shared/ui/SegmentedControl";
+import { Tag } from "@shared/ui/Badge";
+import { DisclosureCard } from "@shared/ui/DisclosureCard";
 import { getSportConfig } from "@shared/config/sport-config";
 import { useActivityDetail } from "@features/activity/hooks/useActivityDetail";
 import { useActivityStreams } from "@features/activity/hooks/useActivityStreams";
@@ -11,38 +14,88 @@ import { ActivityStreamCharts } from "@features/activity/components/ActivityStre
 import { ActivityKmSplits } from "@features/activity/components/ActivityKmSplits";
 import { useActivityLaps } from "@features/activity/hooks/useActivityLaps";
 import { GpsSection } from "@features/activity/components/GpsSection";
-import { resolveGpsState } from "@features/activity/lib/activity-detail";
+import { readGapSpeedPace, readIntervalSummary, resolveGpsState } from "@features/activity/lib/activity-detail";
+import { useSplitSelection } from "@features/activity/lib/use-split-selection";
 import { StrengthDetail } from "@features/activity/components/StrengthDetail";
-import { formatDuration, formatPaceFromSeconds } from "@shared/lib/format";
+import { StrengthSessionMetrics } from "@features/activity/components/StrengthSessionMetrics";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 import { ActivityGearCard } from "@features/activity/components/ActivityGearCard";
+import { ActivityHeroStats } from "@features/activity/components/ActivityHeroStats";
 import { ActivityLoadLevels } from "@features/activity/components/ActivityLoadLevels";
+import { ActivityRaceToggle } from "@features/activity/components/ActivityRaceToggle";
+import { ActivityWeatherCard } from "@features/activity/components/ActivityWeatherCard";
+import { ActivityHrZonesCard } from "@features/activity/components/ActivityHrZonesCard";
+import { ActivityDetailSkeleton } from "@features/activity/components/ActivityDetailSkeleton";
 
-export function ActivityReport({ activityId }: { activityId: string }) {
+type DetailTab = "charts" | "splits";
+
+const DETAIL_TABS: readonly { value: DetailTab; label: string }[] = [
+  { value: "charts", label: "分析图表" },
+  { value: "splits", label: "分段与区间" },
+];
+
+export function ActivityReport({
+  activityId,
+  classificationSlot,
+}: {
+  activityId: string;
+  classificationSlot?: ReactNode;
+}) {
   const query = useActivityDetail(activityId);
   if (query.loading) {
-    return <p role="status" className="text-sm text-muted-foreground">正在加载这次训练…</p>;
+    return <ActivityDetailSkeleton />;
   }
   if (!query.data) {
     return <PageCard><p className="text-sm text-muted-foreground">还没有可回顾的训练记录</p></PageCard>;
   }
   if (getSportConfig(query.data.sport).isStrength) {
-    return <StrengthDetail activityId={activityId} />;
+    const act = query.data;
+    return (
+      <div className="content-arrival space-y-4">
+        <StrengthSessionMetrics
+          durationS={act.duration_s}
+          calories={act.calories}
+          avgHeartRate={act.avg_hr}
+          rpe={act.rpe ?? null}
+        />
+        <ActivityLoadLevels
+          activityId={activityId}
+          isStrength
+          intensityFactor={act.intensity_factor ?? null}
+          trainingStress={act.tss ?? null}
+          rpe={act.rpe ?? null}
+          trimp={act.trimp ?? null}
+        />
+        <StrengthDetail activityId={activityId} />
+      </div>
+    );
   }
-  return <EnduranceReport activityId={activityId} activity={query.data} />;
+  return (
+    <EnduranceReport
+      activityId={activityId}
+      activity={query.data}
+      onReload={query.reload}
+      classificationSlot={classificationSlot}
+    />
+  );
 }
 
 function EnduranceReport({
   activityId,
   activity,
+  onReload,
+  classificationSlot,
 }: {
   activityId: string;
   activity: ActivityDetail;
+  onReload: () => void;
+  classificationSlot?: ReactNode;
 }) {
   const streamsQuery = useActivityStreams(activityId);
   const analysisQuery = useActivityAnalysis(activityId);
   const laps = useActivityLaps(activityId);
-  const [hoverTimeSec, setHoverTimeSec] = useState<number | null>(null);
+  const [detailTab, setDetailTab] = useState<DetailTab>("charts");
+  const { hoverTimeSec, change, selectSplitTime } = useSplitSelection(setDetailTab);
   const streams = groupStreams(streamsQuery.data);
   const analysis = analysisQuery.data;
 
@@ -51,7 +104,6 @@ function EnduranceReport({
       ? 1000 / activity.avg_speed
       : null;
   const zones: ZoneResidence[] = analysis?.zone_residence ?? [];
-  const totalZoneSeconds = Math.max(1, zones.reduce((sum, zone) => sum + zone.seconds, 0));
   const gpsState = resolveGpsState(activity, streams);
 
   const elevationGain =
@@ -68,161 +120,143 @@ function EnduranceReport({
     ? activity.start_time.slice(0, 10).replace(/-/g, "/")
     : null;
 
-  const gapPace = readGapSpeedPace(activity.raw_data);
-  const cadenceSpm =
-    analysis?.biomechanics.avg_cadence_spm ??
-    (activity.avg_cadence != null ? activity.avg_cadence * 2 : null);
+  const sportCfg = getSportConfig(activity.sport);
+  const gapPace = sportCfg.isRun ? readGapSpeedPace(activity.raw_data) : null;
+  const rawCadence = analysis?.biomechanics.avg_cadence_spm;
+  const fallbackCadence =
+    activity.avg_cadence != null && activity.avg_cadence > 0
+      ? sportCfg.isRun && activity.avg_cadence <= 130
+        ? activity.avg_cadence * 2
+        : activity.avg_cadence
+      : null;
+  const cadenceSpm = rawCadence ?? fallbackCadence;
   const rpe = activity.rpe ?? null;
   const tssValue = activity.tss ?? analysis?.summary?.tss ?? null;
+  const efValue =
+    activity.avg_speed != null && activity.avg_speed > 0 && activity.avg_hr != null && activity.avg_hr > 0
+      ? (activity.avg_speed * 60) / activity.avg_hr
+      : null;
 
-  return (
-    <div className="space-y-4" data-testid="demo-activity-report">
-      {/* 渐变主卡片 */}
-      <PageCard hero={true}>
-        <div className="grid grid-cols-3 gap-y-4">
-          <Stat label="距离" value={((activity.distance_m ?? 0) / 1000).toFixed(2)} unit="km" />
-          <Stat label="用时" value={formatDuration(activity.duration_s ?? 0)} />
-          <Stat label="平均配速" value={pace ? formatPaceFromSeconds(Math.round(pace)) : NO_VALUE} unit="/km" />
+  const weatherSummary =
+    activity.weather != null
+      ? [
+          activity.weather.avg_temp != null ? `${Math.round(activity.weather.avg_temp)}°C` : null,
+          activity.weather.wind_speed != null ? `风速 ${activity.weather.wind_speed.toFixed(1)} km/h` : null,
+        ].filter(Boolean).join(" · ")
+      : null;
 
-          <Stat label="GAP" value={gapPace ? formatPaceFromSeconds(Math.round(gapPace)) : NO_VALUE} unit="/km" sub="坡度修正配速" />
-          <Stat label="爬升" value={elevationGain} unit="m" />
-          <Stat label="卡路里" value={caloriesVal} unit="kcal" />
+  const heroStats = (
+    <ActivityHeroStats
+      distanceM={activity.distance_m}
+      durationS={activity.duration_s}
+      paceSec={pace}
+      avgHr={activity.avg_hr}
+      maxHr={activity.max_hr}
+      gapPaceSec={gapPace}
+      elevationGain={elevationGain}
+      caloriesVal={caloriesVal}
+      cadenceSpm={cadenceSpm}
+      isRun={sportCfg.isRun}
+    />
+  );
 
-          <Stat label="平均心率" value={activity.avg_hr != null ? Math.round(activity.avg_hr) : NO_VALUE} unit="bpm" />
-          <Stat label="最高心率" value={activity.max_hr != null ? Math.round(activity.max_hr) : NO_VALUE} unit="bpm" />
-          <Stat label="步频" value={cadenceSpm != null ? Math.round(cadenceSpm) : NO_VALUE} unit="spm" />
-        </div>
-        <p className="mt-3 border-t border-border-subtle pt-2 text-caption1 text-muted-foreground">
-          步频为双脚合计。
-        </p>
-      </PageCard>
+  const loadLevels = (
+    <ActivityLoadLevels
+      activityId={activityId}
+      intensityFactor={activity.intensity_factor ?? analysis?.summary?.if_val ?? null}
+      trainingStress={tssValue}
+      rpe={rpe}
+      trimp={activity.trimp ?? null}
+    />
+  );
 
-      <ActivityLoadLevels
-        activityId={activityId}
-        intensityFactor={activity.intensity_factor ?? analysis?.summary?.if_val ?? null}
-        trainingStress={tssValue}
-        rpe={rpe}
-        trimp={activity.trimp ?? null}
-      />
-
-      <div className="flex gap-2 text-caption1 text-muted-foreground">
+  const metaRow = (
+    <div className="flex flex-wrap items-center justify-between gap-2 text-caption1 text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2">
         <Tag>{activity.device_name ?? "未知设备"}</Tag>
-        <Tag>{activity.source}</Tag>
-        <Tag>{activity.is_race ? "比赛" : "普通训练"}</Tag>
+        {activity.source ? <Tag>{activity.source}</Tag> : null}
       </div>
-
-      <PageCard title="路线">
-        <GpsSection gpsState={gpsState} streamMap={streams} hoverTimeSec={hoverTimeSec} />
-      </PageCard>
-
-      <PageCard title="运动流">
-        <ActivityStreamCharts
-          streams={streams}
-          onHoverTime={setHoverTimeSec}
-          decouplingPct={analysis?.summary?.decoupling_pct ?? null}
-          efficiencyFactor={
-            analysis?.summary?.if_val != null && pace != null && analysis.summary.if_val > 0
-              ? (1000 / pace) * analysis.summary.if_val
-              : null
-          }
-        />
-      </PageCard>
-
-      <PageCard title="分段">
-        <ActivityKmSplits
-          streams={streams}
-          laps={laps.laps}
-          intervalSummary={readIntervalSummary(activity.raw_data)}
-        />
-      </PageCard>
-
-      <PageCard
-        title="心率区间分布"
-        action={
-          <Tag>{thresholdDate ? `阈值自 ${thresholdDate}` : "活动发生时阈值"}</Tag>
-        }
-      >
-        {zones.length ? (
-          <div className="space-y-2">
-            {zones.map((zone) => {
-              const rangeText = formatZoneRange(zone.min_bpm, zone.max_bpm);
-              return (
-                <div key={zone.zone} className="flex items-center gap-2 text-xs">
-                  <span className="w-20 font-medium">
-                    Z{zone.zone}{" "}
-                    {rangeText ? (
-                      <span className="font-normal text-muted-foreground">
-                        {rangeText}
-                      </span>
-                    ) : null}
-                  </span>
-                  <div className="h-2 flex-1 rounded-full bg-secondary">
-                    <div
-                      className={`h-full rounded-full ${zoneBarClass(zone.zone)}`}
-                      style={{
-                        width: `${Math.max(1, zone.pct)}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="num w-10 text-right">
-                    {Math.round(zone.seconds / 60)}m
-                  </span>
-                  <span className="num w-10 text-right text-muted-foreground">
-                    {Math.round((zone.seconds / totalZoneSeconds) * 100)}%
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">暂无区间数据</p>
-        )}
-      </PageCard>
-
-      <ActivityGearCard activityId={activityId} activity={activity} />
+      <ActivityRaceToggle
+        activityId={activityId}
+        isRace={Boolean(activity.is_race)}
+        onDone={onReload}
+      />
     </div>
   );
-}
 
-function formatZoneRange(min: number | null, max: number | null): string {
-  if (min != null && max != null) return `${min}–${max}`;
-  if (min == null && max != null) return `< ${max}`;
-  if (min != null && max == null) return `≥ ${min}`;
-  return "";
-}
+  return (
+    <div className="content-arrival space-y-4" data-testid="demo-activity-report">
+      {gpsState === "valid" ? (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-stretch">
+          <div className="lg:col-span-6">{heroStats}</div>
+          <div className="lg:col-span-6">
+            <PageCard title="路线" className="h-full">
+              <GpsSection gpsState={gpsState} streamMap={streams} hoverTimeSec={hoverTimeSec} />
+            </PageCard>
+          </div>
+        </div>
+      ) : (
+        heroStats
+      )}
 
-/**
- * 区间配色。
- *
- * Tailwind 只收集源码里原样出现的类名，`bg-z${zone}` 这种拼出来的字符串不会生成
- * CSS，进度条就变成透明的空条。
- */
-function zoneBarClass(zone: number): string {
-  switch (zone) {
-    case 1:
-      return "bg-z1";
-    case 2:
-      return "bg-z2";
-    case 3:
-      return "bg-z3";
-    case 4:
-      return "bg-z4";
-    default:
-      return "bg-z5";
-  }
-}
+      {classificationSlot ? (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start">
+          <div className="lg:col-span-5">{classificationSlot}</div>
+          <div className="lg:col-span-7">{loadLevels}</div>
+        </div>
+      ) : loadLevels}
+      <div className="space-y-3">
+        <div className="lg:hidden">
+          <Segmented options={DETAIL_TABS} value={detailTab} onChange={setDetailTab} />
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start">
+          <div className={`${detailTab === "charts" ? "block" : "hidden"} view-swap space-y-4 lg:col-span-7 lg:block`}>
+            {gpsState !== "valid" ? (
+              <GpsSection gpsState={gpsState} streamMap={streams} hoverTimeSec={hoverTimeSec} />
+            ) : null}
+            <PageCard title="运动流">
+              <ActivityStreamCharts
+                streams={streams}
+                hoverTimeSec={hoverTimeSec}
+                onHoverTime={change}
+                activityStartTime={activity.start_time}
+                activityDurationS={activity.duration_s}
+                decouplingPct={analysis?.summary?.decoupling_pct ?? null}
+                efficiencyFactor={efValue}
+              />
+            </PageCard>
+          </div>
+          <div className={`${detailTab === "splits" ? "block" : "hidden"} view-swap space-y-4 lg:col-span-5 lg:block`}>
+            <PageCard title="分段">
+              <ActivityKmSplits
+                streams={streams}
+                laps={laps.laps}
+                intervalSummary={readIntervalSummary(activity.raw_data)}
+                onSelectTime={selectSplitTime}
+              />
+            </PageCard>
+            <ActivityHrZonesCard zones={zones} thresholdDate={thresholdDate} />
+          </div>
+        </div>
+      </div>
 
-/** 来源系统在 raw_data 里给出的坡度修正速度（m/s），换算成配速 */
-function readGapSpeedPace(raw: unknown): number | null {
-  if (raw == null || typeof raw !== "object") return null;
-  const gap = (raw as { gap?: unknown }).gap;
-  return typeof gap === "number" && gap > 0.5 ? 1000 / gap : null;
-}
-
-/** 来源自己写的分组摘要，例如 ["1x 90s 137bpm", "21x 88s 164bpm"] */
-function readIntervalSummary(raw: unknown): string[] {
-  if (raw == null || typeof raw !== "object") return [];
-  const summary = (raw as { interval_summary?: unknown }).interval_summary;
-  if (!Array.isArray(summary)) return [];
-  return summary.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+      {activity.weather != null || sportCfg.isRun ? (
+        <DisclosureCard
+          title="天气、装备与比赛标记"
+          summary={[
+            weatherSummary,
+            activity.device_name ?? "未知设备",
+            activity.is_race ? "比赛活动" : null,
+            sportCfg.isRun ? "跑鞋关联" : null,
+          ].filter(Boolean).join(" · ")}
+        >
+          <div className="space-y-4">
+            {metaRow}
+            {activity.weather != null ? <ActivityWeatherCard weather={activity.weather} /> : null}
+            {sportCfg.isRun ? <ActivityGearCard activityId={activityId} activity={activity} /> : null}
+          </div>
+        </DisclosureCard>
+      ) : metaRow}
+    </div>
+  );
 }

@@ -3,47 +3,41 @@
 import { useMemo, useState } from "react";
 import type { StreamMap } from "@shared/types/activity";
 import type { ActivityLap } from "@features/activity/hooks/useActivityLaps";
-import { buildTimeline, splitByDistance } from "@features/activity/lib/splits";
+import { buildTimeline, splitByDistance, validSplitSampleTime } from "@features/activity/lib/splits";
+import { fastestPaceIndex } from "@features/activity/components/SplitRow";
 import { formatPaceFromSeconds } from "@shared/lib/format";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 
 interface SplitItem {
   index: number;
+  timeSec?: number | null;
   paceSec: number | null;
   avgHr: number | null;
   distanceKm: number;
-  /** 尾段不足一个完整单位 */
   partial: boolean;
 }
 
 type SplitMode = "laps" | "km";
 
-/**
- * 分段表。
- *
- * 「按圈」用来源记录的圈：间歇训练的工作段与组间休息都在里面，圈距由来源决定
- * （操场 400 米、路跑 1 公里、或 N × 1 公里配 200 米休息）。
- * 「每公里」按累计距离插值切分，整公里行就是 1.00 km，最后一行是真实剩余距离。
- */
 export function ActivityKmSplits({
   streams,
   laps = [],
   intervalSummary = [],
+  onSelectTime,
 }: {
   streams: StreamMap;
   laps?: readonly ActivityLap[];
-  /** 来源自己写的分组摘要，例如「21× 88s 164bpm」 */
   intervalSummary?: readonly string[];
+  onSelectTime?: (timeSec: number) => void;
 }) {
   const hasLaps = laps.length > 1;
-  // 圈要等接口回来，默认值不能在建 state 时就定下。
-  // 来源的圈都是 1 公里上下的自动圈时，「按圈」与「每公里」是同一件事，只是圈距
-  // 会抖几十米，所以那种情况默认看整齐的每公里；其余（400/200 米这种）默认看圈。
   const lapsAreAutoKm =
     hasLaps && laps.every((lap) => lap.distance_m != null && Math.abs(lap.distance_m - 1000) <= 150);
   const [picked, setPicked] = useState<SplitMode | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const mode: SplitMode = picked ?? (hasLaps && !lapsAreAutoKm ? "laps" : "km");
 
+  const timeline = useMemo(() => buildTimeline(streams), [streams]);
   const splits = useMemo<SplitItem[]>(() => {
     if (mode === "laps" && hasLaps) {
       return laps.map((lap) => ({
@@ -55,24 +49,42 @@ export function ActivityKmSplits({
       }));
     }
 
-    return splitByDistance(buildTimeline(streams), 1000).map((row, index) => ({
+    return splitByDistance(timeline, 1000).map((row, index) => ({
       index: index + 1,
+      timeSec: validSplitSampleTime(streams, row.startTime, row.endTime),
       paceSec: row.avgSpeed && row.avgSpeed > 0 ? 1000 / row.avgSpeed : null,
       avgHr: row.avgHr != null ? Math.round(row.avgHr) : null,
       distanceKm: row.distanceM / 1000,
       partial: row.distanceM < 999,
     }));
-  }, [streams, laps, mode, hasLaps]);
+  }, [timeline, streams, laps, mode, hasLaps]);
 
   if (splits.length === 0) {
     return <p className="text-sm text-muted-foreground">暂无分段数据</p>;
   }
 
-  const validPaces = splits.map((s) => s.paceSec).filter((p): p is number => p != null && p > 0);
-  const fastestPace = validPaces.length ? Math.min(...validPaces) : 0;
-  const averagePace = validPaces.length
-    ? validPaces.reduce((a, b) => a + b, 0) / validPaces.length
-    : null;
+  const speeds = splits.map((s) => (s.paceSec && s.paceSec > 0 ? 1000 / s.paceSec : null));
+  const distances = splits.map((s) => s.distanceKm * 1000);
+  const bestIdx = fastestPaceIndex(
+    speeds,
+    mode === "km" ? { distances, strideM: 1000 } : undefined,
+  );
+  const fastestPace = bestIdx >= 0 ? (splits[bestIdx]?.paceSec ?? 0) : 0;
+
+  let weightedDist = 0;
+  let weightedSec = 0;
+  for (const s of splits) {
+    if (s.paceSec != null && s.paceSec > 0 && s.distanceKm > 0) {
+      weightedDist += s.distanceKm;
+      weightedSec += s.paceSec * s.distanceKm;
+    }
+  }
+  const averagePace = weightedDist > 0 ? weightedSec / weightedDist : null;
+
+  const canCollapse = splits.length > 12;
+  const visibleSplits = canCollapse && !expanded
+    ? [...splits.slice(0, 5), ...splits.slice(-3)]
+    : splits;
 
   return (
     <div className="space-y-2" data-testid="activity-splits">
@@ -85,7 +97,7 @@ export function ActivityKmSplits({
                 type="button"
                 role="tab"
                 aria-selected={mode === value}
-                onClick={() => setPicked(value)}
+                onClick={() => { setPicked(value); setExpanded(false); }}
                 className={`inline-flex min-h-11 items-center rounded-full px-3 text-xs font-medium ${
                   mode === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                 }`}
@@ -111,33 +123,76 @@ export function ActivityKmSplits({
         <p className="text-caption1 text-muted-foreground">条越长越快；快于全程平均的段用绿色，慢于平均的用橙色。</p>
       ) : null}
 
-      {splits.map((split) => {
+      <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_3.25rem_7.75rem] items-center gap-2 border-b border-border-subtle pb-1.5 text-caption1 text-text-muted">
+        <span>{mode === "laps" && hasLaps ? "圈" : "分段"}</span>
+        <span>配速对比</span>
+        <span className="text-right">配速</span>
+        <span className="text-right">心率 · 距离</span>
+      </div>
+
+      {visibleSplits.map((split, pos) => {
         const pace = split.paceSec;
-        const isFastest = pace != null && pace === fastestPace;
+        const origIdx = splits.indexOf(split);
+        const isFastest = origIdx === bestIdx && pace != null;
         const fasterThanAverage = pace != null && averagePace != null && pace < averagePace;
         const barPct = pace && fastestPace ? Math.min(100, Math.max(15, (fastestPace / pace) * 100)) : 0;
+        const showCollapseGap = canCollapse && !expanded && pos === 5;
 
         return (
-          <div key={split.index} className="grid grid-cols-[26px_1fr_auto] items-center gap-2 text-xs">
-            <span className={`num ${isFastest ? "font-semibold text-accent-strong" : "text-muted-foreground"}`}>
-              {split.index}
-            </span>
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+          <div key={split.index} className="space-y-2">
+            {showCollapseGap ? (
+              <div className="py-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => setExpanded(true)}
+                  className="min-h-11 rounded-full px-4 text-caption1 font-medium text-accent-strong hover:bg-secondary"
+                >
+                  展开全部 {splits.length} {mode === "laps" && hasLaps ? "圈" : "段"}（已折叠 {splits.length - 8} 段）
+                </button>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              disabled={split.timeSec == null || !onSelectTime}
+              aria-label={`查看第 ${split.index} 段运动流`}
+              onClick={() => { if (split.timeSec != null) onSelectTime?.(split.timeSec); }}
+              className={`focus-ring grid min-h-11 w-full grid-cols-[2.25rem_minmax(0,1fr)_3.25rem_7.75rem] items-center gap-2 rounded-lg px-1 text-left text-xs hover:bg-surface-active disabled:cursor-default ${
+                isFastest ? "bg-surface-overlay" : ""
+              }`}
+            >
+              <span className={`num flex items-center gap-1 font-mono tabular-nums ${isFastest ? "font-bold text-accent-strong" : "text-muted-foreground"}`}>
+                <span>{split.index}</span>
+                {isFastest ? <span className="size-1.5 rounded-full bg-accent-strong" title="最快分段" aria-label="最快" /> : null}
+              </span>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
                 <div
-                  className={`h-full ${fasterThanAverage ? "bg-fitness" : "bg-warn"}`}
+                  className={`h-full rounded-full ${fasterThanAverage ? "bg-success" : "bg-warn"}`}
                   style={{ width: `${barPct}%` }}
                 />
               </div>
-              <span className="num font-medium">{pace ? formatPaceFromSeconds(Math.round(pace)) : NO_VALUE}</span>
-            </div>
-            <span className="num text-right text-muted-foreground">
-              {split.avgHr != null ? `${split.avgHr} bpm` : NO_VALUE} ·{" "}
-              <span className={split.partial ? "text-warn" : undefined}>{split.distanceKm.toFixed(2)} km</span>
-            </span>
+              <span className={`num text-right font-mono font-medium tabular-nums ${isFastest ? "text-accent-strong" : "text-text-primary"}`}>
+                {pace ? formatPaceFromSeconds(Math.round(pace)) : NO_VALUE}
+              </span>
+              <span className="num text-right font-mono tabular-nums text-muted-foreground">
+                {split.avgHr != null ? `${split.avgHr} bpm` : NO_VALUE} ·{" "}
+                <span className={split.partial ? "text-warn" : undefined}>{split.distanceKm.toFixed(2)} km</span>
+              </span>
+            </button>
           </div>
         );
       })}
+
+      {canCollapse && expanded ? (
+        <div className="pt-1 text-center">
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="min-h-11 rounded-full px-4 text-caption1 text-text-muted hover:bg-secondary hover:text-text-primary"
+          >
+            收起中间分段
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

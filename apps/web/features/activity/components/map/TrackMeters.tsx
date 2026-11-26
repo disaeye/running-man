@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { NO_VALUE } from "@shared/lib/use-data-state";
 import { formatPaceFromSeconds } from "@shared/lib/format";
 import type { TrackSample } from "@features/activity/components/map/map-data";
 
@@ -98,18 +99,18 @@ function Meter({
   const headPoint = headPointOf(values, domain, headIdx);
 
   return (
-    <div className="min-w-0 flex-1 rounded-xl bg-background/60 p-2 backdrop-blur-sm">
-      <div className="flex items-baseline justify-between text-caption2 text-muted-foreground">
+    <div className="min-w-0 flex-1 rounded-2xl border border-border-default bg-surface-card/95 p-2">
+      <div className="flex items-baseline justify-between text-caption1 text-muted-foreground">
         <span>{label}</span>
         <span className="num text-caption1 text-text-primary">
-          {current != null ? format(current) : "--"}
+          {current != null ? format(current) : NO_VALUE}
         </span>
       </div>
       <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="mt-1 h-10 w-full" preserveAspectRatio="none" aria-label={`${label}曲线`}>
         <path d={path} fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         {headPoint ? <circle cx={headPoint.x} cy={headPoint.y} r="1.6" fill={color} vectorEffect="non-scaling-stroke" /> : null}
       </svg>
-      <div className="text-right text-caption2 text-muted-foreground">{unit}</div>
+      <div className="text-right text-caption1 text-muted-foreground">{unit}</div>
     </div>
   );
 }

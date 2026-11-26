@@ -1,3 +1,5 @@
+import { formatPaceFromSeconds } from "@shared/lib/format";
+
 interface PreviewSegment {
   type: string;
   duration_min: number;
@@ -65,11 +67,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   cooldown: "放松跑",
 };
 
-function formatPace(seconds: number): string {
-  const rounded = Math.round(seconds);
-  return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, "0")}`;
-}
-
 function PreviewMetric({ label, value }: { label: string; value: number }) {
   return (
     <div>
@@ -112,16 +109,19 @@ export function PlanPreview({ preview }: { preview: GeneratePreview }) {
         </div>
       )}
       {preview.phases && preview.phases.length > 0 && (
-        <ul className="mt-3 space-y-1 border-t border-border-subtle pt-3">
+        <ul className="mt-3 flex flex-wrap gap-1.5 border-t border-border-subtle pt-3">
           {preview.phases.map((phase) => (
-            <li key={`${phase.name}-${phase.start_date}`} className="text-caption1 text-text-secondary">
-              {PHASE_LABELS[phase.name] ?? phase.name} · {phase.start_date} 至 {phase.end_date}
+            <li
+              key={`${phase.name}-${phase.start_date}`}
+              className="rounded-md bg-surface-card/70 px-2 py-1 text-caption1 text-text-secondary"
+            >
+              {PHASE_LABELS[phase.name] ?? phase.name} · {phase.start_date.slice(5)}–{phase.end_date.slice(5)}
             </li>
           ))}
         </ul>
       )}
       {preview.events && preview.events.length > 0 && (
-        <ol className="mt-3 max-h-56 space-y-2 overflow-y-auto border-t border-border-subtle pt-3">
+        <ol className="mt-3 space-y-2 border-t border-border-subtle pt-3 md:max-h-[34dvh] md:overflow-y-auto md:pr-1">
           {preview.events.map((event) => (
             <li key={event.event_id} className="rounded-lg bg-surface-card/70 p-2">
               <div className="flex items-center justify-between gap-2">
@@ -133,7 +133,7 @@ export function PlanPreview({ preview }: { preview: GeneratePreview }) {
                 <p className="mt-1 text-caption1 text-text-secondary">
                   {event.duration_min} 分钟 · {PHASE_LABELS[event.phase] ?? event.phase}
                   {event.pace_min_s_km != null && event.pace_max_s_km != null
-                    ? ` · ${formatPace(event.pace_min_s_km)}–${formatPace(event.pace_max_s_km)} /公里`
+                    ? ` · ${formatPaceFromSeconds(event.pace_min_s_km)}–${formatPaceFromSeconds(event.pace_max_s_km)} /公里`
                     : " · 按 RPE 控制强度"}
                 </p>
               )}
@@ -148,9 +148,9 @@ export function PlanPreview({ preview }: { preview: GeneratePreview }) {
           ))}
         </ol>
       )}
-      {preview.events_created > 10 && (
+      {preview.events && preview.events_created > preview.events.length && (
         <p className="mt-2 text-caption1 text-text-muted">
-          预览列出{preview.events?.length ?? 0} 项训练；共{preview.events_created} 项计划课程。
+          预览列出前 {preview.events.length} 项示例训练；共将生成 {preview.events_created} 项计划课程。
         </p>
       )}
     </div>

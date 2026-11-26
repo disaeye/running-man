@@ -33,14 +33,14 @@ const LABELS: Record<string, string> = {
   cooldown: "放松跑",
 };
 
-function paceText(min: number | null | undefined, max: number | null | undefined): string | null {
-  if (min == null || max == null) return null;
-  return `${formatPace(min)}–${formatPace(max)} /公里`;
-}
-
 function formatPace(seconds: number): string {
   const rounded = Math.round(seconds);
   return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, "0")}`;
+}
+
+function paceText(min: number | null | undefined, max: number | null | undefined): string | null {
+  if (min == null || max == null) return null;
+  return `${formatPace(min)}–${formatPace(max)} /公里`;
 }
 
 export function PlanPacePrescription({ event }: { event: CalendarEventDTO }) {

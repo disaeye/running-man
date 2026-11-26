@@ -16,6 +16,7 @@ export function IntervalsConnectDialog({
   setAthleteId,
   apiKey,
   setApiKey,
+  error,
   isBusy,
   onConnect,
 }: {
@@ -25,14 +26,21 @@ export function IntervalsConnectDialog({
   setAthleteId(v: string): void;
   apiKey: string;
   setApiKey(v: string): void;
+  error?: string | null;
   isBusy: string | null;
   onConnect(): void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen && isBusy !== "connect") onClose(); }}>
+      <DialogContent mobileSheet>
         <DialogHeader><DialogTitle>配置 Intervals.icu</DialogTitle></DialogHeader>
-        <div className="flex flex-col gap-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onConnect();
+          }}
+          className="flex flex-col gap-4"
+        >
           <p className="text-caption1 text-text-secondary">
             打开{" "}
             <a
@@ -47,19 +55,26 @@ export function IntervalsConnectDialog({
           </p>
           <label className="flex flex-col gap-1">
             <span className="text-subheadline font-medium text-text-secondary">Athlete ID</span>
-            <Input value={athleteId} onChange={(e) => setAthleteId(e.target.value)} placeholder="例如 i12345" />
+            <Input value={athleteId} onChange={(e) => setAthleteId(e.target.value)} placeholder="例如 i12345" autoComplete="username" />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-subheadline font-medium text-text-secondary">API Key</span>
-            <Input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Intervals.icu API Key" />
+            <Input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Intervals.icu API Key" autoComplete="current-password" />
           </label>
+          {error ? (
+            <p role="alert" className="text-caption1 text-error">
+              {error}
+            </p>
+          ) : null}
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={onClose}>取消</Button>
-            <Button onClick={onConnect} disabled={isBusy !== null}>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={isBusy === "connect"}>
+              取消
+            </Button>
+            <Button type="submit" disabled={isBusy !== null || !athleteId.trim() || !apiKey.trim()}>
               {isBusy === "connect" ? "连接中…" : "连接"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

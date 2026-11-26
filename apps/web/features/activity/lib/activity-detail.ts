@@ -70,3 +70,16 @@ export function computeAvailability(
     hasLaps: countLaps(analysis) > 0,
   };
 }
+
+export function readGapSpeedPace(raw: unknown): number | null {
+  if (raw == null || typeof raw !== "object") return null;
+  const gap = (raw as { gap?: unknown }).gap;
+  return typeof gap === "number" && gap > 0.5 ? 1000 / gap : null;
+}
+
+export function readIntervalSummary(raw: unknown): string[] {
+  if (raw == null || typeof raw !== "object") return [];
+  const summary = (raw as { interval_summary?: unknown }).interval_summary;
+  if (!Array.isArray(summary)) return [];
+  return summary.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+}

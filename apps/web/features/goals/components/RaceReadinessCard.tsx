@@ -1,14 +1,21 @@
 "use client";
 
 import { type ComponentType, useEffect, useState } from "react";
+import useSWR from "swr";
+import { z } from "zod";
 import { Activity, Flower2, Leaf, Mountain, Sprout, Wrench } from "lucide-react";
 import { Card } from "@shared/ui/Card";
 import { CardHeader } from "@shared/ui/CardHeader";
 import { Badge } from "@shared/ui/Badge";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
-import { getReadinessApiV1InsightsReadinessGet } from "@shared/api/generated/clients";
+import {
+  getPeriodizationApiV1PlanPeriodizationGet,
+  getReadinessApiV1InsightsReadinessGet,
+} from "@shared/api/generated/clients";
 import * as Generated from "@shared/api/generated/model";
 import { apiErrorMessage } from "@shared/lib/api";
+import { useAthleteTimezone, athleteToday } from "@shared/lib/training-day";
+import { phaseLabel } from "@features/goals/lib/phase-labels";
 import type { Goal } from "@shared/types/goals";
 import { estimateCurrentPhase, daysRemaining } from "./goal-utils";
 
@@ -42,18 +49,20 @@ const PHASE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
  * 摆第三格 TSB——接口不提供数值型 TSB，拿展示句反推就是拿字符串猜数，
  * 而一个没有数据源的格子不该占版面。
  */
-export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
-  const days = daysRemaining(goal.target_date);
+export function RaceReadinessCard({ goal, daysOverride }: RaceReadinessCardProps & { readonly daysOverride?: number | null }) {
+  const timezone = useAthleteTimezone();
+  const today = athleteToday(timezone);
+  const days = daysOverride !== undefined ? daysOverride : daysRemaining(goal.target_date);
   const [projection, setProjection] = useState<ReadinessResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pastDue = Boolean(goal.target_date && goal.target_date < today);
   const shouldLoadProjection = Boolean(
-    goal.target_date && days !== null && days <= RACE_WINDOW_DAYS && goal.status === "active",
+    goal.target_date && !pastDue && days !== null && days <= RACE_WINDOW_DAYS && goal.status === "active",
   );
 
   useEffect(() => {
-    if (!shouldLoadProjection || !goal.target_date) return;
-    const targetDate = goal.target_date;
+    if (!shouldLoadProjection) return;
 
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -61,7 +70,7 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
     setError(null);
 
     callOrvalValidated(
-      (fetchFn) => getReadinessApiV1InsightsReadinessGet({ date: targetDate }, {}, fetchFn),
+      (fetchFn) => getReadinessApiV1InsightsReadinessGet({ date: today }, {}, fetchFn),
       Generated.ReadinessResponse,
     )
       .then((data) => {
@@ -75,14 +84,28 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
       });
 
     return () => { cancelled = true; };
-  }, [goal.target_date, shouldLoadProjection]);
+  }, [today, shouldLoadProjection]);
+
+  const { data: planPhases } = useSWR<Generated.TrainingPhaseResponseOutput[]>(
+    shouldLoadProjection ? ["/plan/periodization", goal.goal_id] : null,
+    {
+      fetcher: () =>
+        callOrvalValidated(
+          (fetcher) => getPeriodizationApiV1PlanPeriodizationGet({ goal_id: goal.goal_id }, {}, fetcher),
+          z.array(Generated.TrainingPhaseResponse),
+        ),
+    },
+  );
 
   // Only render for active goals with race dates within 90 days
   if (!shouldLoadProjection || days === null) {
     return null;
   }
 
-  const currentPhase = estimateCurrentPhase(goal);
+  const matchedPlanPhase = (planPhases ?? []).find(
+    (phase) => phase.start_date <= today && phase.end_date >= today,
+  );
+  const currentPhase = matchedPlanPhase?.name ?? estimateCurrentPhase(goal);
   const taperAdvice = getTaperAdvice(currentPhase, days);
   const readiness = projection?.local_readiness ?? null;
   // 样本不够时不把分数、徽章当结论：接口的 `data_sufficient` 就是回答这个问题的字段。
@@ -96,6 +119,7 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
           measured ? (
             <Badge variant={readinessVariant(readiness.level)}>
               {readinessLabel(readiness.level)}
+              {readiness.score != null ? ` · ${Math.round(readiness.score)}` : ""}
             </Badge>
           ) : null
         }
@@ -112,17 +136,21 @@ export function RaceReadinessCard({ goal }: RaceReadinessCardProps) {
         <p className="mt-3 text-caption1 text-error">{error}</p>
       ) : loading ? (
         <div className="mt-4 h-4 w-2/3 animate-pulse rounded bg-surface-active" aria-hidden="true" />
-      ) : readiness !== null ? (
+      ) : measured && readiness !== null ? (
         <p className="mt-3 text-caption1 leading-relaxed text-text-secondary">
           {readiness.recommendation || "按当前状态调整训练强度。"}
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-3 text-caption1 leading-relaxed text-text-muted">
+          近期恢复样本不足，持续同步健康与训练数据后将显示准备度建议。
+        </p>
+      )}
 
       <p className="mt-2 flex items-start gap-1.5 text-caption1 text-text-muted">
         <span aria-hidden="true" className="mt-0.5 shrink-0">
           <PhaseIcon phase={currentPhase} />
         </span>
-        <span>减量期建议 · {taperAdvice}</span>
+        <span>{phaseLabel(currentPhase)}建议 · {taperAdvice}</span>
       </p>
     </Card>
   );

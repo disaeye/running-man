@@ -17,25 +17,61 @@ const DATA_DEPENDENT_PREFIXES = [
   "/data/quality",
   "/pmc",
   "/activities",
+  "/activities/classifications",
   "/wellness",
+  "/weight",
   "/metrics/series",
   "/calendar",
   "/goals",
+  "/plan/active",
+  "/plan/periodization",
+  "/plan/revisions",
+  "/plan/adjustments",
+  "/strength",
+  "/gear/shoes",
+  "/notifications",
+  "/insights/ability",
+  "/insights/zones",
   "/insights/readiness",
   "/insights/coach-context",
   "/insights/weekly-progress",
   "/insights/plan-quality",
   "/insights/intensity-distribution",
   "/insights/personal-records",
+  "/insights/athlete-grade",
+  "/insights/personal-range",
+  "training-consistency-from-activities",
 ] as const;
 
-function isDataDependentKey(key: unknown): boolean {
+const TRAINING_PARAM_PREFIXES = [
+  "/athletes/me",
+  "/athletes/me/thresholds",
+  "/athletes/me/physiology",
+  "/insights/zones",
+  "/insights/readiness",
+  "/insights/intensity-distribution",
+  "/insights/weekly-progress",
+  "/insights/plan-quality",
+  "/plan/active",
+  "/insights/ability",
+  "/insights/coach-context",
+  "/pmc",
+  "/activities",
+  "/metrics/series",
+  "/wellness",
+] as const;
+
+function matchesAnyPrefix(key: unknown, prefixes: readonly string[]): boolean {
   const head = keyHead(key);
   if (head === null) return false;
-  return DATA_DEPENDENT_PREFIXES.some(
+  return prefixes.some(
     (prefix) =>
       head === prefix || head.startsWith(`${prefix}/`) || head.startsWith(`${prefix}?`),
   );
+}
+
+function isDataDependentKey(key: unknown): boolean {
+  return keyHead(key) === "sync-health-derived" || matchesAnyPrefix(key, DATA_DEPENDENT_PREFIXES);
 }
 
 function isSyncRunsKey(key: unknown, source?: string): boolean {
@@ -46,14 +82,13 @@ function isSyncRunsKey(key: unknown, source?: string): boolean {
 }
 
 function isIntegrationKey(key: unknown, source?: string): boolean {
-  if (source) {
-    return (
-      (isTupleKey(key) && key[0] === `/integrations/${source}`) ||
-      keyHead(key) === `/integrations/${source}`
-    );
-  }
   const head = keyHead(key);
-  return head !== null && head.startsWith("/integrations/");
+  if (head === null) return false;
+  if (source) {
+    const base = `/integrations/${source}`;
+    return head === base || head.startsWith(`${base}/`) || head.startsWith(`${base}?`);
+  }
+  return head.startsWith("/integrations/");
 }
 
 /** Revalidate settings/data cards and home KPI surfaces after sync, connect, disconnect, or clear. */
@@ -67,6 +102,53 @@ export async function invalidateDataCards(
     mutate((key) => isIntegrationKey(key, source)),
   ];
   await Promise.all(jobs);
+}
+
+/** Revalidate derived VDOT, zone, ability, and coach cards after threshold/HR/profile edits. */
+export async function invalidateTrainingParamDependents(mutate: ScopedMutator): Promise<void> {
+  await mutate((key) => matchesAnyPrefix(key, TRAINING_PARAM_PREFIXES));
+}
+
+/** Revalidate goal, plan, calendar, and home insights after goal mutations or result recording. */
+export async function invalidateGoalDependents(
+  mutate: ScopedMutator,
+  goalId?: string | null,
+): Promise<void> {
+  const prefixes = [
+    "/goals",
+    ...(goalId ? [`/goals/${goalId}`] : []),
+    "/plan/active",
+    "/plan/periodization",
+    "/plan/revisions",
+    "/plan/adjustments",
+    "/calendar",
+    "/insights/coach-context",
+    "/insights/weekly-progress",
+    "/insights/plan-quality",
+    "/insights/personal-records",
+    "/insights/athlete-grade",
+    "/insights/ability",
+  ];
+  await mutate((key) => matchesAnyPrefix(key, prefixes));
+}
+
+/** Revalidate plan, calendar, and coaching insights after generating, adjusting, or editing workouts. */
+export async function invalidatePlanDependents(
+  mutate: ScopedMutator,
+  goalId?: string | null,
+): Promise<void> {
+  const prefixes = [
+    "/calendar",
+    "/plan",
+    "/goals",
+    ...(goalId ? [`/goals/${goalId}`] : []),
+    "/activities/classifications",
+    "/insights/coach-context",
+    "/insights/weekly-progress",
+    "/insights/plan-quality",
+    "/insights/readiness",
+  ];
+  await mutate((key) => matchesAnyPrefix(key, prefixes));
 }
 
 /** @deprecated prefer invalidateDataCards — kept as a named sync alias */

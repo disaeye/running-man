@@ -6,10 +6,10 @@ import { ShareLoadingState } from "@features/share/components/ShareLoadingState"
 import { useShareActivity } from "@features/share/hooks/useShareActivity";
 
 export function ShareContent({ token }: { readonly token: string }) {
-  const { activity, error } = useShareActivity(token);
+  const { activity, error, reload } = useShareActivity(token);
 
   if (error) {
-    return <ShareErrorState error={error} />;
+    return <ShareErrorState error={error} onRetry={reload} />;
   }
 
   if (!activity) {

@@ -15,10 +15,11 @@ export interface SessionClassification {
   readonly kind: string;
 }
 
-const RUN_SPORTS: ReadonlySet<string> = new Set(["Run", "VirtualRun", "TrailRun"]);
 const HIGH_INTENSITY_IF = 0.85;
-const HIGH_HR_RATIO = 0.9;
-const LOW_HR_RATIO = 0.75;
+export { HIGH_INTENSITY_IF };
+export const HIGH_HR_RATIO = 0.9;
+export const MODERATE_HR_RATIO = 0.82;
+export const LOW_HR_RATIO = 0.75;
 
 function isHighIntensity(
   intensity_factor: number | null,
@@ -55,10 +56,10 @@ function classifyRun(activity: ActivitySummary): SessionClassification {
 
 /** Effort bucket and sport label; never a cross-dimension training type. */
 export function classifySession(activity: ActivitySummary): SessionClassification {
-  if (!RUN_SPORTS.has(activity.sport)) {
-    const label = getSportConfig(activity.sport).label;
+  const cfg = getSportConfig(activity.sport);
+  if (!cfg.isRun) {
     return {
-      label,
+      label: cfg.label,
       effort: activity.avg_hr == null ? "unknown" : "moderate",
       kind: activity.sport.toLowerCase(),
     };

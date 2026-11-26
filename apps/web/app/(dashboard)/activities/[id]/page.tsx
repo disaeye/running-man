@@ -1,11 +1,20 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useSWRConfig } from "swr";
+import { AlertTriangle, RotateCcw, Share2 } from "lucide-react";
 import { Card } from "@shared/ui/Card";
-import { Page } from "@shared/ui/Lovable";
+import { Page } from "@shared/ui/PageHeader";
+import { ActivityDetailSkeleton } from "@features/activity/components/ActivityDetailSkeleton";
+import { Button } from "@shared/ui/button";
+import { useToast } from "@shared/ui/Toast";
+import { apiErrorMessage, apiFetch } from "@shared/lib/api";
+import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
+import { trainingReturnUrl } from "@shared/config/training-nav";
 import { getSportConfig } from "@shared/config/sport-config";
 import { useActivityDetail } from "@features/activity/hooks/useActivityDetail";
+import { useSessionClassifications } from "@features/activity/hooks/useSessionClassifications";
 import { useActivityStreams } from "@features/activity/hooks/useActivityStreams";
 import { useActivityReportPrefetch } from "@features/activity/hooks/useActivityReportPrefetch";
 import { groupStreams } from "@shared/types/activity";
@@ -13,20 +22,30 @@ import { computeAvailability, extractId } from "@features/activity/lib/activity-
 import { DataAvailabilityCard } from "@features/activity/components/DataAvailabilityCard";
 import { ActivityReport } from "@features/activity/components/ActivityReport";
 import { SessionClassificationPanel } from "@features/activity/components/SessionClassificationPanel";
+import { ShareDialog } from "@features/activity/components/ShareDialog";
+import { ActivityFlagActions } from "@features/activity/components/ActivityFlagActions";
+import { activityDisplayName, activityOriginalName } from "@features/activity/lib/activity-display-name";
 
 export default function ActivityDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { mutate } = useSWRConfig();
+  const { toast } = useToast();
   const id = extractId(params);
   const activityQuery = useActivityDetail(id);
+  const { byActivityId } = useSessionClassifications();
+  const classification = byActivityId.get(id) ?? null;
   const streamsQuery = useActivityStreams(id);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [retryingStreams, setRetryingStreams] = useState(false);
   useActivityReportPrefetch(id);
 
   if (activityQuery.loading) {
     return (
-      <div className="flex min-h-[320px] items-center justify-center">
-        <p className="text-subheadline text-text-muted" role="status" aria-busy="true">
-          正在加载活动详情…
-        </p>
+      <div className="page-stack">
+        <div className="space-y-2 pb-2"><div className="h-4 w-28" /><div className="h-8 w-52" /></div>
+        <ActivityDetailSkeleton />
       </div>
     );
   }
@@ -51,32 +70,76 @@ export default function ActivityDetailPage() {
     null,
   );
 
+  const handleBack = () => {
+    const returnTo = trainingReturnUrl(searchParams.get("returnTo"));
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/activities");
+  };
+
+  const canRetryStreams =
+    activity.source === "intervals_icu" &&
+    (!availability.hasGps || !(activity.has_hr ?? false));
+
+  const handleRetryStreams = async () => {
+    setRetryingStreams(true);
+    try {
+      await apiFetch(`/activities/${id}/streams/sync`, { method: "POST" });
+      activityQuery.reload();
+      streamsQuery.reload();
+      await invalidateDataCards(mutate);
+      toast("已重新拉取活动流数据", "success");
+    } catch (caught) {
+      toast(apiErrorMessage(caught, "拉取运动流失败"), "error");
+    } finally {
+      setRetryingStreams(false);
+    }
+  };
+
   return (
+    <div className="content-arrival">
     <Page
-      title={activity.name?.trim() || config.label}
+      title={activityDisplayName(activity, classification)}
       eyebrow={formatTime(activity.start_time)}
       back
-      onBack={() => history.back()}
+      onBack={handleBack}
+      right={
+        <Button type="button" variant="outline" size="sm" onClick={() => setShareOpen(true)}>
+          <Share2 className="size-4" aria-hidden="true" />
+          分享
+        </Button>
+      }
     >
       <div data-testid="activity-detail-page" className="space-y-4">
-        <SessionClassificationPanel activityId={id} />
-        <ActivityReport activityId={id} />
+        <ActivityReport
+          activityId={id}
+          classificationSlot={!config.isStrength ? <SessionClassificationPanel activityId={id} originalName={activityOriginalName(activity)} /> : null}
+        />
 
-        {/* 隐藏的元数据流可用性节点，用于后台分析与测试审计 */}
-        <div className="hidden" aria-hidden="true">
-          <DataAvailabilityCard
-            rows={[
-              { label: "GPS 轨迹", ok: availability.hasGps },
-              { label: "心率流", ok: activity.has_hr ?? false },
-              { label: "步频/踏频", ok: activity.has_cadence ?? false },
-              { label: "天气", ok: activity.weather != null },
-            ]}
-            source={activity.source || ""}
-            fileType={activity.file_type || ""}
-          />
-        </div>
+        <DataAvailabilityCard
+          rows={[
+            { label: "GPS 轨迹", ok: availability.hasGps },
+            { label: "心率流", ok: activity.has_hr ?? false },
+            { label: "步频/踏频", ok: activity.has_cadence ?? false },
+            { label: "天气", ok: activity.weather != null },
+          ]}
+          source={activity.source || ""}
+          fileType={activity.file_type || ""}
+          onRetryStreams={canRetryStreams ? () => void handleRetryStreams() : undefined}
+          retryingStreams={retryingStreams}
+          actions={<ActivityFlagActions activityId={id} onDone={() => router.push("/activities")} />}
+        />
       </div>
+
+      <ShareDialog activityId={id} open={shareOpen} onClose={() => setShareOpen(false)} />
     </Page>
+    </div>
   );
 }
 

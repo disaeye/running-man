@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { Page } from "@shared/ui/Lovable";
+import { Page } from "@shared/ui/PageHeader";
 import { AnalysisContent } from "@features/analysis/components/AnalysisContent";
 
 export default function AnalysisPage() {

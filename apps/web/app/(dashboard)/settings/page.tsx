@@ -3,7 +3,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSWRConfig } from "swr";
 import { ArrowLeft } from "lucide-react";
+import { invalidateTrainingParamDependents } from "@features/data/lib/invalidate-after-sync";
 import { useProfile } from "@features/settings/hooks/useProfile";
 import { useZoneOverrides, type ZoneOverride } from "@features/settings/hooks/useZoneOverrides";
 import { resolveSettingsSection, settingsSectionNavUrl } from "@shared/config/canonical-routes";
@@ -15,6 +17,8 @@ import { SettingsTrainingParams } from "@features/settings/components/SettingsTr
 import { SettingsZones } from "@features/settings/components/SettingsZones";
 import { SettingsDataSection } from "@features/settings/components/SettingsDataSection";
 import { SettingsProfile } from "@features/settings/components/SettingsProfile";
+import { ShoeManager } from "@features/settings/components/ShoeManager";
+import { RaceResultsSection } from "@features/settings/components/RaceResultsSection";
 import { SettingsPreferences } from "@features/settings/components/SettingsPreferences";
 import { SettingsNotifications } from "@features/settings/components/SettingsNotifications";
 import { SettingsSignOut } from "@features/settings/components/SettingsSignOut";
@@ -46,9 +50,11 @@ function SettingsPageContent() {
     reload: reloadZones,
   } = useZoneOverrides();
 
+  const { mutate } = useSWRConfig();
   const handleProfileSaved = () => {
     reloadProfile();
     reloadZones();
+    void invalidateTrainingParamDependents(mutate);
   };
 
   const handleTabChange = (tabId: SettingsSectionId) => {
@@ -62,7 +68,6 @@ function SettingsPageContent() {
     <div className="page-stack" data-testid="settings-page">
       <PageHeader
         title="设置"
-        description="管理训练参数、数据来源、个人信息与账户偏好。"
         action={
           <Button asChild variant="outline">
             <Link href="/profile">
@@ -103,38 +108,36 @@ function SettingsPageContent() {
       ) : (
         <div className="space-y-6">
           {activeTab === "training" && (
-            <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-              <div className="lg:col-span-5">
-                <SettingsTrainingParams profile={profile} onSaved={handleProfileSaved} />
-              </div>
-              <div className="lg:col-span-7">
-                <SettingsZones
-                  hrZones={zones?.hr_zones ?? []}
-                  paceZones={zones?.pace_zones ?? null}
-                  thresholdPace={thresholdPace}
-                  hrScheme={zones?.hr_scheme ?? "hrmax"}
-                  hrSchemeOptions={zones?.hr_scheme_options ?? []}
-                  hrSchemeCitation={zones?.hr_scheme_citation ?? null}
-                  unavailableRequirements={zones?.unavailable_requirements ?? []}
-                  hrMax={zones?.hr_max ?? null}
-                  hrMaxEstimated={zones?.hr_max_estimated ?? false}
-                  lthr={zones?.lthr ?? null}
-                  restingHr={zones?.resting_hr ?? null}
-                  hasOverrides={hasOverrides}
-                  loading={zonesLoading}
-                  saving={zonesSaving}
-                  onSave={async (hrOverrides: ZoneOverride[]) => saveOverrides(hrOverrides)}
-                  onReset={async () => resetZones()}
-                  onSelectScheme={selectScheme}
-                />
-              </div>
+            <div className="space-y-6">
+              <SettingsTrainingParams profile={profile} onSaved={handleProfileSaved} />
+              <SettingsZones
+                hrZones={zones?.hr_zones ?? []}
+                paceZones={zones?.pace_zones ?? null}
+                thresholdPace={thresholdPace}
+                hrScheme={zones?.hr_scheme ?? "hrmax"}
+                hrSchemeOptions={zones?.hr_scheme_options ?? []}
+                hrSchemeCitation={zones?.hr_scheme_citation ?? null}
+                unavailableRequirements={zones?.unavailable_requirements ?? []}
+                hrMax={zones?.hr_max ?? null}
+                hrMaxEstimated={zones?.hr_max_estimated ?? false}
+                lthr={zones?.lthr ?? null}
+                restingHr={zones?.resting_hr ?? null}
+                hasOverrides={hasOverrides}
+                loading={zonesLoading}
+                saving={zonesSaving}
+                onSave={async (hrOverrides: ZoneOverride[]) => saveOverrides(hrOverrides)}
+                onReset={async () => resetZones()}
+                onSelectScheme={selectScheme}
+              />
             </div>
           )}
           {activeTab === "data" && <SettingsDataSection />}
           {activeTab === "account" && (
-            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
-              <SettingsProfile profile={profile} onSaved={reloadProfile} />
-              <SettingsPreferences profile={profile} onSaved={reloadProfile} />
+            <div className="space-y-6">
+              <SettingsProfile profile={profile} onSaved={handleProfileSaved} />
+              <ShoeManager />
+              <RaceResultsSection />
+              <SettingsPreferences profile={profile} onSaved={handleProfileSaved} />
               <SettingsNotifications profile={profile} onSaved={reloadProfile} />
               <SettingsSignOut />
             </div>

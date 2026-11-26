@@ -42,7 +42,7 @@ export function buildWeekSummary(args: BuildWeekSummaryArgs): WeekSummary {
   let total = 0;
   let completed = 0;
   for (const ev of events) {
-    if (ev.training_type === "race") continue;
+    if (ev.status === "deleted" || ev.training_type === "race") continue;
     const day = activityLocalDay(ev.start_time, timezone);
     if (day < isoStart || day > isoEnd) continue;
     total += 1;
@@ -52,7 +52,10 @@ export function buildWeekSummary(args: BuildWeekSummaryArgs): WeekSummary {
   // Unplanned activities still count as completed sessions for the week.
   for (const day of activityDays) {
     const hasPlanned = events.some(
-      (ev) => ev.training_type !== "race" && activityLocalDay(ev.start_time, timezone) === day,
+      (ev) =>
+        ev.status !== "deleted" &&
+        ev.training_type !== "race" &&
+        activityLocalDay(ev.start_time, timezone) === day,
     );
     if (!hasPlanned) {
       const count = activityMap.get(day)?.length ?? 1;

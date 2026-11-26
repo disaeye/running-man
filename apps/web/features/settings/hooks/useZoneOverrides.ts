@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
+import { invalidateTrainingParamDependents } from "@features/data/lib/invalidate-after-sync";
 import { callOrval, callOrvalValidated } from "@shared/api/orval-adapter";
 import { apiErrorMessage } from "@shared/lib/api";
 import {
@@ -112,6 +113,7 @@ function mapZonesResponse(raw: Generated.ZonesResponseOutput): ZonesResponseView
 }
 
 export function useZoneOverrides(): UseZoneOverridesResult {
+  const { mutate: globalMutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const { data, error, isLoading, mutate } = useSWR<ZonesResponseView>(
@@ -142,6 +144,7 @@ export function useZoneOverrides(): UseZoneOverridesResult {
         };
         await callOrval((f) => putZonesApiV1InsightsZonesPut(body, {}, f));
         await mutate();
+        await invalidateTrainingParamDependents(globalMutate);
         return true;
       } catch (err: unknown) {
         setMutationError(apiErrorMessage(err, "保存失败"));
@@ -150,7 +153,7 @@ export function useZoneOverrides(): UseZoneOverridesResult {
         setSaving(false);
       }
     },
-    [mutate],
+    [mutate, globalMutate],
   );
 
   const resetZones = useCallback(async (): Promise<boolean> => {
@@ -159,6 +162,7 @@ export function useZoneOverrides(): UseZoneOverridesResult {
     try {
       await callOrval((f) => deleteZonesApiV1InsightsZonesDelete({}, f));
       await mutate();
+      await invalidateTrainingParamDependents(globalMutate);
       return true;
     } catch (err: unknown) {
       setMutationError(apiErrorMessage(err, "恢复失败"));
@@ -166,7 +170,7 @@ export function useZoneOverrides(): UseZoneOverridesResult {
     } finally {
       setSaving(false);
     }
-  }, [mutate]);
+  }, [mutate, globalMutate]);
 
   const selectScheme = useCallback(
     async (scheme: HrScheme): Promise<boolean> => {
@@ -177,6 +181,7 @@ export function useZoneOverrides(): UseZoneOverridesResult {
           putHrSchemeApiV1InsightsZonesSchemePut({ hr_scheme: scheme }, {}, f),
         );
         await mutate();
+        await invalidateTrainingParamDependents(globalMutate);
         return true;
       } catch (err: unknown) {
         // The API rejects a scheme whose thresholds are missing and names the
@@ -187,7 +192,7 @@ export function useZoneOverrides(): UseZoneOverridesResult {
         setSaving(false);
       }
     },
-    [mutate],
+    [mutate, globalMutate],
   );
 
   return {

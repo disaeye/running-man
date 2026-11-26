@@ -80,7 +80,7 @@ export function PerformancePRs() {
             <h2 className="mb-3 text-caption1 font-semibold text-text-secondary">
               {config.label || sport}
             </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {prs.map((pr, idx) => (
                 <Card key={`${pr.type}-${idx}`} padding="sm" className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">

@@ -51,3 +51,24 @@ export function classifyAuthError(
   }
   return { field: "form", message: raw };
 }
+
+/** Validate `next` redirect target so only same-origin relative paths are accepted. */
+export function resolveSafeNextPath(search: string): string {
+  const raw = new URLSearchParams(search).get("next") ?? "";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/";
+  return raw;
+}
+
+/** Build `/login` or `/register` href preserving safe `next` (and optional `email`). */
+export function buildAuthSwitchHref(
+  targetPath: "/login" | "/register",
+  search: string,
+  email?: string,
+): string {
+  const params = new URLSearchParams();
+  const nextPath = resolveSafeNextPath(search);
+  if (nextPath !== "/") params.set("next", nextPath);
+  if (email?.trim()) params.set("email", email.trim());
+  const qs = params.toString();
+  return qs ? `${targetPath}?${qs}` : targetPath;
+}

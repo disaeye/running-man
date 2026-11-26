@@ -2,6 +2,7 @@
 
 import useSWR from "swr";
 import { apiErrorMessage } from "@shared/lib/api";
+import { formatPaceFromSeconds } from "@shared/lib/format";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import {
   getAbilityApiV1InsightsAbilityGet,
@@ -123,10 +124,5 @@ export function formatPaceRange(range: TrainingPaceRange | null): string {
 }
 
 export function formatPace(secPerKm: number | null | undefined): string {
-  if (secPerKm == null || secPerKm <= 0) return "--";
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60)
-    .toString()
-    .padStart(2, "0");
-  return `${m}'${s}"`;
+  return formatPaceFromSeconds(secPerKm ?? null);
 }

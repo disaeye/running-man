@@ -21,7 +21,7 @@ interface GoalFormProps {  open: boolean;
 export function GoalForm({ open, onClose, onSubmit, editingGoal, submitting, submitError }: GoalFormProps) {
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next && !submitting) onClose(); }}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto" mobileSheet>
+      <DialogContent className="sm:max-w-xl" mobileSheet>
         <DialogHeader>
           <DialogTitle>{editingGoal ? "编辑目标" : "创建目标"}</DialogTitle>
         </DialogHeader>
@@ -72,7 +72,14 @@ function GoalFormFields({ editingGoal, onClose, onSubmit, submitting, submitErro
       .then((result) => {
         if (active && result.entries.length > 0) {
           const latest = result.entries[0];
-          if (latest) setLatestWeight(latest.weight_kg);
+          if (latest) {
+            setLatestWeight(latest.weight_kg);
+            setForm((prev) =>
+              prev.type === "weight" && prev.baseline_value == null
+                ? { ...prev, baseline_value: latest.weight_kg, current_value: latest.weight_kg }
+                : prev,
+            );
+          }
         }
       })
       .catch(() => { /* 没有体重记录时留空，由用户输入 */ });
@@ -108,7 +115,10 @@ function GoalFormFields({ editingGoal, onClose, onSubmit, submitting, submitErro
       title: form.title.trim(),
       target_value: form.type === "event" ? null : form.target_value,
       unit: form.type === "event" ? null : unitFor(form.type, form.unit),
-      direction: form.type === "weight" ? "decrease" : "increase",
+      direction:
+        form.type === "weight"
+          ? (form.target_value != null && form.baseline_value != null && form.target_value > form.baseline_value ? "increase" : "decrease")
+          : "increase",
     });
   };
 
@@ -116,7 +126,17 @@ function GoalFormFields({ editingGoal, onClose, onSubmit, submitting, submitErro
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
         <span className="text-subheadline font-medium text-text-secondary">目标类型</span>
-        <TypeSelector current={form.type} onSelect={(value) => update(typePatch(value))} />
+        <TypeSelector
+          current={form.type}
+          onSelect={(value) =>
+            update({
+              ...typePatch(value),
+              ...(value === "weight" && !editingGoal && latestWeight != null && form.baseline_value == null
+                ? { baseline_value: latestWeight, current_value: latestWeight }
+                : {}),
+            })
+          }
+        />
       </div>
 
       <label className="flex flex-col gap-1">
@@ -128,7 +148,7 @@ function GoalFormFields({ editingGoal, onClose, onSubmit, submitting, submitErro
       {form.type === "event" ? (
         <EventFields form={form} update={update} errors={errors} targetPace={targetPace} />
       ) : form.type === "weight" ? (
-        <WeightFields form={form} update={update} errors={errors} latestWeight={latestWeight} />
+        <WeightFields form={form} update={update} errors={errors} latestWeight={latestWeight} isEdit={Boolean(editingGoal)} />
       ) : (
         <AccumulationFields form={form} update={update} errors={errors} />
       )}
@@ -139,9 +159,29 @@ function GoalFormFields({ editingGoal, onClose, onSubmit, submitting, submitErro
         {errors.date && <span className="text-caption1 text-error">{errors.date}</span>}
       </label>
 
+      <label className="flex items-center gap-3 rounded-xl border border-border-default p-3">
+        <input type="checkbox" checked={form.is_primary} onChange={(e) => update({ is_primary: e.target.checked })} className="size-4" />
+        <span className="text-caption1 text-text-secondary">设为主目标（计划与首页按它编排；同时最多一个）</span>
+      </label>
+
+      {editingGoal ? (
+        <label className="flex flex-col gap-1">
+          <span className="text-subheadline font-medium text-text-secondary">目标状态</span>
+          <select
+            value={form.status}
+            onChange={(e) => update({ status: e.target.value as Goal["status"] })}
+            className="min-h-11 rounded-lg border border-border-default bg-surface-card px-3 text-subheadline"
+          >
+            <option value="active">进行中</option>
+            <option value="achieved">已达成</option>
+            <option value="abandoned">已放弃</option>
+          </select>
+        </label>
+      ) : null}
+
       {submitError ? <p role="alert" className="text-caption1 text-error">{submitError}</p> : null}
 
-      <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
+      <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex items-center justify-end gap-2 border-t border-border-subtle bg-surface-card px-6 py-4">
         <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>取消</Button>
         <Button type="submit" disabled={submitting}>{submitting ? "保存中…" : editingGoal ? "保存更改" : "创建目标"}</Button>
       </div>

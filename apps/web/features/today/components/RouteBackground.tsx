@@ -39,7 +39,7 @@ export function RouteBackground({
   return (
     <svg
       viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-      className="absolute inset-0 h-full w-full"
+      className="pointer-events-none absolute inset-0 h-full w-full"
       preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"
     >

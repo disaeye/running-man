@@ -34,11 +34,26 @@ export function LastSyncDetailBlock({
   );
 }
 
-export function SyncProgressBanner({ active }: { active: boolean }) {
+import type { SyncJob } from "@features/data/hooks/useSyncJobs";
+
+const PHASE_TEXT: Record<string, string> = {
+  activities: "拉取活动记录",
+  streams: "解析轨迹与心率流",
+  wellness: "同步健康日志",
+  weather: "补充天气记录",
+};
+
+export function SyncProgressBanner({ active, job }: { active: boolean; job?: SyncJob | null }) {
   if (!active) return null;
+  const phase = job?.phase ? (PHASE_TEXT[job.phase] ?? job.phase) : null;
+  const windowText =
+    job && job.windowsTotal > 0 ? ` · 窗口 ${job.windowsDone}/${job.windowsTotal}` : "";
+  const countText = job ? ` · 已新增 ${job.activitiesUpserted} / 流 ${job.streamsInserted}` : "";
   return (
     <div className="mt-2 rounded-md border border-accent/30 bg-accent/10 px-3 py-2 text-caption1 text-accent-strong">
-      正在从 Intervals.icu 拉取活动与健康数据… 请稍候，完成后会自动刷新。
+      {phase
+        ? `同步进行中：${phase}${windowText}${countText}`
+        : "正在从 Intervals.icu 拉取活动与健康数据… 请稍候，完成后会自动刷新。"}
     </div>
   );
 }

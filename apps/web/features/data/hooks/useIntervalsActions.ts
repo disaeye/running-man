@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useSWRConfig } from "swr";
 import { useToast } from "@shared/ui/Toast";
 import { apiErrorMessage } from "@shared/lib/api";
-import { resyncIntegration } from "@features/data/hooks/useSyncJobs";
+import { resyncIntegration, syncJobKey } from "@features/data/hooks/useSyncJobs";
 import type { SyncResult } from "@features/data/components/SourceCardShared";
 
 interface UseIntervalsActionsOptions {
@@ -20,21 +21,24 @@ export function useIntervalsActions({
   onBackfill,
 }: UseIntervalsActionsOptions) {
   const { toast } = useToast();
+  const { mutate } = useSWRConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [backfillOpen, setBackfillOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [resyncOpen, setResyncOpen] = useState(false);
   const [athleteId, setAthleteId] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [connectError, setConnectError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"connect" | "sync" | "disconnect" | "backfill" | "resync" | null>(null);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
 
   const handleConnect = useCallback(async () => {
     if (!athleteId.trim() || !apiKey.trim()) {
-      toast("请填写 Athlete ID 和 API Key", "warning");
+      setConnectError("请填写 Athlete ID 和 API Key");
       return;
     }
     setBusy("connect");
+    setConnectError(null);
     try {
       await onConnect(athleteId.trim(), apiKey.trim());
       toast("Intervals.icu 已连接", "success");
@@ -43,6 +47,7 @@ export function useIntervalsActions({
       setApiKey("");
     } catch (err) {
       const detail = apiErrorMessage(err, "请检查 Athlete ID 与 API Key 是否正确");
+      setConnectError(detail);
       toast(`连接失败: ${detail}`, "error");
     } finally {
       setBusy(null);
@@ -55,6 +60,7 @@ export function useIntervalsActions({
     toast("增量同步已排队，完成后自动更新", "info");
     try {
       const result = await onSync();
+      void mutate(syncJobKey("intervals_icu"));
       const upserted = (result.upserted as number) ?? 0;
       const deduplicated = (result.deduplicated as number) ?? 0;
       const total = (result.total_processed as number) ?? 0;
@@ -66,31 +72,36 @@ export function useIntervalsActions({
     } finally {
       setBusy(null);
     }
-  }, [onSync, toast]);
+  }, [mutate, onSync, toast]);
 
   const handleStartBackfill = useCallback(
-    async (fromDate: string) => {
+    async (fromDate: string): Promise<boolean> => {
       setBusy("backfill");
-      toast(`已发起从 ${fromDate} 至今的历史导入`, "info");
       try {
         await onBackfill(fromDate);
+        void mutate(syncJobKey("intervals_icu"));
+        toast(`已发起从 ${fromDate} 至今的历史导入`, "info");
+        return true;
       } catch (error) {
         toast(apiErrorMessage(error, "历史导入排队失败"), "error");
+        return false;
       } finally {
         setBusy(null);
       }
     },
-    [onBackfill, toast],
+    [mutate, onBackfill, toast],
   );
 
   const handleConfirmDisconnect = useCallback(
-    async (clearData: boolean) => {
+    async (clearData: boolean): Promise<boolean> => {
       setBusy("disconnect");
       try {
         await onDisconnect(clearData);
         toast(clearData ? "已断开连接并清空同步数据" : "已断开 Intervals.icu 连接", "info");
+        return true;
       } catch (error) {
         toast(apiErrorMessage(error, "断开操作失败"), "error");
+        return false;
       } finally {
         setBusy(null);
       }
@@ -98,17 +109,20 @@ export function useIntervalsActions({
     [onDisconnect, toast],
   );
 
-  const handleResync = useCallback(async () => {
+  const handleResync = useCallback(async (): Promise<boolean> => {
     setBusy("resync");
     try {
       await resyncIntegration("intervals_icu");
+      void mutate(syncJobKey("intervals_icu"));
       toast("已清空本地数据，全量历史同步已排队", "info");
+      return true;
     } catch (error) {
       toast(apiErrorMessage(error, "全量同步排队失败"), "error");
+      return false;
     } finally {
       setBusy(null);
     }
-  }, [toast]);
+  }, [mutate, toast]);
 
   return {
     dialogOpen,
@@ -123,6 +137,8 @@ export function useIntervalsActions({
     setAthleteId,
     apiKey,
     setApiKey,
+    connectError,
+    setConnectError,
     busy,
     syncResult,
     handleConnect,

@@ -2,8 +2,16 @@
 
 import { useState } from "react";
 import type { ActivityDetail } from "@shared/types/activity";
-import { PageCard } from "@shared/ui/Lovable";
+import { PageCard } from "@shared/ui/Card";
+import { useToast } from "@shared/ui/Toast";
 import { useShoeMutations, useShoes } from "@features/activity/hooks/useGear";
+
+function readRawNotes(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const note = (raw as { description?: unknown; notes?: unknown }).description
+    ?? (raw as { notes?: unknown }).notes;
+  return typeof note === "string" && note.trim() ? note.trim() : null;
+}
 
 export function ActivityGearCard({
   activityId,
@@ -12,59 +20,71 @@ export function ActivityGearCard({
   activityId: string;
   activity: ActivityDetail;
 }) {
+  const { toast } = useToast();
   const shoes = useShoes();
   const mutations = useShoeMutations();
   const [selected, setSelected] = useState("");
-  const [notes, setNotes] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+  const rawNotes = readRawNotes(activity.raw_data);
 
   async function assign() {
-    if (!selected) return;
-    const result = await mutations.assign(selected, activityId);
-    setMessage(result ? "跑鞋已关联" : "关联失败，请稍后重试");
+    if (!selected || assigning) return;
+    setAssigning(true);
+    setMessage(null);
+    try {
+      const result = await mutations.assign(selected, activityId);
+      if (result) {
+        shoes.reload();
+        setMessage({ text: "跑鞋已关联", ok: true });
+        toast("跑鞋已关联", "success");
+      } else {
+        setMessage({ text: "关联失败，请稍后重试", ok: false });
+        toast("跑鞋关联失败", "error");
+      }
+    } finally {
+      setAssigning(false);
+    }
   }
 
   return (
-    <PageCard title="装备与备注">
+    <PageCard title="装备与技术细节">
       <div className="space-y-3">
         <div className="flex gap-2">
           <select
+            aria-label="选择跑鞋"
             value={selected}
-            onChange={(event) => setSelected(event.target.value)}
-            className="min-h-11 min-w-0 flex-1 rounded-lg bg-secondary px-3 text-sm"
+            onChange={(event) => {
+              setSelected(event.target.value);
+              setMessage(null);
+            }}
+            className="min-h-11 min-w-0 flex-1 rounded-lg bg-secondary px-3 text-sm text-text-primary"
           >
             <option value="">选择本次使用的跑鞋</option>
             {shoes.data
               .filter((shoe) => !shoe.retired_at)
               .map((shoe) => (
                 <option key={shoe.shoe_id} value={shoe.shoe_id}>
-                  {shoe.name}
+                  {shoe.name} ({Math.round(shoe.current_mileage_m / 1000)} km)
                 </option>
               ))}
           </select>
           <button
             type="button"
             onClick={() => void assign()}
-            disabled={!selected}
-            className="min-h-11 rounded-lg bg-primary px-4 text-xs text-primary-foreground disabled:opacity-40"
+            disabled={!selected || assigning}
+            className="min-h-11 rounded-lg bg-primary px-4 text-xs font-medium text-primary-foreground disabled:opacity-40"
           >
-            关联
+            {assigning ? "关联中…" : "关联"}
           </button>
         </div>
 
-        <div className="space-y-1">
-          <label htmlFor="activity-notes" className="text-caption1 text-muted-foreground">
-            训练备注
-          </label>
-          <textarea
-            id="activity-notes"
-            rows={2}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="记录训练感受、路线路况、天气感受…"
-            className="w-full rounded-lg bg-secondary p-2.5 text-xs text-text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
+        {rawNotes ? (
+          <div className="rounded-lg bg-secondary/60 p-2.5 text-caption1 text-text-secondary">
+            <span className="mb-0.5 block text-text-muted">同步备注</span>
+            <p className="whitespace-pre-wrap">{rawNotes}</p>
+          </div>
+        ) : null}
 
         <p className="text-sm text-muted-foreground">
           {activity.avg_stride_length_m != null
@@ -74,7 +94,9 @@ export function ActivityGearCard({
         </p>
 
         {message ? (
-          <p className="text-xs text-accent-strong">{message}</p>
+          <p role="status" className={`text-xs ${message.ok ? "text-success" : "text-error"}`}>
+            {message.text}
+          </p>
         ) : null}
       </div>
     </PageCard>

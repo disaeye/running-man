@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@shared/ui/select";
-import { SectionHeader } from "@shared/ui/SectionHeader";
+import { ShowcaseHeading } from "./ShowcaseHeading";
 
 export function InputsGallery() {
   const [switchOn, setSwitchOn] = useState(true);
@@ -21,8 +21,8 @@ export function InputsGallery() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <SectionHeader title="Input" subtitle="Default / Disabled / Error" />
-        <div className="mt-4 flex flex-col gap-4 max-w-sm">
+        <ShowcaseHeading title="Input" subtitle="Default / Disabled / Error" />
+        <div className="mt-4 flex max-w-sm flex-col gap-4">
           <Input placeholder="Default input" />
           <Input placeholder="Disabled input" disabled />
           <Input aria-invalid placeholder="Error state" />
@@ -30,7 +30,7 @@ export function InputsGallery() {
       </div>
 
       <div>
-        <SectionHeader title="Select" subtitle="Radix Select with items" />
+        <ShowcaseHeading title="Select" subtitle="Radix Select with items" />
         <div className="mt-4 max-w-xs">
           <Select defaultValue="run">
             <SelectTrigger>
@@ -47,8 +47,8 @@ export function InputsGallery() {
       </div>
 
       <div>
-        <SectionHeader title="Switch" subtitle="On / Off / Disabled" />
-        <div className="mt-4 flex flex-col gap-3 max-w-xs">
+        <ShowcaseHeading title="Switch" subtitle="On / Off / Disabled" />
+        <div className="mt-4 flex max-w-xs flex-col gap-3">
           <Switch label="通知推送" checked={switchOn} onChange={setSwitchOn} />
           <Switch label="关闭状态" checked={false} onChange={() => {}} />
           <Switch label="已禁用" checked={false} onChange={() => {}} disabled />
@@ -56,7 +56,7 @@ export function InputsGallery() {
       </div>
 
       <div>
-        <SectionHeader title="DateRangePicker" subtitle="From/to + quick presets" />
+        <ShowcaseHeading title="DateRangePicker" subtitle="From/to + quick presets" />
         <div className="mt-4">
           <DateRangePicker
             from={dateFrom}

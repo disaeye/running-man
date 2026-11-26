@@ -73,6 +73,8 @@ function mapMilestone(raw: Generated.MilestoneResponseOutput): Milestone {
   };
 }
 
+const EMPTY_GOALS: Goal[] = [];
+
 export function useGoals() {
   const { data, error, isLoading, mutate } = useSWR<Goal[]>(["/goals", {}], {
     fetcher: () =>
@@ -85,7 +87,7 @@ export function useGoals() {
     await mutate();
   }, [mutate]);
 
-  return { goals: data ?? [], loading: isLoading, error: error?.message ?? null, refresh };
+  return { goals: data ?? EMPTY_GOALS, loading: isLoading, error: error?.message ?? null, refresh };
 }
 
 export function useGoal(goalId: string | null) {

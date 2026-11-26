@@ -9,6 +9,7 @@ import { useSyncRuns } from "@features/data/hooks/useSyncRuns";
 import {
   cancelSyncJob,
   isJobActive,
+  useSourceCoverage,
   useSyncJob,
 } from "@features/data/hooks/useSyncJobs";
 
@@ -22,6 +23,7 @@ const PHASE_LABELS: Record<string, string> = {
   activities: "拉取活动记录",
   streams: "解析时序流 (FIT)",
   wellness: "同步健康日志",
+  weather: "补充天气记录",
 };
 
 export function SyncStatusOverview({
@@ -31,6 +33,7 @@ export function SyncStatusOverview({
 }: SyncStatusOverviewProps) {
   const { data: runs } = useSyncRuns({ limit: 10 });
   const { job } = useSyncJob("intervals_icu");
+  const { coverage } = useSourceCoverage("intervals_icu");
   const [cancelling, setCancelling] = useState(false);
 
   const activeJob = isJobActive(job) ? job : null;
@@ -78,7 +81,7 @@ export function SyncStatusOverview({
   }, [integrations, runs]);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {/* Connected Sources Status */}
       <div className="flex flex-col justify-between rounded-2xl bg-surface-card p-4">
         <div>
@@ -135,16 +138,20 @@ export function SyncStatusOverview({
                 variant={
                   stats.latestRun.status === "success"
                     ? "success"
-                    : stats.latestRun.status === "running"
-                      ? "info"
-                      : "error"
+                    : stats.latestRun.status === "partial"
+                      ? "warning"
+                      : stats.latestRun.status === "running"
+                        ? "info"
+                        : "error"
                 }
               >
                 {stats.latestRun.status === "success"
                   ? "成功"
-                  : stats.latestRun.status === "running"
-                    ? "同步中"
-                    : "失败"}
+                  : stats.latestRun.status === "partial"
+                    ? "部分完成"
+                    : stats.latestRun.status === "running"
+                      ? "同步中"
+                      : "失败"}
               </Badge>
             ) : null}
           </div>
@@ -175,12 +182,21 @@ export function SyncStatusOverview({
             <span className="text-caption1 text-text-muted">条活动更新</span>
           </div>
         </div>
-        <div className="mt-3 text-caption1 text-text-muted">
-          已写入{" "}
-          <span className="font-semibold tabular-nums text-text-secondary">
-            {stats.totalStreams}
-          </span>{" "}
-          条秒级数据
+        <div className="mt-3 space-y-1 text-caption1 text-text-muted">
+          <div>
+            已写入{" "}
+            <span className="font-semibold tabular-nums text-text-secondary">
+              {stats.totalStreams}
+            </span>{" "}
+            条秒级数据
+          </div>
+          {integrations.intervals_icu?.status === "connected" && coverage?.firstActivityDate ? (
+            <div className="num text-text-secondary">
+              已覆盖 {coverage.firstActivityDate} 至 {coverage.lastActivityDate}（{coverage.activityCount} 条活动）
+            </div>
+          ) : (
+            <div>首次同步默认拉近 30 天，更早记录可在下方「导入历史」按月回填</div>
+          )}
         </div>
       </div>
 
@@ -208,28 +224,32 @@ export function SyncStatusOverview({
           </div>
         </div>
         <div className="mt-3 flex items-center gap-2">
-          {integrations.intervals_icu?.status === "connected" && onTriggerSync && (
-            activeJob ? (
-              <Button
-                size="xs"
-                variant="destructive"
-                onClick={handleCancel}
-                disabled={cancelling || activeJob.cancelRequested}
-                className="w-full text-caption1"
-              >
-                {cancelling || activeJob.cancelRequested ? "正在取消…" : "取消当前任务"}
-              </Button>
-            ) : (
-              <Button
-                size="xs"
-                variant="secondary"
-                onClick={() => onTriggerSync("intervals_icu")}
-                disabled={isSyncing}
-                className="w-full text-caption1"
-              >
-                {isSyncing ? "同步中…" : "增量同步"}
-              </Button>
-            )
+          {integrations.intervals_icu?.status === "connected" && activeJob ? (
+            <Button
+              size="xs"
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={cancelling || activeJob.cancelRequested}
+              className="w-full text-caption1"
+            >
+              {cancelling || activeJob.cancelRequested ? "正在取消…" : "取消当前任务"}
+            </Button>
+          ) : integrations.intervals_icu?.status === "connected" && onTriggerSync ? (
+            <Button
+              size="xs"
+              variant="secondary"
+              onClick={() => onTriggerSync("intervals_icu")}
+              disabled={isSyncing}
+              className="w-full text-caption1"
+            >
+              {isSyncing ? "同步中…" : "增量同步"}
+            </Button>
+          ) : (
+            <span className="text-caption1 text-text-muted">
+              {integrations.intervals_icu?.status === "connected"
+                ? "在下方数据源卡片发起同步"
+                : "连接后可自动或手动同步"}
+            </span>
           )}
         </div>
       </div>

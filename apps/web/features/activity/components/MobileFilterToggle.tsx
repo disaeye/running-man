@@ -2,15 +2,11 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 export interface MobileFilterToggleProps {
   open: boolean;
+  activeCount?: number;
   onToggle: () => void;
 }
 
-/**
- * Sm-hidden collapsible trigger for the activity filter panel.
- * Visible only on mobile (`sm:hidden`); the desktop filter panel is
- * always visible.
- */
-export function MobileFilterToggle({ open, onToggle }: MobileFilterToggleProps) {
+export function MobileFilterToggle({ open, activeCount = 0, onToggle }: MobileFilterToggleProps) {
   return (
     <button
       type="button"
@@ -23,6 +19,11 @@ export function MobileFilterToggle({ open, onToggle }: MobileFilterToggleProps) 
         <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
       </svg>
       筛选
+      {activeCount > 0 ? (
+        <span className="num rounded-full bg-accent/20 px-1.5 py-0.5 text-caption1 font-medium text-accent-strong">
+          {activeCount}
+        </span>
+      ) : null}
       <span aria-hidden="true" className="text-caption2">
         {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </span>

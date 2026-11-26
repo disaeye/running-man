@@ -61,15 +61,6 @@ const nextConfig = {
       { source: "/trends", destination: "/analysis?tab=load", permanent: true },
       { source: "/data", destination: "/settings?section=data", permanent: true },
       { source: "/export", destination: "/settings?section=data", permanent: true },
-      // `?view=strength` was a fourth calendar tab with no view of its own — it
-      // highlighted and then rendered the week grid. Strength content lives in
-      // the log view, so the old URL normalises there.
-      {
-        source: "/calendar",
-        has: [{ type: "query", key: "view", value: "strength" }],
-        destination: "/calendar?view=list",
-        permanent: true,
-      },
       { source: "/performance", destination: "/analysis?tab=performance", permanent: true },
       { source: "/gear", destination: "/settings?section=account", permanent: true },
       { source: "/library", destination: "/settings?section=account", permanent: true },

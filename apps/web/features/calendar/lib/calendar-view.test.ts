@@ -4,7 +4,9 @@ import { resolveCalendarView, type CalendarView } from "@features/calendar/lib/c
 const CASES: readonly [string | null, CalendarView][] = [
   ["week", "week"],
   ["month", "month"],
-  ["list", "list"],
+  // 流水视图与力量工作台已是独立路由，旧值不再被日历识别
+  ["list", "week"],
+  ["strength", "week"],
   [null, "week"],
   ["hour", "week"],
   ["", "week"],

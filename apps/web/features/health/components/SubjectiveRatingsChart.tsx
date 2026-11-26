@@ -3,7 +3,7 @@
 import { useRef, useMemo } from "react";
 import * as echarts from "echarts/core";
 import { LineChart } from "echarts/charts";
-import { GridComponent, TooltipComponent } from "echarts/components";
+import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { useChartConfig, type ChartConfig } from "@shared/hooks/useChartConfig";
 import { useECharts } from "@shared/hooks/useECharts";
@@ -11,7 +11,7 @@ import { EmptyState } from "@shared/ui/EmptyState";
 import { EMPTY_LABEL } from "@shared/lib/use-data-state";
 import type { WellnessPoint } from "@features/health/hooks/useWellness";
 
-echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
 interface SubjectiveRatingsChartProps {
   data: WellnessPoint[];
@@ -28,6 +28,11 @@ const RATING_SERIES = [
   { field: "hydration", label: "水分", color: "sportSwim" },
   { field: "sleep_quality", label: "睡眠质量", color: "sleep" },
 ] as const;
+
+/** 所选范围内是否有任何一条主观感受记录；没有时整张卡不挂载。 */
+export function hasSubjectiveData(data: readonly WellnessPoint[]): boolean {
+  return data.some((point) => RATING_SERIES.some((entry) => point[entry.field] != null));
+}
 
 /** 主观感受 1–4 等级多折线图（Intervals.icu 等级）。 */
 export function SubjectiveRatingsChart({ data }: SubjectiveRatingsChartProps) {
@@ -46,10 +51,7 @@ export function SubjectiveRatingsChart({ data }: SubjectiveRatingsChartProps) {
     { chartConfig },
   );
 
-  const fields = RATING_SERIES.map((entry) => entry.field);
-  const hasData = series.some((point) =>
-    fields.some((field) => point[field] != null),
-  );
+  const hasData = hasSubjectiveData(series);
 
   return (
     <div className="relative">
@@ -76,7 +78,8 @@ function buildOption(
   const c = chartConfig.colors;
   const days = points.map((p) => p.day.slice(5));
   return {
-    grid: { left: 40, right: 16, top: 16, bottom: 16 },
+    legend: { type: "scroll", top: 0, textStyle: { color: c.textSecondary, fontSize: 10 } },
+    grid: { left: 40, right: 16, top: 38, bottom: 24 },
     xAxis: { data: days },
     yAxis: {
       min: 1,

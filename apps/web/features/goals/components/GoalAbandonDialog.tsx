@@ -39,12 +39,12 @@ export function GoalAbandonDialog({
         if (!next) onCancel();
       }}
     >
-      <DialogContent>
+      <DialogContent mobileSheet>
         <DialogHeader>
-          <DialogTitle>放弃这个目标？</DialogTitle>
+          <DialogTitle>确认删除目标？</DialogTitle>
         </DialogHeader>
         <p className="text-subheadline text-text-secondary">
-          目标“{goalTitle}”及其历史进度和里程碑将被删除。确认后 5 秒内可撤销。
+          目标「{goalTitle}」及其历史进度和里程碑将被永久删除，如需保留记录可改为编辑状态为「已放弃」。
         </p>
         {error ? <p role="alert" className="text-caption1 text-error">{error}</p> : null}
         <div className="flex justify-end gap-3">
@@ -55,7 +55,7 @@ export function GoalAbandonDialog({
             disabled={abandoning}
             data-testid="abandon-goal-cancel"
           >
-            保留目标
+            取消
           </Button>
           <Button
             type="button"
@@ -64,7 +64,7 @@ export function GoalAbandonDialog({
             data-testid="abandon-goal-confirm"
             className="bg-error text-text-inverse hover:bg-error/90"
           >
-            {abandoning ? "正在放弃…" : "确认放弃"}
+            {abandoning ? "正在删除…" : "确认删除"}
           </Button>
         </div>
       </DialogContent>

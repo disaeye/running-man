@@ -1,5 +1,5 @@
 import type { Exercise } from "@features/strength/hooks/useExercises";
-import { PageCard } from "@shared/ui/Lovable";
+import { PageCard } from "@shared/ui/Card";
 
 export interface DraftSet {
   id: string;
@@ -45,5 +45,5 @@ function SetInput({ label, value, placeholder, onChange }: { label: string; valu
 }
 
 export function ExercisePickerOverlay({ exercises, loading, query, onQueryChange, onSelect, onClose }: PickerProps) {
-  return <div className="fixed inset-0 z-[60] flex items-center justify-center" role="dialog" aria-modal="true"><div className="absolute inset-0 bg-black/60" onClick={onClose} /><PageCard className="relative z-10 flex max-h-[70vh] w-full max-w-md flex-col" title="选择动作" action={<button type="button" onClick={onClose} className="text-xs text-muted-foreground">关闭</button>}><input type="text" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="搜索动作..." autoFocus className="w-full rounded-lg bg-secondary px-3 py-2 text-sm outline-none" /><div className="mt-2 overflow-y-auto">{loading ? <p className="py-8 text-center text-sm text-muted-foreground">加载中...</p> : exercises.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">无匹配动作</p> : exercises.map((exercise) => <button key={exercise.id} type="button" onClick={() => onSelect(exercise)} className="flex w-full justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-secondary"><span>{exercise.name_cn}</span><span className="text-xs text-muted-foreground">{exercise.category}</span></button>)}</div></PageCard></div>;
+  return <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true"><div className="absolute inset-0 bg-black/60" onClick={onClose} /><PageCard className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col" title="选择动作" action={<button type="button" onClick={onClose} className="text-xs text-muted-foreground">关闭</button>}><input type="text" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="搜索动作..." autoFocus className="w-full rounded-lg bg-secondary px-3 py-2 text-sm outline-none" /><div className="mt-2 overflow-y-auto">{loading ? <p className="py-8 text-center text-sm text-muted-foreground">加载中...</p> : exercises.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">无匹配动作</p> : exercises.map((exercise) => <button key={exercise.id} type="button" onClick={() => onSelect(exercise)} className="flex w-full justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-secondary"><span>{exercise.name_cn}</span><span className="text-xs text-muted-foreground">{exercise.category}</span></button>)}</div></PageCard></div>;
 }

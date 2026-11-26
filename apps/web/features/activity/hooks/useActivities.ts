@@ -30,6 +30,8 @@ export function hasUsableRange(from: string, to: string): boolean {
   return Boolean(from && to);
 }
 
+const EMPTY_ACTIVITIES: ActivitySummary[] = [];
+
 export function useActivities(from: string, to: string): UseActivitiesResult {
   const params = { from, to };
   // An empty range is not a request for "all activities above". The API rejects
@@ -50,7 +52,7 @@ export function useActivities(from: string, to: string): UseActivitiesResult {
   );
 
   return {
-    data: data ?? [],
+    data: data ?? EMPTY_ACTIVITIES,
     // No range is not loading — nothing was requested. Reporting `isLoading`
     // here is what let the caller wait forever on a fetch that never starts.
     loading: hasRange && isLoading,

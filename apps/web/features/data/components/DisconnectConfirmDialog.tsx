@@ -12,7 +12,7 @@ import {
 interface DisconnectConfirmDialogProps {
   open: boolean;
   onClose(): void;
-  onConfirm(clearData: boolean): Promise<void>;
+  onConfirm(clearData: boolean): Promise<boolean | void>;
   isBusy?: boolean;
 }
 
@@ -22,20 +22,34 @@ export function DisconnectConfirmDialog({
   onConfirm,
   isBusy = false,
 }: DisconnectConfirmDialogProps) {
-  const [clearData, setClearData] = useState(false);
-
-  const handleConfirm = async () => {
-    await onConfirm(clearData);
-    onClose();
-  };
-
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={(next) => { if (!next && !isBusy) onClose(); }}>
+      <DialogContent className="max-w-md" mobileSheet>
         <DialogHeader>
           <DialogTitle>断开 Intervals.icu 连接</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4 text-caption1">
+        {open ? (
+          <DisconnectConfirmBody onClose={onClose} onConfirm={onConfirm} isBusy={isBusy} />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DisconnectConfirmBody({
+  onClose,
+  onConfirm,
+  isBusy,
+}: Omit<DisconnectConfirmDialogProps, "open">) {
+  const [clearData, setClearData] = useState(false);
+
+  const handleConfirm = async () => {
+    const ok = await onConfirm(clearData);
+    if (ok !== false) onClose();
+  };
+
+  return (
+    <div className="flex flex-col gap-4 text-caption1">
           <p className="text-text-secondary leading-relaxed">
             断开连接后，系统将停止自动同步。请选择如何处理当前已导入的活动、时序流与健康数据。
           </p>
@@ -91,7 +105,5 @@ export function DisconnectConfirmDialog({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { normalizeGpsTrack } from "@features/activity/lib/gps-track";
 import { simplifyTrack, cumulativeDistancesKm } from "@features/activity/lib/gps-simplify";
@@ -27,6 +27,12 @@ export function ActivityMap({ streams, hoverTimeSec = null }: ActivityMapProps) 
   const [tilesFailed, setTilesFailed] = useState(false);
   const { ref, size } = useElementSize<HTMLDivElement>();
   const playback = useTrackPlayback();
+
+  useEffect(() => {
+    if (hoverTimeSec != null && playback.playing) {
+      playback.pause();
+    }
+  }, [hoverTimeSec, playback]);
 
   const samples = useMemo(
     () => joinTrackSamples(simplifyTrack(normalizeGpsTrack(streams).points), streams),
@@ -61,7 +67,7 @@ export function ActivityMap({ streams, hoverTimeSec = null }: ActivityMapProps) 
   }
 
   if (tilesFailed) {
-    return <GpsTrack streams={streams} />;
+    return <GpsTrack streams={streams} hoverTimeSec={hoverTimeSec} />;
   }
 
   const lastIdx = samples.length - 1;
@@ -105,11 +111,16 @@ export function ActivityMap({ streams, hoverTimeSec = null }: ActivityMapProps) 
                 headIdx={headIdx}
                 hoverIdx={hoverIdx}
               />
-              <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-background/75 px-2 py-1 text-caption2 text-muted-foreground backdrop-blur-sm">
+              <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1.5 rounded-full border border-border-default bg-surface-card/95 px-2.5 py-1 text-caption1 text-muted-foreground">
                 {playback.playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
                 <span className="num" data-testid="map-progress">
                   {(cumKm[headIdx] ?? 0).toFixed(2)} / {totalKm.toFixed(2)} km
                 </span>
+              </div>
+              <div className="pointer-events-none absolute bottom-2 left-2 flex items-center gap-2 rounded-full border border-border-default bg-surface-card/95 px-2.5 py-1 text-caption1 text-muted-foreground">
+                <span>慢</span>
+                <span className="h-1.5 w-10 rounded-full bg-gradient-to-r from-[var(--color-destructive)] via-[var(--color-warning)] to-[var(--color-success)]" aria-hidden />
+                <span>快</span>
               </div>
             </>
           ) : (

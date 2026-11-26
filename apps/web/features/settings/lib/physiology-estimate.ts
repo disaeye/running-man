@@ -129,7 +129,7 @@ export function buildEstimateRows(
       trend: trendFor("hr_max", current.hr_max, hr.data_sufficient ? hr.hr_max : null),
       shortfall: hr.data_sufficient
         ? null
-        : `需要至少 ${hr.required_sessions} 次活动，近 ${hr.input_window_days} 天只有 ${hr.session_count} 次`,
+        : `需要至少 ${hr.required_sessions} 次含最高心率记录的训练，近 ${hr.input_window_days} 天有 ${hr.session_count} 次`,
     },
     {
       key: "lthr" as const,
@@ -141,7 +141,7 @@ export function buildEstimateRows(
       trend: trendFor("lthr", current.lthr, lthr.data_sufficient ? lthr.lthr : null),
       shortfall: lthr.data_sufficient
         ? null
-        : `需要至少 ${lthr.required_efforts} 次接近阈值的高强度活动，目前 ${lthr.near_threshold_count} 次`,
+        : `需要至少 ${lthr.required_efforts} 次持续 20 分钟以上且含心率的高强度跑，目前 ${lthr.near_threshold_count} 次`,
     },
     {
       key: "threshold_pace" as const,
@@ -163,7 +163,49 @@ export function buildEstimateRows(
       ),
       shortfall: pace.data_sufficient
         ? null
-        : `需要至少 ${pace.required_efforts} 次接近极限的跑步，近 ${pace.input_window_days} 天有 ${pace.effort_count} 次`,
+        : `需要至少 ${pace.required_efforts} 次全力或节奏跑（单次 > 1 km 且 > 3 分钟、配速在个人最佳 15% 内且平均心率 ≥ 阈值心率 91%，无心率带仅看配速），近 ${pace.input_window_days} 天仅识别到 ${pace.effort_count} 次`,
+    },
+  ];
+}
+
+export interface SyncedReadingInput {
+  readonly day: string;
+  readonly value: number;
+}
+
+export interface SyncReadingsControl {
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly restingHr: SyncedReadingInput | null;
+  readonly weight: SyncedReadingInput | null;
+  readonly currentRestingHr: number | null;
+  readonly currentWeightKg: number | null;
+  readonly onPull: () => void;
+  readonly onApply: (patch: { resting_hr?: number; weight_kg?: number }) => void;
+}
+
+/** Build comparison rows for synced wellness readings (`resting_hr`, `weight_kg`). */
+export function buildSyncedRows(syncReadings: SyncReadingsControl) {
+  const rhrNext = syncReadings.restingHr ? Math.round(syncReadings.restingHr.value) : null;
+  const weightNext = syncReadings.weight ? Number(syncReadings.weight.value.toFixed(2)) : null;
+  return [
+    {
+      key: "resting_hr" as const,
+      label: "静息心率",
+      currentText: syncReadings.currentRestingHr == null ? NO_VALUE : `${syncReadings.currentRestingHr} ${HEART_RATE_UNIT}`,
+      nextText: rhrNext == null ? null : `${rhrNext} ${HEART_RATE_UNIT}`,
+      nextValue: rhrNext,
+      day: syncReadings.restingHr?.day ?? "",
+      differs: rhrNext != null && rhrNext !== syncReadings.currentRestingHr,
+    },
+    {
+      key: "weight_kg" as const,
+      label: "体重",
+      currentText: syncReadings.currentWeightKg == null ? NO_VALUE : `${syncReadings.currentWeightKg} kg`,
+      nextText: weightNext == null ? null : `${weightNext} kg`,
+      nextValue: weightNext,
+      day: syncReadings.weight?.day ?? "",
+      differs: weightNext != null && weightNext !== syncReadings.currentWeightKg,
     },
   ];
 }

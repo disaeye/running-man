@@ -1,7 +1,14 @@
 "use client";
 
-import { InsetBlock } from "@shared/ui/InsetBlock";
 import { MetricStrip, type MetricStripItem } from "@shared/ui/MetricStrip";
+import { PlanActualDeltaGrid, type PlanActualRowItem } from "@shared/ui/PlanActualDeltaGrid";
+import {
+  buildPlanActualDeltas,
+  othersLine,
+  plannedFamily,
+  sumRecorded,
+  weightedRecorded,
+} from "@features/calendar/lib/plan-actual-delta";
 import {
   formatDistance,
   formatDuration,
@@ -9,147 +16,19 @@ import {
   formatPace,
   formatPaceFromSeconds,
 } from "@shared/lib/format";
-import { getSportConfig, type SportFamily } from "@shared/config/sport-config";
+import { getSportConfig } from "@shared/config/sport-config";
 import type { ActivitySummary } from "@shared/types/activity";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
 
-/** 缺值文案，和日历里其它块同一个词。 */
 const UNRECORDED = "未记录";
 
 interface DayPlanActualProps {
-  /** 当天的计划事件；`CalendarDaySheet` 用它的 `editingEvent`。 */
   readonly event: CalendarEventDTO | undefined;
-  /** 当天已记录的活动，来源与日历的 `activityMap` 一致。 */
   readonly activities: readonly ActivitySummary[];
 }
 
-/** 同类训练里某一项的合计；一项都没有值时返回 null，不拿 0 顶替缺失。 */
-function sumRecorded(
-  activities: readonly ActivitySummary[],
-  read: (activity: ActivitySummary) => number | null,
-): number | null {
-  let total = 0;
-  let count = 0;
-  for (const activity of activities) {
-    const value = read(activity);
-    if (value == null) continue;
-    total += value;
-    count += 1;
-  }
-  return count === 0 ? null : total;
-}
-
 /**
- * 活动摘要里只有整段均值，同类训练不止一次时按时长加权才是这一类的均值。
- * 缺这一项的场次不参与加权——它不是 0，只是没测。
- */
-function weightedRecorded(
-  activities: readonly ActivitySummary[],
-  read: (activity: ActivitySummary) => number | null,
-): number | null {
-  let weighted = 0;
-  let weight = 0;
-  for (const activity of activities) {
-    const value = read(activity);
-    const seconds = activity.duration_s;
-    if (value == null || seconds == null || seconds <= 0) continue;
-    weighted += value * seconds;
-    weight += seconds;
-  }
-  return weight === 0 ? null : weighted / weight;
-}
-
-/**
- * 被计划的那一类训练。
- *
- * 课表里的配速区间和时长描述的是一类训练（跑步课表就是跑步），右列也只拿
- * 这一类来比；别的运动混进来，两个数字就不再指同一件事。
- *
- * 没有 `sport_type`，或者注册表认不出这个值（family 落到 `unknown`）时没有
- * 类别可对齐，退回「带距离的训练」——配速、步频这些右列的主要格子本来就只
- * 对有位移的场次成立。
- */
-function plannedFamily(event: CalendarEventDTO): SportFamily | null {
-  if (!event.sport_type) return null;
-  const family = getSportConfig(event.sport_type).family;
-  return family === "unknown" ? null : family;
-}
-
-/**
- * 不进对比的那一行：当天还做了哪些别的运动，几次、加起来多久。
- *
- * 只报次数和别的运动自己的时长，不报被比较的那一类里的任何数字。
- */
-function othersLine(
-  others: readonly ActivitySummary[],
-  comparedCount: number,
-  plannedLabel: string | null,
-): string | null {
-  if (others.length === 0) return null;
-
-  const labels = new Map<string, number>();
-  for (const activity of others) {
-    const label = getSportConfig(activity.sport).label;
-    labels.set(label, (labels.get(label) ?? 0) + 1);
-  }
-  const counts = [...labels]
-    .map(([label, count]) => `${count} 次${label}`)
-    .join("、");
-  const totalS = sumRecorded(others, (activity) => activity.duration_s);
-  const duration = totalS == null ? null : formatDuration(totalS);
-  // 只有一种别的运动时，时长就是它的；不止一种时写「合计」，否则读者会把
-  // 那个数配给最后一个运动名。
-  const amount =
-    duration == null ? "" : labels.size > 1 ? `，合计 ${duration}` : `，${duration}`;
-
-  return comparedCount === 0
-    ? `当天没有${plannedLabel ?? "带距离的训练"}，只有 ${counts}${amount}`
-    : `当天另有 ${counts}${amount}`;
-}
-
-/**
- * 列内的一格：12px 标签加 13px 等宽数字；缺值仍占一行，不缩成 0，
- * 并在下面一句说清缺的是哪个字段。
- */
-function PlanActualRow({
-  label,
-  value,
-  note,
-}: {
-  readonly label: string;
-  readonly value: string | null;
-  readonly note: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="truncate text-caption1 text-text-muted">{label}</p>
-      <p
-        className={`mt-0.5 truncate font-mono text-subheadline tabular-nums ${
-          value == null ? "text-text-muted" : "text-text-primary"
-        }`}
-      >
-        {value ?? UNRECORDED}
-      </p>
-      {value == null ? (
-        <p className="mt-0.5 text-caption1 text-text-muted">{note}</p>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * 同一天的「计划与实际」对照：左列课表，右列记录。
- *
- * 只在当天既有计划事件、又有已记录活动时出现——只有一半事实的时候，
- * 上半部分的 `PlanPacePrescription` 和 `DayActivitySummary` 已经各说过一遍，
- * 这里再画一个半空的块只是噪音。
- *
- * 两列讲同一类训练：右列只统计与被计划事件同 family 的活动，别的运动挪到
- * `MetricStrip` 上面一行文字里单独交代，不进任何数字。计划写的是跑步课表，
- * 右列却报当天总量（跑步加力量），「计划 40 分钟」对着「实际 1h30」比的
- * 就不是同一件事了。
- *
- * 跑步距离汇总只采用现有活动记录；缺少记录时明确标注未记录。
+ * 同一天的「计划与实际」对照：四列对齐展示指标 / 计划 / 实际 / 偏差 Δ 徽章。
  */
 export function DayPlanActual({ event, activities }: DayPlanActualProps) {
   if (!event || activities.length === 0) return null;
@@ -164,12 +43,8 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
 
   const family = plannedFamily(event);
   const compared = family
-    ? activities.filter(
-        (activity) => getSportConfig(activity.sport).family === family,
-      )
-    : activities.filter(
-        (activity) => activity.distance_m != null && activity.distance_m > 0,
-      );
+    ? activities.filter((activity) => getSportConfig(activity.sport).family === family)
+    : activities.filter((activity) => activity.distance_m != null && activity.distance_m > 0);
   const others = activities.filter((activity) => !compared.includes(activity));
 
   const distanceM = sumRecorded(compared, (activity) => activity.distance_m);
@@ -188,8 +63,8 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
   );
 
   const effectiveRpe =
-    event.completed_rpe ??
     compared.find((activity) => activity.rpe != null)?.rpe ??
+    event.completed_rpe ??
     null;
   const stripItems: MetricStripItem[] = [
     {
@@ -200,74 +75,64 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
   ];
   const quality = event.session_classification?.quality ?? null;
   const execution = event.session_classification?.execution ?? null;
+  const deltas = buildPlanActualDeltas({
+    plannedDistanceM: event.predicted_distance_m ?? null,
+    actualDistanceM: distanceM,
+    plannedDurationMin: prescription?.duration_min ?? null,
+    actualDurationS: durationS,
+    paceMinS: prescription?.pace_min_s_km ?? null,
+    paceMaxS: prescription?.pace_max_s_km ?? null,
+  });
+
+  const deltaByKey = new Map(deltas.filter((d) => d.key).map((d) => [d.key!, d]));
+  const rows: PlanActualRowItem[] = [
+    {
+      key: "distance",
+      label: "距离",
+      planned: event.predicted_distance_m != null && event.predicted_distance_m > 0 ? formatDistance(event.predicted_distance_m) : null,
+      actual: distanceM == null ? null : formatDistance(distanceM),
+      delta: deltaByKey.get("distance") ?? null,
+      missingNote: "活动没有距离数据",
+    },
+    {
+      key: "duration",
+      label: "时长",
+      planned: prescription ? `${prescription.duration_min} 分钟` : null,
+      actual: durationS == null ? null : formatDuration(durationS),
+      delta: deltaByKey.get("duration") ?? null,
+      missingNote: "活动没有用时数据",
+    },
+    {
+      key: "pace",
+      label: "配速",
+      planned: planPace,
+      actual: avgPace,
+      delta: deltaByKey.get("pace") ?? null,
+      missingNote: "没有带距离的训练",
+    },
+    {
+      key: "avg_hr",
+      label: "平均心率",
+      planned: null,
+      actual: avgHr == null ? null : formatHeartRate(avgHr),
+      missingNote: "活动没有心率数据",
+    },
+    {
+      key: "cadence",
+      label: "步频",
+      planned: null,
+      actual: cadence == null ? null : `${Math.round(cadence)} spm`,
+      missingNote: "活动没有步频数据",
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-3" data-testid="day-plan-actual">
-      <InsetBlock>
-        <div className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-3">
-          <div className="min-w-0">
-            <p className="text-caption1 font-semibold text-text-secondary">计划课表</p>
-            <div className="mt-2 flex flex-col gap-2">
-              {/* 优先读取计划事件已计算保存的预计距离，缺值时不倒推。 */}
-              <PlanActualRow
-                label="目标距离"
-                value={event.predicted_distance_m != null && event.predicted_distance_m > 0 ? formatDistance(event.predicted_distance_m) : null}
-                note="课表和事件都没有距离"
-              />
-              <PlanActualRow
-                label="配速区间"
-                value={planPace}
-                note="课表没有配速区间"
-              />
-              <PlanActualRow
-                label="时长"
-                value={prescription ? `${prescription.duration_min} 分钟` : null}
-                note="课表没有时长"
-              />
-            </div>
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-caption1 font-semibold text-text-secondary">实际完成</p>
-            <div className="mt-2 flex flex-col gap-2">
-              <PlanActualRow
-                label="距离"
-                value={distanceM == null ? null : formatDistance(distanceM)}
-                note="活动没有距离数据"
-              />
-              <PlanActualRow
-                label="用时"
-                value={durationS == null ? null : formatDuration(durationS)}
-                note="活动没有用时数据"
-              />
-              <PlanActualRow
-                label="平均配速"
-                value={avgPace}
-                note="没有带距离的训练"
-              />
-              <PlanActualRow
-                label="平均心率"
-                value={avgHr == null ? null : formatHeartRate(avgHr)}
-                note="活动没有心率数据"
-              />
-              <PlanActualRow
-                label="步频"
-                value={cadence == null ? null : `${Math.round(cadence)} spm`}
-                note="活动没有步频数据"
-              />
-            </div>
-          </div>
-        </div>
-
-        {note ? (
-          <p
-            className="mt-3 text-caption1 text-text-muted"
-            data-testid="day-plan-actual-others"
-          >
-            {note}
-          </p>
-        ) : null}
-      </InsetBlock>
+      <PlanActualDeltaGrid
+        rows={rows}
+        summaryBadges={deltas}
+        footnote={note}
+      />
 
       <MetricStrip items={stripItems} columns={3} testId="day-plan-actual-metrics" />
 
@@ -276,7 +141,6 @@ export function DayPlanActual({ event, activities }: DayPlanActualProps) {
   );
 }
 
-/** 课表完成度摘要：距离与时长达成率，来自后端五对象分类结果。 */
 function SegmentQuality({
   quality,
   workDistanceM,
@@ -303,7 +167,5 @@ function SegmentQuality({
       note: workDistanceM == null ? "未记录" : undefined,
     },
   ];
-  return (
-    <MetricStrip items={items} columns={3} testId="day-plan-actual-quality" />
-  );
+  return <MetricStrip items={items} columns={3} testId="day-plan-actual-quality" />;
 }

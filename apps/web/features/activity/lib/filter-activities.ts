@@ -5,6 +5,7 @@ import {
   sportFamilyLabel,
   type SportFamily,
 } from "@shared/config/sport-config";
+import { SPORT_ALIASES } from "@shared/config/generated/sport-registry";
 import type { ActivityFilterState } from "@features/activity/components/ActivityFilters";
 import { classifySession } from "@features/activity/lib/session-classification";
 
@@ -41,13 +42,10 @@ export function filterActivities(
   filters: ActivityFilterState,
   project: ProjectFilter = "all",
 ): ActivitySummary[] {
-  let result = data;
-
-  if (project !== "all") {
-    result = result.filter((a) => matchesProject(a.sport, project));
-  }
+  let result = data.filter((a) => matchesProject(a.sport, project));
   if (filters.sport !== "all") {
-    result = result.filter((a) => a.sport === filters.sport);
+    const target = SPORT_ALIASES[filters.sport] ?? filters.sport.toLowerCase();
+    result = result.filter((a) => (SPORT_ALIASES[a.sport] ?? a.sport.toLowerCase()) === target);
   }
   if (filters.race && filters.race !== "all") {
     result = result.filter((activity) => Boolean(activity.is_race) === (filters.race === "race"));

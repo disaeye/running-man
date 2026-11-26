@@ -12,7 +12,7 @@ import { useDataQuality, type QualityIssue } from "@features/data/hooks/useDataQ
 const STATUS_LABEL = { ok: "正常", warning: "需要关注", error: "需要处理" } as const;
 const STATUS_VARIANT = { ok: "success", warning: "warning", error: "error" } as const;
 
-export function DataQuality() {
+export function DataQuality({ hideSettingsLink = false }: { hideSettingsLink?: boolean }) {
   const { data, loading, refreshing, error, reload } = useDataQuality();
 
   if (loading) {
@@ -52,10 +52,10 @@ export function DataQuality() {
     ["心率", activities.with_hr, activities.total_activities],
     ["GPS", activities.with_gps, activities.total_activities],
     ["流数据", activities.with_streams, activities.total_activities],
+    ["功率", activities.with_power ?? 0, activities.total_activities],
     ["睡眠", coverage.wellness.sleep_days_28d, 28],
     ["静息心率", coverage.wellness.rhr_days_28d, 28],
     ["HRV", coverage.wellness.hrv_days_28d ?? 0, 28],
-    ["力量训练", coverage.strength?.sessions_14d ?? 0, 14],
   ] as const;
 
   return (
@@ -104,12 +104,19 @@ export function DataQuality() {
           <ul className="space-y-2">
             {issues.map((issue) => <QualityIssueRow key={issue.key} issue={issue} />)}
           </ul>
-          <Link href="/settings?section=data" className="mt-2 inline-flex min-h-[44px] items-center text-caption1 font-medium text-accent-strong hover:underline">
-            打开数据设置 →
-          </Link>
+          {!hideSettingsLink && (
+            <Link href="/settings?section=data" className="mt-2 inline-flex min-h-[44px] items-center text-caption1 font-medium text-accent-strong hover:underline">
+              打开数据设置 →
+            </Link>
+          )}
         </div>
       )}
 
+      {coverage.strength != null && (
+        <p className="mt-3 text-caption1 text-text-muted">
+          近 14 天力量训练 {coverage.strength.sessions_14d ?? 0} 次 · 累计 {coverage.strength.sessions_total ?? 0} 次 · 近 30 天未关联跑鞋 {activities.unassigned_run_activities_30d} 次
+        </p>
+      )}
       {coverage.uploads != null && (coverage.uploads.runs_30d ?? 0) > 0 && (
         <p className="mt-3 text-caption1 text-text-muted" data-testid="data-quality-uploads">
           近30天手动上传 {coverage.uploads.runs_30d ?? 0} 个批次

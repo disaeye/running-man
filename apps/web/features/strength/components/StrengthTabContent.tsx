@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import useSWR from "swr";
+import { activityDetailUrl } from "@shared/config/training-nav";
 import { apiErrorMessage } from "@shared/lib/api";
 import { callOrvalValidated } from "@shared/api/orval-adapter";
 import {
@@ -10,14 +12,8 @@ import {
 import * as Generated from "@shared/api/generated/model";
 import { z } from "zod";
 import { Card } from "@shared/ui/Card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@shared/ui/dialog";
 import { Badge } from "@shared/ui/Badge";
-import { StrengthWorkoutEditor } from "@features/strength/components/StrengthWorkoutEditor";
+import { activityLocalDay, athleteRange, useAthleteTimezoneState } from "@shared/lib/training-day";
 import type { WorkoutExercise } from "@shared/types/strength";
 import { NO_VALUE } from "@shared/lib/use-data-state";
 
@@ -26,22 +22,18 @@ interface WorkoutData {
   exercises: WorkoutExercise[];
 }
 
-function isoDate(iso: string): string {
-  const d = new Date(iso);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
-
 function totalVolume(exes: WorkoutExercise[]): number {
   return exes.reduce(
-    (s, ex) => s + ex.sets.reduce((s2, set) => s2 + (set.weight_kg ?? 0) * set.reps, 0),
+    (s, ex) =>
+      s +
+      ex.sets
+        .filter((set) => set.completed)
+        .reduce((s2, set) => s2 + (set.weight_kg ?? 0) * set.reps, 0),
     0,
   );
 }
 
-function StrengthCard({ data }: { data: WorkoutData }) {
+function StrengthCard({ data, timezone, returnTo }: { data: WorkoutData; timezone: string; returnTo: string }) {
   const { activity, exercises } = data;
   const vol = totalVolume(exercises);
   const nSets = exercises.reduce((s, ex) => s + ex.sets.length, 0);
@@ -49,9 +41,12 @@ function StrengthCard({ data }: { data: WorkoutData }) {
   return (
     <Card padding="md" className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-subheadline font-semibold text-text-primary">
-          {isoDate(activity.start_time)}{activity.name ? ` · ${activity.name}` : ""}
-        </span>
+        <Link
+          href={activityDetailUrl(activity.activity_id, returnTo)}
+          className="text-subheadline font-semibold text-text-primary hover:text-accent-strong hover:underline"
+        >
+          {activityLocalDay(activity.start_time, timezone)}{activity.name ? ` · ${activity.name}` : ""}
+        </Link>
         <Badge variant={activity.has_training_content ? "success" : "neutral"}>
           {activity.has_training_content ? "已记录训练内容" : "仅活动记录"}
         </Badge>
@@ -93,70 +88,42 @@ function StrengthCard({ data }: { data: WorkoutData }) {
   );
 }
 
-export function StrengthTabContent() {
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [workouts, setWorkouts] = useState<WorkoutData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    setError(null);
-
-      const to = new Date();
-      const from = new Date();
-      from.setDate(from.getDate() - 60);
-
-      (async () => {
-      try {
-        const strength = await callOrvalValidated(
-          (fetchFn) => listStrengthActivitiesApiV1StrengthWorkoutsGet(
-            {
-              from_date: from.toISOString().slice(0, 10),
-              to_date: to.toISOString().slice(0, 10),
-            },
-            {},
-            fetchFn,
-          ),
-          z.array(Generated.StrengthActivityResponse),
-        );
-        if (cancelled) return;
-
-        const results = await Promise.all(
-          strength.map(async (activity) => {
-            const exercises = activity.has_training_content
-              ? await callOrvalValidated(
-                  (fetchFn) => listWorkoutExercisesApiV1StrengthWorkoutsActivityIdExercisesGet(
-                    activity.activity_id,
-                    {},
-                    fetchFn,
-                  ),
-                  z.array(Generated.WorkoutExerciseResponse),
-                )
-              : [];
-            return { activity, exercises: exercises as WorkoutExercise[] };
-          }),
-        );
-        if (!cancelled) setWorkouts(results);
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setError(apiErrorMessage(err, "获取数据失败"));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [refreshKey]);
-
-  const handleSaved = useCallback(() => {
-    setEditorOpen(false);
-    setRefreshKey((k) => k + 1);
-  }, []);
+export function StrengthTabContent({ returnTo }: { readonly returnTo: string }) {
+  const { timezone, resolved } = useAthleteTimezoneState();
+  const { from, to } = athleteRange(60, timezone);
+  const { data: workouts = [], isLoading, error: swrError } = useSWR<WorkoutData[]>(
+    resolved ? ["/strength/workouts", from, to, timezone] : null,
+    async () => {
+      const strength = await callOrvalValidated(
+        (fetchFn) => listStrengthActivitiesApiV1StrengthWorkoutsGet(
+          {
+            from_date: from,
+            to_date: to,
+          },
+          {},
+          fetchFn,
+        ),
+        z.array(Generated.StrengthActivityResponse),
+      );
+      return Promise.all(
+        strength.map(async (activity) => {
+          const exercises = activity.has_training_content
+            ? await callOrvalValidated(
+                (fetchFn) => listWorkoutExercisesApiV1StrengthWorkoutsActivityIdExercisesGet(
+                  activity.activity_id,
+                  {},
+                  fetchFn,
+                ),
+                z.array(Generated.WorkoutExerciseResponse),
+              )
+            : [];
+          return { activity, exercises: exercises as WorkoutExercise[] };
+        }),
+      );
+    },
+  );
+  const loading = !resolved || isLoading;
+  const error = swrError ? apiErrorMessage(swrError, "获取数据失败") : null;
 
   if (loading) {
     return (
@@ -183,34 +150,24 @@ export function StrengthTabContent() {
         </div>
       ) : (
         <>
-        <p className="text-caption1 text-text-muted">力量活动记录（包含有训练内容与仅有活动记录）</p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {workouts.map((w) => (
-            <StrengthCard key={w.activity.activity_id} data={w} />
-          ))}
-        </div>
+          <p className="text-caption1 text-text-muted">力量活动记录（包含有训练内容与仅有活动记录）</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {workouts.map((w) => (
+              <StrengthCard key={w.activity.activity_id} data={w} timezone={timezone} returnTo={returnTo} />
+            ))}
+          </div>
         </>
       )}
 
       <div className="flex items-center justify-between border-t border-border-subtle pt-4">
         <button
           type="button"
-          onClick={() => setEditorOpen(true)}
-              className="focus-ring inline-flex min-h-[44px] items-center rounded-md bg-accent px-4 text-subheadline font-semibold text-on-accent transition-opacity hover:opacity-90"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="focus-ring inline-flex min-h-[44px] items-center rounded-md bg-accent px-4 text-subheadline font-semibold text-on-accent transition-opacity hover:opacity-90"
         >
-          + 新增训练
+          回到顶部新增训练
         </button>
       </div>
-
-      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader><DialogTitle>新增力量训练</DialogTitle></DialogHeader>
-          <StrengthWorkoutEditor
-            onSaved={handleSaved}
-            onClose={() => setEditorOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

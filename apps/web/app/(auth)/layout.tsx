@@ -9,9 +9,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * Auth shell: the lavender field on the left carries the product's one claim,
- * the white card on the right carries the form. Below 1024px the field folds
- * away and the card stands alone, with the wordmark above it.
+ * Auth shell: the sunken canvas frames the elevated auth card; on desktop
+ * (>=1024px) the left column states the product thesis and data provenance.
  *
  * Must NOT use `.shell-chrome-row` (that is the dashboard horizontal flex).
  */
@@ -21,8 +20,8 @@ export default function AuthLayout({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-[100dvh] w-full bg-surface-base">
-      <aside className="hidden w-[38%] max-w-[30rem] flex-col justify-between bg-rail p-10 lg:flex">
+    <div className="flex min-h-[100dvh] w-full bg-surface-sunken">
+      <aside className="hidden w-[38%] max-w-[30rem] flex-col justify-between border-r border-border-subtle bg-rail p-10 lg:flex">
         <div className="flex items-center gap-2.5">
           <span
             className="grid size-7 place-items-center rounded-lg bg-primary text-on-primary"
@@ -47,16 +46,21 @@ export default function AuthLayout({
 
       <main className="flex w-full flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">
-          <div className="mb-6 flex items-center gap-2.5 lg:hidden">
-            <span
-              className="grid size-7 place-items-center rounded-lg bg-primary text-on-primary"
-              aria-hidden="true"
-            >
-              <span className="size-1.5 rounded-full bg-on-primary" />
-            </span>
-            <span className="shell-title text-title3 font-semibold text-text-primary">Running Man</span>
+          <div className="mb-6 lg:hidden">
+            <div className="flex items-center gap-2.5">
+              <span
+                className="grid size-7 place-items-center rounded-lg bg-primary text-on-primary"
+                aria-hidden="true"
+              >
+                <span className="size-1.5 rounded-full bg-on-primary" />
+              </span>
+              <span className="shell-title text-title3 font-semibold text-text-primary">Running Man</span>
+            </div>
+            <p className="mt-2 text-caption1 text-text-muted">
+              从 Intervals.icu 导入活动，把训练数据变成今天的决定。
+            </p>
           </div>
-          <div className="w-full rounded-2xl bg-surface-card p-6">
+          <div className="w-full rounded-2xl border border-border-subtle bg-surface-card p-6 shadow-[var(--shadow-panel)]">
             {children}
           </div>
         </div>

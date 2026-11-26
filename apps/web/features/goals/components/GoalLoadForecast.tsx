@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { PageCard, Tag } from "@shared/ui/Lovable";
+import { PageCard } from "@shared/ui/Card";
+import { Tag } from "@shared/ui/Badge";
 import { LovableChart, LovableLegend } from "@shared/ui/LovableChart";
 import { usePmcData } from "@features/pmc/hooks/usePmcData";
 import { useCalendarEvents } from "@features/calendar/hooks/useCalendarEvents";
@@ -50,6 +51,15 @@ export function GoalLoadForecast({ today, targetDate, timezone }: { today: strin
     }
     return days.map((value) => value.slice(5));
   }, [pmc.data, today, to]);
+  const futureSeries = useMemo(() => {
+    if (future.length === 0 || pmc.data.length === 0) return [];
+    const futureOffset = Math.max(0, pmc.data.length - 1);
+    return [
+      ...Array<number | null>(futureOffset).fill(null),
+      pmc.data.at(-1)!.ctl,
+      ...future,
+    ];
+  }, [future, pmc.data]);
   if (!pmc.data.length) return <PageCard title="预计负荷走势"><p className="text-sm text-muted-foreground">尚无负荷记录，无法推演。</p></PageCard>;
   const plannedFuture = events.events.filter(
     (event) => event.status !== "deleted" && !event.done && activityLocalDay(event.start_time, timezone) > today,
@@ -67,5 +77,31 @@ export function GoalLoadForecast({ today, targetDate, timezone }: { today: strin
     { label: "计划覆盖", value: plannedFuture.length ? `未来 ${plannedFuture.length} 课 · ${plannedDistanceKm.toFixed(0)} 公里` : "计划未覆盖未来训练", tone: plannedFuture.length ? "warn" as const : "muted" as const },
     { label: "减量期安排", value: targetDate ? "比赛日已纳入推演" : "未设置减量日期", tone: targetDate ? "primary" as const : "muted" as const },
   ];
-  return <PageCard title="预计负荷走势" action={<Tag tone="warn">规划预测</Tag>}><LovableChart h={120} zero labels={forecastLabels} lines={[{ data: pmc.data.map((point) => point.ctl), cls: "stroke-fitness", label: "CTL", format: (v) => v.toFixed(1) }, { data: pmc.data.map((point) => point.tsb), cls: "stroke-form", label: "TSB", format: (v) => v.toFixed(1) }, { data: future, cls: "stroke-fitness", dashed: true, label: "计划 CTL", format: (v) => v.toFixed(1) }]} /><LovableLegend items={[{ label: "CTL 体能", cls: "bg-fitness" }, { label: "TSB 状态", cls: "bg-form" }, { label: "计划推演", cls: "border border-dashed border-fitness" }]} /><p className="mt-2 text-caption1 text-muted-foreground">{future.length ? "虚线按已保存计划的预计 TSS 计算，未安排日期按休息处理。" : "尚无未来计划负荷，当前仅展示历史记录。"}{missingTss ? " 部分课表未估算负荷，推演偏低。" : ""}</p><div className="mt-3 space-y-2">{rows.map((row) => <div key={row.label} className="flex items-center justify-between gap-2 text-sm"><span className="text-muted-foreground">{row.label}</span><Tag tone={row.tone}>{row.value}</Tag></div>)}</div></PageCard>;
+  return (
+    <PageCard title="预计负荷走势" action={<Tag tone="warn">规划预测</Tag>}>
+      <LovableChart
+        h={120}
+        zero
+        labels={forecastLabels}
+        lines={[
+          { data: pmc.data.map((point) => point.ctl), cls: "stroke-fitness", label: "CTL", format: (v) => v.toFixed(1) },
+          { data: pmc.data.map((point) => point.tsb), cls: "stroke-form", label: "TSB", format: (v) => v.toFixed(1) },
+          { data: futureSeries, cls: "stroke-fitness", dashed: true, label: "计划 CTL", format: (v) => v.toFixed(1) },
+        ]}
+      />
+      <LovableLegend items={[{ label: "CTL 体能", cls: "bg-fitness" }, { label: "TSB 状态", cls: "bg-form" }, { label: "计划推演", cls: "border border-dashed border-fitness" }]} />
+      <p className="mt-2 text-caption1 text-muted-foreground">
+        {future.length ? "虚线按已保存计划的预计 TSS 计算，未安排日期按休息处理。" : "尚无未来计划负荷，当前仅展示历史记录。"}
+        {missingTss ? " 部分课表未估算负荷，推演偏低。" : ""}
+      </p>
+      <div className="mt-3 space-y-2">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between gap-2 text-sm">
+            <span className="text-muted-foreground">{row.label}</span>
+            <Tag tone={row.tone}>{row.value}</Tag>
+          </div>
+        ))}
+      </div>
+    </PageCard>
+  );
 }

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useSWRConfig } from "swr";
 import { Button } from "@shared/ui/button";
 import { useToast } from "@shared/ui/Toast";
 import { apiErrorMessage } from "@shared/lib/api";
+import { invalidateDataCards } from "@features/data/lib/invalidate-after-sync";
 import { retryActivityStreams } from "@features/data/hooks/useSyncJobs";
 
 export interface SyncErrorItem {
@@ -17,6 +19,7 @@ interface SyncErrorRetryListProps {
 }
 
 export function SyncErrorRetryList({ errors }: SyncErrorRetryListProps) {
+  const { mutate } = useSWRConfig();
   const { toast } = useToast();
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [fixedIds, setFixedIds] = useState<Set<string>>(() => new Set());
@@ -28,6 +31,7 @@ export function SyncErrorRetryList({ errors }: SyncErrorRetryListProps) {
     try {
       const inserted = await retryActivityStreams(activityId);
       setFixedIds((prev) => new Set(prev).add(activityId));
+      await invalidateDataCards(mutate);
       toast(`活动 ${activityId} 流数据已重新拉取（${inserted} 条样本）`, "success");
     } catch (err) {
       const msg = apiErrorMessage(err, "重试失败");

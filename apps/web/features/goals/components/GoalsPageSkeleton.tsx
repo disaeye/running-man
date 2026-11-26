@@ -7,7 +7,7 @@ export function GoalsPageSkeleton() {
         <Skeleton className="h-9 w-28 rounded-md" />
       </div>
       <Skeleton className="h-48 w-full rounded-lg" />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="space-y-4">
         <Skeleton className="h-40 w-full rounded-lg" />
         <Skeleton className="h-40 w-full rounded-lg" />
       </div>

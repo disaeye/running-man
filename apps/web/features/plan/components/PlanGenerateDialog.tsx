@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,82 +9,91 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@shared/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@shared/ui/select";
 import { Button } from "@shared/ui/button";
 import { PlanGenerationSettings } from "@features/plan/components/PlanGenerationSettings";
+import { useGoals } from "@features/goals/hooks/useGoals";
+import { useProfile } from "@features/settings/hooks/useProfile";
 import { apiErrorMessage, apiFetch } from "@shared/lib/api";
 import { useToast } from "@shared/ui/Toast";
 import { PlanPreview, type GeneratePreview } from "@features/plan/components/plan-preview";
-
-interface Goal {
-  goal_id: string;
-  title: string;
-  target_date: string | null;
-  race_distance_m: number | null;
-  race_target_time_s: number | null;
-  status: string;
-  is_primary?: boolean;
-}
+import { PlanGoalPicker, PlanStatusPanel } from "@features/plan/components/PlanStatusPanel";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onGenerated: () => void | Promise<void>;
   trainingDays?: number;
+  initialGoalId?: string | null;
 }
 
-type DialogState =
-  | { kind: "loading-goals" }
+type ActionState =
   | { kind: "ready" }
-  | { kind: "goals-error"; message: string }
   | { kind: "previewing" }
   | { kind: "preview-error"; message: string }
   | { kind: "generating" };
 
-export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 5 }: Props) {
+type DialogState =
+  | ActionState
+  | { kind: "loading-goals" }
+  | { kind: "goals-error"; message: string };
+
+export function PlanGenerateDialog({
+  open,
+  onClose,
+  onGenerated,
+  trainingDays,
+  initialGoalId = null,
+}: Props) {
   const { toast } = useToast();
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [selectedGoal, setSelectedGoal] = useState("");
+  const { profile } = useProfile();
+  const goalsQuery = useGoals();
+  const defaultTrainingDays = trainingDays ?? profile?.weekly_training_days ?? 5;
+  const goals = useMemo(
+    () =>
+      goalsQuery.goals.filter(
+        (goal) => goal.status === "active" && goal.target_date !== null && goal.race_distance_m !== null,
+      ),
+    [goalsQuery.goals],
+  );
+  const [selectedGoalOverride, setSelectedGoal] = useState<string>("");
   const [preview, setPreview] = useState<GeneratePreview | null>(null);
-  const [restDays, setRestDays] = useState(() => Math.max(0, 7 - trainingDays));
+  const [restDays, setRestDays] = useState(() => Math.max(0, 7 - defaultTrainingDays));
+  const [prevTrainingDays, setPrevTrainingDays] = useState(defaultTrainingDays);
   const [preferredDaysOff, setPreferredDaysOff] = useState<number[]>([]);
   const [longRunDay, setLongRunDay] = useState<number | null>(null);
-  const [state, setState] = useState<DialogState>({ kind: "loading-goals" });
+  const [actionState, setActionState] = useState<ActionState>({ kind: "ready" });
+  const [wasOpen, setWasOpen] = useState(open);
 
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    apiFetch<Goal[]>("/goals")
-      .then((rows) => {
-        if (cancelled) return;
-        const active = rows.filter((goal) => goal.status === "active");
-        const eligible = active.filter(
-          (goal) => goal.target_date !== null && goal.race_distance_m !== null,
-        );
-        setGoals(eligible);
-        setSelectedGoal((current) =>
-          eligible.some((goal) => goal.goal_id === current)
-            ? current
-            : (eligible[0]?.goal_id ?? ""),
-        );
-        setState({ kind: "ready" });
-      })
-      .catch((caught: unknown) => {
-        if (!cancelled) {
-          setGoals([]);
-          setState({ kind: "goals-error", message: apiErrorMessage(caught) });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
+  if (prevTrainingDays !== defaultTrainingDays) {
+    setPrevTrainingDays(defaultTrainingDays);
+    setRestDays(Math.max(0, 7 - defaultTrainingDays));
+  }
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) {
+      setPreview(null);
+      setActionState({ kind: "ready" });
+    }
+  }
+
+  const selectedGoal = useMemo(() => {
+    if (selectedGoalOverride && goals.some((g) => g.goal_id === selectedGoalOverride)) {
+      return selectedGoalOverride;
+    }
+    if (initialGoalId && goals.some((g) => g.goal_id === initialGoalId)) {
+      return initialGoalId;
+    }
+    return goals[0]?.goal_id ?? "";
+  }, [goals, initialGoalId, selectedGoalOverride]);
+
+  const state: DialogState =
+    actionState.kind !== "ready"
+      ? actionState
+      : goalsQuery.error
+        ? { kind: "goals-error", message: goalsQuery.error }
+        : goalsQuery.loading && goalsQuery.goals.length === 0
+          ? { kind: "loading-goals" }
+          : { kind: "ready" };
 
   const selected = useMemo(
     () => goals.find((goal) => goal.goal_id === selectedGoal) ?? null,
@@ -99,14 +108,29 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
   });
 
   const toggleDayOff = (day: number) => {
-    setPreferredDaysOff((current) =>
-      current.includes(day) ? current.filter((value) => value !== day) : [...current, day],
-    );
+    setPreferredDaysOff((current) => {
+      const next = current.includes(day)
+        ? current.filter((value) => value !== day)
+        : [...current, day];
+      if (!current.includes(day)) {
+        if (longRunDay === day) setLongRunDay(null);
+        if (next.length > restDays) setRestDays(Math.min(6, next.length));
+      }
+      return next;
+    });
+    setPreview(null);
+  };
+
+  const handleLongRunDayChange = (day: number | null) => {
+    setLongRunDay(day);
+    if (day != null) {
+      setPreferredDaysOff((current) => current.filter((value) => value !== day));
+    }
     setPreview(null);
   };
   const handlePreview = async () => {
     if (!selectedGoal) return;
-    setState({ kind: "previewing" });
+    setActionState({ kind: "previewing" });
     try {
       const result = await apiFetch<GeneratePreview>("/plan/generate", {
         method: "POST",
@@ -114,17 +138,17 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
         body: JSON.stringify(planRequest()),
       });
       setPreview(result);
-      setState({ kind: "ready" });
+      setActionState({ kind: "ready" });
     } catch (caught) {
       const message = apiErrorMessage(caught);
-      setState({ kind: "preview-error", message });
+      setActionState({ kind: "preview-error", message });
       toast("预览失败", "error");
     }
   };
 
   const handleGenerate = async () => {
     if (!selectedGoal || !preview) return;
-    setState({ kind: "generating" });
+    setActionState({ kind: "generating" });
     try {
       const result = await apiFetch<GeneratePreview>("/plan/generate", {
         method: "POST",
@@ -134,7 +158,7 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
       toast(`已生成 ${result.events_created} 个训练`, "success");
       onClose();
     } catch (caught) {
-      setState({ kind: "preview-error", message: apiErrorMessage(caught) });
+      setActionState({ kind: "preview-error", message: apiErrorMessage(caught) });
       toast("生成失败", "error");
     }
   };
@@ -142,8 +166,8 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
   const busy = state.kind === "previewing" || state.kind === "generating";
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent className="sm:max-w-lg" mobileSheet>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen && !busy) onClose(); }}>
+      <DialogContent className={preview ? "sm:max-w-3xl" : "sm:max-w-lg"} mobileSheet>
         <DialogHeader>
           <DialogTitle>从目标生成训练计划</DialogTitle>
           <DialogDescription>
@@ -152,71 +176,52 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
         </DialogHeader>
 
         <div className="flex flex-col gap-5">
-          {state.kind === "goals-error" ? (
-            <StatusPanel title="目标加载失败" body={state.message} tone="error" />
-          ) : state.kind === "loading-goals" ? (
-            <StatusPanel title="正在加载目标" body="读取日期与距离齐全的进行中比赛目标。" />
-          ) : goals.length === 0 ? (
-            <StatusPanel
-              title="没有资料完整的比赛目标"
-              body="请为目标填写比赛日期和距离，再生成训练计划。"
-              action={<Link href="/goals" className="font-medium text-accent-strong hover:underline">前往目标</Link>}
-            />
-          ) : (
-            <label className="flex flex-col gap-2" htmlFor="plan-generate-goal">
-              <span className="text-subheadline font-medium text-text-primary">训练目标</span>
-              <Select
-                value={selectedGoal}
-                onValueChange={(value) => {
-                  setSelectedGoal(value);
-                  setPreview(null);
-                  setState({ kind: "ready" });
-                }}
-              >
-                <SelectTrigger id="plan-generate-goal" aria-label="选择目标" className="w-full">
-                  <SelectValue placeholder="选择目标" />
-                </SelectTrigger>
-                <SelectContent>
-                  {goals.map((goal) => (
-                    <SelectItem key={goal.goal_id} value={goal.goal_id}>
-                      {goal.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selected?.target_date && (
-                <span className="text-caption1 text-text-muted">目标日期 {selected.target_date}</span>
+          <div className={preview ? "grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] md:items-start" : "flex flex-col gap-5"}>
+            <div className="flex flex-col gap-5">
+              {state.kind === "goals-error" ? (
+                <PlanStatusPanel title="目标加载失败" body={state.message} tone="error" />
+              ) : state.kind === "loading-goals" ? (
+                <PlanStatusPanel title="正在加载目标" body="读取日期与距离齐全的进行中比赛目标。" />
+              ) : goals.length === 0 ? (
+                <PlanStatusPanel
+                  title="没有资料完整的比赛目标"
+                  body="请为目标填写比赛日期和距离，再生成训练计划。"
+                  action={<Link href="/goals" className="font-medium text-accent-strong hover:underline">前往目标</Link>}
+                />
+              ) : (
+                <PlanGoalPicker
+                  goals={goals}
+                  selectedGoal={selectedGoal}
+                  selected={selected}
+                  onSelect={(value) => {
+                    setSelectedGoal(value);
+                    setPreview(null);
+                    setActionState({ kind: "ready" });
+                  }}
+                />
               )}
-              {selected?.race_distance_m && (
-                <span className="text-caption1 text-text-muted">
-                  比赛距离 {(selected.race_distance_m / 1000).toFixed(2)} 公里
-                  {selected.race_target_time_s
-                    ? ` · 目标完赛用时 ${Math.floor(selected.race_target_time_s / 3600)}:${String(Math.floor(selected.race_target_time_s / 60) % 60).padStart(2, "0")}`
-                    : ""}
-                </span>
+
+              {goals.length > 0 && (
+                <PlanGenerationSettings
+                  restDays={restDays}
+                  preferredDaysOff={preferredDaysOff}
+                  longRunDay={longRunDay}
+                  onRestDaysChange={(value) => { setRestDays(value); setPreview(null); }}
+                  onToggleDayOff={toggleDayOff}
+                  onLongRunDayChange={handleLongRunDayChange}
+                />
               )}
-            </label>
-          )}
 
-          {goals.length > 0 && (
-            <PlanGenerationSettings
-              restDays={restDays}
-              preferredDaysOff={preferredDaysOff}
-              longRunDay={longRunDay}
-              onRestDaysChange={(value) => { setRestDays(value); setPreview(null); }}
-              onToggleDayOff={toggleDayOff}
-              onLongRunDayChange={(value) => { setLongRunDay(value); setPreview(null); }}
-            />
-          )}
+              {state.kind === "preview-error" && (
+                <PlanStatusPanel title="操作未完成" body={state.message} tone="error" />
+              )}
+            </div>
 
-          {state.kind === "preview-error" && (
-            <StatusPanel title="操作未完成" body={state.message} tone="error" />
-          )}
+            {preview && <PlanPreview preview={preview} />}
+          </div>
 
-          {preview && <PlanPreview preview={preview} />}
-
-          <div className="flex flex-col-reverse gap-2 border-t border-border-default pt-4 sm:flex-row sm:justify-end">
-            <Button variant="ghost" onClick={onClose}>取消</Button>
+          <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex flex-col-reverse gap-2 border-t border-border-default bg-surface-card px-6 py-4 sm:flex-row sm:justify-end">
+            <Button variant="ghost" onClick={onClose} disabled={busy}>取消</Button>
             <Button
               onClick={preview ? handleGenerate : handlePreview}
               disabled={!selectedGoal || busy || state.kind === "loading-goals" || state.kind === "goals-error"}
@@ -233,25 +238,5 @@ export function PlanGenerateDialog({ open, onClose, onGenerated, trainingDays = 
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function StatusPanel({
-  title,
-  body,
-  tone = "neutral",
-  action,
-}: {
-  title: string;
-  body: string;
-  tone?: "neutral" | "error";
-  action?: ReactNode;
-}) {
-  return (
-    <div className={`rounded-xl border p-4 ${tone === "error" ? "border-error/30 bg-error/5" : "border-border-default bg-surface-overlay/35"}`}>
-      <p className={`text-subheadline font-semibold ${tone === "error" ? "text-error" : "text-text-primary"}`}>{title}</p>
-      <p className="mt-1 text-caption1 text-text-secondary">{body}</p>
-      {action && <div className="mt-3 text-caption1">{action}</div>}
-    </div>
   );
 }

@@ -1,3 +1,4 @@
+import { activityLocalDay } from "@shared/lib/training-day";
 import type { ActivitySummary } from "@shared/types/activity";
 import { getSportConfig, type SportFamily } from "@shared/config/sport-config";
 import type { CalendarEventDTO } from "@features/calendar/components/types";
@@ -43,7 +44,6 @@ export interface WeekDay {
 
 export interface WeekModel {
   readonly days: readonly WeekDay[];
-  readonly hiddenCount: number;
   readonly comparison: PeriodComparison;
   readonly missingSessions: readonly string[];
 }
@@ -132,6 +132,7 @@ export function buildWeekModel({
   to,
   today,
   family = "all",
+  includeEmptyDays = false,
 }: {
   readonly activities: readonly ActivitySummary[];
   readonly events: readonly CalendarEventDTO[];
@@ -140,15 +141,18 @@ export function buildWeekModel({
   readonly to: string;
   readonly today: string;
   readonly family?: SportFamily | "all";
+  readonly includeEmptyDays?: boolean;
 }): WeekModel {
   const allDays = enumerateDays(from, to);
   const grouped = groupTrainingByDay(activities, events, timezone);
-  const scopedActivities = activities.filter((a) =>
-    matches(family, getSportConfig(a.sport).family, null),
-  );
-  const scopedEvents = events.filter(
-    (e) => e.status !== "deleted" && matches(family, "running", e),
-  );
+  const scopedActivities = activities.filter((a) => {
+    const day = activityLocalDay(a.start_time, timezone);
+    return from <= day && day <= to && matches(family, getSportConfig(a.sport).family, null);
+  });
+  const scopedEvents = events.filter((e) => {
+    const day = activityLocalDay(e.start_time, timezone);
+    return from <= day && day <= to && e.status !== "deleted" && matches(family, "running", e);
+  });
 
   const planned = sumPlanned(scopedEvents);
   const actual = sumActual(scopedActivities);
@@ -161,7 +165,6 @@ export function buildWeekModel({
   ) as Record<MetricKey, MetricComparison>;
 
   const days: WeekDay[] = [];
-  let hiddenCount = 0;
   const missingSessions: string[] = [];
 
   for (const day of allDays) {
@@ -174,10 +177,7 @@ export function buildWeekModel({
     );
     const isToday = day === today;
     const hasContent = dayActivities.length > 0 || dayEvents.length > 0 || isToday;
-    if (!hasContent) {
-      hiddenCount += 1;
-      continue;
-    }
+    if (!hasContent && !includeEmptyDays) continue;
 
     const eventMatches = matchDayEvents(day, today, dayEvents, dayActivities);
     const state = resolveDayState(day, today, dayActivities, dayEvents, eventMatches);
@@ -203,7 +203,6 @@ export function buildWeekModel({
 
   return {
     days,
-    hiddenCount,
     comparison: {
       from,
       to,
@@ -266,8 +265,4 @@ export function periodLabel(from: string, to: string): string {
 
 export function monthLabel(monthKey: string): string {
   return `${monthKey.slice(0, 4)} 年 ${Number(monthKey.slice(5))} 月`;
-}
-
-export function listLabel(days: number): string {
-  return `最近 ${days} 天`;
 }

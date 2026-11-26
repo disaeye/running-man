@@ -7,21 +7,18 @@ export interface TrackPlayback {
   progress: number;
   playing: boolean;
   toggle: () => void;
+  pause: () => void;
 }
 
-/** 整条轨迹播完一遍的时长（秒） */
 const REPLAY_SECONDS = 20;
 
 /**
- * 轨迹回放的播放状态。
- *
- * 进入页面就开始播放，播到终点后从头继续；点击画面暂停，再次点击继续。
- * 进度推进放在 requestAnimationFrame 里，`progress` 只由这里写。
+ * 轨迹回放的播放状态：默认静止展示完整轨迹（progress = 1），按需点击播放。
  */
 export function useTrackPlayback(): TrackPlayback {
-  const [progress, setProgress] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const progressRef = useRef(0);
+  const [progress, setProgress] = useState(1);
+  const [playing, setPlaying] = useState(false);
+  const progressRef = useRef(1);
 
   useEffect(() => {
     progressRef.current = progress;
@@ -36,18 +33,29 @@ export function useTrackPlayback(): TrackPlayback {
       last = now;
       const next = progressRef.current + dt / REPLAY_SECONDS;
       if (next >= 1) {
-        progressRef.current = 0;
-        setProgress(0);
-      } else {
-        setProgress(next);
+        progressRef.current = 1;
+        setProgress(1);
+        setPlaying(false);
+        return;
       }
+      setProgress(next);
       frame = requestAnimationFrame(step);
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
   }, [playing]);
 
-  const toggle = useCallback(() => setPlaying((value) => !value), []);
+  const toggle = useCallback(() => {
+    setPlaying((wasPlaying) => {
+      if (!wasPlaying && progressRef.current >= 0.999) {
+        progressRef.current = 0;
+        setProgress(0);
+      }
+      return !wasPlaying;
+    });
+  }, []);
 
-  return { progress, playing, toggle };
+  const pause = useCallback(() => setPlaying(false), []);
+
+  return { progress, playing, toggle, pause };
 }

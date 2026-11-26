@@ -33,8 +33,8 @@ export function ActivityWeatherCard({ weather }: ActivityWeatherCardProps) {
         <WeatherItem label="体感" value={fmt(weather.feels_like, "°C", 1)} />
         <WeatherItem
           label="风速"
-          value={fmt(weather.wind_speed, " m/s", 1)}
-          hint={`阵风 ${fmt(weather.wind_gust, " m/s", 1)} · ${windDirection(weather.wind_deg)}`}
+          value={fmt(weather.wind_speed, " km/h", 1)}
+          hint={`阵风 ${fmt(weather.wind_gust, " km/h", 1)} · ${windDirection(weather.wind_deg)}`}
         />
         <WeatherItem
           label="风阻占比"
@@ -45,8 +45,12 @@ export function ActivityWeatherCard({ weather }: ActivityWeatherCardProps) {
           }
         />
         <WeatherItem label="云量" value={fmt(weather.clouds_pct, "%")} />
-        <WeatherItem label="最大降雨" value={fmt(weather.max_rain, " mm", 1)} />
-        <WeatherItem label="最大降雪" value={fmt(weather.max_snow, " cm", 1)} />
+        {(weather.max_rain ?? 0) > 0 && (
+          <WeatherItem label="最大降雨" value={fmt(weather.max_rain, " mm", 1)} />
+        )}
+        {(weather.max_snow ?? 0) > 0 && (
+          <WeatherItem label="最大降雪" value={fmt(weather.max_snow, " cm", 1)} />
+        )}
       </dl>
     </div>
   );
@@ -60,9 +64,9 @@ function rangeHint(min: number | null | undefined, max: number | null | undefine
 function WeatherItem({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-caption2 text-text-secondary">{label}</dt>
+      <dt className="text-caption1 text-text-secondary">{label}</dt>
       <dd className="font-mono text-callout font-semibold text-text-primary">{value}</dd>
-      {hint && hint !== "" && <dd className="text-caption2 text-text-muted">{hint}</dd>}
+      {hint && hint !== "" && <dd className="text-caption1 text-text-muted">{hint}</dd>}
     </div>
   );
 }

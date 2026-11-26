@@ -1,18 +1,18 @@
 import { AlertTriangle } from "lucide-react";
-import { PageCard } from "@shared/ui/Lovable";
-import { BrowseAllLink } from "@shared/ui/BrowseAllLink";
+import { PageCard } from "@shared/ui/Card";
+import { DisclosureCard } from "@shared/ui/DisclosureCard";
 import { Skeleton } from "@shared/ui/Skeleton";
 import { Button } from "@shared/ui/button";
-import { TrainingFocus } from "./TrainingFocus";
+import { PlanQuality } from "@features/plan/components/PlanQuality";
+import { PlanQualityVerdict } from "@features/plan/components/PlanQualityVerdict";
 import { TrainingPeriodSummary } from "./TrainingSummary";
+import { TrainingConnectionNotice } from "./TrainingConnectionNotice";
 import { TrainingWeekView } from "./TrainingWeekView";
 import { TrainingMonthView } from "./TrainingMonthView";
-import { TrainingActivityList } from "./TrainingActivityList";
-import { TrainingEmptyState } from "./TrainingEmptyState";
+import type { DaySheetMode } from "./CalendarDaySheet";
 import type { ActivitySummary } from "@shared/types/activity";
 import type { CalendarEventDTO } from "./types";
 import type { WeekModel } from "../lib/training-week";
-import type { WellnessPoint } from "@features/health/hooks/useWellness";
 import type { CalendarView } from "../lib/calendar-view";
 
 export interface ViewPanelsProps {
@@ -22,35 +22,20 @@ export interface ViewPanelsProps {
   readonly error: string | null;
   readonly model: WeekModel;
   readonly today: string;
-  readonly month: string;
+  /** 当前显示周期的锚点日。 */
+  readonly anchor: string;
   readonly timezone: string;
-  readonly listDays: number;
-  readonly activities: readonly ActivitySummary[];
   readonly scopedActivities: readonly ActivitySummary[];
   readonly scopedEvents: readonly CalendarEventDTO[];
-  readonly todayEvent: CalendarEventDTO | null;
-  readonly wellness: WellnessPoint | null;
-  readonly wellnessLoading: boolean;
-  readonly wellnessError: string | null;
   readonly scaleDays: readonly number[];
-  readonly isCurrentWeek: boolean;
-  readonly weekOffset: number;
-  readonly onWeekChange: (delta: number) => void;
-  readonly onMonthChange: (delta: number) => void;
-  readonly onLoadEarlier: () => void;
-  readonly onSelectDate: (day: string) => void;
-  /** 周视图的「回到今天」与「跳到日期」：都直接落成单日抽屉。 */
-  readonly onBackToToday: () => void;
-  readonly onJumpToDate: (day: string) => void;
-  readonly onPlanToday: () => void;
-  readonly onPlanWeek: () => void;
-  readonly onGeneratePlan: () => void;
+  readonly isCurrentPeriod: boolean;
+  readonly viewControl: React.ReactNode;
+  readonly onAnchorChange: (anchor: string | null) => void;
+  readonly onSelectDate: (day: string, mode?: DaySheetMode) => void;
+  readonly onPlanPeriod: () => void;
   readonly onRetry: () => void;
-  readonly onRetryWellness: () => void;
-  readonly onSaved: () => void;
 }
 
-/** 三个视图各自的渲染分支；严格区分加载、失败、空态三种状态。 */
 export function TrainingViewPanels(props: ViewPanelsProps) {
   if (!props.resolved || props.loading) {
     return <TrainingSkeleton view={props.view} />;
@@ -71,70 +56,61 @@ export function TrainingViewPanels(props: ViewPanelsProps) {
       </PageCard>
     );
   }
-  return (
-    <>
-      {props.view === "week" ? (
-        <div key="week" className="view-swap space-y-3">
-          {props.isCurrentWeek ? (
-            <TrainingFocus
-              day={props.today}
-              activities={props.model.days.find((item) => item.day === props.today)?.activities ?? []}
-              events={props.model.days.find((item) => item.day === props.today)?.events ?? []}
-              event={props.todayEvent}
-              wellness={props.wellness}
-              wellnessLoading={props.wellnessLoading}
-              wellnessError={props.wellnessError}
-              onRetryWellness={props.onRetryWellness}
-              onSaved={props.onSaved}
-              onPlan={props.onPlanToday}
-            />
+  const summary = (
+    <TrainingPeriodSummary
+      comparison={props.model.comparison}
+      periodKind={props.view}
+      isCurrentPeriod={props.isCurrentPeriod}
+      onPlan={props.onPlanPeriod}
+    />
+  );
+  if (props.view === "week") {
+    return (
+      <div key="week" className="view-swap grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start">
+        <div className="order-1 space-y-3 lg:order-2 lg:col-span-4">
+          {summary}
+          {props.model.comparison.hasPlan ? (
+            <DisclosureCard
+              title="计划质量评估"
+              summary={<PlanQualityVerdict from={props.model.comparison.from} to={props.model.comparison.to} />}
+            >
+              <PlanQuality from={props.model.comparison.from} to={props.model.comparison.to} />
+            </DisclosureCard>
           ) : null}
-          <TrainingPeriodSummary
-            comparison={props.model.comparison}
-            weekOffset={props.weekOffset}
-            onPlan={props.isCurrentWeek ? props.onPlanToday : props.onPlanWeek}
-          />
+        </div>
+        <div className="order-2 space-y-3 lg:order-1 lg:col-span-8">
+          <TrainingConnectionNotice />
           <TrainingWeekView
             model={props.model}
+            anchor={props.anchor}
             today={props.today}
-            onWeekChange={props.onWeekChange}
-            onSelectDate={props.onSelectDate}
-            onBackToToday={props.onBackToToday}
-            onJumpToDate={props.onJumpToDate}
-          />
-          <TrainingEmptyState
-            hasPlan={props.model.comparison.hasPlan}
-            missingSessions={props.model.missingSessions}
-            isCurrentWeek={props.isCurrentWeek}
-            onPlan={props.isCurrentWeek ? props.onPlanToday : props.onPlanWeek}
-            onGenerate={props.onGeneratePlan}
-          />
-        </div>
-      ) : props.view === "month" ? (
-        <div key="month" className="view-swap">
-          <TrainingMonthView
-            activities={props.scopedActivities}
-            events={props.scopedEvents}
-            timezone={props.timezone}
-            today={props.today}
-            month={props.month}
-            scaleDays={props.scaleDays}
-            onMonthChange={props.onMonthChange}
+            viewControl={props.viewControl}
+            onAnchorChange={props.onAnchorChange}
             onSelectDate={props.onSelectDate}
           />
         </div>
-      ) : (
-        <div key="list" className="view-swap flex flex-col gap-4">
-          <BrowseAllLink />
-          <TrainingActivityList
-            activities={props.scopedActivities}
-            timezone={props.timezone}
-            days={props.listDays}
-            onLoadEarlier={props.onLoadEarlier}
-          />
-        </div>
-      )}
-    </>
+      </div>
+    );
+  }
+  return (
+    <div key="month" className="view-swap grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start">
+      <div className="order-2 lg:order-1 lg:col-span-8">
+        <TrainingMonthView
+          activities={props.scopedActivities}
+          events={props.scopedEvents}
+          timezone={props.timezone}
+          today={props.today}
+          anchor={props.anchor}
+          scaleDays={props.scaleDays}
+          viewControl={props.viewControl}
+          onAnchorChange={props.onAnchorChange}
+          onSelectDate={(day) => props.onSelectDate(day)}
+        />
+      </div>
+      <div className="order-1 lg:order-2 lg:col-span-4">
+        {summary}
+      </div>
+    </div>
   );
 }
 

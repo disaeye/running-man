@@ -62,7 +62,7 @@ export function usePmcData(from: string, to: string): UsePmcDataResult {
 
   return {
     data: data ?? [],
-    loading: isLoading,
+    loading: !hasRange || isLoading,
     error: error?.message ?? null,
     reload: () => void mutate(),
   };

@@ -1,6 +1,7 @@
 "use client";
 
-import { PageCard, Bar } from "@shared/ui/Lovable";
+import { PageCard } from "@shared/ui/Card";
+import { Bar } from "@shared/ui/MetricBar";
 import type { MuscleVolumeItem } from "@shared/types/strength";
 
 interface StrengthMuscleLoadProps {
@@ -20,11 +21,11 @@ export function StrengthMuscleLoad({ data }: StrengthMuscleLoadProps) {
         <div className="space-y-3">
           {data.map((item) => (
             <div key={item.muscle} className="flex items-center gap-3 text-sm">
-              <span className="w-16 shrink-0 text-muted-foreground">{item.muscle}</span>
-              <div className="flex-1">
+              <span className="w-16 shrink-0 truncate text-muted-foreground">{item.muscle}</span>
+              <div className="min-w-0 flex-1">
                 <Bar value={item.volume_kg} max={maxVolume} />
               </div>
-              <span className="num w-16 shrink-0 text-right text-xs">
+              <span className="num w-16 shrink-0 text-right text-xs tabular-nums">
                 {item.volume_kg.toFixed(0)} kg
               </span>
             </div>

@@ -2,18 +2,20 @@
 
 import type { DistributionItem } from "@shared/types/strength";
 import { Card } from "@shared/ui/Card";
+import { ProportionBar } from "@shared/ui/ProportionBar";
+import { largestRemainderPercent } from "@shared/lib/format";
 
 interface MuscleDistributionProps {
   data: DistributionItem[];
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  胸: "bg-atl-magenta",
-  背: "bg-ctl",
+  胸: "bg-fatigue",
+  背: "bg-fitness",
   腿: "bg-success",
-  肩: "bg-warning",
-  臂: "bg-info",
-  核心: "bg-tsb",
+  肩: "bg-warn",
+  臂: "bg-z2",
+  核心: "bg-form",
   全身: "bg-text-secondary",
 };
 
@@ -29,28 +31,34 @@ export function MuscleDistribution({ data }: MuscleDistributionProps) {
     );
   }
 
+  const pcts = largestRemainderPercent(sorted.map((item) => item.volume_kg));
+
   return (
-    <dl className="space-y-3" aria-label="各肌群训练量分布">
-      {sorted.map((item) => (
-        <div key={item.category} className="space-y-1">
-          <div className="flex items-center justify-between gap-3 text-caption1">
-            <dt className="truncate font-medium text-text-primary">{item.category}</dt>
+    <div className="space-y-3">
+      <ProportionBar
+        showGrid={false}
+        ariaLabel="各肌群训练量占比"
+        segments={sorted.map((item, idx) => ({
+          key: item.category,
+          label: item.category,
+          pct: pcts[idx] ?? 0,
+          colorClass: CATEGORY_COLORS[item.category] ?? "bg-text-muted",
+          subLabel: `${item.set_count} 组`,
+        }))}
+      />
+      <dl className="space-y-2.5" aria-label="各肌群训练量分布">
+        {sorted.map((item) => (
+          <div key={item.category} className="flex items-center justify-between gap-3 text-caption1">
+            <dt className="flex min-w-0 items-center gap-2 font-medium text-text-primary">
+              <span className={`inline-block size-2 shrink-0 rounded-full ${CATEGORY_COLORS[item.category] ?? "bg-text-muted"}`} aria-hidden="true" />
+              <span className="truncate">{item.category}</span>
+            </dt>
             <dd className="shrink-0 font-mono tabular-nums text-text-secondary">
               {item.set_count} 组 · {item.percentage.toFixed(0)}% · {Math.round(item.volume_kg).toLocaleString()} kg
             </dd>
           </div>
-          <div
-            className="h-2 w-full overflow-hidden rounded-full bg-surface-overlay"
-            role="img"
-            aria-label={`${item.category}，${item.set_count} 组，占训练量 ${item.percentage.toFixed(0)}%`}
-          >
-            <div
-              className={`h-full rounded-full ${CATEGORY_COLORS[item.category] ?? "bg-text-muted"}`}
-              style={{ width: `${Math.min(100, Math.max(0, item.percentage))}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </dl>
+        ))}
+      </dl>
+    </div>
   );
 }

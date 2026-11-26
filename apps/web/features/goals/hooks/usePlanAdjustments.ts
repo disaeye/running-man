@@ -10,6 +10,9 @@ import * as Generated from "@shared/api/generated/model";
 export interface PlanAdjustment {
   readonly adjustment_id: string;
   readonly event_id: string;
+  readonly event_date: string | null;
+  readonly event_title: string | null;
+  readonly adjustment_pct: number;
   readonly trigger_type: string;
   readonly trigger_summary: string;
   readonly status: "pending" | "applied" | "reverted";
@@ -46,6 +49,8 @@ export function usePlanAdjustments(): {
   const adjustments = (data?.adjustments ?? []).map((item) => ({
     adjustment_id: item.adjustment_id,
     event_id: item.event_id,
+    event_date: item.event_date ?? null,
+    event_title: item.event_title ?? null,
     trigger_type: item.trigger_type,
     trigger_summary: item.trigger_summary,
     adjustment_pct: item.adjustment_pct,

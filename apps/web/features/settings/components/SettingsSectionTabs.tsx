@@ -16,7 +16,7 @@ export function SettingsSectionTabs({
 }) {
   return (
     <div
-      className="grid grid-cols-3 gap-1 rounded-2xl bg-surface-overlay p-1 sm:inline-flex sm:flex-wrap"
+      className="grid w-full grid-cols-3 gap-1 rounded-2xl bg-surface-overlay p-1"
       role="group"
       aria-label="设置分类"
     >

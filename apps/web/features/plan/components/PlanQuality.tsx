@@ -25,7 +25,7 @@ const GRADE_STYLING: Record<Grade, GradeStyling> = {
 
 const DEFAULT_RING_COLOR = "var(--color-text-muted)";
 
-function gradeStyling(grade: Grade | null): { ringColor: string; badgeVariant: GradeVariant; label: string } {
+export function gradeStyling(grade: Grade | null): { ringColor: string; badgeVariant: GradeVariant; label: string } {
   if (grade && grade in GRADE_STYLING) return GRADE_STYLING[grade];
   return { ringColor: DEFAULT_RING_COLOR, badgeVariant: "neutral", label: "" };
 }
@@ -73,11 +73,17 @@ export function PlanQuality({ from, to }: PlanQualityProps) {
 
         <p className="text-caption1 leading-snug text-text-secondary">{data.message}</p>
 
-        <dl className="flex gap-6">
+        <dl className="flex flex-wrap gap-6">
           <div>
             <dt className="text-caption1 text-text-muted">关键训练</dt>
             <dd className="font-mono text-subheadline font-semibold tabular-nums text-text-primary">
               {data.key_sessions_completed}/{data.key_sessions_total}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-caption1 text-text-muted">周负荷 TSS</dt>
+            <dd className="font-mono text-subheadline font-semibold tabular-nums text-text-primary">
+              {Math.round(data.weekly_tss)}/{Math.round(data.target_tss)}
             </dd>
           </div>
         </dl>
@@ -86,7 +92,7 @@ export function PlanQuality({ from, to }: PlanQualityProps) {
           <ul className="flex flex-col gap-1">
             {data.concerns.slice(0, 3).map((c, i) => (
               <li key={i} className="flex items-start gap-1.5 text-caption1 text-text-secondary">
-                <span className="mt-1 inline-flex size-1 shrink-0 rounded-full bg-warning" aria-hidden />
+                <span className="mt-[7px] inline-flex size-1 shrink-0 rounded-full bg-warning" aria-hidden />
                 <span>{c}</span>
               </li>
             ))}

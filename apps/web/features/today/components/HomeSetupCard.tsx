@@ -10,24 +10,20 @@ interface Props {
   readonly connection: "loading" | "error" | "connected" | "disconnected";
   readonly lastSync: string | null;
   readonly profile: UserProfile | null;
+  readonly syncing?: boolean;
+  readonly onSync?: () => void;
 }
 
 interface Step {
   readonly title: string;
   readonly body: string;
-  readonly href: string;
+  readonly href?: string;
+  readonly onAction?: () => void;
+  readonly disabled?: boolean;
   readonly action: string;
 }
 
-/**
- * What a page with no training data at all shows.
- *
- * The steps describe the athlete's real state. The card used to offer "连接数据源
- * / 去连接" and "填写阈值 / 去填写" unconditionally, so an athlete who had already
- * connected Intervals.icu and filled all four thresholds was told to do both —
- * while the data settings showed 已连接 and the settings page showed 已填写 4/4 项阈值.
- */
-export function HomeSetupCard({ connection, lastSync, profile }: Props) {
+export function HomeSetupCard({ connection, lastSync, profile, syncing = false, onSync }: Props) {
   const recorded = countRecordedThresholds(profile);
   const steps: Step[] = [];
 
@@ -49,15 +45,23 @@ export function HomeSetupCard({ connection, lastSync, profile }: Props) {
     steps.push({
       title: "Intervals.icu 已连接",
       body: lastSync
-        ? `最后同步 ${lastSync.slice(0, 10)}。还没读到训练记录，可以在数据页手动同步一次。首次同步只覆盖最近 30 天，更早的历史需要用数据页的历史回填工具导入。`
-        : "还没有同步过。在数据页发起一次同步，训练记录会填进这里。首次同步只覆盖最近 30 天，更早的历史需要用数据页的历史回填工具导入。",
-      href: "/settings?section=data",
-      action: "去同步",
+        ? `最后同步 ${lastSync.slice(0, 10)}。还没读到训练记录，可以直接在这里发起同步（更早历史可去数据页回填）。`
+        : "还没有同步过。可以直接发起一次同步（首次默认拉最近 30 天，更早记录可在数据页回填）。",
+      ...(onSync
+        ? {
+            onAction: onSync,
+            disabled: syncing,
+            action: syncing ? "同步中…" : "立即同步",
+          }
+        : {
+            href: "/settings?section=data",
+            action: "去同步",
+          }),
     });
   } else {
     steps.push({
       title: "连接数据源",
-      body: "用 Intervals.icu 把历史活动、心率和睡眠同步进来。首次同步覆盖最近 30 天，更早的历史用数据页的历史回填工具补齐。",
+      body: "用 Intervals.icu 同步历史活动、心率与睡眠，或手动补录你的第一次训练。",
       href: "/settings?section=data",
       action: "去连接",
     });
@@ -73,10 +77,10 @@ export function HomeSetupCard({ connection, lastSync, profile }: Props) {
   }
 
   steps.push({
-    title: "回来看今天的建议",
-    body: "有数据之后，这里会给出今天该练什么、强度多少，以及为什么。",
-    href: "/analysis",
-    action: "了解分析",
+    title: "也可以先手动安排训练",
+    body: "在训练日历中补录一次训练或按目标生成训练计划，首页会自动给出今日建议。",
+    href: "/calendar",
+    action: "去训练页",
   });
 
   const connectedWithNoData = connection === "connected";
@@ -93,17 +97,30 @@ export function HomeSetupCard({ connection, lastSync, profile }: Props) {
         {steps.map((step, index) => (
           <li
             key={step.title}
-            className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-border-subtle py-3"
+            className="grid grid-cols-[1.25rem_1fr_auto] items-center gap-x-3 gap-y-1 border-t border-border-subtle py-3"
           >
             <span className="font-mono text-caption1 text-text-muted">{index + 1}</span>
-            <span className="text-subheadline font-medium text-text-primary">{step.title}</span>
-            <span className="text-caption1 text-text-muted">{step.body}</span>
-            <Link
-              href={step.href}
-              className="focus-ring tactile ml-auto inline-flex min-h-11 items-center rounded px-2 text-caption1 font-medium text-accent-strong underline-offset-4 hover:underline"
-            >
-              {step.action}
-            </Link>
+            <div className="min-w-0">
+              <p className="text-subheadline font-medium text-text-primary">{step.title}</p>
+              <p className="mt-0.5 text-caption1 text-text-muted">{step.body}</p>
+            </div>
+            {step.onAction ? (
+              <button
+                type="button"
+                disabled={step.disabled}
+                onClick={step.onAction}
+                className="focus-ring tactile inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-caption1 font-medium text-accent-strong underline-offset-4 hover:bg-secondary hover:underline disabled:opacity-60"
+              >
+                {step.action}
+              </button>
+            ) : (
+              <Link
+                href={step.href ?? "/settings?section=data"}
+                className="focus-ring tactile inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-caption1 font-medium text-accent-strong underline-offset-4 hover:bg-secondary hover:underline"
+              >
+                {step.action}
+              </Link>
+            )}
           </li>
         ))}
       </ol>
