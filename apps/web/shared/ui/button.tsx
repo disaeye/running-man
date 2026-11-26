@@ -5,12 +5,12 @@ import { Slot } from "radix-ui"
 import { cn } from "@shared/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-subheadline font-medium whitespace-nowrap transition-[color,background-color,border-color,transform,box-shadow] duration-150 ease-default outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.97] disabled:pointer-events-none aria-invalid:border-error aria-invalid:ring-error/20 motion-reduce:active:scale-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-subheadline font-medium whitespace-nowrap transition-[color,background-color,border-color,transform,box-shadow] duration-150 ease-default active:duration-75 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.97] disabled:pointer-events-none aria-invalid:border-error aria-invalid:ring-error/20 motion-reduce:active:scale-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "bg-accent text-on-accent hover:bg-accent/90 active:bg-primary-active disabled:bg-surface-active disabled:text-text-muted",
+          "bg-accent text-on-accent shadow-[inset_0_1px_0_oklch(1_0_0/35%),0_0_18px_oklch(0.9_0.19_122/18%)] hover:bg-accent/90 hover:shadow-[inset_0_1px_0_oklch(1_0_0/45%),0_0_24px_oklch(0.9_0.19_122/32%)] active:bg-primary-active disabled:bg-surface-active disabled:text-text-muted disabled:shadow-none",
         destructive:
           "border border-error/40 bg-error/8 text-error hover:bg-error/20 focus-visible:ring-error/20 disabled:border-border-subtle disabled:bg-surface-overlay disabled:text-text-muted",
         outline:
@@ -19,7 +19,7 @@ const buttonVariants = cva(
           "border border-border-default bg-surface-overlay text-text-primary hover:bg-surface-active disabled:border-border-subtle disabled:bg-surface-subtle disabled:text-text-muted",
         ghost:
           "hover:bg-surface-overlay hover:text-text-primary disabled:text-text-muted",
-        link: "text-accent-strong underline-offset-4 hover:underline disabled:text-text-muted",
+        link: "text-text-secondary underline decoration-border-strong underline-offset-4 hover:text-text-primary disabled:text-text-muted",
       },
       size: {
         default: "h-11 px-[22px] py-[11px] min-h-[44px] min-w-[44px] has-[>svg]:px-4",

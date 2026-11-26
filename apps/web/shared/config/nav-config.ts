@@ -39,8 +39,15 @@ export function activeNavFromPath(pathname: string): string | null {
     (e) => e.href !== "/" && (pathname === e.href || pathname.startsWith(`${e.href}/`)),
   );
   if (entry) return entry.id;
-  // /activities/* maps to calendar (merged)
-  if (pathname === "/activities" || pathname.startsWith("/activities/")) return "calendar";
+  // /activities/* and /strength/* map to calendar (训练)
+  if (
+    pathname === "/activities" ||
+    pathname.startsWith("/activities/") ||
+    pathname === "/strength" ||
+    pathname.startsWith("/strength/")
+  ) {
+    return "calendar";
+  }
   return null;
 }
 

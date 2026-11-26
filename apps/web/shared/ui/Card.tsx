@@ -1,8 +1,12 @@
-import { type HTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
+export type CardAccent = "none" | "accent" | "success" | "warn" | "error";
+
+interface CardProps extends HTMLAttributes<HTMLElement> {
   padding?: "none" | "sm" | "md" | "lg";
   variant?: "content" | "action";
+  as?: "div" | "section";
+  accent?: CardAccent;
 }
 
 const PADDING = {
@@ -13,42 +17,83 @@ const PADDING = {
 } as const;
 
 const VARIANT = {
-  content: "",
-  action: "shadow-[var(--shadow-panel)]",
+  content: "border-border-subtle bg-surface-card",
+  action: "border-accent-strong/30 bg-surface-raised shadow-[var(--shadow-panel)]",
 } as const;
+
+const ACCENT_BORDER: Record<CardAccent, string> = {
+  none: "",
+  accent: "border-l-[3px] border-l-accent-strong",
+  success: "border-l-[3px] border-l-success",
+  warn: "border-l-[3px] border-l-warn",
+  error: "border-l-[3px] border-l-error",
+};
 
 /**
  * 唯一的面板原语。
  *
- * 层级靠明度差分界：画布是 `--color-surface-sunken`，卡片是 `--color-surface-card`，
- * 卡片比画布亮一档，眼睛就能分出层。因此卡片不加边线——画布已经换掉了，
- * 再画一条 1px 发丝边就是第二层框。
+ * 层级通过画布与面板的明度阶梯 + 1px 低对比度外发丝边确立。
+ * `--shadow-panel` 只给焦点行动卡：`variant="action"` 时加，一屏最多一张。
+ * 内容卡不加阴影，圆角统一 16px（`rounded-2xl`）。
  *
- * `--shadow-panel` 只给行动卡：`variant="action"` 时加，一屏最多一张。
- * 内容卡不加阴影。
- *
- * `--shadow-panel` 没有进 `@theme inline`，Tailwind 生成不出 `shadow-panel`，
- * 所以这里用方括号直接读 CSS 变量。
- *
- * 卡片不嵌套。一组的若干张卡片用 `page-stack` 或 grid 排；
- * 卡内分组用 `InsetBlock` 或 `divide-y`，不再套一张卡。
- *
- * 手机上一律 20px 内边距（`sm`、`md` 相同），一行文字在相邻卡片里能对齐；
- * 更宽的内边距从 `sm` 起才有空间花。
+ * 卡片不嵌套。卡内分组用 `InsetBlock`（无边框下沉槽）或 `divide-y`。
  */
 export function Card({
   padding = "md",
   variant = "content",
+  as = "div",
+  accent = "none",
   className = "",
   children,
   ...props
 }: CardProps) {
+  const Component = as;
   return (
-    <div
-      className={`min-w-0 rounded-[18px] border border-border-subtle bg-surface-card text-text-primary ${PADDING[padding]} ${VARIANT[variant]} ${className}`.trim()}
+    <Component
+      className={`min-w-0 rounded-2xl border text-text-primary ${PADDING[padding]} ${VARIANT[variant]} ${ACCENT_BORDER[accent]} ${className}`.trim()}
       {...props}
     >
       {children}
-    </div>
+    </Component>
+  );
+}
+
+/**
+ * 带标准眉标与右侧操作槽的内容卡片，直接复用统一 `Card` 表面原语。
+ */
+export function PageCard({
+  title,
+  action,
+  children,
+  className = "",
+  hero = false,
+  accent = "none",
+  testId,
+}: {
+  title?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  hero?: boolean;
+  accent?: CardAccent;
+  testId?: string;
+}) {
+  return (
+    <Card
+      as="section"
+      padding="none"
+      variant={hero ? "action" : "content"}
+      accent={accent}
+      data-testid={testId}
+      className={`p-4 sm:p-5 ${className}`.trim()}
+    >
+      {title || action ? (
+        <div className="mb-3 flex items-center justify-between gap-2">
+          {title ? <h2 className="eyebrow min-w-0 truncate">{title}</h2> : <span />}
+          {action ? <div className="shrink-0">{action}</div> : null}
+        </div>
+      ) : null}
+      {children}
+    </Card>
   );
 }

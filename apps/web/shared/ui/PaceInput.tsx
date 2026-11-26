@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Input } from "./input";
 
 interface PaceInputProps {
@@ -25,17 +26,32 @@ function splitPace(sPerKm: number): { minutes: number; seconds: number } {
  * Two number segments joined by a colon — no free-text parsing.
  */
 export function PaceInput({ value, onChange, id, "aria-label": ariaLabel }: PaceInputProps) {
-  const { minutes, seconds } = value != null ? splitPace(value) : { minutes: null, seconds: null };
+  const initial = value != null ? splitPace(value) : { minutes: null, seconds: null };
+  const [prevValue, setPrevValue] = useState<number | null>(value);
+  const [minText, setMinText] = useState<string>(initial.minutes != null ? String(initial.minutes) : "");
+  const [secText, setSecText] = useState<string>(initial.seconds != null ? String(initial.seconds) : "");
 
-  const emit = (nextMinutes: number | null, nextSeconds: number | null) => {
-    // 0 minutes is not a valid pace — treat it as empty so clearing the
-    // minutes segment (or typing 0) keeps the seconds-only value clean.
-    const minutesValue = nextMinutes != null && nextMinutes > 0 ? nextMinutes : null;
-    if (minutesValue == null && (nextSeconds == null || nextSeconds === 0)) {
+  if (prevValue !== value) {
+    setPrevValue(value);
+    const synced = value != null ? splitPace(value) : { minutes: null, seconds: null };
+    setMinText(synced.minutes != null ? String(synced.minutes) : "");
+    setSecText(synced.seconds != null ? String(synced.seconds) : "");
+  }
+
+  const commit = (nextMinText: string, nextSecText: string) => {
+    setMinText(nextMinText);
+    setSecText(nextSecText);
+    if (nextMinText === "" && nextSecText === "") {
+      setPrevValue(null);
       onChange(null);
       return;
     }
-    onChange((minutesValue ?? 0) * 60 + (nextSeconds ?? 0));
+    const mins = nextMinText === "" ? 0 : Math.max(0, Math.min(99, Number(nextMinText)));
+    const secs = nextSecText === "" ? 0 : Math.max(0, Math.min(59, Number(nextSecText)));
+    const total = mins * 60 + secs;
+    const nextVal = total > 0 ? total : null;
+    setPrevValue(nextVal);
+    onChange(nextVal);
   };
 
   return (
@@ -46,12 +62,13 @@ export function PaceInput({ value, onChange, id, "aria-label": ariaLabel }: Pace
         inputMode="numeric"
         min={0}
         max={99}
-        value={minutes ?? ""}
+        value={minText}
         placeholder="4"
         aria-label="分"
         onChange={(e) => {
           const raw = e.target.value;
-          emit(raw === "" ? null : Math.max(0, Math.min(99, Number(raw))), seconds);
+          const clamped = raw === "" ? "" : String(Math.max(0, Math.min(99, Math.floor(Number(raw)))));
+          commit(clamped, secText);
         }}
         className="w-16 text-center font-mono tabular-nums"
       />
@@ -61,12 +78,13 @@ export function PaceInput({ value, onChange, id, "aria-label": ariaLabel }: Pace
         inputMode="numeric"
         min={0}
         max={59}
-        value={seconds ?? ""}
+        value={secText}
         placeholder="30"
         aria-label="秒"
         onChange={(e) => {
           const raw = e.target.value;
-          emit(minutes, raw === "" ? null : Math.max(0, Math.min(59, Number(raw))));
+          const clamped = raw === "" ? "" : String(Math.max(0, Math.min(59, Math.floor(Number(raw)))));
+          commit(minText, clamped);
         }}
         className="w-16 text-center font-mono tabular-nums"
       />

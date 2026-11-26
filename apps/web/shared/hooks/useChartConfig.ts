@@ -53,3 +53,8 @@ export function useChartConfig(): ChartConfig {
     [baseOption, snapshot.colors, snapshot.isDark],
   );
 }
+
+/** Convenience hook returning reactive chart colors when theme flips. */
+export function useChartColors(): ChartColors {
+  return useChartConfig().colors;
+}

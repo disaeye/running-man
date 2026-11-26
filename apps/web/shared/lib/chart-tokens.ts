@@ -74,7 +74,33 @@ export interface ChartColors {
 }
 
 
-/** Expand #rgb / rgb() to #rrggbb so alpha suffixes are legal for Canvas. */
+/** Expand #rgb / rgb() / oklch() to #rrggbb so alpha suffixes are legal for Canvas. */
+function oklchToHex(value: string): string | null {
+  const m = /^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*[\d.]+%?)?\s*\)$/i.exec(value);
+  if (!m) return null;
+  let l = Number(m[1]);
+  if (m[2] === "%") l /= 100;
+  const c = Number(m[3]);
+  const h = (Number(m[4]) * Math.PI) / 180;
+  const a = c * Math.cos(h);
+  const b = c * Math.sin(h);
+  const l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = l - 0.0894841775 * a - 1.2914855480 * b;
+  const lc = l_ ** 3;
+  const mc = m_ ** 3;
+  const sc = s_ ** 3;
+  const rLin = +4.0767416621 * lc - 3.3077115913 * mc + 0.2309699292 * sc;
+  const gLin = -1.2684380046 * lc + 2.6097574011 * mc - 0.3413193965 * sc;
+  const bLin = -0.0041960863 * lc - 0.7034186147 * mc + 1.7076147010 * sc;
+  const toByte = (ch: number) => {
+    const clamped = Math.max(0, Math.min(1, ch));
+    const srgb = clamped <= 0.0031308 ? 12.92 * clamped : 1.055 * clamped ** (1 / 2.4) - 0.055;
+    return Math.round(srgb * 255).toString(16).padStart(2, "0");
+  };
+  return `#${toByte(rLin)}${toByte(gLin)}${toByte(bLin)}`;
+}
+
 export function normalizeCssColor(value: string): string {
   const v = value.trim();
   if (!v) return "";
@@ -98,6 +124,8 @@ export function normalizeCssColor(value: string): string {
       Math.max(0, Math.min(255, Number(n ?? 0))).toString(16).padStart(2, "0");
     return `#${toHex(rgb[1])}${toHex(rgb[2])}${toHex(rgb[3])}`;
   }
+  const oklchHex = oklchToHex(v);
+  if (oklchHex) return oklchHex;
   return v;
 }
 

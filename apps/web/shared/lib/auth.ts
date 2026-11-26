@@ -40,7 +40,6 @@ export interface UserProfile {
   readonly resting_hr: number | null;
   readonly dob: string | null;
   readonly sex: string | null;
-  readonly weight_goal: number | null;
   readonly weekly_training_days: number;
   readonly max_session_duration_min: number;
   readonly preferred_sport: string;

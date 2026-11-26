@@ -42,6 +42,8 @@ export const TERMS = {
   ...TERMS_PHYSIOLOGY,
 } as const;
 
+export type TermKey = keyof typeof TERMS;
+
 /** 获取术语的中文显示名 */
 export function termLabel(key: keyof typeof TERMS, showAbbr = true): string {
   const t = TERMS[key];

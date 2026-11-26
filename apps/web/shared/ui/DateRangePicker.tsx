@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@shared/ui/button";
-import { toISODate } from "@shared/lib/format";
+import { computeRange, toISODate } from "@shared/lib/format";
 
 interface DateRangePickerProps {
   readonly from: string;
@@ -9,16 +9,8 @@ interface DateRangePickerProps {
   readonly onChange: (from: string, to: string) => void;
   readonly fromLabel?: string;
   readonly toLabel?: string;
-  /** Hide 本周 / 本月 / 今年 where the surface already offers its own presets. */
+  /** Hide 本周 / 本月 / 近 90 天 / 今年 where the surface already offers its own presets. */
   readonly showQuickRanges?: boolean;
-}
-
-function applyRange(
-  builder: () => { from: string; to: string },
-  onChange: (from: string, to: string) => void,
-) {
-  const { from, to } = builder();
-  onChange(from, to);
 }
 
 function getWeekRange(): { from: string; to: string } {
@@ -42,6 +34,13 @@ function getYearRange(): { from: string; to: string } {
   return { from: toISODate(first), to: toISODate(now) };
 }
 
+const QUICK_RANGES = [
+  { id: "week", label: "本周", build: getWeekRange },
+  { id: "month", label: "本月", build: getMonthRange },
+  { id: "90d", label: "近 90 天", build: () => computeRange(90) },
+  { id: "year", label: "今年", build: getYearRange },
+] as const;
+
 export function DateRangePicker({
   from,
   to,
@@ -50,6 +49,22 @@ export function DateRangePicker({
   toLabel = "结束日期",
   showQuickRanges = true,
 }: DateRangePickerProps) {
+  const handleFromChange = (nextFrom: string) => {
+    if (nextFrom && to && nextFrom > to) {
+      onChange(nextFrom, nextFrom);
+      return;
+    }
+    onChange(nextFrom, to);
+  };
+
+  const handleToChange = (nextTo: string) => {
+    if (nextTo && from && nextTo < from) {
+      onChange(nextTo, nextTo);
+      return;
+    }
+    onChange(from, nextTo);
+  };
+
   return (
     <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
       <div className="flex w-full items-center gap-2 sm:w-auto">
@@ -57,7 +72,8 @@ export function DateRangePicker({
           type="date"
           aria-label={fromLabel}
           value={from}
-          onChange={(e) => onChange(e.target.value, to)}
+          max={to || undefined}
+          onChange={(e) => handleFromChange(e.target.value)}
           className="focus-ring min-h-[44px] min-w-0 flex-1 rounded-lg border border-border-default bg-surface-card px-3 py-2 text-subheadline text-text-primary transition-colors hover:border-accent focus:border-accent focus:outline-none sm:flex-none"
         />
         <span className="text-subheadline text-text-muted">至</span>
@@ -65,20 +81,27 @@ export function DateRangePicker({
           type="date"
           aria-label={toLabel}
           value={to}
-          onChange={(e) => onChange(from, e.target.value)}
+          min={from || undefined}
+          onChange={(e) => handleToChange(e.target.value)}
           className="focus-ring min-h-[44px] min-w-0 flex-1 rounded-lg border border-border-default bg-surface-card px-3 py-2 text-subheadline text-text-primary transition-colors hover:border-accent focus:border-accent focus:outline-none sm:flex-none"
         />
       </div>
-      <div className={`w-full items-center gap-1 sm:w-auto ${showQuickRanges ? "flex" : "hidden"}`}>
-        <Button variant="ghost" onClick={() => applyRange(getWeekRange, onChange)}>
-          本周
-        </Button>
-        <Button variant="ghost" onClick={() => applyRange(getMonthRange, onChange)}>
-          本月
-        </Button>
-        <Button variant="ghost" onClick={() => applyRange(getYearRange, onChange)}>
-          今年
-        </Button>
+      <div className={`w-full flex-wrap items-center gap-1 sm:w-auto ${showQuickRanges ? "flex" : "hidden"}`}>
+        {QUICK_RANGES.map((preset) => {
+          const target = preset.build();
+          const active = from === target.from && to === target.to;
+          return (
+            <Button
+              key={preset.id}
+              type="button"
+              variant={active ? "secondary" : "ghost"}
+              aria-pressed={active}
+              onClick={() => onChange(target.from, target.to)}
+            >
+              {preset.label}
+            </Button>
+          );
+        })}
       </div>
     </div>
   );

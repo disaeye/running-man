@@ -45,10 +45,17 @@ export const ERROR_LABEL = "加载失败";
 /**
  * The placeholder for a value that exists as a field but has no measurement.
  *
- * One glyph for one meaning. The app previously used `--`, `—` and `——` in
- * different components, which read as three different degrees of "unknown".
+ * Unified across tables, stats and strips as "未记录", never bare `--`/`—`.
  */
-export const NO_VALUE = "--";
+export const NO_VALUE = "未记录";
+
+export function formatMetricOrUnrecorded(
+  value: string | number | null | undefined,
+  unit?: string,
+): string {
+  if (value == null || value === "") return NO_VALUE;
+  return unit ? `${value} ${unit}` : String(value);
+}
 
 export interface UseDataStateInput<T> {
   data: T | null | undefined;

@@ -8,7 +8,7 @@
  * Three independent URL-state dimensions live here:
  *
  * - `?tab=` on `/analysis`        (overview | load | performance | intensity)
- * - `?view=` on `/calendar`       (week | month | list)
+ * - `?view=` on `/calendar`       (week | month; the log view lives at `/activities`)
  * - `?section=` on `/settings` (data | training | account; legacy `profile` → account)
  *
  * Each dimension has its own alias table and round-trip URL builders.
@@ -26,8 +26,8 @@ export type AnalysisTabId = "load" | "performance" | "body";
  */
 export type AnalysisPageTab = AnalysisTabId;
 
-/** Canonical `/calendar?view=` values. Legacy `strength` resolves to `list` via `CALENDAR_VIEW_ALIASES`. */
-export type CalendarViewId = "week" | "month" | "list";
+/** Canonical `/calendar?view=` values. The log view lives at `/activities` and strength at `/strength`. */
+export type CalendarViewId = "week" | "month";
 export type SettingsSectionId = "data" | "training" | "account";
 
 const ANALYSIS_TAB_ALIASES: Readonly<Record<string, AnalysisTabId>> = {
@@ -49,14 +49,9 @@ const CANONICAL_ANALYSIS_TABS: ReadonlySet<AnalysisTabId> = new Set([
   "body",
 ]);
 
-const CALENDAR_VIEW_ALIASES: Readonly<Record<string, CalendarViewId>> = {
-  strength: "list",
-};
-
 const CANONICAL_CALENDAR_VIEWS: ReadonlySet<CalendarViewId> = new Set([
   "week",
   "month",
-  "list",
 ]);
 
 const CANONICAL_SETTINGS_SECTIONS: ReadonlySet<SettingsSectionId> = new Set([
@@ -92,16 +87,13 @@ export function resolveAnalysisPageTab(raw: string | null): AnalysisPageTab {
 
 /**
  * Resolve a raw `?view=` value on `/calendar` to a canonical view.
- * Accepts legacy `strength` (now folded into the 日志 view) and maps
- * it to `list`; falls back to `week` for unknown / missing values.
+ * The log view (`list`) and the strength workbench (`strength`) are separate
+ * routes now; both legacy values are redirected by the middleware / redirect
+ * table before reaching the page, and anything else unknown falls back to
+ * `week`.
  */
 export function resolveCalendarView(raw: string | null): CalendarViewId {
-  if (raw != null && isCalendarViewId(raw)) return raw;
-  if (raw != null) {
-    const aliasTarget = CALENDAR_VIEW_ALIASES[raw];
-    if (aliasTarget) return aliasTarget;
-  }
-  return "week";
+  return raw != null && isCalendarViewId(raw) ? raw : "week";
 }
 
 /**
@@ -262,6 +254,16 @@ export function canonicalAnalysisSearch(
   return replaceOwnedKey(pathname, currentParams, "tab", canonicalTab);
 }
 
+/**
+ * Build the canonical `/calendar` URL the page should *replace to* on
+ * initial load, or `null` when already canonical.
+ *
+ * `week` is the default view and collapses to bare `/calendar` (other
+ * params preserved); `month` keeps `?view=month`. Unknown values settle to
+ * the default view.
+ *
+ * Non-`view` query params are preserved.
+ */
 export function canonicalCalendarSearch(
   currentParams: URLSearchParams,
   pathname = "/calendar",
@@ -338,8 +340,6 @@ export const ANALYSIS_TAB_ALL_INPUTS: readonly string[] = [
 export const CALENDAR_VIEW_ALL_INPUTS: readonly string[] = [
   "week",
   "month",
-  "list",
-  "strength",
 ] as const;
 
 export const SETTINGS_SECTION_ALL_INPUTS: readonly string[] = [

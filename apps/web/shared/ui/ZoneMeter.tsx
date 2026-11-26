@@ -74,20 +74,22 @@ export function ZoneMeter({
 
   return (
     <div className={className} role="img" aria-label={label}>
-      <div className="relative flex h-1.5 w-full overflow-hidden rounded-full">
-        {zones.map((entry) => {
-          const low = clamp(entry.min, span);
-          const high = clamp(entry.max, span);
-          const width = Math.max(((high - low) / spanWidth) * 100, 0);
-          if (width <= 0) return null;
-          return (
-            <span
-              key={`${entry.label}-${entry.min}`}
-              className={`${ZONE_TONE_CLASS[entry.tone].dot} opacity-40`}
-              style={{ width: `${width}%` }}
-            />
-          );
-        })}
+      <div className="relative h-2.5 w-full">
+        <div className="flex h-1.5 w-full translate-y-0.5 overflow-hidden rounded-full">
+          {zones.map((entry) => {
+            const low = clamp(entry.min, span);
+            const high = clamp(entry.max, span);
+            const width = Math.max(((high - low) / spanWidth) * 100, 0);
+            if (width <= 0) return null;
+            return (
+              <span
+                key={`${entry.label}-${entry.min}`}
+                className={`${ZONE_TONE_CLASS[entry.tone].dot} opacity-40`}
+                style={{ width: `${width}%` }}
+              />
+            );
+          })}
+        </div>
         {markerPercent != null && (
           <span
             className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface-card bg-text-primary"
@@ -96,7 +98,7 @@ export function ZoneMeter({
         )}
       </div>
       {!compact && (
-        <div className="mt-1.5 flex justify-between gap-2 text-caption2 text-text-muted">
+        <div className="mt-1.5 flex justify-between gap-2 text-caption1 text-text-muted">
           <span>{Number(span.min.toFixed(precision))}</span>
           {zone && <span className={ZONE_TONE_CLASS[zone.tone].text}>{zone.label}</span>}
           <span>{Number(span.max.toFixed(precision))}</span>

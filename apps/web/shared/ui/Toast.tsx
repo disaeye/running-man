@@ -5,6 +5,8 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
+  useRef,
   useState,
 } from "react";
 import { X } from "lucide-react";
@@ -15,6 +17,7 @@ interface ToastItem {
   id: string;
   message: string;
   variant: ToastVariant;
+  durationMs: number;
   /** 可选操作按钮（如「撤销」）；点击后自动关闭提示。 */
   action?: { label: string; onClick: () => void };
 }
@@ -39,11 +42,14 @@ export function useToast(): ToastContextValue {
 }
 
 const variantStyles: Record<ToastVariant, string> = {
-  success: "border-success/30 bg-success/10 text-success",
-  error: "border-error/30 bg-error/10 text-error",
-  info: "border-info/30 bg-info/10 text-info",
-  warning: "border-warning/30 bg-warning/10 text-warning",
+  success: "border-success/30 bg-surface-raised text-success",
+  error: "border-error/30 bg-surface-raised text-error",
+  info: "border-info/30 bg-surface-raised text-info",
+  warning: "border-warning/30 bg-surface-raised text-warning",
 };
+
+/** 退场动画时长，与 animate-out 的 duration 一致；动画结束后才真正移除。 */
+const EXIT_DURATION_MS = 150;
 
 function ToastItemComp({
   item,
@@ -52,14 +58,42 @@ function ToastItemComp({
   item: ToastItem;
   onRemove: (id: string) => void;
 }) {
+  const [paused, setPaused] = useState(false);
+  const [exiting, setExiting] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismiss = useCallback(() => {
+    setExiting(true);
+    exitTimerRef.current = setTimeout(() => onRemove(item.id), EXIT_DURATION_MS);
+  }, [item.id, onRemove]);
+
+  useEffect(() => {
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (paused || exiting) return;
+    timerRef.current = setTimeout(dismiss, item.durationMs);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [item.id, item.durationMs, dismiss, paused, exiting]);
+
   return (
     <div
-      role="alert"
-      className={`
-        animate-in duration-200 ease-enter slide-in-from-right-2 fade-in-0
-        rounded-lg border border-border-default px-4 py-3 text-subheadline shadow-elevated
-        ${variantStyles[item.variant]}
-      `.trim()}
+      role={item.variant === "error" || item.variant === "warning" ? "alert" : "status"}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+      className={`${
+        exiting
+          ? "animate-out duration-150 ease-exit slide-out-to-right-2 fade-out-0"
+          : "animate-in duration-200 ease-enter slide-in-from-right-2 fade-in-0"
+      } rounded-lg border px-4 py-3 text-subheadline shadow-elevated ${variantStyles[item.variant]}`.trim()}
     >
       <div className="flex items-center justify-between gap-3">
         <span>{item.message}</span>
@@ -68,7 +102,7 @@ function ToastItemComp({
             <button
               onClick={() => {
                 item.action?.onClick();
-                onRemove(item.id);
+                dismiss();
               }}
               className="focus-ring tactile min-h-11 shrink-0 rounded-full px-2 text-subheadline font-semibold underline-offset-4 hover:underline"
               aria-label={item.action.label}
@@ -77,8 +111,9 @@ function ToastItemComp({
             </button>
           ) : null}
           <button
-            onClick={() => onRemove(item.id)}
-            className="focus-ring -me-2 flex size-[44px] shrink-0 items-center justify-center text-current/60 hover:text-current"
+            onClick={dismiss}
+            disabled={exiting}
+            className="focus-ring tactile -me-2 flex size-[44px] shrink-0 items-center justify-center text-current/60 hover:text-current"
             aria-label="关闭提示"
           >
             <X className="size-4" aria-hidden />
@@ -88,8 +123,6 @@ function ToastItemComp({
     </div>
   );
 }
-
-// ── Provider ──
 
 interface ToastProviderProps extends HTMLAttributes<HTMLDivElement> {
   duration?: number;
@@ -110,10 +143,9 @@ export function ToastProvider({
   const toast = useCallback(
     (message: string, variant: ToastVariant = "info") => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      setToasts((prev) => [...prev, { id, message, variant }]);
-      setTimeout(() => removeToast(id), duration);
+      setToasts((prev) => [...prev, { id, message, variant, durationMs: duration }]);
     },
-    [duration, removeToast],
+    [duration],
   );
 
   const toastWithAction = useCallback(
@@ -124,10 +156,12 @@ export function ToastProvider({
       durationMs?: number,
     ) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      setToasts((prev) => [...prev, { id, message, variant, action }]);
-      setTimeout(() => removeToast(id), durationMs ?? duration);
+      setToasts((prev) => [
+        ...prev,
+        { id, message, variant, action, durationMs: durationMs ?? duration },
+      ]);
     },
-    [duration, removeToast],
+    [duration],
   );
 
   return (
@@ -136,7 +170,7 @@ export function ToastProvider({
       {toasts.length > 0 && (
         <div
           className={`
-            fixed bottom-4 right-4 z-50 flex flex-col gap-2
+            fixed bottom-[calc(var(--mobile-nav-height,3.5rem)+1rem+env(safe-area-inset-bottom))] left-4 right-4 z-50 flex flex-col gap-2 sm:left-auto sm:max-w-sm
             ${className}
           `.trim()}
           {...props}

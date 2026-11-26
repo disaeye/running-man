@@ -1,6 +1,7 @@
 "use client";
 
 import { ToastProvider } from "@shared/ui/Toast";
+import { ScrollProgressBar } from "@shared/ui/ScrollProgressBar";
 import { MobileTabBar } from "@shared/layout/TopTabBar";
 
 interface AppShellProps {
@@ -17,7 +18,13 @@ export function AppShell({ children }: AppShellProps) {
         跳到主要内容
       </a>
       <div data-shell="root" className="min-h-dvh bg-surface-sunken text-text-primary">
-        <main id="main-content" role="main" data-shell-region="main" className="pb-[calc(var(--mobile-nav-height,64px)+env(safe-area-inset-bottom))]">
+        <ScrollProgressBar />
+        <main
+          id="main-content"
+          role="main"
+          data-shell-region="main"
+          className="shell-main pb-[calc(var(--mobile-nav-height,64px)+1rem+env(safe-area-inset-bottom))]"
+        >
           <div className="shell-main-inner">{children}</div>
           <div data-testid="content-end-sentinel" aria-hidden="true" className="h-px w-full" />
         </main>

@@ -21,10 +21,11 @@ export function formatDistance(meters: number | null): string {
 }
 
 export function formatDuration(seconds: number | null): string {
-  if (seconds == null) return "--";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return "--";
+  const total = Math.round(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
   if (h > 0) return `${h}h ${m}m`;
   if (m > 0) return `${m}m`;
   return `${s}s`;
@@ -86,10 +87,28 @@ export function formatPace(speedMs: number | null): string {
 
 /** Seconds per kilometre to min'sec" (e.g. 270 → "4'30\""). */
 export function formatPaceFromSeconds(secPerKm: number | null): string {
-  if (secPerKm == null || secPerKm <= 0) return "--";
-  const min = Math.floor(secPerKm / 60);
-  const sec = Math.round(secPerKm % 60);
+  if (secPerKm == null || !Number.isFinite(secPerKm) || secPerKm <= 0) return "--";
+  const total = Math.round(secPerKm);
+  const min = Math.floor(total / 60);
+  const sec = total % 60;
   return `${min}'${sec.toString().padStart(2, "0")}"`;
+}
+
+/** Largest-remainder integer percentages summing to 100 (all 0 if total <= 0). */
+export function largestRemainderPercent(values: readonly number[]): number[] {
+  const safe = values.map((v) => (Number.isFinite(v) && v > 0 ? v : 0));
+  const total = safe.reduce((sum, v) => sum + v, 0);
+  if (total <= 0) return safe.map(() => 0);
+  const exact = safe.map((v) => (v / total) * 100);
+  const floors = exact.map((v) => Math.floor(v));
+  const remainder = 100 - floors.reduce((sum, v) => sum + v, 0);
+  const order = exact
+    .map((v, idx) => ({ idx, frac: v - floors[idx]! }))
+    .sort((a, b) => b.frac - a.frac);
+  for (let i = 0; i < remainder && i < order.length; i += 1) {
+    floors[order[i]!.idx] = (floors[order[i]!.idx] ?? 0) + 1;
+  }
+  return floors;
 }
 
 /** Format calories (e.g. 450 → "450 kcal") */

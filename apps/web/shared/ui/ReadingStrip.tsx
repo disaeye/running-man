@@ -1,4 +1,6 @@
+import type { TermKey } from "@shared/config/terms";
 import { cn } from "@shared/lib/utils";
+import { MetricInlineDisclosure } from "@shared/ui/MetricInlineDisclosure";
 
 export interface Reading {
   readonly label: string;
@@ -7,6 +9,7 @@ export interface Reading {
   readonly unit?: string | null;
   readonly note?: string | null;
   readonly tone?: "default" | "warn";
+  readonly termKey?: TermKey;
 }
 
 /**
@@ -41,13 +44,21 @@ export function ReadingStrip({
           key={item.label}
           className={cn(
             "min-w-0 py-4",
-            index % 2 === 1 && "border-l border-border-subtle pl-4",
+            index % 2 === 0 ? "pr-4 md:pr-0" : "border-l border-border-subtle pl-4",
             index >= 2 && "border-t border-border-subtle md:border-t-0",
             index > 0 && "md:border-l md:border-border-subtle md:pl-6",
-            index === 0 && "md:pr-6",
+            index < items.length - 1 && "md:pr-6",
           )}
         >
-          <dt className="text-caption1 text-text-muted">{item.label}</dt>
+          <dt className="flex items-center text-caption1 text-text-muted">
+            <span className="truncate">{item.label}</span>
+            {item.termKey ? (
+              <MetricInlineDisclosure
+                termKey={item.termKey}
+                align={index % 2 === 1 ? "right" : "left"}
+              />
+            ) : null}
+          </dt>
           <dd className="mt-1.5 flex items-baseline gap-1.5">
             {item.value == null ? (
               <span className="text-caption1 text-text-muted">未记录</span>
@@ -55,13 +66,18 @@ export function ReadingStrip({
               <>
                 <span
                   className={cn(
-                    "font-mono text-title1 font-normal tabular-nums",
-                    item.tone === "warn" ? "text-warning" : "text-accent-strong",
+                    "font-mono text-title1 font-semibold tabular-nums",
+                    item.tone === "warn" ? "text-warning" : "text-text-primary",
                   )}
                 >
                   {item.value}
                 </span>
-                {item.unit && <span className="text-caption1 text-text-muted">{item.unit}</span>}
+                {item.unit && (
+                  <>
+                    {" "}
+                    <span className="text-caption1 text-text-muted">{item.unit}</span>
+                  </>
+                )}
               </>
             )}
           </dd>

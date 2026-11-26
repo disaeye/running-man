@@ -4,143 +4,139 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Running Man — 夜间赛场（Night Track）。
+ * Running Man — 双主题精密遥测设计系统（Daylight Chrono Lab & Precision Night Telemetry）。
  *
- * 视觉采用深色画布、荧光黄绿主色、青色辅色、橙色警示，
- * 窄体标题字与等宽数字。画布比卡片亮一档，层次靠明度差而不是投影。
- *
- * 这个产品只有一个主题：暗色。白天在户外看手机的强光环境下，深色画布配
- * 高对比数字比浅色更好读；两个主题会让同一份数据出现两套颜色语义，
- * 图表配色与区间配色都要各写一遍。
- *
- * `:root` 声明真实颜色，`.dark` 重复同一组值：应用始终带着 `dark` 类，
- * 而设计闸门会分别读这两个块，两处必须一致。
+ * 日间模式（`:root`）：矿物冷灰画布 + 纯白精密图版 + 深碳墨数字 + 油墨级曲线色。
+ * 夜间模式（`.dark`）：深邃碳黑画布 + 顶边微镜面卡片 + 冷光银白数字 + 自发光曲线色。
+ * 两套色盘在 OKLCH 空间内保持恒定色相角（Hue），按表面明度自适应平移，
+ * 并通过「10% 荧光克制法则」把赛道荧光绿仅保留在主 CTA、焦点指示与可交互强调上。
  */
 :root {
-  --color-surface-sunken: oklch(0.16 0.012 250);
-  --color-surface-card: oklch(0.205 0.014 250);
-  --color-surface-raised: oklch(0.26 0.014 250);
-  --color-surface-overlay: oklch(0.16 0.012 250 / 40%);
-  --color-surface-active: oklch(0.30 0.014 250);
-  --color-surface-base: oklch(0.205 0.014 250);
-  --color-surface-subtle: oklch(0.205 0.014 250);
-  --color-rail: oklch(0.205 0.014 250);
+  color-scheme: light;
 
-  --color-text-primary: oklch(0.95 0.008 250);
-  --color-text-secondary: oklch(0.80 0.012 250);
-  --color-text-muted: oklch(0.66 0.015 250);
-  --color-text-inverse: oklch(0.18 0.02 122);
-  --color-ink: oklch(0.95 0.008 250);
-  --color-on-primary: oklch(0.18 0.02 122);
-  --color-on-dark: oklch(0.95 0.008 250);
-  --color-on-dark-soft: oklch(0.66 0.015 250);
+  /* 表面层级（L0 画布 → L1 下沉槽 → L2 标准卡 → L3 行动卡/浮层 → L4 激活态） */
+  --color-surface-sunken: oklch(0.955 0.006 255);
+  --color-surface-overlay: oklch(0.925 0.008 255);
+  --color-surface-card: oklch(1 0 0);
+  --color-surface-raised: oklch(1 0 0);
+  --color-surface-active: oklch(0.90 0.010 255);
+  --color-surface-base: oklch(0.98 0.003 255);
+  --color-surface-subtle: oklch(0.94 0.006 255);
+  --color-rail: oklch(0.94 0.006 255);
 
-  /* 强调色：荧光黄绿为主，青色为辅，橙色用于警示。 */
-  --color-accent: oklch(0.9 0.19 122);
-  --color-primary: oklch(0.9 0.19 122);
-  --color-accent-strong: oklch(0.9 0.19 122);
-  --color-on-accent: oklch(0.18 0.02 122);
-  --color-chart-accent: oklch(0.9 0.19 122);
-  --color-ring: oklch(0.9 0.19 122);
-  --color-primary-active: #b0d500;
-  --color-primary-disabled: #4a4f2a;
-  --color-chrome-accent: #caf300;
-  --color-tertiary: #7df4ff;
-  --color-tertiary-dim: #00dbe9;
-  /* 橙色是警示色，名字是 warm（暖），不是 secondary：`text-secondary` 在
-   * 全站 270 处表示「次要文字」，把它定义成橙色会让次要文字变成橙色，
-   * 并且橙字落在橙底上时对比度是 1.0:1。 */
-  --color-warm: #ffb59c;
-  --color-warm-dim: #ff5708;
+  /* 文字色阶（保证在全部 L0–L4 表面上 >= 4.5:1） */
+  --color-text-primary: oklch(0.18 0.015 255);
+  --color-text-secondary: oklch(0.35 0.016 255);
+  --color-text-muted: oklch(0.41 0.015 255);
+  --color-text-inverse: oklch(0.98 0.003 255);
+  --color-ink: oklch(0.18 0.015 255);
+  --color-on-primary: oklch(0.16 0.03 125);
+  --color-on-dark: oklch(0.96 0.006 255);
+  --color-on-dark-soft: oklch(0.67 0.015 255);
 
-  /* 数据语义色：只用于图表序列、分类标签与状态点。 */
-  --color-ctl: oklch(0.8 0.15 200);
-  --color-atl: oklch(0.75 0.16 20);
-  --color-tsb: oklch(0.82 0.15 85);
-  --color-ctl-blue: #00dbe9;
-  --color-atl-magenta: #7df4ff;
-  --color-tsb-gold: #ffb59c;
-  --color-hr-rest: #ff788f;
-  --color-sleep: #00dbe9;
-  --color-weight: #7df4ff;
-  --color-success: oklch(0.8 0.16 145);
-  --color-warning: oklch(0.82 0.16 80);
-  --color-error: oklch(0.7 0.19 20);
-  --color-info: oklch(0.8 0.15 200);
-  --color-recovery-good: oklch(0.8 0.16 145);
-  --color-recovery-moderate: oklch(0.82 0.16 80);
-  --color-recovery-poor: oklch(0.7 0.19 20);
-  --color-zone-1: oklch(0.75 0.12 220);
-  --color-zone-2: oklch(0.8 0.14 160);
-  --color-zone-3: oklch(0.85 0.17 100);
-  --color-zone-4: oklch(0.78 0.16 60);
-  --color-zone-5: oklch(0.7 0.19 20);
-  --color-goal-on-track: oklch(0.8 0.16 145);
-  --color-goal-behind: oklch(0.82 0.16 80);
-  --color-goal-at-risk: oklch(0.7 0.19 20);
-  --color-sport-run: oklch(0.78 0.16 10);
-  --color-sport-virtualrun: #b88cff;
-  --color-sport-trailrun: #ff8fa4;
-  --color-sport-ride: oklch(0.8 0.15 200);
-  --color-sport-virtualride: #00dbe9;
-  --color-sport-bike: #00dbe9;
-  --color-sport-swim: #00dbe9;
-  --color-sport-walk: #5cb87a;
-  --color-sport-hike: #5cb87a;
-  --color-sport-alpineski: #00dbe9;
-  --color-sport-workout: oklch(0.82 0.16 80);
-  --color-sport-weighttraining: #ffb59c;
-  --color-data-emphasis: oklch(0.8 0.15 200);
-  --color-load-heatmap: oklch(0.8 0.15 200);
-  --color-calendar-today: #caf300;
-  --color-active-phase: #caf300;
-  --color-gps-map-bg: #0c0e11;
-  --color-gps-map-grid: #282a2d;
-  --color-insight-bg: #16181b;
-  --color-insight-border: rgba(226, 226, 230, 0.12);
+  /* 品牌赛道荧光绿（填充保留高饱和黄绿，文字前景自动下潜为深林竞技绿） */
+  --color-accent: oklch(0.87 0.20 124);
+  --color-primary: oklch(0.87 0.20 124);
+  --color-accent-strong: oklch(0.38 0.135 135);
+  --color-on-accent: oklch(0.16 0.03 125);
+  --color-chart-accent: oklch(0.38 0.135 135);
+  --color-ring: oklch(0.38 0.135 135);
+  --color-primary-active: oklch(0.80 0.19 124);
+  --color-primary-disabled: oklch(0.86 0.03 124);
+  --color-chrome-accent: oklch(0.87 0.20 124);
+  --color-tertiary: oklch(0.40 0.145 235);
+  --color-tertiary-dim: oklch(0.45 0.135 235);
+  --color-warm: oklch(0.41 0.145 45);
+  --color-warm-dim: oklch(0.45 0.165 35);
 
-  --color-border-subtle: oklch(1 0 0 / 9%);
-  --color-border-default: oklch(1 0 0 / 14%);
-  --color-border-strong: oklch(1 0 0 / 20%);
-  --color-outline: oklch(0.66 0.015 250);
-  --color-outline-variant: oklch(1 0 0 / 9%);
+  /* 数据语义色（正交色相 + 日间油墨级明度） */
+  --color-ctl: oklch(0.40 0.145 235);
+  --color-atl: oklch(0.40 0.175 345);
+  --color-tsb: oklch(0.41 0.130 75);
+  --color-ctl-blue: oklch(0.40 0.145 235);
+  --color-atl-magenta: oklch(0.40 0.175 345);
+  --color-tsb-gold: oklch(0.41 0.130 75);
+  --color-hr-rest: oklch(0.40 0.175 345);
+  --color-sleep: oklch(0.40 0.145 235);
+  --color-weight: oklch(0.42 0.135 195);
+  --color-success: oklch(0.40 0.145 152);
+  --color-warning: oklch(0.41 0.135 75);
+  --color-error: oklch(0.40 0.185 25);
+  --color-info: oklch(0.40 0.145 235);
+  --color-recovery-good: oklch(0.40 0.145 152);
+  --color-recovery-moderate: oklch(0.41 0.135 75);
+  --color-recovery-poor: oklch(0.40 0.185 25);
+  --color-zone-1: oklch(0.72 0.045 235);
+  --color-zone-2: oklch(0.64 0.075 195);
+  --color-zone-3: oklch(0.56 0.105 145);
+  --color-zone-4: oklch(0.48 0.145 65);
+  --color-zone-5: oklch(0.40 0.185 25);
+  --color-goal-on-track: oklch(0.40 0.145 152);
+  --color-goal-behind: oklch(0.41 0.135 75);
+  --color-goal-at-risk: oklch(0.40 0.185 25);
+  --color-sport-run: oklch(0.40 0.145 155);
+  --color-sport-virtualrun: oklch(0.42 0.155 290);
+  --color-sport-trailrun: oklch(0.42 0.155 180);
+  --color-sport-ride: oklch(0.40 0.145 235);
+  --color-sport-virtualride: oklch(0.42 0.145 220);
+  --color-sport-bike: oklch(0.40 0.145 235);
+  --color-sport-swim: oklch(0.42 0.145 210);
+  --color-sport-walk: oklch(0.42 0.145 145);
+  --color-sport-hike: oklch(0.42 0.145 145);
+  --color-sport-alpineski: oklch(0.42 0.145 220);
+  --color-sport-workout: oklch(0.41 0.135 75);
+  --color-sport-weighttraining: oklch(0.41 0.145 55);
+  --color-data-emphasis: oklch(0.40 0.145 235);
+  --color-load-heatmap: oklch(0.40 0.145 235);
+  --color-calendar-today: oklch(0.38 0.135 135);
+  --color-active-phase: oklch(0.38 0.135 135);
+  --color-gps-map-bg: oklch(0.94 0.008 255);
+  --color-gps-map-grid: oklch(0.84 0.010 255);
+  --color-insight-bg: oklch(0.97 0.005 255);
+  --color-insight-border: oklch(0.18 0.02 255 / 12%);
+
+  --color-border-subtle: oklch(0.18 0.02 255 / 11%);
+  --color-border-default: oklch(0.18 0.02 255 / 18%);
+  --color-border-strong: oklch(0.18 0.02 255 / 28%);
+  --color-outline: oklch(0.41 0.015 255);
+  --color-outline-variant: oklch(0.18 0.02 255 / 11%);
 
   /* 玻璃只在导航与顶栏这类 chrome 上使用。 */
-  --glass-bg: #1e2023;
-  --glass-bg-strong: #16181b;
-  --glass-border: #2a2d31;
-  --glass-highlight: inset 0 1px 0 rgba(226, 226, 230, 0.06);
+  --glass-bg: oklch(0.98 0.003 255 / 88%);
+  --glass-bg-strong: oklch(1 0 0 / 92%);
+  --glass-border: oklch(0.18 0.02 255 / 11%);
+  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 80%);
   --glass-blur: 20px;
   --glass-saturate: 1.15;
-  --glass-glow: 0 0 24px rgba(202, 243, 0, 0.06);
+  --glass-glow: 0 4px 20px oklch(0.18 0.02 255 / 6%);
 
   /* 阴影：行动卡与浮层各一档，内容卡不投影。 */
-  --shadow-card: 0 1px 8px rgba(0, 0, 0, 0.4);
-  --shadow-elevated: 0 24px 70px rgba(0, 0, 0, 0.55);
-  --shadow-sheet: 0 -18px 50px rgba(0, 0, 0, 0.6);
-  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 1px 4px rgba(15, 23, 42, 0.06);
+  --shadow-elevated: 0 20px 50px rgba(15, 23, 42, 0.14);
+  --shadow-sheet: 0 -12px 36px rgba(15, 23, 42, 0.12);
+  --shadow-panel: 0 8px 24px rgba(15, 23, 42, 0.08);
 
-  /* Tailwind 语义别名。 */
-  --color-background: oklch(0.16 0.012 250);
-  --color-foreground: oklch(0.95 0.008 250);
-  --color-card: oklch(0.205 0.014 250);
-  --color-card-foreground: oklch(0.95 0.008 250);
-  --color-popover: oklch(0.26 0.014 250);
-  --color-popover-foreground: oklch(0.95 0.008 250);
-  --color-primary-foreground: oklch(0.18 0.02 122);
-  --color-secondary: oklch(0.26 0.014 250);
-  --color-secondary-foreground: oklch(0.95 0.008 250);
-  --color-muted: oklch(0.205 0.014 250);
-  --color-muted-foreground: oklch(0.66 0.015 250);
-  --color-accent-foreground: oklch(0.18 0.02 122);
-  --color-destructive: oklch(0.7 0.19 20);
-  --color-destructive-foreground: oklch(0.95 0.008 250);
-  --color-border: oklch(1 0 0 / 9%);
-  --color-input: oklch(1 0 0 / 14%);
-  --color-fitness: oklch(0.8 0.15 200);
-  --color-fatigue: oklch(0.75 0.16 20);
-  --color-form: oklch(0.82 0.15 85);
-  --color-warn: oklch(0.82 0.16 80);
+  /* Tailwind 语义别名（日间）。 */
+  --color-background: oklch(0.955 0.006 255);
+  --color-foreground: oklch(0.18 0.015 255);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.18 0.015 255);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.18 0.015 255);
+  --color-primary-foreground: oklch(0.16 0.03 125);
+  --color-secondary: oklch(0.925 0.008 255);
+  --color-secondary-foreground: oklch(0.18 0.015 255);
+  --color-muted: oklch(0.94 0.006 255);
+  --color-muted-foreground: oklch(0.41 0.015 255);
+  --color-accent-foreground: oklch(0.16 0.03 125);
+  --color-destructive: oklch(0.40 0.185 25);
+  --color-destructive-foreground: oklch(0.98 0.003 255);
+  --color-border: oklch(0.18 0.02 255 / 11%);
+  --color-input: oklch(0.18 0.02 255 / 18%);
+  --color-fitness: oklch(0.40 0.145 235);
+  --color-fatigue: oklch(0.40 0.175 345);
+  --color-form: oklch(0.41 0.130 75);
+  --color-warn: oklch(0.41 0.135 75);
   --color-z1: var(--color-zone-1);
   --color-z2: var(--color-zone-2);
   --color-z3: var(--color-zone-3);
@@ -148,11 +144,12 @@
   --color-z5: var(--color-zone-5);
 
   /*
-   * 字体：窄体（Barlow Condensed）做标题与标签，等宽（JetBrains Mono）做
-   * 数字，正文用 Space Grotesk。指标数字一律等宽并开表格数字，
-   * 一列数字上下才对得齐。
+   * 字体：中文正文与拉丁正文 Noto Sans SC（网页字体按 unicode-range 分片加载），
+   * 等宽数字 JetBrains Mono，窄体英文标题 Barlow Condensed。
+   * 三套拉丁字体在 layout.tsx 以 display: optional 加载，首帧后不再换字形；
+   * Noto Sans SC 保留 swap，避免分片晚到时同一句中文出现两种字形。
    */
-  --font-sans: "Noto Sans SC", var(--font-noto-sans-sc), "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-sans: "Noto Sans SC", var(--font-noto-sans-sc), var(--font-space-grotesk), "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
   --font-display: "Barlow Condensed", var(--font-barlow-condensed), "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-serif: var(--font-sans);
@@ -165,6 +162,7 @@
   --shell-gap: 1rem;
   --mobile-nav-height: 3.5rem;
   --duration-instant: 100ms;
+  --duration-press: 80ms;
   --duration-fast: 180ms;
   --duration-normal: 300ms;
   --duration-slow: 600ms;
@@ -175,46 +173,135 @@
 }
 
 .dark {
-  --color-surface-sunken: oklch(0.16 0.012 250);
-  --color-surface-card: oklch(0.205 0.014 250);
-  --color-surface-raised: oklch(0.26 0.014 250);
-  --color-surface-overlay: oklch(0.16 0.012 250 / 40%);
-  --color-surface-active: oklch(0.30 0.014 250);
-  --color-surface-base: oklch(0.205 0.014 250);
-  --color-text-primary: oklch(0.95 0.008 250);
-  --color-text-secondary: oklch(0.80 0.012 250);
-  --color-text-muted: oklch(0.66 0.015 250);
-  --color-accent: oklch(0.9 0.19 122);
-  --color-primary: oklch(0.9 0.19 122);
-  --color-ring: oklch(0.9 0.19 122);
-  --color-border-subtle: oklch(1 0 0 / 9%);
-  --color-border-default: oklch(1 0 0 / 14%);
-  --color-border-strong: oklch(1 0 0 / 20%);
-  --color-ctl: oklch(0.8 0.15 200);
-  --color-atl: oklch(0.75 0.16 20);
-  --color-tsb: oklch(0.82 0.15 85);
-  --color-zone-1: oklch(0.75 0.12 220);
-  --color-zone-2: oklch(0.8 0.14 160);
-  --color-zone-3: oklch(0.85 0.17 100);
-  --color-zone-4: oklch(0.78 0.16 60);
-  --color-zone-5: oklch(0.7 0.19 20);
-  --color-recovery-good: oklch(0.8 0.16 145);
-  --color-recovery-moderate: oklch(0.82 0.16 80);
-  --color-recovery-poor: oklch(0.7 0.19 20);
-  --color-goal-on-track: oklch(0.8 0.16 145);
-  --color-goal-behind: oklch(0.82 0.16 80);
-  --color-goal-at-risk: oklch(0.7 0.19 20);
-  --color-data-emphasis: oklch(0.8 0.15 200);
-  --color-load-heatmap: oklch(0.8 0.15 200);
-  --color-sport-run: oklch(0.78 0.16 10);
-  --color-sport-ride: oklch(0.8 0.15 200);
-  --color-sport-workout: oklch(0.82 0.16 80);
+  color-scheme: dark;
+
+  --color-surface-sunken: oklch(0.13 0.012 255);
+  --color-surface-overlay: oklch(0.16 0.013 255);
+  --color-surface-card: oklch(0.195 0.014 255);
+  --color-surface-raised: oklch(0.235 0.016 255);
+  --color-surface-active: oklch(0.275 0.018 255);
+  --color-surface-base: oklch(0.195 0.014 255);
+  --color-surface-subtle: oklch(0.16 0.013 255);
+  --color-rail: oklch(0.16 0.013 255);
+
+  --color-text-primary: oklch(0.96 0.006 255);
+  --color-text-secondary: oklch(0.80 0.012 255);
+  --color-text-muted: oklch(0.67 0.015 255);
+  --color-text-inverse: oklch(0.15 0.025 122);
+  --color-ink: oklch(0.96 0.006 255);
+  --color-on-primary: oklch(0.15 0.025 122);
+  --color-on-dark: oklch(0.96 0.006 255);
+  --color-on-dark-soft: oklch(0.67 0.015 255);
+
+  --color-accent: oklch(0.90 0.195 122);
+  --color-primary: oklch(0.90 0.195 122);
+  --color-accent-strong: oklch(0.90 0.195 122);
+  --color-on-accent: oklch(0.15 0.025 122);
+  --color-chart-accent: oklch(0.90 0.195 122);
+  --color-ring: oklch(0.90 0.195 122);
+  --color-primary-active: oklch(0.82 0.18 122);
+  --color-primary-disabled: oklch(0.36 0.06 122);
+  --color-chrome-accent: oklch(0.90 0.195 122);
+  --color-tertiary: oklch(0.76 0.145 235);
+  --color-tertiary-dim: oklch(0.68 0.145 235);
+  --color-warm: oklch(0.82 0.12 45);
+  --color-warm-dim: oklch(0.70 0.17 35);
+
+  --color-ctl: oklch(0.76 0.145 235);
+  --color-atl: oklch(0.72 0.180 345);
+  --color-tsb: oklch(0.83 0.155 82);
+  --color-ctl-blue: oklch(0.76 0.145 235);
+  --color-atl-magenta: oklch(0.72 0.180 345);
+  --color-tsb-gold: oklch(0.83 0.155 82);
+  --color-hr-rest: oklch(0.74 0.17 350);
+  --color-sleep: oklch(0.76 0.145 235);
+  --color-weight: oklch(0.78 0.135 195);
+  --color-success: oklch(0.80 0.165 152);
+  --color-warning: oklch(0.82 0.160 80);
+  --color-error: oklch(0.70 0.190 25);
+  --color-info: oklch(0.76 0.145 235);
+  --color-recovery-good: oklch(0.80 0.165 152);
+  --color-recovery-moderate: oklch(0.82 0.160 80);
+  --color-recovery-poor: oklch(0.70 0.190 25);
+  --color-zone-1: oklch(0.52 0.045 235);
+  --color-zone-2: oklch(0.61 0.075 195);
+  --color-zone-3: oklch(0.70 0.105 145);
+  --color-zone-4: oklch(0.79 0.145 65);
+  --color-zone-5: oklch(0.88 0.185 25);
+  --color-goal-on-track: oklch(0.80 0.165 152);
+  --color-goal-behind: oklch(0.82 0.160 80);
+  --color-goal-at-risk: oklch(0.70 0.190 25);
+  --color-sport-run: oklch(0.78 0.16 155);
+  --color-sport-virtualrun: oklch(0.76 0.15 290);
+  --color-sport-trailrun: oklch(0.76 0.15 180);
+  --color-sport-ride: oklch(0.76 0.145 235);
+  --color-sport-virtualride: oklch(0.74 0.145 220);
+  --color-sport-bike: oklch(0.76 0.145 235);
+  --color-sport-swim: oklch(0.76 0.145 210);
+  --color-sport-walk: oklch(0.76 0.145 145);
+  --color-sport-hike: oklch(0.76 0.145 145);
+  --color-sport-alpineski: oklch(0.76 0.145 220);
+  --color-sport-workout: oklch(0.82 0.160 80);
+  --color-sport-weighttraining: oklch(0.80 0.13 55);
+  --color-data-emphasis: oklch(0.76 0.145 235);
+  --color-load-heatmap: oklch(0.76 0.145 235);
+  --color-calendar-today: oklch(0.90 0.195 122);
+  --color-active-phase: oklch(0.90 0.195 122);
+  --color-gps-map-bg: oklch(0.11 0.012 255);
+  --color-gps-map-grid: oklch(0.24 0.012 255);
+  --color-insight-bg: oklch(0.16 0.013 255);
+  --color-insight-border: oklch(1 0 0 / 11%);
+
+  --color-border-subtle: oklch(1 0 0 / 10%);
+  --color-border-default: oklch(1 0 0 / 15%);
+  --color-border-strong: oklch(1 0 0 / 24%);
+  --color-outline: oklch(0.67 0.015 255);
+  --color-outline-variant: oklch(1 0 0 / 10%);
+
+  --glass-bg: oklch(0.195 0.014 255 / 85%);
+  --glass-bg-strong: oklch(0.16 0.013 255 / 92%);
+  --glass-border: oklch(1 0 0 / 10%);
+  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 6%);
+  --glass-glow: 0 0 24px oklch(0.90 0.195 122 / 6%);
+
+  --shadow-card: 0 1px 8px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 24px 70px rgba(0, 0, 0, 0.55);
+  --shadow-sheet: 0 -18px 50px rgba(0, 0, 0, 0.6);
+  --shadow-panel: 0 10px 28px rgba(0, 0, 0, 0.45);
+
+  --color-background: oklch(0.13 0.012 255);
+  --color-foreground: oklch(0.96 0.006 255);
+  --color-card: oklch(0.195 0.014 255);
+  --color-card-foreground: oklch(0.96 0.006 255);
+  --color-popover: oklch(0.235 0.016 255);
+  --color-popover-foreground: oklch(0.96 0.006 255);
+  --color-primary-foreground: oklch(0.15 0.025 122);
+  --color-secondary: oklch(0.235 0.016 255);
+  --color-secondary-foreground: oklch(0.96 0.006 255);
+  --color-muted: oklch(0.195 0.014 255);
+  --color-muted-foreground: oklch(0.67 0.015 255);
+  --color-accent-foreground: oklch(0.15 0.025 122);
+  --color-destructive: oklch(0.70 0.190 25);
+  --color-destructive-foreground: oklch(0.96 0.006 255);
+  --color-border: oklch(1 0 0 / 10%);
+  --color-input: oklch(1 0 0 / 15%);
+  --color-fitness: oklch(0.76 0.145 235);
+  --color-fatigue: oklch(0.72 0.180 345);
+  --color-form: oklch(0.83 0.155 82);
+  --color-warn: oklch(0.82 0.160 80);
+  --color-z1: var(--color-zone-1);
+  --color-z2: var(--color-zone-2);
+  --color-z3: var(--color-zone-3);
+  --color-z4: var(--color-zone-4);
+  --color-z5: var(--color-zone-5);
 }
 
 @theme inline {
   --ease-default: var(--ease-default);
   --ease-enter: var(--ease-enter);
   --ease-exit: var(--ease-exit);
+  /* 没有显式 duration 的 transition-* 工具类一律取点按与颜色反馈的时长。 */
+  --default-transition-duration: var(--duration-instant);
   --color-surface-base: var(--color-surface-base);
   --color-rail: var(--color-rail);
   --color-surface: var(--color-surface-card);
@@ -223,9 +310,9 @@
   --color-surface-overlay: var(--color-surface-overlay);
   --color-surface-active: var(--color-surface-active);
   --color-surface-sunken: var(--color-surface-sunken);
-  --color-surface-dark: var(--color-surface-base);
-  --color-surface-dark-elevated: var(--color-surface-raised);
-  --color-surface-dark-soft: var(--color-surface-overlay);
+  --color-surface-dark: oklch(0.195 0.014 255);
+  --color-surface-dark-elevated: oklch(0.235 0.016 255);
+  --color-surface-dark-soft: oklch(0.16 0.013 255);
   --color-text-primary: var(--color-text-primary);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-muted: var(--color-text-muted);
@@ -327,11 +414,11 @@
   --color-z4: var(--color-z4);
   --color-z5: var(--color-z5);
 
-  /* 指标两级大数：48px 一屏一处，24px 次大。 */
+  /* 7 档运动遥测字阶：48px / 30px / 26px / 20px / 16px / 14px / 12px。 */
   --text-metric-xl: 3rem;
-  --text-metric-xl--line-height: 1.05;
-  --text-metric-lg: 1.5rem;
-  --text-metric-lg--line-height: 1.1;
+  --text-metric-xl--line-height: 1;
+  --text-metric-lg: 1.875rem;
+  --text-metric-lg--line-height: 1.08;
   /* 结论句：34px，整页唯一。 */
   --text-conclusion: 2.125rem;
   --text-conclusion--line-height: 1.2;
@@ -342,19 +429,18 @@
   --text-display-lg--line-height: 1.2;
   --text-display-md: clamp(1.75rem, 3vw, 2rem);
   --text-display-md--line-height: 1.25;
-  --text-display-sm: 1.75rem;
-  --text-display-sm--line-height: 1.3;
+  --text-display-sm: 1.625rem;
+  --text-display-sm--line-height: 1.25;
   --text-largeTitle: 1.75rem;
   --text-title1: 1.5rem;
-  --text-title2: 1.375rem;
-  --text-title3: 1.25rem;
+  --text-title2: 1.25rem;
+  --text-title3: 1.125rem;
   --text-headline: 0.9375rem;
-  /* 正文 16px：参考稿用浏览器默认字号，中文正文 14px 偏小。 */
+  /* 正文 16px，高密度表格/控件行 14px，中文标签地板 12px。 */
   --text-body: 1rem;
   --text-callout: 0.875rem;
-  --text-subheadline: 0.8125rem;
+  --text-subheadline: 0.875rem;
   --text-footnote: 0.8125rem;
-  /* 中文 12px 是地板：11px 的汉字在屏幕上糊成一团。 */
   --text-caption1: 0.75rem;
   --text-caption2: 0.6875rem;
   --font-sans: var(--font-sans);
@@ -398,6 +484,11 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
 .focus-ring:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 3px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-ring) 20%, transparent); }
 ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); color: var(--color-text-primary); }
 * { -webkit-tap-highlight-color: transparent; }
+@layer base {
+  /* Tailwind 4 的 preflight 不给 button 设置 cursor，浏览器默认是箭头；可点击控件一律手形。 */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
+}
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { background: var(--color-border-default); border-radius: 999px; }
@@ -411,7 +502,7 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
     transition-duration: var(--duration-instant) !important;
     scroll-behavior: auto !important;
   }
-  .motion-indicator, .page-arrival, .focal-reveal, ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
+  .motion-indicator, .focal-reveal, .route-arrival, ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
     animation: none !important;
     transition: none !important;
     transform: none !important;
@@ -453,23 +544,96 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
 .shell-main-inner canvas, .shell-main-inner svg, .shell-main-inner img, .shell-main-inner video { max-width: 100%; }
 .page-stack { display: flex; flex-direction: column; gap: var(--shell-gap); width: 100%; min-width: 0; }
 
+@media (min-width: 1024px) {
+  :root {
+    --shell-content-max: 64rem;
+    --shell-pad-x: 1.5rem;
+    --shell-pad-x-end: 1.5rem;
+    --shell-pad-y: 6rem;
+  }
+}
+
 @utility surface {
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-2xl);
   background: var(--color-card);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 5%);
 }
 @utility surface-hero {
-  border: 1px solid oklch(0.9 0.19 122 / 25%);
-  border-radius: 18px;
-  background: var(--color-card);
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--color-accent-strong) 28%, transparent);
+  border-radius: var(--radius-2xl);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-panel);
 }
 @utility eyebrow {
+  font-family: var(--font-sans);
   font-size: 0.75rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.02em;
   color: var(--color-muted-foreground);
   font-weight: 600;
 }
-.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+[data-testid="home-recovery"] { container-type: inline-size; }
+[data-testid="home-readings"] [class*="font-mono"] { font-family: var(--font-sans); }
+
+/* 骨架屏斜向高光扫掠（fb-skeleton） */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--color-border-subtle) 85%, var(--color-surface-card));
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(1 0 0 / 7%) 50%,
+    transparent 100%
+  );
+  animation: rm-shimmer 1.6s var(--ease-default) infinite;
+}
+@keyframes rm-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* 光标光斑卡片（card-spotlight）：桌面悬停时边框与表面轻微聚光 */
+.card-spotlight {
+  position: relative;
+  transition: border-color var(--duration-fast) var(--ease-default),
+    background-color var(--duration-fast) var(--ease-default),
+    transform var(--duration-instant) var(--ease-default);
+}
+@media (hover: hover) {
+  .card-spotlight:hover {
+    border-color: var(--color-border-default);
+    background: var(--color-surface-raised);
+  }
+}
+
+/* 今日/实时信号微呼吸脉冲点（mi-pulse） */
+.pulse-dot {
+  position: relative;
+}
+.pulse-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-accent-strong);
+  opacity: 0;
+  animation: rm-pulse-ring 2.2s var(--ease-enter) infinite;
+}
+@keyframes rm-pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.65; }
+  75%, 100% { transform: scale(1.75); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after, .pulse-dot::after { animation: none !important; display: none; }
+}
 
 
 .card-interactive { cursor: pointer; transition: background-color var(--duration-fast) var(--ease-default), transform var(--duration-instant) var(--ease-default); }
@@ -485,7 +649,8 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
  * 底部抽屉式弹窗转居中模态（矮屏贴底抽屉不剩阅读空间）。
  * 高度阈值 500px 排除横屏平板——它们有足够纵向空间，维持完整形态。 */
 @media (orientation: landscape) and (max-height: 500px) {
-  [data-shell-region="bottom"] .grid.h-14 { height: 2.5rem; }
+  .shell-main { padding-bottom: calc(var(--mobile-nav-height, 40px) + 1rem + env(safe-area-inset-bottom)); }
+  [data-shell-region="bottom"] [data-nav-row] { height: 2.5rem; }
   [data-shell-region="bottom"] [data-indicator-key] span { display: none; }
   [data-shell-region="bottom"] [data-indicator-key] svg { width: 1.25rem; height: 1.25rem; }
   [data-slot="dialog-content"] {
@@ -506,14 +671,30 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
   }
 }
 
-/* 触屏与键盘共用的点按反馈：颜色先到，缩放只给可交互的控件。 */
+/* 触屏与键盘共用的点按反馈：颜色先到，缩放只给可交互的控件。
+ * 按下用 80ms 立即到位，松开回到 180ms，手指离开时控件平滑复原。 */
 .tactile {
   transition: background-color var(--duration-instant) var(--ease-default),
     color var(--duration-instant) var(--ease-default),
-    transform var(--duration-instant) var(--ease-default);
+    transform var(--duration-fast) var(--ease-default);
 }
-.tactile:active { transform: scale(0.975); }
+.tactile:active { transform: scale(0.975); transition-duration: var(--duration-press); }
 .tactile:focus-visible { transform: none; }
+/* 触屏兜底：系统点按高亮已全局关闭，没有自带 :active 样式的按钮与链接按下时变淡，
+ * 手指触碰到页面跳转之间始终有视觉变化；桌面有 hover 态，不适用。 */
+@media (hover: none) {
+  button:not(:disabled):not(.tactile):active,
+  a:not(.tactile):not(.row-press):active { opacity: 0.55; }
+}
+
+/* 普通文字链接使用正文色阶；主按钮和带选中背景的控件继续使用品牌色。 */
+a.text-accent-strong:not([class*="bg-primary"]) {
+  color: var(--color-text-secondary);
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 4px;
+}
+a.text-accent-strong:not([class*="bg-primary"]):hover { color: var(--color-text-primary); }
 
 /* 异步操作的进行态只改变颜色与图标转速，不改变控件尺寸。 */
 .action-busy { color: var(--color-text-muted); }
@@ -557,24 +738,61 @@ p, span, li, dt, dd { overflow-wrap: break-word; }
   animation: rm-reveal var(--duration-focal) var(--ease-enter) both;
 }
 
-/* 路由连续性：只给内容列，导航外壳在切换期间保持静止。 */
-.page-arrival {
-  animation: page-in var(--duration-fast) var(--ease-enter) both;
+/* 首页训练判断：只读取内容，不移动布局，也不拦截任何控件。 */
+.reading-active { pointer-events: auto; }
+.reading-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-left: 2px solid var(--color-accent);
+  animation: reading-edge 700ms var(--ease-enter) both;
+}
+.reading-active .num { animation: reading-value 180ms var(--ease-enter) both; }
+.reading-active .num:nth-child(2) { animation-delay: 60ms; }
+.reading-active .num:nth-child(3) { animation-delay: 120ms; }
+.reading-updated { animation: reading-update 500ms var(--ease-enter) both; }
+@keyframes reading-edge { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes reading-value { from { opacity: 0.45; } to { opacity: 1; } }
+@keyframes reading-update { 0% { opacity: 0.72; } 100% { opacity: 1; } }
+
+/* 路由入场：浏览器 View Transition 接管时，旧快照与新页面做等长的交叉淡入；
+ * 位移留给层级推入，底部 Tab 之间的切换只改透明度。 */
+.route-arrival {
+  animation: page-in var(--duration-fast) var(--ease-default) both;
 }
 @keyframes page-in {
-  from { opacity: 0; transform: translate3d(0, 6px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-::view-transition-old(root) { animation: page-out var(--duration-instant) var(--ease-exit) both; }
-::view-transition-new(root) { animation: page-in var(--duration-fast) var(--ease-enter) both; }
+::view-transition-old(root) { animation: page-out var(--duration-fast) var(--ease-default) both; }
+::view-transition-new(root) { animation: page-in var(--duration-fast) var(--ease-default) both; }
 @keyframes page-out { to { opacity: 0; } }
-/* View Transition 接管导航时收起 template 的入场，避免两段动画叠加。 */
-html[data-route-vt] .page-arrival { animation: none; }
+/* 主题切换期间冻结内部元素的 CSS transition，由根视图或统一插值完成丝滑过渡。 */
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  transition: none !important;
+}
+html[data-theme-vt]::view-transition-old(root),
+html[data-theme-vt]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-theme-vt]::view-transition-old(root) { z-index: 1; }
+html[data-theme-vt]::view-transition-new(root) { z-index: 9999; }
+/* 周切换只移动日期内容，周汇总与操作控件保持原位。 */
+.week-shift { animation: week-next var(--duration-fast) var(--ease-enter) both; }
+.week-shift[data-week-direction="previous"] { animation-name: week-previous; }
+@keyframes week-next { from { opacity: 0.5; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes week-previous { from { opacity: 0.5; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 /* 查询参数切换不重挂载 template，由内容区自己做一次短淡入。 */
 .view-swap { animation: view-swap var(--duration-fast) var(--ease-enter) both; }
 @keyframes view-swap { from { opacity: 0.4; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .view-swap { animation: none; }
+  .view-swap, .week-shift, .reading-updated, .reading-active .num { animation: none; }
+  .reading-active::after { animation: none; display: none; }
+  .content-arrival, [data-hydration-reveal] { transition: none; opacity: 1; }
 }
 
 /* 目标切换：详情区在两个目标之间做一次短淡入加轻微上浮，与视图切换同一节奏。 */
@@ -598,15 +816,24 @@ html[data-route-vt] .page-arrival { animation: none; }
 }
 @keyframes phase-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
-/* 进度环挂载时从空环扫到当前值；之后的数值变化仍由过渡接管。 */
-.ring-draw { animation: ring-sweep var(--duration-slow) var(--ease-enter) both; }
+/* 进度环挂载时从空环扫到当前值；动画结束后的数值变化由 transition 接管，
+ * 所以动画不保留末帧，避免末帧值压住 attribute 变化。 */
+.ring-draw { animation: ring-sweep var(--duration-slow) var(--ease-enter); }
+/* 骨架 → 数据：内容首次挂载时从透明淡入，只改透明度，不触碰布局。 */
+.content-arrival { transition: opacity var(--duration-fast) var(--ease-default); }
+@starting-style {
+  .content-arrival { opacity: 0; }
+}
+/* 水合后才计算出的文字（按运动员时区得到的日期等）淡入，不再突然出现。 */
+[data-hydration-reveal] { transition: opacity var(--duration-fast) var(--ease-default); }
+[data-hydration-reveal]:empty { opacity: 0; }
 /* 导航外壳在捕获新快照时保持静止，只让内容列交叉淡入。 */
 [data-shell-region="bottom"] { view-transition-name: mobile-nav; }
 [data-testid="sidebar"] { view-transition-name: desktop-nav; }
 ::view-transition-group(mobile-nav),
 ::view-transition-group(desktop-nav) { animation-duration: 0s; }
 
-.nav-pill-active { background: var(--color-surface-base); color: var(--color-accent); }
+.nav-pill-active { background: var(--color-surface-base); color: var(--color-accent-strong); }
 .shell-title { letter-spacing: normal; }
 
 /* Keep heavy below-fold feature panels out of the first paint. */
@@ -615,7 +842,7 @@ html[data-route-vt] .page-arrival { animation: none; }
 .uplot { font-family: var(--font-sans); color: var(--color-text-secondary); }.u-legend { font-size: var(--text-caption1, 12px); color: var(--color-text-secondary); }
 .u-legend th { color: var(--color-text-primary); }
 .u-cursor-x, .u-cursor-y { border-color: var(--color-text-muted) !important; }
-.u-select { background: color-mix(in srgb, var(--color-accent) 10%, transparent) !important; }
+.u-select { background: color-mix(in srgb, var(--color-accent-strong) 10%, transparent) !important; }
 .u-axis { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted); }
 
 /* Touch feedback comes from the surface, not from scaling the whole control:
@@ -624,17 +851,17 @@ html[data-route-vt] .page-arrival { animation: none; }
 .row-press { transition: background-color 100ms var(--ease-default); }
 .row-press:active { background-color: var(--color-surface-active); }
 
-html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; accent-color: var(--color-accent); }
+html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; accent-color: var(--color-accent-strong); }
 
 /* Browser surfaces belong to the palette: caret, selection and scrollbar. */
-input, textarea, [contenteditable="true"] { caret-color: var(--color-accent); }
+input, textarea, [contenteditable="true"] { caret-color: var(--color-accent-strong); }
 
-/* 窄体标题字：数字与标题用同一族窄体，视觉上更接近参考稿。 */
+/* 窄体标题字：英文标题与标签用窄体。 */
 .font-display { font-family: var(--font-display); }
 /* 全大写标签：参考稿的标签都是大写窄体，中文标签保持原样。 */
 .label-caps { font-family: var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; }
 /* 指标数字：等宽，表格数字对齐。 */
 .metric-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 /* 主色发光：只给行动按钮与状态点。 */
-.accent-glow { box-shadow: 0 0 20px rgba(202, 243, 0, 0.35); }
-.accent-glow-soft { box-shadow: 0 0 16px rgba(202, 243, 0, 0.18); }
+.accent-glow { box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent) 35%, transparent); }
+.accent-glow-soft { box-shadow: 0 0 16px color-mix(in srgb, var(--color-accent) 18%, transparent); }

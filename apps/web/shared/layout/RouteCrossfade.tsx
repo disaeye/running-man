@@ -83,7 +83,8 @@ export function RouteCrossfade() {
         .catch(() => undefined)
         .finally(() => {
           active.current = null;
-          // 下一帧再移除，保证新页挂载时 page-arrival 仍被抑制。
+          // 下一帧再移除：template 恰在这一刻挂载时仍能看到该属性，
+          // RouteArrival 据此判断这一次由 View Transition 负责，不再叠加淡入。
           window.requestAnimationFrame(() => {
             document.documentElement.removeAttribute("data-route-vt");
           });

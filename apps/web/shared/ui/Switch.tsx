@@ -44,7 +44,7 @@ export function Switch({
           if (!disabled) onChange(!checked);
         }}
         className={`
-          focus-ring
+          focus-ring tactile
           inline-flex min-h-10 w-11 shrink-0 items-center justify-center
           rounded-full
           ${disabled ? "opacity-50" : ""}
