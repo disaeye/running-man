@@ -7,6 +7,7 @@ imports only the readiness score, so the two are also consumed separately.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import cast
 
@@ -65,7 +66,7 @@ def compute_recommendation(
     return {
         "action": action,
         "workout_type": workout_type,
-        "duration_min": _duration(score, target_tss),
+        "duration_min": _duration(score, target_tss, planned),
         "target_tss": target_tss,
         "intensity": intensity,
         "pace_targets": _pace_targets(action, intensity, planned, inputs.training_paces),
@@ -86,11 +87,8 @@ def _workout_choice(score: int, planned: Row | None) -> tuple[str, str, str]:
     if band["level"] == "rest":
         return "rest", "rest", "none"
     if planned:
-        return (
-            "follow_plan",
-            str(planned.get("sport_type") or planned.get("category") or "workout"),
-            _intensity(score),
-        )
+        wtype = planned.get("training_type") or planned.get("sport_type") or planned.get("category")
+        return "follow_plan", str(wtype or "workout"), _intensity(score)
     if band["level"] == "high":
         return "train", "quality", "high"
     if band["level"] == "moderate":
@@ -243,18 +241,18 @@ def _reason(score: int, planned: Row | None, completed: float, planned_week: flo
         )
     return f"今天{state}；本周还没有训练，也没有排定课表。"
 
-def _duration(score: int, target_tss: int) -> int:
-    """Minutes that produce ``target_tss`` at this session's intensity.
-
-    TSS = hours × IF² × 100, so minutes = TSS × 60 / (100 × IF²). Dividing the
-    target by 1.2/1.0/0.7 treated one TSS as one minute, which is only true at
-    IF ≈ 1: an easy session came out about twice as long as it should be, and
-    that figure is displayed as today's training time on the home page.
-    """
+def _duration(score: int, target_tss: int, planned: Row | None = None) -> int:
+    """Minutes producing ``target_tss`` at this session's intensity, or the plan's prescription."""
     if target_tss == 0:
         return 0
-    level = band_for_score(score)["level"]
-    intensity = _SESSION_IF.get(str(level), 0.7)
+    level = str(band_for_score(score)["level"])
+    prescription = planned.get("workout_prescription") if planned else None
+    prescribed_min = prescription.get("duration_min") if isinstance(prescription, Mapping) else None
+    if isinstance(prescribed_min, int | float) and not isinstance(prescribed_min, bool):
+        if prescribed_min > 0:
+            scaled = float(prescribed_min) * (1.0 if level in ("high", "moderate") else 0.6)
+            return max(1, min(180, round(scaled)))
+    intensity = _SESSION_IF.get(level, 0.7)
     minutes = target_tss * 60.0 / (100.0 * intensity * intensity)
     return max(15, min(180, round(minutes)))
 
@@ -267,8 +265,10 @@ _SESSION_IF: dict[str, float] = {
     "rest": 0.0,
 }
 
+
 def _next_event(events: list[Row]) -> Row | None:
-    return events[0] if events else None
+    pending = [e for e in events if not e.get("done") and e.get("status") != "deleted"]
+    return next((e for e in pending if e.get("linked_activity_id") is None), None)
 
 def _event_summary(event: Row | None) -> dict[str, object] | None:
     if event is None:

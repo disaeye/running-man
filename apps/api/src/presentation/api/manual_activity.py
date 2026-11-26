@@ -6,7 +6,7 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from application.computation.orchestration import enqueue_activity_recompute
 from domain.ingestion import IngestionError, canonical_source, canonical_sport
@@ -20,6 +20,23 @@ MANUAL_EVENT_ID_MAX_LENGTH = 200
 ManualSport = Literal[
     "Run", "VirtualRun", "TrailRun", "Ride", "VirtualRide", "Bike", "Workout", "Swim"
 ]
+_SPORT_ALIASES: dict[str, str] = {
+    "run": "Run",
+    "virtualrun": "VirtualRun",
+    "virtual_run": "VirtualRun",
+    "trailrun": "TrailRun",
+    "trail_run": "TrailRun",
+    "ride": "Ride",
+    "virtualride": "VirtualRide",
+    "virtual_ride": "VirtualRide",
+    "bike": "Bike",
+    "cycling": "Ride",
+    "workout": "Workout",
+    "weight_training": "Workout",
+    "strength": "Workout",
+    "strength_training": "Workout",
+    "swim": "Swim",
+}
 
 
 class ManualActivityCreate(BaseModel):
@@ -34,6 +51,13 @@ class ManualActivityCreate(BaseModel):
     rpe: int | None = Field(default=None, ge=1, le=10)
     name: str | None = None
     event_id: str | None = None
+
+    @field_validator("sport", mode="before")
+    @classmethod
+    def _normalize_sport(cls, value: object) -> object:
+        if isinstance(value, str):
+            return _SPORT_ALIASES.get(value.strip().lower(), value)
+        return value
 
 
 class ManualActivityResponse(BaseModel):

@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, time
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from application.run_classification.link import link_plan_to_activity
+from domain.time import resolve_zone
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.calendar import CalendarRepo
 from presentation.api.schemas import CalendarEvent
@@ -16,6 +17,19 @@ def get_calendar_repo() -> CalendarRepo:
     return CalendarRepo()
 
 
+def _localize_range(
+    start: datetime, end: datetime, timezone: str | None
+) -> tuple[datetime, datetime]:
+    zone = resolve_zone(timezone)
+    local_start = start.replace(tzinfo=zone) if start.tzinfo is None else start
+    if end.tzinfo is None:
+        end_time = time.max if end.time() == time.min else end.time()
+        local_end = datetime.combine(end.date(), end_time, tzinfo=zone)
+    else:
+        local_end = end
+    return local_start, local_end
+
+
 @router.get("", response_model=list[CalendarEvent])
 async def list_events(
     start: datetime = Query(alias="from"),
@@ -23,7 +37,11 @@ async def list_events(
     athlete: Athlete = Depends(get_current_athlete),
     repo: CalendarRepo = Depends(get_calendar_repo),
 ) -> list[CalendarEvent]:
-    return [CalendarEvent.model_validate(row) for row in await repo.list(athlete.id, start, end)]
+    local_start, local_end = _localize_range(start, end, athlete.timezone)
+    return [
+        CalendarEvent.model_validate(row)
+        for row in await repo.list(athlete.id, local_start, local_end)
+    ]
 
 
 @router.post("", response_model=CalendarEvent, status_code=status.HTTP_201_CREATED)

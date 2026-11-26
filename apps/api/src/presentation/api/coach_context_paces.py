@@ -11,21 +11,33 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from application.physiology.service import cached_physiology
+from application.thresholds.effective import resolve_effective_thresholds
 from domain.physiology.vdot import training_paces as compute_training_paces
 from domain.physiology.vdot import vdot_from_threshold_pace
 
 
-async def training_paces_for(athlete_id: UUID) -> dict[str, dict[str, float]] | None:
-    """Daniels pace bands derived from the stored threshold pace.
-
-    None when physiology has never been computed: the prescription then carries
-    a load target and a duration but no pace, which is the honest state for an
-    athlete without a threshold yet.
-    """
+async def resolve_threshold_pace(athlete_id: UUID) -> float | None:
+    """Resolve current threshold pace (s/km), preferring effective thresholds."""
+    effective = await resolve_effective_thresholds(athlete_id)
+    if effective.threshold_pace.value is not None:
+        return float(effective.threshold_pace.value)
     cached = await cached_physiology(athlete_id)
-    if cached is None or cached.threshold_pace is None:
+    if cached is not None and cached.threshold_pace is not None:
+        return float(cached.threshold_pace)
+    return None
+
+
+async def training_paces_for(athlete_id: UUID) -> dict[str, dict[str, float]] | None:
+    """Daniels pace bands derived from the current threshold pace.
+
+    None when neither effective thresholds nor cached physiology has a threshold:
+    the prescription then carries a load target and a duration but no pace, which
+    is the honest state for an athlete without a threshold yet.
+    """
+    threshold_pace = await resolve_threshold_pace(athlete_id)
+    if threshold_pace is None:
         return None
-    vdot = vdot_from_threshold_pace(cached.threshold_pace)
+    vdot = vdot_from_threshold_pace(threshold_pace)
     if vdot is None:
         return None
     return compute_training_paces(vdot) or None

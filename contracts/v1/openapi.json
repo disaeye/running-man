@@ -13646,10 +13646,13 @@
         "type": "object"
       },
       "WeightUpsert": {
+        "additionalProperties": false,
         "properties": {
           "body_fat_pct": {
             "anyOf": [
               {
+                "maximum": 80.0,
+                "minimum": 1.0,
                 "type": "number"
               },
               {
@@ -13664,6 +13667,8 @@
             "type": "string"
           },
           "weight_kg": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 500.0,
             "title": "Weight Kg",
             "type": "number"
           }

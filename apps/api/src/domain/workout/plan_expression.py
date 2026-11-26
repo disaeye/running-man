@@ -53,14 +53,20 @@ def _context_lines(
     return lines
 
 
+def _segment_midpoint_pace(segment: dict[str, object]) -> float:
+    low = _number(segment.get("pace_min_s_km"))
+    high = _number(segment.get("pace_max_s_km"))
+    if low > 0 and high > 0:
+        return (low + high) / 2.0
+    return low if low > 0 else high
+
+
 def _continuous_expression(
     name: str, segments: tuple[dict[str, object], ...] | list[dict[str, object]]
 ) -> str:
     distance_m = sum(_distance(segment) for segment in segments)
     pace_values = [
-        _number(segment.get("pace_min_s_km"))
-        for segment in segments
-        if _number(segment.get("pace_min_s_km")) > 0
+        pace for segment in segments if (pace := _segment_midpoint_pace(segment)) > 0
     ]
     if not pace_values:
         return f"{name}：连续 {distance_m / 1000:.2f} km"

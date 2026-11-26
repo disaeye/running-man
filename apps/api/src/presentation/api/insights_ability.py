@@ -5,10 +5,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
-from application.physiology.service import cached_physiology
-from domain.physiology.vdot import _T_PCT_HIGH, _vo2_from_velocity, training_paces
+from domain.physiology.vdot import training_paces, vdot_from_threshold_pace
 from domain.time import today_in_zone
 from infrastructure.auth.models import Athlete
+from presentation.api.coach_context_paces import resolve_threshold_pace
 from presentation.auth.deps import get_current_athlete
 
 router = APIRouter(prefix="/insights", tags=["insights"])
@@ -63,13 +63,11 @@ async def get_ability(
     iterates ability points. When physiology is available the first element is
     today's snapshot (vDOT + threshold pace); otherwise empty list.
     """
-    cached = await cached_physiology(athlete.id)
-    if cached is None or cached.threshold_pace is None:
+    threshold_pace = await resolve_threshold_pace(athlete.id)
+    if threshold_pace is None:
         return []
 
-
-    threshold_pace = float(cached.threshold_pace)
-    vdot_value = _vdot_proxy_from_threshold(threshold_pace)
+    vdot_value = vdot_from_threshold_pace(threshold_pace)
     # Stamped with the athlete's day so the snapshot sorts after their real
     # ability history instead of landing on whatever date the host thinks it is.
     day = today_in_zone(athlete.timezone).isoformat()
@@ -87,11 +85,10 @@ async def get_ability_current(
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
 ) -> AbilitySnapshotResponse:
     """Explicit current ability snapshot for Today prescription UI."""
-    cached = await cached_physiology(athlete.id)
-    if cached is None or cached.threshold_pace is None:
+    threshold_pace = await resolve_threshold_pace(athlete.id)
+    if threshold_pace is None:
         return AbilitySnapshotResponse()
-    threshold_pace = float(cached.threshold_pace)
-    vdot_value = _vdot_proxy_from_threshold(threshold_pace)
+    vdot_value = vdot_from_threshold_pace(threshold_pace)
     paces = training_paces(vdot_value) if vdot_value else {}
     return AbilitySnapshotResponse(
         vdot=round(vdot_value, 1) if vdot_value else None,
@@ -99,22 +96,6 @@ async def get_ability_current(
         trainingPaces=_paces_response(paces),
         data_available=True,
     )
-
-
-def _vdot_proxy_from_threshold(threshold_pace_s_km: float) -> float | None:
-    """Invert threshold pace back to a VDOT.
-
-    Threshold sits at 88% of VDOT in the oxygen domain, so the inverse is
-    ``VDOT = VO2(v_threshold) / 0.88`` using Daniels' cost curve. Dividing the
-    velocity by 0.88 and applying a linear oxygen cost skips the quadratic and
-    reports a VDOT about 20% too high.
-    """
-    if threshold_pace_s_km <= 0:
-        return None
-    velocity_m_per_min = 60000.0 / threshold_pace_s_km
-    observed_vo2 = _vo2_from_velocity(velocity_m_per_min)
-    vdot = observed_vo2 / _T_PCT_HIGH
-    return vdot if vdot > 0 else None
 
 
 def _paces_response(paces: dict[str, dict[str, float]]) -> TrainingPacesResponse:

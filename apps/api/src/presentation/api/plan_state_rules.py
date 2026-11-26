@@ -93,12 +93,17 @@ def goal_target(goal: dict[str, object]) -> date | None:
 def vdot_for(
     goal: dict[str, object],
     paces: dict[str, dict[str, float]] | None,
+    *,
+    recorded_vdot: float | None = None,
 ) -> float | None:
     """The athlete's VDOT for the pace table.
 
-    The goal's race target is used when it has one: that is the performance the
-    plan is built around. Otherwise the threshold pace history gives it.
+    Follows the same priority as the plan generator: recorded threshold pace
+    history takes precedence when available, otherwise the goal's race target
+    or threshold pace entry gives it.
     """
+    if recorded_vdot is not None and recorded_vdot > 0:
+        return recorded_vdot
     distance = float_or_none(goal.get("race_distance_m"))
     time_s = goal.get("race_target_time_s")
     if distance is not None and isinstance(time_s, int) and time_s > 0:

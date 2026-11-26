@@ -34,6 +34,7 @@ class ActivityReadRepo:
           ON tss.athlete_id = a.athlete_id AND tss.subject_key = a.activity_id
          AND tss.metric_key = 'tss'
         WHERE a.athlete_id = %s
+          AND a.deleted_at IS NULL
           AND (a.start_time AT TIME ZONE athlete.timezone)::date BETWEEN %s AND %s
         ORDER BY a.start_time DESC
         """
@@ -68,6 +69,7 @@ class ActivityReadRepo:
           ON tss.athlete_id = a.athlete_id AND tss.subject_key = a.activity_id
          AND tss.metric_key = 'tss'
         WHERE a.athlete_id = %s AND a.activity_id = %s
+          AND a.deleted_at IS NULL
         LIMIT 1
         """
         async with _connect() as conn, conn.cursor() as cur:

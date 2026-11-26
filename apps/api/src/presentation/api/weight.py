@@ -4,7 +4,7 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from application.goals.progress import refresh_active_goal_progress
 from infrastructure.auth.models import Athlete
@@ -21,9 +21,11 @@ router = APIRouter(prefix="/weight", tags=["weight"])
 
 
 class WeightUpsert(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
     date: date
-    weight_kg: float
-    body_fat_pct: float | None = None
+    weight_kg: float = Field(gt=0, le=500)
+    body_fat_pct: float | None = Field(default=None, ge=1, le=80)
 
 
 def get_weight_repo() -> WeightRepo:

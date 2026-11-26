@@ -30,6 +30,7 @@ class TrainingPaceStep:
     intensity_anchor: str = TRAINING_PACE_ANCHOR
     algorithm_version: str = VDOT_ALGORITHM_VERSION
     source_refs: tuple[str, ...] = VDOT_SOURCE_REFS
+    vdot: float | None = None
 
 
 async def training_pace_history(
@@ -60,6 +61,7 @@ async def training_pace_history(
                     intensity_anchor=TRAINING_PACE_ANCHOR,
                     algorithm_version=VDOT_ALGORITHM_VERSION,
                     source_refs=VDOT_SOURCE_REFS,
+                    vdot=vdot,
                 )
             )
     return tuple(steps)

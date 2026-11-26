@@ -217,7 +217,13 @@ def _apply_metric_overrides(
     zones: list[Zone], overrides: Sequence[ZoneOverrideLike], metric: str
 ) -> list[Zone]:
     by_zone = {row["zone"]: row for row in overrides if row["metric"] == metric}
-    return [_override_zone(zone, by_zone.get(zone["zone"])) for zone in zones]
+    updated = [_override_zone(zone, by_zone.get(zone["zone"])) for zone in zones]
+    for idx in range(len(updated) - 1):
+        upper = updated[idx]["max_value"]
+        next_lower = updated[idx + 1]["min_value"]
+        if upper is not None and upper >= next_lower:
+            updated[idx]["max_value"] = next_lower - 1
+    return updated
 
 
 def _override_zone(zone: Zone, override: ZoneOverrideLike | None) -> Zone:

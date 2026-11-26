@@ -1,19 +1,25 @@
 from datetime import date, datetime
 from typing import cast
 
+from domain.time import local_day
+
 
 def redact_for_public(activity: dict[str, object]) -> dict[str, object]:
+    raw_tz = activity.get("timezone")
+    tz = str(raw_tz) if raw_tz is not None else None
     return {
         "sport": activity.get("sport"),
-        "date": _activity_date(activity.get("start_time")),
+        "date": _activity_date(activity.get("start_time"), tz),
         "duration_s": activity.get("duration_s"),
         "distance_m": activity.get("distance_m"),
         "name": _activity_name(activity),
     }
 
 
-def _activity_date(value: object) -> date | str | None:
+def _activity_date(value: object, timezone: str | None = None) -> date | str | None:
     if isinstance(value, datetime):
+        if value.tzinfo is not None and timezone is not None:
+            return local_day(value, timezone)
         return value.date()
     if isinstance(value, date):
         return value

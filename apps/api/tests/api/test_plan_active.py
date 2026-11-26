@@ -110,6 +110,31 @@ async def test_active_plan_reports_missing_distance_as_null() -> None:
         await _cleanup(athlete.id)
 
 
+async def test_active_plan_prefers_threshold_pace_over_goal_target() -> None:
+    """Recorded threshold pace takes priority over goal race target for VDOT & paces."""
+    athlete = Athlete(uuid4(), "plan-threshold@example.com", "hash")
+    _override_auth(athlete)
+    try:
+        await _seed_athlete(athlete.id)
+        # Goal target ~1:45 half (VDOT ~42), while recorded threshold pace 4:00/km -> VDOT > 50.
+        await _seed_goal(athlete.id, TARGET_DAY + timedelta(days=60))
+        async with get_pool().connection() as conn, conn.cursor() as cur:
+            await cur.execute(
+                "INSERT INTO athlete_thresholds (athlete_id, effective_from, threshold_pace) "
+                "VALUES (%s, %s, %s)",
+                (athlete.id, TARGET_DAY - timedelta(days=1), 240.0),
+            )
+
+        response = await _get("/api/v1/plan/active")
+        assert response.status_code == 200
+        body = response.json()
+
+        assert body["vdot"] is not None
+        assert body["vdot"] > 50
+    finally:
+        await _cleanup(athlete.id)
+
+
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------

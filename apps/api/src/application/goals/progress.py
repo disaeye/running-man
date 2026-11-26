@@ -33,7 +33,8 @@ _DURATION_DIVISORS = {"min": 60.0, "h": 3600.0, "s": 1.0}
 _GOAL_FIELDS = """
 goal_id, athlete_id, type::text AS type, title, target_value, current_value, unit::text AS unit,
 direction::text AS direction, start_date, sport_key, is_primary, baseline_value,
-target_date, status::text AS status,
+target_date, race_distance_m, race_target_time_s, race_actual_time_s, race_activity_id,
+status::text AS status, g.created_at, g.updated_at,
 (g.created_at AT TIME ZONE COALESCE(ath.timezone, 'UTC'))::date AS created_day,
 (now() AT TIME ZONE COALESCE(ath.timezone, 'UTC'))::date AS local_today
 """
@@ -158,7 +159,11 @@ async def _update_goal(
     UPDATE goals SET current_value = %s, status = COALESCE(%s::varchar, status),
     updated_at = now()
     WHERE athlete_id = %s AND goal_id = %s
-    RETURNING goal_id, current_value, status::text AS status
+    RETURNING goal_id, athlete_id, type::text AS type, title, target_value,
+              current_value, unit::text AS unit, direction::text AS direction,
+              start_date, sport_key, is_primary, baseline_value, target_date,
+              race_distance_m, race_target_time_s, race_actual_time_s,
+              race_activity_id, status::text AS status, created_at, updated_at
     """
     async with db_conn.cursor() as cur:
         _ = await cur.execute(query, (current_value, status, athlete_id, goal_id))

@@ -29,10 +29,9 @@ async def get_pmc(
 ) -> list[PmcPointResponse]:
     if sport is None:
         rows = await repo.get_daily_load_range(athlete.id, start, end)
-        # The stored series does not carry the warm-up flag, so derive it from
-        # how much history exists before each day. Without it the client cannot
-        # tell a converging CTL from a measured one.
-        first_day = _earliest_load_day(rows)
+        earliest_fn = getattr(repo, "earliest_day", None)
+        earliest = await earliest_fn(athlete.id) if callable(earliest_fn) else None
+        first_day = earliest if isinstance(earliest, date) else _earliest_load_day(rows)
         return [
             PmcPointResponse.model_validate(
                 point

@@ -188,9 +188,9 @@ def session_distance_m(
         if not isinstance(duration, int | float) or duration <= 0:
             continue
         pace = _midpoint_pace(segment, pace_min_s_km, pace_max_s_km)
-        if pace is None:
+        if pace is None or pace <= 0:
             continue
-        total += duration / 60.0 * pace
+        total += (duration * 60.0 / pace) * 1000.0
         known = True
     if not known:
         return None

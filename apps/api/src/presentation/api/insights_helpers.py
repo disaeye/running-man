@@ -6,14 +6,18 @@ Split out to keep insights.py under the 250 LOC cap (clean-code.md).
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping
-from datetime import date, timedelta
+from collections.abc import Mapping, Sequence
+from datetime import date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from application.insights.service import events_for_day, readiness_inputs, week_context
 from domain.insights.plan_quality import PlanQuality
 from domain.insights.prs import PersonalRecord
+from domain.insights.zone_schemes import ZoneScheme, hr_zones_for_scheme
+from domain.insights.zones import Zone, ZoneOverrideLike, apply_overrides
+from domain.thresholds.resolver import ThresholdStep, resolve_all
+from domain.time import local_day
 from infrastructure.repositories.insight_reads import InsightReadRepo
 from infrastructure.repositories.pmc import PmcRepo
 from presentation.api.insights_activity_queries import _activities_for_range
@@ -180,3 +184,34 @@ def _ctl_value(row: dict[str, object]) -> float:
 
 def _int_value(value: object) -> int:
     return int(value) if isinstance(value, int | float) else 0
+
+
+def _positive_int(value: object) -> int | None:
+    return int(value) if isinstance(value, int | float) and value > 0 else None
+
+
+def _zones_at(
+    thresholds: list[ThresholdStep],
+    scheme: ZoneScheme,
+    start_time: object,
+    timezone: str | None = None,
+    overrides: Sequence[ZoneOverrideLike] = (),
+    fallback_hr_max: int | None = None,
+    fallback_resting_hr: int | None = None,
+) -> list[Zone]:
+    """Zone boundaries in force when this activity happened."""
+    target: date | None = None
+    if isinstance(start_time, datetime):
+        target = (
+            local_day(start_time, timezone) if start_time.tzinfo is not None else start_time.date()
+        )
+    resolved = resolve_all(thresholds, target)
+    zones = hr_zones_for_scheme(
+        scheme,
+        hr_max=_positive_int(resolved["hr_max"]) or fallback_hr_max,
+        lthr=_positive_int(resolved["lthr"]),
+        resting_hr=_positive_int(resolved["resting_hr"]) or fallback_resting_hr,
+    )
+    if not zones:
+        return []
+    return apply_overrides(zones, None, overrides)[0] if overrides else zones

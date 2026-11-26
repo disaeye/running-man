@@ -15,8 +15,10 @@ from infrastructure.repositories.strength_repository_helpers import (
 
 
 def _e1rm(weight_kg: float | None, reps: int | None) -> float | None:
-    if weight_kg is None or reps is None or not 1 <= reps <= 10:
+    if weight_kg is None or weight_kg <= 0 or reps is None or not 1 <= reps <= 10:
         return None
+    if reps == 1:
+        return round(float(weight_kg), 2)
     return round(float(weight_kg) * (1 + reps / 30), 2)
 
 
@@ -35,13 +37,16 @@ class StrengthRepo(StrengthAnalyticsRepo):
                a.duration_s, (COUNT(DISTINCT we.id) > 0 OR COUNT(ws.id) > 0) AS has_training_content,
                COUNT(DISTINCT we.id)::int AS exercise_count, COUNT(ws.id)::int AS set_count
         FROM activity_summary a
+        JOIN athletes athlete ON athlete.id = a.athlete_id
         LEFT JOIN workout_exercises we
           ON we.activity_id = a.activity_id AND we.athlete_id = a.athlete_id
         LEFT JOIN workout_sets ws
           ON ws.workout_exercise_id = we.id AND ws.athlete_id = a.athlete_id
-        WHERE a.athlete_id = %s AND a.sport = 'weight_training'
-          AND (%s::date IS NULL OR a.start_time::date >= %s::date)
-          AND (%s::date IS NULL OR a.start_time::date <= %s::date)
+        WHERE a.athlete_id = %s
+          AND a.deleted_at IS NULL
+          AND LOWER(a.sport) IN ('weight_training', 'workout', 'strength', 'strength_training')
+          AND (%s::date IS NULL OR (a.start_time AT TIME ZONE athlete.timezone)::date >= %s::date)
+          AND (%s::date IS NULL OR (a.start_time AT TIME ZONE athlete.timezone)::date <= %s::date)
         GROUP BY a.activity_id, a.start_time, a.name, a.duration_s
         ORDER BY a.start_time DESC
         """

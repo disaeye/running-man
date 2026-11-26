@@ -64,11 +64,14 @@ WHERE athlete_id = %s AND sport IS NULL AND metric_key = 'daily_tss'
 
 _WELLNESS_COVERAGE_QUERY = """
 SELECT
-    count(*) FILTER (WHERE sleep_secs IS NOT NULL AND sleep_secs > 0) AS sleep_days_28d,
-    count(*) FILTER (WHERE resting_hr IS NOT NULL) AS rhr_days_28d,
-    count(*) FILTER (WHERE hrv IS NOT NULL) AS hrv_days_28d
-FROM health_wellness
-WHERE athlete_id = %s AND day >= CURRENT_DATE - INTERVAL '27 days'
+    count(*) FILTER (WHERE w.sleep_secs IS NOT NULL AND w.sleep_secs > 0) AS sleep_days_28d,
+    count(*) FILTER (WHERE w.resting_hr IS NOT NULL) AS rhr_days_28d,
+    count(*) FILTER (WHERE w.hrv IS NOT NULL) AS hrv_days_28d
+FROM health_wellness w
+JOIN athletes a ON a.id = w.athlete_id
+WHERE w.athlete_id = %s
+  AND w.day BETWEEN (now() AT TIME ZONE a.timezone)::date - 27
+                AND (now() AT TIME ZONE a.timezone)::date
 """
 
 _STRENGTH_COVERAGE_QUERY = """
@@ -76,7 +79,8 @@ SELECT
     count(*) FILTER (WHERE start_time >= now() - interval '14 days') AS sessions_14d,
     count(*) AS sessions_total
 FROM activity_compute
-WHERE athlete_id = %s AND sport = 'Workout'
+WHERE athlete_id = %s
+  AND LOWER(sport) IN ('workout', 'weight_training', 'strength', 'strength_training')
 """
 
 _UPLOAD_COVERAGE_QUERY = """

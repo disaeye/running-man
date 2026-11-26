@@ -62,8 +62,9 @@ def compute_plan_quality(
     start: date,
     end: date,
     classifications: Sequence[Mapping[str, object]] | None = None,
+    timezone: str | None = None,
 ) -> PlanQuality:
-    inputs = _plan_inputs(planned_events, activities, start, end, classifications)
+    inputs = _plan_inputs(planned_events, activities, start, end, classifications, timezone)
     if not inputs["planned_tss"]:
         return _quality(0.0, [], ["所选周期没有训练计划"], ["先为本周安排至少3次训练"])
     planned_facts = aggregate_plan_segment_facts(planned_events)
@@ -107,36 +108,43 @@ def _plan_inputs(
     start: date,
     end: date,
     classifications: Sequence[Mapping[str, object]] | None = None,
+    timezone: str | None = None,
 ) -> PlanInputs:
     planned_tss = [
-        num(event.get("predicted_tss")) for event in planned_events if in_range(event, start, end)
+        num(event.get("predicted_tss"))
+        for event in planned_events
+        if in_range(event, start, end, timezone)
     ]
     planned_types = [
         str(event.get("training_type"))
         for event in planned_events
-        if in_range(event, start, end)
+        if in_range(event, start, end, timezone)
         and isinstance(event.get("training_type"), str)
         and num(event.get("predicted_tss")) > 0
     ]
     planned_durations = [
         session_duration(event)
         for event in planned_events
-        if in_range(event, start, end)
+        if in_range(event, start, end, timezone)
         and isinstance(event.get("training_type"), str)
         and num(event.get("predicted_tss")) > 0
     ]
     return {
-        "weeks": compute_weekly_progress(planned_events, activities, start, end, classifications),
+        "weeks": compute_weekly_progress(
+            planned_events, activities, start, end, classifications, timezone=timezone
+        ),
         "planned_tss": [tss for tss in planned_tss if tss > 0],
         "planned_types": planned_types,
         "planned_durations": planned_durations,
         "planned_days": {
-            as_date(event.get("start_time"))
+            as_date(event.get("start_time"), timezone)
             for event in planned_events
-            if in_range(event, start, end)
+            if in_range(event, start, end, timezone)
         },
         "actual_days": {
-            as_date(row.get("start_time")) for row in activities if in_range(row, start, end)
+            as_date(row.get("start_time"), timezone)
+            for row in activities
+            if in_range(row, start, end, timezone)
         },
     }
 

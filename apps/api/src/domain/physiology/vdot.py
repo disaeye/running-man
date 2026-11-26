@@ -17,7 +17,7 @@ domain:
 pace comes from solving the oxygen equation backwards. Working in velocity
 instead — treating a %VO2max as a % of vVO2max — skips the quadratic's constant
 term and lands every prescription too fast; for a 5K in 20:00 the easy range
-came out at 4:45–5:57/km instead of 5:34–6:13/km.
+came out at 4:45–5:57/km instead of 5:11–5:52/km.
 
 Pure Python, no external dependencies. All paces are seconds-per-kilometre.
 """
@@ -49,8 +49,8 @@ VDOT_ALGORITHM_VERSION: Final = "vdot-1.0.0"
 # to roughly 0.79 of vVO2max, because the oxygen curve's intercept is negative.
 # Pinned against Daniels' published paces for VDOT 50 in
 # `tests/domain/test_vdot.py`.
-_E_PCT: Final = 0.55
-_E_PCT_HIGH: Final = 0.63
+_E_PCT: Final = 0.59
+_E_PCT_HIGH: Final = 0.69
 _M_PCT: Final = 0.76
 _M_PCT_HIGH: Final = 0.80
 _T_PCT: Final = 0.83

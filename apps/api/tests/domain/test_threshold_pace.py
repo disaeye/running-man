@@ -189,3 +189,20 @@ class TestEffortIntensityFilter:
 
         assert result["data_sufficient"] is False
         assert result["critical_speed_s_per_km"] is None
+
+    def test_low_hr_sprint_does_not_poison_fastest_pace_for_sustained_efforts(self) -> None:
+        # A 1.4 km burst whose avg HR sits well below threshold fails the HR
+        # filter and must not set fastest_pace so low that a 10K effort is dropped.
+        short_low_hr = {"sport": "Run", "distance_m": 1410, "duration_s": 325, "avg_hr": 160}
+        ten_k_no_hr = {"sport": "Run", "distance_m": 10000, "duration_s": 2677}
+        half_tempo = {"sport": "Run", "distance_m": 11020, "duration_s": 2918, "avg_hr": 173}
+        five_k = {"sport": "Run", "distance_m": 5030, "duration_s": 1310, "avg_hr": 174}
+
+        points = extract_efforts_from_activities(
+            [short_low_hr, ten_k_no_hr, half_tempo, five_k], lthr=185
+        )
+
+        assert EffortPoint(distance_m=1410.0, duration_s=325.0) not in points
+        assert EffortPoint(distance_m=10000.0, duration_s=2677.0) in points
+        assert EffortPoint(distance_m=11020.0, duration_s=2918.0) in points
+        assert len(points) == 3

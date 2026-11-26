@@ -158,9 +158,9 @@ algorithms:
         expect: { vdot: 50.0 }
         tolerance: 0.3
       - name: daniels_easy_pace_for_vdot_50
-        # Published: 5:34–6:13/km.
+        # Published: 5:11–5:52/km (59%–69% of VDOT in oxygen domain).
         inputs: { vdot: 50 }
-        expect: { easy_min_s_per_km: 334, easy_max_s_per_km: 373 }
+        expect: { easy_min_s_per_km: 311, easy_max_s_per_km: 352 }
         tolerance: 4
       - name: daniels_threshold_pace_for_vdot_50
         # Published: 4:15/km.

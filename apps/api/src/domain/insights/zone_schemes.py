@@ -237,9 +237,18 @@ def hr_zones_for_scheme(
         return None
     anchor = resting_hr if scheme.reference == "hr_reserve" else 0
     assert anchor is not None
-    return [
-        _zone_with_anchor(bounds, reference, anchor) for bounds in scheme.bounds
-    ]
+    zones = [_zone_with_anchor(bounds, reference, anchor) for bounds in scheme.bounds]
+    return _dedupe_adjacent_upper_bounds(zones)
+
+
+def _dedupe_adjacent_upper_bounds(zones: list[Zone]) -> list[Zone]:
+    """Ensure integer upper edge never overlaps the next zone's lower edge."""
+    for idx in range(len(zones) - 1):
+        upper = zones[idx]["max_value"]
+        next_lower = zones[idx + 1]["min_value"]
+        if upper is not None and upper >= next_lower:
+            zones[idx]["max_value"] = next_lower - 1
+    return zones
 
 
 def _zone_with_anchor(

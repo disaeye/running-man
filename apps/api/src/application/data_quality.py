@@ -96,8 +96,9 @@ async def _run_missing_gps_90d(cur: Any, athlete_id: UUID) -> list[QualityIssue]
     await cur.execute(
         "SELECT count(*) AS cnt FROM activity_compute "
         "WHERE athlete_id = %s "
-        "AND start_time >= CURRENT_DATE - INTERVAL '90 days' "
-        "AND sport = 'Run' AND has_gps = FALSE",
+        "AND start_time >= now() - INTERVAL '90 days' "
+        "AND LOWER(sport) IN ('run', 'trailrun', 'trail_run', 'virtualrun', 'virtual_run') "
+        "AND has_gps = FALSE",
         (athlete_id,),
     )
     row = await cur.fetchone()
@@ -119,8 +120,8 @@ async def _ride_missing_power_90d(cur: Any, athlete_id: UUID) -> list[QualityIss
     await cur.execute(
         "SELECT count(*) AS cnt FROM activity_compute "
         "WHERE athlete_id = %s "
-        "AND start_time >= CURRENT_DATE - INTERVAL '90 days' "
-        "AND (sport = 'Ride' OR sport = 'VirtualRide') "
+        "AND start_time >= now() - INTERVAL '90 days' "
+        "AND LOWER(sport) IN ('ride', 'virtualride', 'virtual_ride', 'bike') "
         "AND avg_power IS NULL",
         (athlete_id,),
     )
@@ -143,8 +144,11 @@ async def _wellness_missing_recent(cur: Any, athlete_id: UUID) -> list[QualityIs
     await cur.execute(
         "SELECT count(*) AS cnt FROM health_wellness "
         "WHERE athlete_id = %s "
-        "AND day >= CURRENT_DATE - INTERVAL '7 days'",
-        (athlete_id,),
+        "AND day BETWEEN (now() AT TIME ZONE "
+        "COALESCE((SELECT timezone FROM athletes WHERE id = %s), 'UTC'))::date - 6 "
+        "AND (now() AT TIME ZONE "
+        "COALESCE((SELECT timezone FROM athletes WHERE id = %s), 'UTC'))::date",
+        (athlete_id, athlete_id, athlete_id),
     )
     row = await cur.fetchone()
     count = int(row["cnt"]) if row else 0
@@ -200,9 +204,7 @@ async def _athlete_timezone(cur: Any, athlete_id: UUID) -> str:
     raw = row["timezone"] if row else None
     if raw is None:
         return "UTC"
-    if isinstance(raw, (bytes, bytearray)):
-        raw = raw.decode()
-    return str(raw) or "UTC"
+    return (raw.decode() if isinstance(raw, (bytes, bytearray)) else str(raw)) or "UTC"
 
 
 async def _physiology_stale(cur: Any, athlete_id: UUID, now: datetime) -> list[QualityIssue]:
@@ -269,8 +271,5 @@ async def _run_rules(cur: Any, athlete_id: UUID, now: datetime) -> dict[str, obj
 
 
 def _summary_status(issues: list[QualityIssue]) -> str:
-    if any(issue.severity == "error" for issue in issues):
-        return "error"
-    if any(issue.severity == "warning" for issue in issues):
-        return "warning"
-    return "ok"
+    severities = {issue.severity for issue in issues}
+    return "error" if "error" in severities else ("warning" if "warning" in severities else "ok")

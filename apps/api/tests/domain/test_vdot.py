@@ -21,7 +21,7 @@ from domain.physiology.vdot import (
 # Single-pace rows in the table (interval 3:55, repetition 3:38) sit inside the
 # computed range.
 DANIELS_VDOT_50 = {
-    "easy": (334, 373),        # 5:34–6:13
+    "easy": (311, 352),        # 5:11–5:52 (Daniels 59%–69% vVO2max)
     "marathon": (278, 287),    # 4:38–4:47
     "threshold": (255, 268),   # 4:15–4:28
     "interval": (234, 240),    # 3:54–4:00
@@ -97,10 +97,11 @@ def test_training_paces_reproduce_daniels_table_for_vdot_50() -> None:
 
 
 def test_easy_pace_is_not_threshold_pace() -> None:
-    # The failure mode this guards: easy running prescribed at 4:45/km for a
-    # VDOT 50 runner, which is a little slower than their half-marathon pace.
+    # The failure mode this guards: easy running prescribed near marathon/half-marathon
+    # pace instead of genuine aerobic easy pace (59%–69% vVO2max, slower than marathon).
     paces = training_paces(50.0)
-    assert paces["easy"]["min"] >= 330, "easy pace must be slower than 5:30/km"
+    assert paces["easy"]["min"] >= 305, "easy pace must be slower than 5:05/km"
+    assert paces["easy"]["min"] > paces["marathon"]["max"]
     assert paces["easy"]["min"] > paces["threshold"]["max"]
 
 

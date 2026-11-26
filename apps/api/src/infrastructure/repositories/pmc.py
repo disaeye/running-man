@@ -82,6 +82,17 @@ class PmcRepo:
             row = await cur.fetchone()
         return float(row["tss"]) if row else 0.0
 
+    async def earliest_day(self, athlete_id: UUID) -> date | None:
+        query = """
+        SELECT MIN(day) AS first_day FROM current_daily_facts
+        WHERE athlete_id = %s AND sport IS NULL AND metric_key = 'daily_tss'
+        """
+        async with _connect() as conn, conn.cursor() as cur:
+            _ = await cur.execute(query, (athlete_id,))
+            row = await cur.fetchone()
+        first = row["first_day"] if row else None
+        return first if isinstance(first, date) else None
+
     async def count_days(self, athlete_id: UUID) -> int:
         query = """
         SELECT COUNT(DISTINCT day) AS days FROM current_daily_facts

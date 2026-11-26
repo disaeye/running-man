@@ -6,6 +6,7 @@ from datetime import date, datetime
 from typing import Any, cast
 
 from domain.insights.session_quality import QualityMatches, empty_quality_matches, quality_matches
+from domain.time import local_day
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +26,7 @@ def match_planned_actual(
     actuals: list[dict[str, object]],
     tss_tolerance: float = 0.2,
     classifications: Sequence[Mapping[str, object]] | None = None,
+    timezone: str | None = None,
 ) -> list[PlannedActualMatch]:
     """
     Match planned training_calendar events to actual activity_summary activities.
@@ -40,12 +42,14 @@ def match_planned_actual(
     by_activity = {str(row.get("activity_id")): row for row in classifications or []}
 
     for plan in planned:
-        plan_date = _as_date(plan["start_time"])
+        plan_date = _as_date(plan["start_time"], timezone)
         plan_sport = str(plan.get("sport_type") or "")
         plan_tss = plan.get("predicted_tss")
         plan_tss_val = _as_float(plan_tss) if plan_tss is not None else None
 
-        best_actual = _find_actual(plan, plan_date, plan_sport, actuals, matched_actual_ids)
+        best_actual = _find_actual(
+            plan, plan_date, plan_sport, actuals, matched_actual_ids, timezone
+        )
 
         if best_actual is not None:
             actual_id = str(best_actual["activity_id"])
@@ -94,7 +98,7 @@ def match_planned_actual(
             matches.append(
                 PlannedActualMatch(
                     planned_event_id="",
-                    planned_date=_as_date(act["start_time"]),
+                    planned_date=_as_date(act["start_time"], timezone),
                     planned_sport=None,
                     planned_tss=None,
                     actual_activity_id=act_id,
@@ -112,6 +116,7 @@ def _find_actual(
     plan_sport: str,
     actuals: list[dict[str, object]],
     matched_actual_ids: set[str],
+    timezone: str | None = None,
 ) -> dict[str, object] | None:
     """A stored link wins; otherwise match by date and sport."""
     linked_id = str(plan.get("linked_activity_id") or "")
@@ -131,7 +136,7 @@ def _find_actual(
         act_id = str(act["activity_id"])
         if act_id in matched_actual_ids:
             continue
-        act_date = _as_date(act["start_time"])
+        act_date = _as_date(act["start_time"], timezone)
         act_sport = str(act.get("sport") or "")
         date_diff = abs((plan_date - act_date).days)
         if date_diff <= 1 and _sport_matches(plan_sport, act_sport):
@@ -139,8 +144,10 @@ def _find_actual(
     return None
 
 
-def _as_date(value: object) -> date:
+def _as_date(value: object, timezone: str | None = None) -> date:
     if isinstance(value, datetime):
+        if value.tzinfo is not None and timezone is not None:
+            return local_day(value, timezone)
         return value.date()
     if isinstance(value, date):
         return value

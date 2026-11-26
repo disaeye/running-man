@@ -21,7 +21,7 @@ class ReadinessAssessment:
 async def readiness_inputs(
     athlete_id: UUID, target_day: date
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    start = target_day - timedelta(days=8)
+    start = target_day - timedelta(days=10)
     wellness = await WellnessRepo().readiness_range(athlete_id, start, target_day)
     loads = await PmcRepo().get_daily_load_range(athlete_id, start, target_day)
     return wellness, loads

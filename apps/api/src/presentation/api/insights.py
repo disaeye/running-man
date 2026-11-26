@@ -1,4 +1,5 @@
-from datetime import date, datetime, timedelta
+from collections.abc import Sequence
+from datetime import date, timedelta
 from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -6,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from application.computation.orchestration import enqueue_activity_recompute
 from application.insights import service as insights_service
+from application.thresholds.effective import resolve_effective_thresholds
 from domain.insights.hard_days import detect_consecutive_hard_days
 from domain.insights.plan_quality import compute_plan_quality
 from domain.insights.prs import (
@@ -17,18 +19,18 @@ from domain.insights.prs import (
 from domain.insights.session_domains import aggregate_domain_seconds, domain_share
 from domain.insights.taper import assess_taper
 from domain.insights.weekly_progress import compute_weekly_progress
-from domain.insights.zone_schemes import ZoneScheme, hr_zones_for_scheme, scheme_for
+from domain.insights.zone_schemes import scheme_for
 from domain.insights.zones import (
     ActivityLike,
-    Zone,
+    ZoneOverrideLike,
     activity_distribution_from_counts,
     weekly_breakdown,
 )
-from domain.thresholds.resolver import ThresholdStep, resolve_all
 from domain.time import today_in_zone
 from infrastructure.auth.models import Athlete
 from infrastructure.repositories.insight_reads import InsightReadRepo
 from infrastructure.repositories.thresholds import ThresholdRepo
+from infrastructure.repositories.zone_overrides import list_overrides
 from infrastructure.repositories.zone_scheme import get_hr_scheme
 from presentation.api.analytics_insight_contracts import (
     HardDayRangeResponse,
@@ -49,12 +51,14 @@ from presentation.api.insights_helpers import (
     _daily_loads_for_range,
     _date_range,
     _insight_inputs,
+    _positive_int,
     _power_streams_for_activities,
     _quality_message,
     _ride_record,
     _run_record,
     _tss_value,
     _zone_seconds,
+    _zones_at,
 )
 from presentation.api.readiness_contract import ReadinessResponse, build_readiness_response
 from presentation.auth.deps import get_current_athlete
@@ -62,29 +66,6 @@ from presentation.auth.deps import get_current_athlete
 router = APIRouter(prefix="/insights", tags=["insights"])
 
 RECOMPUTE_MAX_DAYS = 365
-
-
-def _zones_at(
-    thresholds: list[ThresholdStep], scheme: ZoneScheme, start_time: object
-) -> list[Zone]:
-    """Zone boundaries in force when this activity happened.
-
-    Resolving per activity date keeps a July session bucketed by July's
-    thresholds after the athlete re-tests in September.
-    """
-    target = start_time.date() if isinstance(start_time, datetime) else None
-    resolved = resolve_all(thresholds, target)
-    zones = hr_zones_for_scheme(
-        scheme,
-        hr_max=_positive_int(resolved["hr_max"]),
-        lthr=_positive_int(resolved["lthr"]),
-        resting_hr=_positive_int(resolved["resting_hr"]),
-    )
-    return zones or []
-
-
-def _positive_int(value: object) -> int | None:
-    return int(value) if isinstance(value, int | float) and value > 0 else None
 
 
 class RecomputeRequest(BaseModel):
@@ -111,12 +92,24 @@ async def get_intensity_distribution(
     activities = [row for row in all_activities if is_run_sport(str(row.get("sport")))]
     counts = await InsightReadRepo().metric_value_counts(athlete.id, activities, ["heart_rate"])
     thresholds = await ThresholdRepo().history(athlete.id)
+    effective = await resolve_effective_thresholds(athlete.id)
+    overrides = cast(Sequence[ZoneOverrideLike], await list_overrides(athlete.id))
     scheme = scheme_for(await get_hr_scheme(athlete.id))
+    fallback_hr_max = _positive_int(effective.hr_max.value)
+    fallback_resting_hr = _positive_int(effective.resting_hr.value)
     distributions = [
         activity_distribution_from_counts(
             cast(ActivityLike, cast(object, row)),
             counts.get(str(row["activity_id"]), {}),
-            _zones_at(thresholds, scheme, row.get("start_time")),
+            _zones_at(
+                thresholds,
+                scheme,
+                row.get("start_time"),
+                athlete.timezone,
+                overrides,
+                fallback_hr_max,
+                fallback_resting_hr,
+            ),
             athlete.timezone,
         )
         for row in activities
@@ -163,7 +156,7 @@ async def get_weekly_progress(
     range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
     events, activities, classifications = await _insight_inputs(athlete.id, range_start, range_end)
     weekly_progress = compute_weekly_progress(
-        events, activities, range_start, range_end, classifications
+        events, activities, range_start, range_end, classifications, timezone=athlete.timezone
     )
     return [WeeklyProgressResponse.model_validate(row) for row in weekly_progress]
 
@@ -176,7 +169,9 @@ async def get_plan_quality(
 ) -> PlanQualityResponse:
     range_start, range_end = _date_range(start, end, today_in_zone(athlete.timezone))
     events, activities, classifications = await _insight_inputs(athlete.id, range_start, range_end)
-    quality = compute_plan_quality(events, activities, range_start, range_end, classifications)
+    quality = compute_plan_quality(
+        events, activities, range_start, range_end, classifications, timezone=athlete.timezone
+    )
     seconds = aggregate_domain_seconds(classifications)
     planned_tss = sum(_number(row.get("predicted_tss")) for row in events)
     actual_tss = sum(_number(row.get("tss")) for row in activities)

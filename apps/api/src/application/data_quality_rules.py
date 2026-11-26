@@ -18,9 +18,13 @@ async def _hrv_missing_recent(cur: Any, athlete_id: UUID) -> list[QualityIssue]:
         SELECT count(*) AS wellness_days,
                count(*) FILTER (WHERE hrv IS NOT NULL) AS hrv_days
         FROM health_wellness
-        WHERE athlete_id = %s AND day >= CURRENT_DATE - INTERVAL '6 days'
+        WHERE athlete_id = %s
+          AND day BETWEEN (now() AT TIME ZONE
+                           COALESCE((SELECT timezone FROM athletes WHERE id = %s), 'UTC'))::date - 6
+                      AND (now() AT TIME ZONE
+                           COALESCE((SELECT timezone FROM athletes WHERE id = %s), 'UTC'))::date
         """,
-        (athlete_id,),
+        (athlete_id, athlete_id, athlete_id),
     )
     row = await cur.fetchone()
     if row is None or int(row["wellness_days"]) == 0:
@@ -46,7 +50,8 @@ async def _strength_missing_recent(cur: Any, athlete_id: UUID) -> list[QualityIs
             count(*) FILTER (WHERE start_time >= now() - interval '14 days') AS recent,
             count(*) AS ever
         FROM activity_compute
-        WHERE athlete_id = %s AND sport = 'Workout'
+        WHERE athlete_id = %s
+          AND LOWER(sport) IN ('workout', 'weight_training', 'strength', 'strength_training')
         """,
         (athlete_id,),
     )

@@ -31,10 +31,14 @@ class ShareRepo:
 
     async def get_activity_for_token(self, token: UUID) -> dict[str, object] | None:
         query = """
-        SELECT a.activity_id, a.start_time, a.sport, a.distance_m, a.duration_s, a.raw_data
-        FROM share_tokens st JOIN activity_summary a
+        SELECT a.activity_id, a.start_time, a.sport, a.distance_m, a.duration_s,
+               a.name, a.raw_data, ath.timezone
+        FROM share_tokens st
+        JOIN activity_summary a
           ON a.athlete_id = st.athlete_id AND a.activity_id = st.activity_id
+        JOIN athletes ath ON ath.id = a.athlete_id
         WHERE st.token = %s AND st.revoked_at IS NULL
+          AND a.deleted_at IS NULL
           AND (st.expires_at IS NULL OR st.expires_at > now())
         ORDER BY a.start_time DESC LIMIT 1
         """

@@ -11,6 +11,7 @@ from domain.insights.recommendation import TrainingContext, compute_recommendati
 from domain.insights.session_domains import aggregate_domain_seconds, domain_share
 from domain.insights.session_quality import quality_matches
 from domain.load.pmc import warmup_days
+from domain.time import local_day, resolve_zone
 from infrastructure.auth.models import Athlete
 from infrastructure.db.pool import get_pool
 from infrastructure.repositories.calendar import CalendarRepo
@@ -55,6 +56,7 @@ async def get_coach_context(
     calendar_repo: Annotated[CalendarRepo, Depends(get_calendar_repo)],
     db_pool: Annotated[Any, Depends(get_data_health_pool)],
 ) -> CoachContextResponse:
+    zone = resolve_zone(athlete.timezone)
     # 五路都是独立读：并发拉取，串行时每次往返的池检出与查询延迟叠加
     # 在一起，首页每次加载都要为此多等 100ms 以上。
     (
@@ -69,8 +71,8 @@ async def get_coach_context(
         pmc_repo.get_daily_load_range(athlete.id, target_day - timedelta(days=89), target_day),
         calendar_repo.list(
             athlete.id,
-            datetime.combine(target_day - timedelta(days=6), time.min),
-            datetime.combine(target_day + timedelta(days=1), time.max),
+            datetime.combine(target_day - timedelta(days=6), time.min, tzinfo=zone),
+            datetime.combine(target_day + timedelta(days=1), time.max, tzinfo=zone),
         ),
         compute_data_freshness(athlete.id, db_pool),
         training_paces_for(athlete.id),
@@ -80,7 +82,12 @@ async def get_coach_context(
     )
     readiness = compute_readiness(target_day, wellness, readiness_loads)
     completed_tss = _sum_tss(pmc_loads[-7:])
-    planned_tss = _sum_planned_tss(events)
+    week_events = [
+        event
+        for event in events
+        if (day := _event_day(event, athlete.timezone)) is not None and day <= target_day
+    ]
+    planned_tss = _sum_planned_tss(week_events)
     return CoachContextResponse.model_validate(
         {
             "data_freshness": _data_freshness(freshness, target_day),
@@ -90,7 +97,7 @@ async def get_coach_context(
             "missing_data_caveats": _missing_data_caveats(freshness, wellness, target_day),
             "recommendation": compute_recommendation(
                 readiness,
-                _events_for_target_day(events, target_day),
+                _events_for_target_day(events, target_day, athlete.timezone),
                 completed_tss,
                 planned_tss,
                 # Days with actual training, not days with a load row. The PMC series
@@ -103,7 +110,9 @@ async def get_coach_context(
                     training_paces=training_paces,
                     acwr=latest_acwr(pmc_loads),
                     has_plan_tomorrow=bool(
-                        _events_for_target_day(events, target_day + timedelta(days=1))
+                        _events_for_target_day(
+                            events, target_day + timedelta(days=1), athlete.timezone
+                        )
                     ),
                 ),
             ),
@@ -212,14 +221,18 @@ def _missing_data_caveats(
 
 
 def _events_for_target_day(
-    events: Sequence[dict[str, object]], target_day: date
+    events: Sequence[dict[str, object]],
+    target_day: date,
+    timezone: str | None = None,
 ) -> list[dict[str, object]]:
-    return [event for event in events if _event_day(event) == target_day]
+    return [event for event in events if _event_day(event, timezone) == target_day]
 
 
-def _event_day(event: dict[str, object]) -> date | None:
+def _event_day(event: dict[str, object], timezone: str | None = None) -> date | None:
     value = event.get("start_time")
     if isinstance(value, datetime):
+        if value.tzinfo is not None and timezone is not None:
+            return local_day(value, timezone)
         return value.date()
     if isinstance(value, date):
         return value

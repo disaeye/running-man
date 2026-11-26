@@ -35,10 +35,12 @@ MIN_EFFORT_DURATION_S = 180.0
 # excluding easy and recovery running, which are 30-60% slower.
 EFFORT_PACE_TOLERANCE = 1.15
 
-# Fraction of LTHR (or HRmax) a threshold effort must average. Threshold sits
-# just below LTHR in a sustained run, so 0.95 admits real efforts and rejects
-# easy volume.
+# Fraction of HRmax when LTHR is unavailable; HRmax is a ceiling so 95% keeps
+# near-maximal sessions. When LTHR is known, whole-run avg HR of a 5K–10K race
+# includes initial cardiac lag, so 91% of LTHR admits real threshold efforts
+# while still excluding steady aerobic (≈85%) and easy (≈79%) volume.
 EFFORT_MIN_HR_RATIO = 0.95
+_LTHR_MIN_HR_RATIO = 0.91
 
 
 @dataclass(frozen=True)
@@ -181,46 +183,54 @@ def _positive_float(value: object) -> float | None:
 
 
 def _select_efforts(
-    candidates: list[_Candidate], reference_hr: float | None
+    candidates: list[_Candidate], hr_threshold: float | None
 ) -> list[EffortPoint]:
     """Keep the points that describe the athlete's sustainable boundary.
 
-    The cutoff is on *pace* (s/km), where smaller is faster, not on speed:
-    expressing it as ``speed >= best_speed × tolerance`` would keep only runs
-    faster than the athlete's fastest, i.e. none of them.
+    Filter by heart rate *first* so a short run whose average HR fell short of
+    threshold cannot set an artificially fast ``fastest_pace`` and knock out
+    genuine 10K / half-marathon efforts. The cutoff is on *pace* (s/km), where
+    smaller is faster.
     """
-    fastest_pace = min(1000.0 / candidate.speed_ms for candidate in candidates)
+    hard = [
+        candidate
+        for candidate in candidates
+        if _is_hard_enough(candidate.avg_hr, hr_threshold)
+    ]
+    if not hard:
+        return []
+    fastest_pace = min(1000.0 / candidate.speed_ms for candidate in hard)
     pace_cutoff = fastest_pace * EFFORT_PACE_TOLERANCE
     return [
         candidate.point
-        for candidate in candidates
+        for candidate in hard
         if 1000.0 / candidate.speed_ms <= pace_cutoff
-        and _is_hard_enough(candidate.avg_hr, reference_hr)
     ]
 
 
-def _is_hard_enough(avg_hr: float | None, reference_hr: float | None) -> bool:
+def _is_hard_enough(avg_hr: float | None, hr_threshold: float | None) -> bool:
     """Whether an activity's heart rate indicates a threshold-level effort.
 
     An activity without HR passes on its pace alone: the pace filter already
     required it to be near the athlete's best, and rejecting it would discard
     real efforts recorded without a strap.
     """
-    if reference_hr is None or avg_hr is None:
+    if hr_threshold is None or avg_hr is None:
         return True
-    return avg_hr >= reference_hr * EFFORT_MIN_HR_RATIO
+    return avg_hr >= hr_threshold
 
 
 def _effort_reference_hr(lthr: int | None, hr_max: int | None) -> float | None:
-    """The HR a threshold effort should reach, preferring LTHR.
+    """Minimum average HR (bpm) for a threshold effort, preferring LTHR.
 
-    LTHR is the threshold itself; HRmax is a ceiling and a threshold effort sits
-    below it, so using HRmax directly would demand an intensity above threshold.
+    LTHR is the threshold itself; whole-run avg HR of sustained races sits just
+    below it due to warmup/ramp lag, so ``_LTHR_MIN_HR_RATIO`` applies. HRmax
+    is a ceiling and keeps ``EFFORT_MIN_HR_RATIO``.
     """
     if lthr is not None and lthr > 0:
-        return float(lthr)
+        return float(lthr) * _LTHR_MIN_HR_RATIO
     if hr_max is not None and hr_max > 0:
-        return float(hr_max)
+        return float(hr_max) * EFFORT_MIN_HR_RATIO
     return None
 
 

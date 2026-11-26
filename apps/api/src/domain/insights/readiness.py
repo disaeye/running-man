@@ -117,7 +117,7 @@ def _readings(target_day: date, day: date | None, by_day: dict[date, Row]) -> di
 def _baseline(target_day: date, by_day: dict[date, Row], key: str) -> float | None:
     """The seven-day mean of one wellness reading."""
     history = [_num(by_day.get(day), key) for day in baseline_days(target_day, tuple(by_day))]
-    return _avg([value for value in history if value])
+    return _avg([value for value in history if value is not None])
 
 
 def _metric_value(target_day: date, by_day: dict[date, Row], key: str) -> float | None:

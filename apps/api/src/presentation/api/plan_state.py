@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, Query
 
 from application.plan.training_paces import (
     goal_training_paces,
-    paces_for_date,
+    pace_step_for_date,
     training_pace_history,
 )
 from domain.time import today_in_zone
@@ -90,17 +90,22 @@ async def get_active_plan(
         sessions = await week_sessions(conn, athlete.id, week_start, week_end)
         activities = await week_activities(conn, athlete.id, week_start, week_end)
         loads = await week_loads(conn, athlete.id, week_start, week_end)
-        history = await training_pace_history(athlete.id, goal_target(selected) or today, conn)
+        history = await training_pace_history(
+            athlete.id, max(goal_target(selected) or today, today), conn
+        )
 
-    paces = paces_for_date(history, today)
-    if paces is None:
+    step = pace_step_for_date(history, today)
+    paces: dict[str, dict[str, float]] | None
+    if step is not None:
+        paces = step.paces
+    else:
         goal_paces = goal_training_paces(selected)
         paces = goal_paces[0].paces if goal_paces else None
 
     session_views = [_session_view(row) for row in sessions]
     phase_views = [_phase_view(row, today) for row in phases]
     current = next((phase for phase in phase_views if phase.is_current), None)
-    vdot = vdot_for(selected, paces)
+    vdot = vdot_for(selected, paces, recorded_vdot=step.vdot if step is not None else None)
     targets = pace_targets(vdot)
 
     return ActivePlanResponse(

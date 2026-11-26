@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from math import isnan
+from math import atan2, cos, degrees, isnan, radians, sin
 from typing import Final
 
 # The archive endpoint serves the gap-free reanalysis series. It needs no API
@@ -186,7 +186,7 @@ def parse_archive_response(
         max_temp_c=_maximum(temps),
         feels_like_c=_average(feels),
         wind_speed_kmh=_average(wind),
-        wind_deg=_average_int(direction),
+        wind_deg=_circular_mean_deg(direction),
         clouds_pct=_average(clouds),
         max_rain_mm=_maximum(rain),
         covered_hours=len(covered),
@@ -252,6 +252,15 @@ def _average(values: list[float]) -> float | None:
     if not values:
         return None
     return round(sum(values) / len(values), 1)
+
+
+def _circular_mean_deg(values: list[float]) -> int | None:
+    if not values:
+        return None
+    sin_sum = sum(sin(radians(deg)) for deg in values)
+    cos_sum = sum(cos(radians(deg)) for deg in values)
+    angle = round(degrees(atan2(sin_sum, cos_sum))) % 360
+    return angle
 
 
 def _average_int(values: list[float]) -> int | None:

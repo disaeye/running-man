@@ -78,8 +78,12 @@ class ThresholdRepo:
         Only the keys present in ``values`` are written, so a single-threshold
         edit does not blank out the others already recorded for that date.
         """
-        columns = [column for column in _COLUMNS if column in values]
-        if not columns:
+        write_values: dict[str, object] = {"source": source, **values}
+        if algorithm_version is not None and "algorithm_version" not in write_values:
+            write_values["algorithm_version"] = algorithm_version
+        columns = [column for column in _COLUMNS if column in write_values]
+        required = ("hr_max", "resting_hr", "lthr", "threshold_pace")
+        if not any(col in write_values for col in required):
             raise ValueError("no threshold values supplied")
         insert_columns = ", ".join(("athlete_id", "effective_from", *columns))
         placeholders = ", ".join(["%s"] * (2 + len(columns)))
@@ -93,7 +97,7 @@ class ThresholdRepo:
         params = (
             athlete_id,
             effective_from,
-            *(values[column] for column in columns),
+            *(write_values[column] for column in columns),
         )
         async with _connect() as conn, conn.cursor() as cur:
             _ = await cur.execute(query, params)

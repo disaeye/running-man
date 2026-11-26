@@ -33,7 +33,10 @@ async def week_sessions(
     async with conn.cursor() as cur:
         _ = await cur.execute(
             """
-            SELECT event_id, start_time, name, training_type, predicted_tss,
+            SELECT event_id, start_time,
+                   (start_time AT TIME ZONE (SELECT timezone FROM athletes WHERE id = %s))::date
+                       AS local_date,
+                   name, training_type, predicted_tss,
                    predicted_distance_m, workout_prescription, done
             FROM training_calendar
             WHERE athlete_id = %s AND status <> 'deleted'
@@ -41,7 +44,7 @@ async def week_sessions(
                   BETWEEN %s AND %s
             ORDER BY start_time
             """,
-            (athlete_id, athlete_id, week_start, week_end),
+            (athlete_id, athlete_id, athlete_id, week_start, week_end),
         )
         rows = await cur.fetchall()
 
@@ -50,12 +53,14 @@ async def week_sessions(
         start_time = row.get("start_time")
         if not isinstance(start_time, datetime):
             continue
+        local_date = row.get("local_date")
+        session_date = local_date if isinstance(local_date, date) else start_time.date()
         prescription = row.get("workout_prescription")
         segments: dict[str, object] = prescription if isinstance(prescription, dict) else {}
         sessions.append(
             {
                 "event_id": str(row.get("event_id")),
-                "date": start_time.date(),
+                "date": session_date,
                 "title": str(row.get("name") or ""),
                 "training_type": row.get("training_type"),
                 "duration_min": segments.get("duration_min"),
@@ -104,7 +109,7 @@ async def week_loads(
             SELECT day, metric_key, value
             FROM current_daily_facts
             WHERE athlete_id = %s AND day BETWEEN %s AND %s
-              AND metric_key = 'tss'
+              AND sport IS NULL AND metric_key = 'daily_tss'
             ORDER BY day
             """,
             (athlete_id, week_start, week_end),
