@@ -5,6 +5,7 @@ Split out to keep the gate within the repository's 250-line limit.
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,10 @@ from typing import Final
 HEX: Final = re.compile(r"^#(?P<rgb>[0-9a-fA-F]{6})$")
 RGBA: Final = re.compile(
     r"^rgba?\(\s*(?P<r>\d+)\s*,\s*(?P<g>\d+)\s*,\s*(?P<b>\d+)\s*(?:,\s*(?P<a>[\d.]+)\s*)?\)$"
+)
+OKLCH: Final = re.compile(
+    r"^oklch\(\s*(?P<l>[\d.]+)(?P<lp>%?)\s+(?P<c>[\d.]+)\s+(?P<h>[\d.]+)"
+    r"(?:\s*/\s*(?P<a>[\d.]+)(?P<ap>%?))?\s*\)$"
 )
 DECLARATION: Final = re.compile(r"^\s*--color-(?P<name>[a-z0-9-]+)\s*:\s*(?P<value>[^;]+);")
 
@@ -23,6 +28,28 @@ class Rgba:
     g: int
     b: int
     a: float = 1.0
+
+
+def _oklch_to_srgb(lightness: float, chroma: float, hue_deg: float, alpha: float) -> Rgba:
+    hue_rad = math.radians(hue_deg)
+    a = chroma * math.cos(hue_rad)
+    b = chroma * math.sin(hue_rad)
+    l_ = lightness + 0.3963377774 * a + 0.2158037573 * b
+    m_ = lightness - 0.1055613458 * a - 0.0638541728 * b
+    s_ = lightness - 0.0894841775 * a - 1.2914855480 * b
+    l_cubed = l_ ** 3
+    m_cubed = m_ ** 3
+    s_cubed = s_ ** 3
+    r_lin = +4.0767416621 * l_cubed - 3.3077115913 * m_cubed + 0.2309699292 * s_cubed
+    g_lin = -1.2684380046 * l_cubed + 2.6097574011 * m_cubed - 0.3413193965 * s_cubed
+    b_lin = -0.0041960863 * l_cubed - 0.7034186147 * m_cubed + 1.7076147010 * s_cubed
+
+    def encode(channel: float) -> int:
+        clamped = max(0.0, min(1.0, channel))
+        srgb = 12.92 * clamped if clamped <= 0.0031308 else 1.055 * (clamped ** (1.0 / 2.4)) - 0.055
+        return round(srgb * 255)
+
+    return Rgba(encode(r_lin), encode(g_lin), encode(b_lin), alpha)
 
 
 def parse_colour(value: str) -> Rgba | None:
@@ -38,6 +65,20 @@ def parse_colour(value: str) -> Rgba | None:
             int(rgba_match.group("g")),
             int(rgba_match.group("b")),
             float(rgba_match.group("a") or 1.0),
+        )
+    oklch_match = OKLCH.match(text)
+    if oklch_match:
+        lightness = float(oklch_match.group("l"))
+        if oklch_match.group("lp") == "%":
+            lightness /= 100.0
+        alpha = float(oklch_match.group("a")) if oklch_match.group("a") else 1.0
+        if oklch_match.group("ap") == "%":
+            alpha /= 100.0
+        return _oklch_to_srgb(
+            lightness,
+            float(oklch_match.group("c")),
+            float(oklch_match.group("h")),
+            alpha,
         )
     return None
 

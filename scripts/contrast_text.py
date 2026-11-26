@@ -39,9 +39,10 @@ TYPE_SCALE: Final = re.compile(
 )
 ICON_SIZE: Final = re.compile(r"\b(?:size|[hw])-\d+(?:\.\d+)?\b")
 # Any utility whose value is a colour but whose name starts with something else;
-# `bg-text-muted/30` contains the substring `text-muted`.
+# `bg-text-muted/30` contains the substring `text-muted`. `decoration-` sets the
+# underline colour, so `decoration-text-secondary` is not a text colour class.
 OTHER_UTILITY: Final = re.compile(
-    r"\b(?:bg|border|ring|fill|stroke|from|to|via|divide|outline|shadow|placeholder)-"
+    r"\b(?:bg|border|ring|fill|stroke|from|to|via|divide|outline|shadow|placeholder|decoration)-"
     r"[a-z0-9-/]+\b"
 )
 
